@@ -12,7 +12,7 @@ import { z } from 'zod';
 
 type FilterState = z.infer<typeof FiltersSchema>;
 
-const CATEGORIES = ['Anime', 'Games', 'Marvel', 'DC', 'Random'];
+const CATEGORIES = ['Anime', 'Games', 'Marvel', 'DC'];
 
 export default function Home() {
   const [filters, setFilters] = useState<FilterState>({});

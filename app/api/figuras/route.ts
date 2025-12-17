@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { FiltersSchema, FiguraDTO } from '@/lib/dto';
@@ -10,33 +11,41 @@ export async function GET(req: NextRequest) {
         // Validate Input
         const filters = FiltersSchema.parse(queryParams);
 
+        // 3. Category Logic (Database-side filtering)
+        const shouldFilterCategory = filters.categoria && filters.categoria !== 'Todos' && filters.categoria !== 'all';
+
+        // Construct select string dynamically based on whether we filter or not
+        // Filtering requires inner join (series:series!inner) AND (categorias:categorias!inner)
+        const seriesJoin = shouldFilterCategory ? 'series:series!inner' : 'series:series';
+        const categoryJoin = shouldFilterCategory ? 'categorias:categorias!inner' : 'categorias:categorias';
+
         let query = supabase
             .from('figuras')
             .select(`
+id,
+    nome,
+    imagem_url,
+    disponivel,
+    studio_id,
+    serie_id,
+    ${seriesJoin} (
         id,
         nome,
-        imagem_url,
-        disponivel,
-        studio_id,
-        serie_id,
-        series:series (
-          id,
-          nome,
-          categorias:categorias (
+        ${categoryJoin} (
             id,
             nome
-          )
-        ),
-        studios:studios (
-          id,
-          nome
-        ),
-        figuras_meta (
-          altura_cm,
-          largura_cm,
-          profundidade_cm
         )
-      `);
+        ),
+studios: studios(
+    id,
+    nome
+),
+    figuras_meta(
+        altura_cm,
+        largura_cm,
+        profundidade_cm
+    )
+        `);
 
         // --- Filters ---
 
@@ -54,8 +63,9 @@ export async function GET(req: NextRequest) {
         }
 
         // 3. Category
-        if (filters.categoria && filters.categoria !== 'Todos' && filters.categoria !== 'all') {
-            // Memory filtering used for category due to complex nested relationship filtering
+        if (shouldFilterCategory) {
+            // Filter by the deep nested column via !inner joins
+            query = query.eq('series.categorias.nome', filters.categoria);
         }
 
         // 4. Search (q)
@@ -104,10 +114,7 @@ export async function GET(req: NextRequest) {
             };
         });
 
-        // Manual filtering for Deep relations (Category) if params provided
-        if (filters.categoria && filters.categoria !== 'Todos') {
-            items = items.filter((i: any) => i.categoria === filters.categoria);
-        }
+        // Manual filtering for Deep relations (Category) is handled by DB via !inner joins
 
         // Next Cursor Logic
         // Ideally we check if we got 'limit' items. If so, there might be next page.

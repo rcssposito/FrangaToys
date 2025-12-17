@@ -3,7 +3,7 @@
 import { useEstudios } from '@/hooks/useEstudios';
 import { FiltersSchema } from '@/lib/dto';
 import { Check, X } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { z } from 'zod';
 import { clsx } from 'clsx';
 
@@ -19,16 +19,44 @@ export const DesktopFilters = ({ filters, onChange, categories }: FiltersProps) 
     const { data: estudios } = useEstudios();
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [localSearch, setLocalSearch] = useState(filters.q || '');
+    const [debouncedSearch, setDebouncedSearch] = useState(filters.q || '');
+    const isUserInteraction = useRef(false);
+    const isFocused = useRef(false); // To prevent external jitter if user happens to be typing on desktop too
 
-    // Debounce search
+    // 1. Sync local state FROM props (External updates)
+    useEffect(() => {
+        const remoteQ = filters.q || '';
+        if (remoteQ !== localSearch) {
+            // If user is focused on desktop input, ignore external updates (anti-echo)
+            if (isFocused.current) return;
+
+            // Otherwise, sync up! (e.g. Mobile typed 'a', so Desktop must know 'a')
+            setLocalSearch(remoteQ);
+            setDebouncedSearch(remoteQ);
+            isUserInteraction.current = false;
+        }
+    }, [filters.q]);
+
+    // 2. Debounce localSearch
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (localSearch !== filters.q) {
-                onChange({ ...filters, q: localSearch });
-            }
+            setDebouncedSearch(localSearch);
         }, 400);
         return () => clearTimeout(timer);
-    }, [localSearch, filters, onChange]);
+    }, [localSearch]);
+
+    // 3. Sync debouncedSearch TO parent (User interaction)
+    useEffect(() => {
+        const currentQ = filters.q || '';
+        const debouncedQ = debouncedSearch || '';
+
+        // Only update if settled AND distinct AND user-initiated
+        if (debouncedQ === localSearch && debouncedQ !== currentQ) {
+            if (isUserInteraction.current) {
+                onChange({ ...filters, q: debouncedQ || undefined });
+            }
+        }
+    }, [debouncedSearch, localSearch, filters, onChange]);
 
     const toggleCategory = (cat: string) => {
         onChange({ ...filters, categoria: filters.categoria === cat ? undefined : cat });
@@ -62,7 +90,12 @@ export const DesktopFilters = ({ filters, onChange, categories }: FiltersProps) 
             <div className="relative w-full mb-3">
                 <input
                     value={localSearch}
-                    onChange={(e) => setLocalSearch(e.target.value)}
+                    onChange={(e) => {
+                        setLocalSearch(e.target.value);
+                        isUserInteraction.current = true;
+                    }}
+                    onFocus={() => isFocused.current = true}
+                    onBlur={() => isFocused.current = false}
                     placeholder="Buscar por nome, série ou estúdio..."
                     className="w-full px-4 py-3 rounded border border-gray-700 bg-[#121826] text-white focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-gray-500"
                 />
@@ -153,12 +186,7 @@ export const DesktopFilters = ({ filters, onChange, categories }: FiltersProps) 
 
                     {/* Actions */}
                     <div className="flex gap-3 pt-4 border-t border-gray-800">
-                        <button
-                            onClick={handleApply}
-                            className="px-6 py-2 rounded bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold shadow-lg shadow-orange-900/20 transition-transform active:scale-95"
-                        >
-                            Aplicar
-                        </button>
+
                         <button
                             onClick={handleClear}
                             className="px-6 py-2 rounded border border-zinc-700 bg-black hover:bg-zinc-900 text-white text-sm transition-transform active:scale-95"

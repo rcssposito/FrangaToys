@@ -6,7 +6,7 @@ import Providers from './providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Lojinha3D | Franga Toys',
+  title: 'Franga Toys',
   description: 'Galeria de figuras 3D customizadas',
 };
 
