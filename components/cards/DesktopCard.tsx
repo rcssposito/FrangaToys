@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { FiguraDTO } from '@/lib/dto';
 import Image from 'next/image';
 import { clsx } from 'clsx';
-import { ExternalLink } from 'lucide-react';
+import { getOptimizedImageUrl } from '@/lib/image-utils';
 
 interface FigureCardProps {
     figure: FiguraDTO;
@@ -13,6 +13,8 @@ interface FigureCardProps {
 
 export const DesktopCard = ({ figure, onOpenModal }: FigureCardProps) => {
     const [isFlipped, setIsFlipped] = useState(false);
+
+    const imageUrl = getOptimizedImageUrl(figure.imagem_url);
 
     const buildBudgetLink = () => {
         const msg = `Olá! Quero orçamento da figura: ${figure.nome}${figure.categoria ? ` (${figure.categoria})` : ''}.`;
@@ -39,7 +41,7 @@ export const DesktopCard = ({ figure, onOpenModal }: FigureCardProps) => {
                 }}>
                     <div className="relative w-full h-full bg-[#121214] rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-600 transition-all shadow-lg hover:shadow-xl">
                         <Image
-                            src={figure.imagem_url || '/placeholder.png'}
+                            src={imageUrl}
                             alt={figure.nome}
                             fill
                             className="object-contain transition-transform duration-500 group-hover:scale-105"
@@ -82,7 +84,7 @@ export const DesktopCard = ({ figure, onOpenModal }: FigureCardProps) => {
                     {/* Background Image (Blurred/Darkened) */}
                     <div className="absolute inset-0 opacity-30">
                         <Image
-                            src={figure.imagem_url || '/placeholder.png'}
+                            src={imageUrl}
                             alt="Background"
                             fill
                             className="object-cover blur-sm"

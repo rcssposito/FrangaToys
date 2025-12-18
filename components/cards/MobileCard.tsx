@@ -4,6 +4,7 @@ import { FiguraDTO } from '@/lib/dto';
 import Image from 'next/image';
 import { clsx } from 'clsx';
 import { ExternalLink, Tag } from 'lucide-react';
+import { getOptimizedImageUrl } from '@/lib/image-utils';
 
 interface MobileCardProps {
     figure: FiguraDTO;
@@ -29,7 +30,7 @@ export const MobileCard = ({ figure, onOpenModal, className }: MobileCardProps) 
             {/* Left: Image (Square-ish) */}
             <div className="relative w-36 sm:w-48 aspect-[4/5] bg-zinc-900 border-r border-zinc-800 flex-shrink-0">
                 <Image
-                    src={figure.imagem_url || '/placeholder.png'}
+                    src={getOptimizedImageUrl(figure.imagem_url)}
                     alt={figure.nome}
                     fill
                     className="object-contain p-2"

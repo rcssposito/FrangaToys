@@ -4,6 +4,7 @@ import { useEffect, useCallback } from 'react';
 import { FiguraDTO } from '@/lib/dto';
 import { X, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
+import { getOptimizedImageUrl } from '@/lib/image-utils';
 
 interface ImageModalProps {
     figure: FiguraDTO | null;
@@ -82,7 +83,7 @@ export const ImageModal = ({ figure, isOpen, onClose, onNext, onPrev, currentInd
                 {/* Main Image */}
                 <div className="relative w-full h-full max-h-[75vh] flex items-center justify-center">
                     <Image
-                        src={figure.imagem_url || '/placeholder.png'}
+                        src={getOptimizedImageUrl(figure.imagem_url)}
                         alt={figure.nome}
                         width={1200}
                         height={1200}
