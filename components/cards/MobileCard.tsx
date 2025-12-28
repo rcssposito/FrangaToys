@@ -6,6 +6,7 @@ import { clsx } from 'clsx';
 import { ExternalLink, Tag } from 'lucide-react';
 import { getOptimizedImageUrl } from '@/lib/image-utils';
 import imageKitLoader from '@/lib/image-loader';
+import { useCart } from '@/context/CartContext';
 
 interface MobileCardProps {
     figure: FiguraDTO;
@@ -14,6 +15,7 @@ interface MobileCardProps {
 }
 
 export const MobileCard = ({ figure, onOpenModal, className }: MobileCardProps) => {
+    const { addToCart, removeFromCart, isInCart } = useCart();
 
     const buildBudgetLink = () => {
         const msg = `Olá! Quero orçamento da figura: ${figure.nome}${figure.categoria ? ` (${figure.categoria})` : ''}.`;
@@ -89,15 +91,20 @@ export const MobileCard = ({ figure, onOpenModal, className }: MobileCardProps) 
                         >
                             Detalhes
                         </button>
-                        <a
-                            href={buildBudgetLink()}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-1 bg-orange-600/90 hover:bg-orange-600 text-white text-xs py-2 rounded font-medium text-center transition-colors shadow-sm flex items-center justify-center gap-1"
-                            onClick={(e) => e.stopPropagation()}
+                        <button
+                            className={clsx(
+                                "flex-1 text-white text-xs py-2 rounded font-medium text-center transition-colors shadow-sm flex items-center justify-center gap-1",
+                                isInCart(figure.id)
+                                    ? "bg-green-600 hover:bg-green-700"
+                                    : "bg-orange-600/90 hover:bg-orange-600"
+                            )}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                isInCart(figure.id) ? removeFromCart(figure.id) : addToCart(figure);
+                            }}
                         >
-                            Orçar
-                        </a>
+                            {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar"}
+                        </button>
                     </div>
                 </div>
 

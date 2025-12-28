@@ -6,6 +6,8 @@ import { X, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import { getOptimizedImageUrl } from '@/lib/image-utils';
 import imageKitLoader from '@/lib/image-loader';
+import { useCart } from '@/context/CartContext';
+import { clsx } from 'clsx';
 
 interface ImageModalProps {
     figure: FiguraDTO | null;
@@ -18,6 +20,7 @@ interface ImageModalProps {
 }
 
 export const DesktopModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIndex, total }: ImageModalProps) => {
+    const { addToCart, removeFromCart, isInCart } = useCart();
 
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
         if (!isOpen) return;
@@ -108,15 +111,18 @@ export const DesktopModal = ({ figure, isOpen, onClose, onNext, onPrev, currentI
                             </div>
                         </div>
 
-                        <a
-                            href={buildBudgetLink()}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-lg font-medium transition-transform active:scale-95 whitespace-nowrap"
+                        <button
+                            className={clsx(
+                                "flex items-center gap-2 text-white px-5 py-2.5 rounded-lg font-medium transition-transform active:scale-95 whitespace-nowrap",
+                                isInCart(figure.id)
+                                    ? "bg-green-600 hover:bg-green-700"
+                                    : "bg-orange-600 hover:bg-orange-700"
+                            )}
+                            onClick={() => isInCart(figure.id) ? removeFromCart(figure.id) : addToCart(figure)}
                         >
                             <ExternalLink size={18} />
-                            Pedir Orçamento
-                        </a>
+                            {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar ao Orçamento"}
+                        </button>
                     </div>
                     <div className="absolute -top-3 right-4 bg-zinc-800 text-xs px-2 py-0.5 rounded text-zinc-400">
                         {currentIndex + 1} / {total}

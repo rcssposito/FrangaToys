@@ -7,8 +7,11 @@ import { GalleryGrid } from '@/components/Gallery/GalleryGrid';
 import { DesktopModal } from '@/components/Modal/DesktopModal';
 import { MobileModal } from '@/components/Modal/MobileModal';
 import { BackToTop } from '@/components/ui/BackToTop';
+import { CartIndicator } from '@/components/Cart/CartIndicator';
+import { CartDrawer } from '@/components/Cart/CartDrawer';
 import { FiltersSchema, FiguraDTO } from '@/lib/dto';
 import { z } from 'zod';
+import Link from 'next/link';
 
 type FilterState = z.infer<typeof FiltersSchema>;
 
@@ -16,6 +19,7 @@ const CATEGORIES = ['Anime', 'Games', 'Marvel', 'DC'];
 
 export default function Home() {
   const [filters, setFilters] = useState<FilterState>({});
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // State for Modal Navigation
   const [activeFigure, setActiveFigure] = useState<FiguraDTO | null>(null);
@@ -49,11 +53,14 @@ export default function Home() {
     <main className="min-h-screen bg-black text-white px-0 sm:px-4 py-4 sm:py-8">
       <div className="w-full sm:max-w-[95%] mx-auto">
 
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-10 px-4 hidden sm:block">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
+        {/* Header - Desktop */}
+        <div className="hidden sm:flex items-center justify-center relative mb-8 px-4 py-4">
+          <Link href="/" className="text-3xl font-bold tracking-tight hover:opacity-80 transition-opacity">
             Galeria <span className="text-orange-500">Franga Toys</span>
-          </h1>
+          </Link>
+          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            <CartIndicator onClick={() => setIsDrawerOpen(true)} className="hover:bg-zinc-900 px-3 py-2 rounded-lg" />
+          </div>
         </div>
 
         {/* Filters - Split */}
@@ -62,6 +69,7 @@ export default function Home() {
             filters={filters}
             onChange={setFilters}
             categories={CATEGORIES}
+            onOpenCart={() => setIsDrawerOpen(true)}
           />
         </div>
         <div className="hidden sm:block">
@@ -107,6 +115,7 @@ export default function Home() {
         />
       </div>
 
+      <CartDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
       <BackToTop />
     </main>
   );

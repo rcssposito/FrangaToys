@@ -11,13 +11,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 type FilterState = z.infer<typeof FiltersSchema>;
 
+import { CartIndicator } from '@/components/Cart/CartIndicator';
+
 interface MobileFiltersProps {
     filters: FilterState;
     onChange: (newFilters: FilterState) => void;
     categories: string[];
+    onOpenCart: () => void;
 }
 
-export const MobileFilters = ({ filters, onChange, categories }: MobileFiltersProps) => {
+export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: MobileFiltersProps) => {
     const { data: estudios } = useEstudios();
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [localSearch, setLocalSearch] = useState(filters.q || '');
@@ -98,10 +101,14 @@ export const MobileFilters = ({ filters, onChange, categories }: MobileFiltersPr
         <div className="w-full flex flex-col mb-4 sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-white/5 pb-2 pt-2">
 
             {/* 0. Mobile Brand Header */}
-            <div className="px-4 py-2 flex items-center justify-center">
+            <div className="px-4 py-2 flex items-center justify-between relative">
+                <div className="w-10" /> {/* Spacer to center title */}
                 <h1 className="text-lg font-bold tracking-tight">
                     Galeria <span className="text-orange-500">Franga Toys</span>
                 </h1>
+                <div className="w-10 flex justify-end">
+                    <CartIndicator onClick={onOpenCart} />
+                </div>
             </div>
 
             {/* 1. Search Row */}

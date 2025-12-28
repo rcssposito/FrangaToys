@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { clsx } from 'clsx';
 import { getOptimizedImageUrl } from '@/lib/image-utils';
 import imageKitLoader from '@/lib/image-loader';
+import { useCart } from '@/context/CartContext';
 
 interface FigureCardProps {
     figure: FiguraDTO;
@@ -13,6 +14,7 @@ interface FigureCardProps {
 }
 
 export const DesktopCard = ({ figure, onOpenModal }: FigureCardProps) => {
+    const { addToCart, removeFromCart, isInCart } = useCart();
     const [isFlipped, setIsFlipped] = useState(false);
 
     const imageUrl = getOptimizedImageUrl(figure.imagem_url);
@@ -130,15 +132,20 @@ export const DesktopCard = ({ figure, onOpenModal }: FigureCardProps) => {
                                 </div>
                             </div>
 
-                            <a
-                                href={buildBudgetLink()}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-full bg-[#ea580c] hover:bg-[#c2410c] text-white font-bold py-3 rounded-md transition-colors shadow-lg"
-                                onClick={(e) => e.stopPropagation()}
+                            <button
+                                className={clsx(
+                                    "w-full font-bold py-3 rounded-md transition-colors shadow-lg active:scale-95",
+                                    isInCart(figure.id)
+                                        ? "bg-green-600 hover:bg-green-700 text-white"
+                                        : "bg-orange-600 hover:bg-orange-700 text-white"
+                                )}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    isInCart(figure.id) ? removeFromCart(figure.id) : addToCart(figure);
+                                }}
                             >
-                                Pedir orçamento
-                            </a>
+                                {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar ao Orçamento"}
+                            </button>
 
                         </div>
 

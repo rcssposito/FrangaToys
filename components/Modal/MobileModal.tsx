@@ -6,6 +6,8 @@ import { X, ChevronLeft, ChevronRight, Share } from 'lucide-react';
 import Image from 'next/image';
 import { getOptimizedImageUrl } from '@/lib/image-utils';
 import imageKitLoader from '@/lib/image-loader';
+import { useCart } from '@/context/CartContext';
+import { clsx } from 'clsx';
 
 interface MobileModalProps {
     figure: FiguraDTO | null;
@@ -18,6 +20,7 @@ interface MobileModalProps {
 }
 
 export const MobileModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIndex, total }: MobileModalProps) => {
+    const { addToCart, removeFromCart, isInCart } = useCart();
 
     useEffect(() => {
         if (isOpen) {
@@ -89,15 +92,18 @@ export const MobileModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIn
                     </div>
                 </div>
 
-                <a
-                    href={buildBudgetLink()}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-95"
+                <button
+                    className={clsx(
+                        "w-full text-white font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-95",
+                        isInCart(figure.id)
+                            ? "bg-green-600 hover:bg-green-700"
+                            : "bg-orange-600 hover:bg-orange-700"
+                    )}
+                    onClick={() => isInCart(figure.id) ? removeFromCart(figure.id) : addToCart(figure)}
                 >
                     <Share size={18} />
-                    Pedir Orçamento
-                </a>
+                    {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar ao Orçamento"}
+                </button>
             </div>
         </div>
     );
