@@ -14,7 +14,7 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 // Cliente padrão para o frontend (respeita RLS)
-export const supabase = createClient(supabaseUrl, supabaseKey, {
+export const supabase = createClient(supabaseUrl!, supabaseKey!, {
     auth: {
         persistSession: false,
     },
@@ -23,7 +23,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 // Cliente Admin para rotas de API (ignora RLS)
 // Deve ser usado apenas no servidor
 export const supabaseAdmin = supabaseServiceKey
-    ? createClient(supabaseUrl, supabaseServiceKey, {
+    ? createClient(supabaseUrl!, supabaseServiceKey, {
         auth: {
             persistSession: false,
         },
