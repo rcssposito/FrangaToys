@@ -1,0 +1,71 @@
+
+import { NextResponse } from 'next/server';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
+
+export async function GET(req: Request) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const search = searchParams.get('search');
+
+        // 1. Buscar configurações globais de preço primeiro (sempre id: 1)
+        const { data: settings, error: settingsError } = await supabase
+            .from('pricing_params')
+            .select('*')
+            .eq('id', 1)
+            .single();
+
+        if (settingsError) throw settingsError;
+
+        // 2. Se houver busca, filtramos na tabela 'figuras' (principais) 
+        // para fugir do limite de 1000 itens da View e incluir itens sem metadata
+        if (search) {
+            const { data, error } = await supabase
+                .from('figuras')
+                .select(`
+                    id,
+                    nome,
+                    figuras_meta (
+                        resina_kg,
+                        horas_impressao,
+                        horas_pintura
+                    )
+                `)
+                .ilike('nome', `%${search}%`)
+                .limit(50);
+
+            if (error) throw error;
+
+            const formatted = data.map((item: any) => {
+                const meta = item.figuras_meta || {};
+
+                const custoBase =
+                    ((meta.resina_kg || 0) * (settings.custo_resina_kg || 0)) +
+                    ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0)) +
+                    ((meta.horas_pintura || 0) * (settings.custo_h_pintura || 0));
+
+                return {
+                    id: item.id,
+                    Figura: item.nome,
+                    "Básico (R$)": Number((custoBase * settings.margem_basica).toFixed(2)),
+                    "Premium (R$)": Number((custoBase * settings.margem_premium).toFixed(2))
+                };
+            });
+
+            return NextResponse.json(formatted);
+        }
+
+        // 3. Caso sem busca: Usa a View apenas para carga inicial (limitada a 100 por performance)
+        const { data, error } = await supabase
+            .from('vw_figuras_orcamento')
+            .select('*')
+            .order('Figura', { ascending: true })
+            .limit(100);
+
+        if (error) throw error;
+        return NextResponse.json(data);
+
+    } catch (error: any) {
+        console.error('Catalog Search Error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
