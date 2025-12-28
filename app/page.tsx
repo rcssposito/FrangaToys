@@ -12,6 +12,7 @@ import { CartDrawer } from '@/components/Cart/CartDrawer';
 import { FiltersSchema, FiguraDTO } from '@/lib/dto';
 import { z } from 'zod';
 import Link from 'next/link';
+import { Settings } from 'lucide-react';
 
 type FilterState = z.infer<typeof FiltersSchema>;
 
@@ -58,8 +59,15 @@ export default function Home() {
           <Link href="/" className="text-3xl font-bold tracking-tight hover:opacity-80 transition-opacity">
             Galeria <span className="text-orange-500">Franga Toys</span>
           </Link>
-          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
             <CartIndicator onClick={() => setIsDrawerOpen(true)} className="hover:bg-zinc-900 px-3 py-2 rounded-lg" />
+            <Link
+              href="/admin"
+              className="p-2 text-zinc-500 hover:text-white transition-colors"
+              title="Acessar Admin"
+            >
+              <Settings size={20} />
+            </Link>
           </div>
         </div>
 

@@ -2,12 +2,13 @@
 
 import { useEstudios } from '@/hooks/useEstudios';
 import { FiltersSchema } from '@/lib/dto';
-import { SlidersHorizontal, ArrowLeft, X, Search } from 'lucide-react';
+import { SlidersHorizontal, ArrowLeft, X, Search, Settings } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useState, useEffect, useRef } from 'react';
 import { z } from 'zod';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
 type FilterState = z.infer<typeof FiltersSchema>;
 
@@ -102,12 +103,16 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
 
             {/* 0. Mobile Brand Header */}
             <div className="px-4 py-2 flex items-center justify-between relative">
-                <div className="w-10" /> {/* Spacer to center title */}
+                <div className="w-10 flex justify-start">
+                    <CartIndicator onClick={onOpenCart} />
+                </div>
                 <h1 className="text-lg font-bold tracking-tight">
                     Galeria <span className="text-orange-500">Franga Toys</span>
                 </h1>
                 <div className="w-10 flex justify-end">
-                    <CartIndicator onClick={onOpenCart} />
+                    <Link href="/admin" className="p-1 text-zinc-500 hover:text-white transition-colors">
+                        <Settings size={18} />
+                    </Link>
                 </div>
             </div>
 

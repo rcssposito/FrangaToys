@@ -1,13 +1,22 @@
 import Link from 'next/link';
-import { Users, Package, Settings, LogOut } from 'lucide-react';
+import { Users, Package, Settings, LogOut, Home } from 'lucide-react';
 
 export default function AdminDashboard() {
     return (
         <div className="min-h-screen bg-black text-white p-8">
             <header className="flex justify-between items-center mb-8 border-b border-zinc-800 pb-4">
-                <div>
-                    <h1 className="text-3xl font-bold">Painel Administrativo</h1>
-                    <p className="text-zinc-400">Bem-vindo! Gerencie sua loja por aqui.</p>
+                <div className="flex items-center gap-4">
+                    <Link
+                        href="/"
+                        className="p-2 bg-zinc-900 border border-zinc-800 rounded-lg hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-white"
+                        title="Voltar ao Site"
+                    >
+                        <Home size={20} />
+                    </Link>
+                    <div>
+                        <h1 className="text-3xl font-bold">Painel Administrativo</h1>
+                        <p className="text-zinc-400">Bem-vindo! Gerencie sua loja por aqui.</p>
+                    </div>
                 </div>
 
                 {/* Futuro Botão de Logout */}
