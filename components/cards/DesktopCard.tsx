@@ -7,13 +7,13 @@ import { clsx } from 'clsx';
 import { getOptimizedImageUrl } from '@/lib/image-utils';
 import imageKitLoader from '@/lib/image-loader';
 import { useCart } from '@/context/CartContext';
+import Link from 'next/link';
 
 interface FigureCardProps {
     figure: FiguraDTO;
-    onOpenModal: (f: FiguraDTO) => void;
 }
 
-export const DesktopCard = ({ figure, onOpenModal }: FigureCardProps) => {
+export const DesktopCard = ({ figure }: FigureCardProps) => {
     const { addToCart, removeFromCart, isInCart } = useCart();
     const [isFlipped, setIsFlipped] = useState(false);
 
@@ -40,18 +40,18 @@ export const DesktopCard = ({ figure, onOpenModal }: FigureCardProps) => {
             )}>
 
                 {/* === FRONT FACE === */}
-                <div className="absolute inset-0 backface-hidden" onClick={(e) => {
-                }}>
+                <div className="absolute inset-0 backface-hidden">
                     <div className="relative w-full h-full bg-[#121214] rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-600 transition-all shadow-lg hover:shadow-xl">
-                        <Image
-                            loader={imageKitLoader}
-                            src={imageUrl}
-                            alt={figure.nome}
-                            fill
-                            className="object-contain transition-transform duration-500 group-hover:scale-105"
-                            sizes="(max-width: 768px) 50vw, 25vw"
-                            onClick={() => onOpenModal(figure)}
-                        />
+                        <Link href={`/figura/${figure.id}`} scroll={false}>
+                            <Image
+                                loader={imageKitLoader}
+                                src={imageUrl}
+                                alt={figure.nome}
+                                fill
+                                className="object-contain transition-transform duration-500 group-hover:scale-105"
+                                sizes="(max-width: 768px) 50vw, 25vw"
+                            />
+                        </Link>
 
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 pointer-events-none" />
 

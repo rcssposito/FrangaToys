@@ -84,35 +84,9 @@ export default function Home() {
         <div className="px-2 sm:px-0">
           <GalleryGrid
             filters={filters}
-            onOpenModal={handleOpenModal}
-            setFilteredFigures={setCurrentList}
           />
         </div>
 
-      </div>
-
-      {/* Modal - Split */}
-      <div className="block sm:hidden">
-        <MobileModal
-          figure={activeFigure}
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onNext={nextFigure}
-          onPrev={prevFigure}
-          currentIndex={activeIndex}
-          total={currentList.length}
-        />
-      </div>
-      <div className="hidden sm:block">
-        <DesktopModal
-          figure={activeFigure}
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onNext={nextFigure}
-          onPrev={prevFigure}
-          currentIndex={activeIndex}
-          total={currentList.length}
-        />
       </div>
 
       <CartDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />

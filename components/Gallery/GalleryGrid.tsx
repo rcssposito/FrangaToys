@@ -12,11 +12,9 @@ type Filters = z.infer<typeof FiltersSchema>;
 
 interface GalleryGridProps {
     filters: Filters;
-    onOpenModal: (f: FiguraDTO) => void;
-    setFilteredFigures: (figures: FiguraDTO[]) => void;
 }
 
-export const GalleryGrid = ({ filters, onOpenModal, setFilteredFigures }: GalleryGridProps) => {
+export const GalleryGrid = ({ filters }: GalleryGridProps) => {
     const {
         data,
         fetchNextPage,
@@ -27,14 +25,6 @@ export const GalleryGrid = ({ filters, onOpenModal, setFilteredFigures }: Galler
     } = useFiguras(filters);
 
     const observerTarget = useRef(null);
-
-    // Update parent with flat list for Modal navigation
-    useEffect(() => {
-        if (data) {
-            const allItems = data.pages.flatMap(p => p.items);
-            setFilteredFigures(allItems);
-        }
-    }, [data, setFilteredFigures]);
 
     // Infinite Scroll Observer
     useEffect(() => {
@@ -80,13 +70,11 @@ export const GalleryGrid = ({ filters, onOpenModal, setFilteredFigures }: Galler
                         <div key={figure.id}>
                             <MobileCard
                                 figure={figure}
-                                onOpenModal={onOpenModal}
                                 className="block sm:hidden"
                             />
                             <div className="hidden sm:block">
                                 <DesktopCard
                                     figure={figure}
-                                    onOpenModal={onOpenModal}
                                 />
                             </div>
                         </div>
