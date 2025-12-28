@@ -26,17 +26,20 @@ export async function POST(req: Request) {
         }
 
         // 2. Verificar senha (Hash)
-        console.log('User found:', user.email);
-        console.log('Hash in DB:', user.password_hash);
+        // console.log('User found:', user.email);
         const isValid = await bcrypt.compare(password, user.password_hash);
-        console.log('Password valid?', isValid);
 
         if (!isValid) {
             return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 });
         }
 
         // 3. Criar Sessão (JWT)
-        const token = await signSession({ id: user.id, email: user.email });
+        // Include roles in the session payload
+        const token = await signSession({
+            id: user.id,
+            email: user.email,
+            roles: user.roles || ['admin'] // Fallback if DB migration isn't immediate
+        });
 
         // 4. Salvar no Cookie via Header (Edge compatible)
         const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 dia

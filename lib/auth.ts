@@ -5,10 +5,13 @@ const SECRET_KEY = process.env.JWT_SECRET || 'franga-toys-secret-key-change-me';
 const key = new TextEncoder().encode(SECRET_KEY);
 
 export async function signSession(payload: any) {
-    return await new SignJWT(payload)
+    const iat = Math.floor(Date.now() / 1000);
+    const exp = iat + 24 * 60 * 60; // 24 hours
+
+    return await new SignJWT({ ...payload })
         .setProtectedHeader({ alg: 'HS256' })
-        .setIssuedAt()
-        .setExpirationTime('24h') // Sessão dura 24 horas
+        .setIssuedAt(iat)
+        .setExpirationTime(exp)
         .sign(key);
 }
 
