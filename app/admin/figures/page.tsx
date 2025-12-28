@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
@@ -9,6 +10,8 @@ interface Figure {
     id: number;
     nome: string;
     serie: string;
+    categoria: string;
+    categoria_id: number;
     imagem_url: string;
     altura_cm: number;
     largura_cm: number;
@@ -16,6 +19,7 @@ interface Figure {
     resina_kg: number;
     horas_impressao: number;
     horas_pintura: number;
+    escala: number;
 }
 
 interface PricingSettings {
@@ -28,48 +32,56 @@ interface PricingSettings {
 
 export default function DataGridPage() {
     const [figures, setFigures] = useState<Figure[]>([]);
-    const [filteredFigures, setFilteredFigures] = useState<Figure[]>([]);
     const [settings, setSettings] = useState<PricingSettings | null>(null);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [savingId, setSavingId] = useState<number | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
 
     // Modal State
     const [previewImage, setPreviewImage] = useState<{ url: string, nome: string } | null>(null);
 
+    // Fetch settings on mount
     useEffect(() => {
-        fetchData();
+        const fetchSettings = async () => {
+            try {
+                const res = await fetch('/api/admin/settings');
+                const data = await res.json();
+                setSettings(data);
+            } catch (err) {
+                toast.error('Erro ao carregar configurações');
+            }
+        };
+        fetchSettings();
     }, []);
 
-    useEffect(() => {
-        const lower = search.toLowerCase();
-        setFilteredFigures(
-            figures.filter(f =>
-                f.nome.toLowerCase().includes(lower) ||
-                f.serie.toLowerCase().includes(lower)
-            )
-        );
-    }, [search, figures]);
-
-    const fetchData = async () => {
+    // Fetch figures based on filters
+    const fetchFigures = useCallback(async (catId: number | null = selectedCategoryId, searchTerm: string = search) => {
         try {
-            const [figRes, setRes] = await Promise.all([
-                fetch('/api/admin/figures'),
-                fetch('/api/admin/settings')
-            ]);
+            setLoading(true);
+            const params = new URLSearchParams();
+            if (catId) params.append('categoria_id', catId.toString());
+            if (searchTerm) params.append('search', searchTerm);
 
-            const figData = await figRes.json();
-            const setData = await setRes.json();
-
-            setFigures(figData);
-            setSettings(setData);
-        } catch (err) {
-            toast.error('Erro ao carregar dados');
+            const res = await fetch(`/api/admin/figures?${params.toString()}`);
+            if (!res.ok) throw new Error('Falha ao carregar');
+            const data = await res.json();
+            setFigures(data);
+        } catch (error) {
+            toast.error('Erro ao carregar figuras');
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedCategoryId, search]); // Dependencies for useCallback
+
+    // Initial Load & Filter Changes with debounce
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchFigures();
+        }, 300); // 300ms debounce
+        return () => clearTimeout(timer);
+    }, [fetchFigures]); // fetchFigures depends on selectedCategoryId and search
 
     const handleChange = (id: number, field: keyof Figure, value: string) => {
         const numValue = parseFloat(value) || 0;
@@ -87,6 +99,7 @@ export default function DataGridPage() {
 
             if (!res.ok) throw new Error('Erro ao salvar');
             toast.success('Alterações salvas!');
+            await fetchFigures(); // Refresh data to show calculated dimensions
         } catch (err) {
             toast.error('Erro ao salvar');
         } finally {
@@ -108,7 +121,7 @@ export default function DataGridPage() {
             if (!res.ok) throw new Error('Erro ao excluir');
 
             toast.success('Figura removida com sucesso');
-            setFigures(prev => prev.filter(f => f.id !== id));
+            await fetchFigures(); // Refresh data
         } catch (err) {
             toast.error('Erro ao excluir figura');
         } finally {
@@ -129,7 +142,19 @@ export default function DataGridPage() {
         };
     };
 
-    if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" /></div>;
+    if (loading && figures.length === 0) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" /></div>;
+
+    const CATEGORY_FILTERS = [
+        { id: 1, label: 'Anime' },
+        { id: 2, label: 'Games' },
+        { id: 3, label: 'Marvel' },
+        { id: 4, label: 'DC' },
+        { id: 5, label: 'Random' },
+    ];
+
+    // Check for duplicate keys in figures (Accessing state)
+    const duplicateIds = figures.map(f => f.id).filter((item, index, arr) => arr.indexOf(item) !== index);
+    if (duplicateIds.length > 0) console.error('Duplicate IDs detected:', duplicateIds);
 
     return (
         <div className="min-h-screen bg-black text-white p-8 relative">
@@ -145,12 +170,12 @@ export default function DataGridPage() {
                             <p className="text-zinc-400 text-sm">Clique no nome para ver a foto. Edite custos abaixo.</p>
                         </div>
                     </div>
-
+                    {/* Search Bar */}
                     <div className="relative w-full md:w-96">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
                         <input
                             type="text"
-                            placeholder="Buscar figura ou série..."
+                            placeholder="Buscar figura..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-4 py-3 outline-none focus:border-orange-500 transition-colors"
@@ -158,12 +183,32 @@ export default function DataGridPage() {
                     </div>
                 </div>
 
+                {/* Filters */}
+                <div className="flex gap-2 overflow-x-auto pb-4 mb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-zinc-700">
+                    <button
+                        onClick={() => setSelectedCategoryId(null)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${!selectedCategoryId ? 'bg-orange-500 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+                    >
+                        Todas
+                    </button>
+                    {CATEGORY_FILTERS.map(cat => (
+                        <button
+                            key={cat.id}
+                            onClick={() => setSelectedCategoryId(cat.id)}
+                            className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${selectedCategoryId === cat.id ? 'bg-orange-500 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+                        >
+                            {cat.label}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Tabela */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-x-auto shadow-2xl">
-                    <table className="w-full text-left border-collapse whitespace-nowrap">
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-auto shadow-2xl max-h-[75vh]">
+                    <table className="w-full text-left border-collapse whitespace-nowrap relative">
                         <thead className="bg-zinc-950 text-zinc-400 text-[10px] uppercase tracking-wider sticky top-0 z-10">
                             <tr>
                                 <th className="p-4 min-w-[220px]">Figura (Clique p/ ver)</th>
+                                <th className="p-4 text-center">Escala (%)</th>
                                 <th className="p-4 text-center">KG Resina</th>
                                 <th className="p-4 text-center">H. Impressão</th>
                                 <th className="p-4 text-center">H. Pintura</th>
@@ -174,53 +219,63 @@ export default function DataGridPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-800 text-sm">
-                            {filteredFigures.map(f => {
+                            {figures.map(f => {
                                 const prices = calculatePrices(f);
                                 return (
                                     <tr key={f.id} className="hover:bg-zinc-800/30 transition-colors group">
                                         <td className="p-3">
-                                            <button
+                                            <div
                                                 onClick={() => f.imagem_url && setPreviewImage({ url: f.imagem_url, nome: f.nome })}
-                                                className="text-left group/name"
+                                                className="cursor-pointer text-left group/name"
                                             >
                                                 <div className="font-bold text-white leading-tight group-hover/name:text-orange-500 transition-colors flex items-center gap-2">
                                                     {f.nome}
                                                     {f.imagem_url && <ExternalLink size={12} className="opacity-0 group-hover/name:opacity-100" />}
                                                 </div>
-                                                <div className="text-[11px] text-zinc-500">{f.serie}</div>
-                                            </button>
+                                                <div className="text-[11px] text-zinc-500">{f.categoria} - {f.serie}</div>
+                                            </div>
+                                        </td>
+
+                                        <td className="p-2">
+                                            <input
+                                                type="number" step="1"
+                                                className="w-16 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block text-orange-400 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                value={f.escala || ''}
+                                                onChange={e => handleChange(f.id, 'escala', e.target.value)}
+                                                placeholder="100"
+                                            />
                                         </td>
 
                                         <td className="p-2">
                                             <input
                                                 type="number" step="0.001"
-                                                className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block"
-                                                value={f.resina_kg}
+                                                className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                value={f.resina_kg?.toString() ?? ''}
                                                 onChange={e => handleChange(f.id, 'resina_kg', e.target.value)}
                                             />
                                         </td>
                                         <td className="p-2">
                                             <input
                                                 type="number" step="0.1"
-                                                className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block"
-                                                value={f.horas_impressao}
+                                                className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                value={f.horas_impressao?.toString() ?? ''}
                                                 onChange={e => handleChange(f.id, 'horas_impressao', e.target.value)}
                                             />
                                         </td>
                                         <td className="p-2">
                                             <input
                                                 type="number" step="0.1"
-                                                className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block"
-                                                value={f.horas_pintura}
+                                                className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                value={f.horas_pintura?.toString() ?? ''}
                                                 onChange={e => handleChange(f.id, 'horas_pintura', e.target.value)}
                                             />
                                         </td>
 
                                         <td className="p-2">
                                             <div className="flex gap-1 justify-center">
-                                                <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px]" placeholder="A" value={f.altura_cm} onChange={e => handleChange(f.id, 'altura_cm', e.target.value)} />
-                                                <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px]" placeholder="L" value={f.largura_cm} onChange={e => handleChange(f.id, 'largura_cm', e.target.value)} />
-                                                <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px]" placeholder="P" value={f.profundidade_cm} onChange={e => handleChange(f.id, 'profundidade_cm', e.target.value)} />
+                                                <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="A" value={f.altura_cm?.toString() ?? ''} onChange={e => handleChange(f.id, 'altura_cm', e.target.value)} />
+                                                <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="L" value={f.largura_cm?.toString() ?? ''} onChange={e => handleChange(f.id, 'largura_cm', e.target.value)} />
+                                                <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="P" value={f.profundidade_cm?.toString() ?? ''} onChange={e => handleChange(f.id, 'profundidade_cm', e.target.value)} />
                                             </div>
                                         </td>
 
@@ -252,7 +307,7 @@ export default function DataGridPage() {
                                             </div>
                                         </td>
                                     </tr>
-                                )
+                                );
                             })}
                         </tbody>
                     </table>

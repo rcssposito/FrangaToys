@@ -1,50 +1,102 @@
 
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 // LISTAR FIGURAS + METADADOS
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
-        const { data, error } = await supabase
+        const { searchParams } = new URL(req.url);
+        const search = searchParams.get('search') || '';
+        const categoria_id = searchParams.get('categoria_id');
+
+        // Dynamically select join type based on filtering
+        const shouldFilterCategory = categoria_id && categoria_id !== '0';
+        const seriesJoin = shouldFilterCategory ? 'series:series!inner' : 'series:series';
+        // Note: We need 'categorias' inside series to display category name even if not filtering
+        // But if filtering, we want !inner to ensure match.
+        const categoryJoin = shouldFilterCategory ? 'categorias:categorias!inner' : 'categorias:categorias';
+
+        let query = supabase
             .from('figuras')
             .select(`
         id, 
         nome, 
         imagem_url,
-        series ( nome ),
+        serie_id,
+        ${seriesJoin} ( 
+            nome, 
+            ${categoryJoin} ( nome, id ) 
+        ),
         figuras_meta ( 
           altura_cm, 
           largura_cm, 
           profundidade_cm, 
           resina_kg, 
           horas_impressao, 
-          horas_pintura 
+          horas_pintura,
+          escala
         )
-      `)
-            .order('id', { ascending: true });
+      `);
+
+        // 1. Filter by Category ID
+        if (shouldFilterCategory) {
+            query = query.eq('series.categorias.id', categoria_id);
+        }
+
+        // 2. Filter by Search Term (Name)
+        if (search) {
+            query = query.ilike('nome', `%${search}%`);
+        }
+
+        // 3. Sorting
+        // "No botão todos a busca é por ordem alfabética"
+        query = query.order('nome', { ascending: true });
+
+        // Remove arbitrary limits (or set a very high one if pagination is not strictly implemented in frontend yet)
+        query = query.range(0, 4999);
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
+        // Helper to extract category safely
+        const getCategory = (item: any) => {
+            const series = Array.isArray(item.series) ? item.series[0] : item.series;
+            if (!series) return { nome: 'Outros', id: 0 };
+
+            const cat = Array.isArray(series.categorias) ? series.categorias[0] : series.categorias;
+            if (!cat) return { nome: 'Outros', id: 0 };
+
+            return cat;
+        };
+
         // Formatar para ficar plano (flat) para o frontend
         const formatted = data.map((item: any) => {
-            const meta = item.figuras_meta;
+            const meta = item.figuras_meta && item.figuras_meta.length > 0 ? item.figuras_meta[0] : (item.figuras_meta || {});
+            const cat = getCategory(item);
+
             return {
                 id: item.id,
                 nome: item.nome,
-                serie: item.series?.nome || 'Sem Série',
+                serie: (Array.isArray(item.series) ? item.series[0]?.nome : item.series?.nome) || 'Sem Série',
+                categoria: cat.nome || 'Outros',
+                categoria_id: cat.id || 0,
                 imagem_url: item.imagem_url,
-                altura_cm: meta?.altura_cm || 0,
-                largura_cm: meta?.largura_cm || 0,
-                profundidade_cm: meta?.profundidade_cm || 0,
-                resina_kg: meta?.resina_kg || 0,
-                horas_impressao: meta?.horas_impressao || 0,
-                horas_pintura: meta?.horas_pintura || 0,
+                altura_cm: meta.altura_cm || 0,
+                largura_cm: meta.largura_cm || 0,
+                profundidade_cm: meta.profundidade_cm || 0,
+                resina_kg: meta.resina_kg || 0,
+                horas_impressao: meta.horas_impressao || 0,
+                horas_pintura: meta.horas_pintura || 0,
+                escala: meta.escala || 100,
             };
         });
 
         return NextResponse.json(formatted);
+
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error('Error fetching figures:', error);
+        return NextResponse.json({ error: 'Failed to fetch figures' }, { status: 500 });
     }
 }
 
@@ -52,22 +104,61 @@ export async function GET() {
 export async function PUT(req: Request) {
     try {
         const body = await req.json();
-        const { id, ...meta } = body;
+        const { id, nome, serie, imagem_url, ...rawMeta } = body;
+
+        // Filter to ensure only valid columns are passed to Supabase
+        const meta: any = {
+            resina_kg: rawMeta.resina_kg,
+            horas_impressao: rawMeta.horas_impressao,
+            horas_pintura: rawMeta.horas_pintura,
+            altura_cm: rawMeta.altura_cm,
+            largura_cm: rawMeta.largura_cm,
+            profundidade_cm: rawMeta.profundidade_cm,
+            escala: rawMeta.escala
+        };
+
+        // SMART SCALING LOGIC
+        if (meta.escala) {
+            const { data: currentMeta, error: fetchError } = await supabase
+                .from('figuras_meta')
+                .select('escala, altura_cm, largura_cm, profundidade_cm')
+                .eq('figura_id', id)
+                .single();
+
+            if (!fetchError && currentMeta) {
+                const oldScale = currentMeta.escala || 100;
+                const newScale = Number(meta.escala); // Ensure number
+
+                if (oldScale !== newScale && oldScale > 0) {
+                    const factor = newScale / oldScale;
+
+                    // Round to nearest integer (Standard Rounding: >= 0.5 rounds up)
+                    if (currentMeta.altura_cm) meta.altura_cm = Math.round(currentMeta.altura_cm * factor);
+                    if (currentMeta.largura_cm) meta.largura_cm = Math.round(currentMeta.largura_cm * factor);
+                    if (currentMeta.profundidade_cm) meta.profundidade_cm = Math.round(currentMeta.profundidade_cm * factor);
+                }
+            }
+        }
+
+        console.log('Upserting meta for ID:', id, meta);
 
         // Atualiza apenas a tabela meta
         const { error } = await supabase
             .from('figuras_meta')
             .upsert({
                 figura_id: id,
-                ...meta,
-                updated_at: new Date().toISOString()
+                ...meta
             }, { onConflict: 'figura_id' });
 
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase Upsert Error Detailed:', JSON.stringify(error, null, 2));
+            return NextResponse.json({ error: 'Database Error', details: error }, { status: 500 });
+        }
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        console.error('API Catch Error:', error);
+        return NextResponse.json({ error: error.message || 'Unknown Error', stack: error.stack }, { status: 500 });
     }
 }
 
