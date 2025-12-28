@@ -16,17 +16,16 @@ export function getOptimizedImageUrl(url: string | null): string {
       // Ou poderíamos usar uma constante global se quisermos cache mais longo.
       // Aqui usamos um valor que muda aproximadamente a cada hora para equilíbrio
       const hourScale = Math.floor(Date.now() / (1000 * 60 * 60));
-      
+
       if (urlObj.searchParams.has('v')) {
         // Se já tem versão, não mexemos (ou atualizamos se necessário)
       } else {
         urlObj.searchParams.set('v', hourScale.toString());
       }
 
-      // Garante transformações básicas se não houver 'tr'
-      if (!urlObj.searchParams.has('tr')) {
-        urlObj.searchParams.set('tr', 'w-800,q-80,f-auto');
-      }
+      // As transformações de redimensionamento (width/quality) agora são 
+      // gerenciadas pelo Custom Loader (next.config.ts -> image-loader.ts)
+      // Aqui garantimos apenas o cache-busting (v).
     }
 
     return urlObj.toString();

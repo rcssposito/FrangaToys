@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import { FiguraDTO } from '@/lib/dto';
 import { X, ChevronLeft, ChevronRight, Share } from 'lucide-react';
 import Image from 'next/image';
+import { getOptimizedImageUrl } from '@/lib/image-utils';
+import imageKitLoader from '@/lib/image-loader';
 
 interface MobileModalProps {
     figure: FiguraDTO | null;
@@ -47,7 +49,8 @@ export const MobileModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIn
             {/* 2. Fullscreen Image with Gestures (Simplified for now with buttons) */}
             <div className="flex-1 relative w-full h-full">
                 <Image
-                    src={figure.imagem_url || '/placeholder.png'}
+                    loader={imageKitLoader}
+                    src={getOptimizedImageUrl(figure.imagem_url)}
                     alt={figure.nome}
                     fill
                     className="object-contain"
