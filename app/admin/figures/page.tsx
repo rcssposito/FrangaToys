@@ -13,13 +13,13 @@ interface Figure {
     categoria: string;
     categoria_id: number;
     imagem_url: string;
-    altura_cm: number;
-    largura_cm: number;
-    profundidade_cm: number;
-    resina_kg: number;
-    horas_impressao: number;
-    horas_pintura: number;
-    escala: number;
+    altura_cm: number | string;
+    largura_cm: number | string;
+    profundidade_cm: number | string;
+    resina_kg: number | string;
+    horas_impressao: number | string;
+    horas_pintura: number | string;
+    escala: number | string;
 }
 
 interface PricingSettings {
@@ -84,17 +84,29 @@ export default function DataGridPage() {
     }, [fetchFigures]); // fetchFigures depends on selectedCategoryId and search
 
     const handleChange = (id: number, field: keyof Figure, value: string) => {
-        const numValue = parseFloat(value) || 0;
-        setFigures(prev => prev.map(f => f.id === id ? { ...f, [field]: numValue } : f));
+        setFigures(prev => prev.map(f => f.id === id ? { ...f, [field]: value } : f));
     };
 
     const handleSave = async (figure: Figure) => {
         setSavingId(figure.id);
+
+        // Ensure values are numbers for API
+        const payload = {
+            ...figure,
+            resina_kg: Number(figure.resina_kg),
+            horas_impressao: Number(figure.horas_impressao),
+            horas_pintura: Number(figure.horas_pintura),
+            altura_cm: Number(figure.altura_cm),
+            largura_cm: Number(figure.largura_cm),
+            profundidade_cm: Number(figure.profundidade_cm),
+            escala: Number(figure.escala),
+        };
+
         try {
             const res = await fetch('/api/admin/figures', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(figure),
+                body: JSON.stringify(payload),
             });
 
             if (!res.ok) throw new Error('Erro ao salvar');
@@ -131,10 +143,15 @@ export default function DataGridPage() {
 
     const calculatePrices = (f: Figure) => {
         if (!settings) return { basic: 0, premium: 0 };
+
+        const h_imp = Number(f.horas_impressao);
+        const res_kg = Number(f.resina_kg);
+        const h_pint = Number(f.horas_pintura);
+
         const custoBase =
-            (f.horas_impressao * settings.custo_h_impressao) +
-            (f.resina_kg * settings.custo_resina_kg) +
-            (f.horas_pintura * settings.custo_h_pintura);
+            (h_imp * settings.custo_h_impressao) +
+            (res_kg * settings.custo_resina_kg) +
+            (h_pint * settings.custo_h_pintura);
 
         return {
             basic: custoBase * settings.margem_basica,
@@ -250,7 +267,7 @@ export default function DataGridPage() {
                                             <input
                                                 type="number" step="0.001"
                                                 className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                value={f.resina_kg?.toString() ?? ''}
+                                                value={f.resina_kg === 0 ? '' : f.resina_kg}
                                                 onChange={e => handleChange(f.id, 'resina_kg', e.target.value)}
                                             />
                                         </td>
@@ -258,7 +275,7 @@ export default function DataGridPage() {
                                             <input
                                                 type="number" step="0.1"
                                                 className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                value={f.horas_impressao?.toString() ?? ''}
+                                                value={f.horas_impressao === 0 ? '' : f.horas_impressao}
                                                 onChange={e => handleChange(f.id, 'horas_impressao', e.target.value)}
                                             />
                                         </td>
@@ -266,16 +283,16 @@ export default function DataGridPage() {
                                             <input
                                                 type="number" step="0.1"
                                                 className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                value={f.horas_pintura?.toString() ?? ''}
+                                                value={f.horas_pintura === 0 ? '' : f.horas_pintura}
                                                 onChange={e => handleChange(f.id, 'horas_pintura', e.target.value)}
                                             />
                                         </td>
 
                                         <td className="p-2">
                                             <div className="flex gap-1 justify-center">
-                                                <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="A" value={f.altura_cm?.toString() ?? ''} onChange={e => handleChange(f.id, 'altura_cm', e.target.value)} />
-                                                <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="L" value={f.largura_cm?.toString() ?? ''} onChange={e => handleChange(f.id, 'largura_cm', e.target.value)} />
-                                                <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="P" value={f.profundidade_cm?.toString() ?? ''} onChange={e => handleChange(f.id, 'profundidade_cm', e.target.value)} />
+                                                <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="A" value={f.altura_cm === 0 ? '' : f.altura_cm} onChange={e => handleChange(f.id, 'altura_cm', e.target.value)} />
+                                                <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="L" value={f.largura_cm === 0 ? '' : f.largura_cm} onChange={e => handleChange(f.id, 'largura_cm', e.target.value)} />
+                                                <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="P" value={f.profundidade_cm === 0 ? '' : f.profundidade_cm} onChange={e => handleChange(f.id, 'profundidade_cm', e.target.value)} />
                                             </div>
                                         </td>
 
