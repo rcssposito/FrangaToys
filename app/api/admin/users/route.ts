@@ -1,3 +1,6 @@
+import { NextResponse } from 'next/server';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
+import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth';
 

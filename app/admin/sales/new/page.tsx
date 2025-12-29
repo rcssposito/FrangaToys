@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { Save, Loader2, ArrowLeft, Search, DollarSign } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
 interface CatalogItem {
@@ -22,8 +22,11 @@ export default function NewSalePage() {
     // Form
     const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null);
     const [cliente, setCliente] = useState('');
+    const [dataVenda, setDataVenda] = useState(new Date().toISOString().split('T')[0]); // Default Today
     const [canal, setCanal] = useState('Whatsapp');
     const [valorFinal, setValorFinal] = useState('');
+    const [quantidade, setQuantidade] = useState(1);
+    const [observacao, setObservacao] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
@@ -69,7 +72,10 @@ export default function NewSalePage() {
                     figura_id: selectedItem.id,
                     cliente_nome: cliente,
                     canal_venda: canal,
-                    valor_venda_final: parseFloat(valorFinal)
+                    valor_venda_final: parseFloat(valorFinal),
+                    quantidade,
+                    observacao,
+                    data_venda: dataVenda // YYYY-MM-DD
                 }),
             });
 
@@ -159,31 +165,74 @@ export default function NewSalePage() {
                                         placeholder="Nome do Cliente"
                                     />
                                 </div>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm text-zinc-400 mb-1">Data da Venda</label>
+                                        <div className="relative">
+                                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                                            <input
+                                                type="date"
+                                                required
+                                                value={dataVenda}
+                                                onChange={e => setDataVenda(e.target.value)}
+                                                className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 pl-10 outline-none focus:border-orange-500 text-white scheme-dark"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-zinc-400 mb-1">Canal</label>
+                                        <select
+                                            value={canal}
+                                            onChange={e => setCanal(e.target.value)}
+                                            className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 outline-none focus:border-orange-500 text-white"
+                                        >
+                                            <option>Whatsapp</option>
+                                            <option>Instagram</option>
+                                            <option>Indicação</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm text-zinc-400 mb-1">Canal</label>
-                                    <select
-                                        value={canal}
-                                        onChange={e => setCanal(e.target.value)}
-                                        className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 outline-none focus:border-orange-500 text-white"
-                                    >
-                                        <option>Whatsapp</option>
-                                        <option>Instagram</option>
-                                        <option>Indicação</option>
-                                    </select>
+                                    <label className="block text-sm text-zinc-400 mb-1">Quantidade</label>
+                                    <div className="relative">
+                                        <Package className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                                        <input
+                                            type="number" min="1" required
+                                            value={quantidade}
+                                            onChange={e => setQuantidade(Math.max(1, parseInt(e.target.value) || 1))}
+                                            className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 pl-10 outline-none focus:border-orange-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm text-zinc-400 mb-1">Valor Final Total (R$)</label>
+                                    <div className="relative">
+                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500" size={18} />
+                                        <input
+                                            type="number" step="0.01" required
+                                            value={valorFinal}
+                                            onChange={e => setValorFinal(e.target.value)}
+                                            className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 pl-10 outline-none focus:border-green-500 text-lg font-bold text-green-400"
+                                        />
+                                    </div>
+                                    <div className="text-xs text-zinc-500 mt-1">
+                                        Valor total, mesmo se quantidade for maior que 1.
+                                    </div>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm text-zinc-400 mb-1">Valor Final da Venda (R$)</label>
-                                <div className="relative">
-                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500" size={18} />
-                                    <input
-                                        type="number" step="0.01" required
-                                        value={valorFinal}
-                                        onChange={e => setValorFinal(e.target.value)}
-                                        className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 pl-10 outline-none focus:border-green-500 text-lg font-bold text-green-400"
-                                    />
-                                </div>
+                                <label className="block text-sm text-zinc-400 mb-1">Observações (Opcional)</label>
+                                <textarea
+                                    value={observacao}
+                                    onChange={e => setObservacao(e.target.value)}
+                                    className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 outline-none focus:border-orange-500 h-20 resize-none"
+                                    placeholder="Ex: Brinde, Troca, etc."
+                                />
                             </div>
 
                             <button

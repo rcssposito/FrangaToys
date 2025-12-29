@@ -11,7 +11,8 @@ import {
     ShoppingCart,
     Settings,
     LogOut,
-    Store
+    Store,
+    Activity
 } from 'lucide-react';
 
 export default function AdminSidebar() {
@@ -26,28 +27,34 @@ export default function AdminSidebar() {
             roles: ['admin', 'sales', 'pricing', 'finance'] // Everyone sees dashboard (content filtered)
         },
         {
-            name: 'Usuários',
-            href: '/admin/users',
-            icon: Users,
-            roles: ['admin']
-        },
-        {
             name: 'Catálogo',
             href: '/admin/figures',
             icon: Package,
-            roles: ['admin', 'pricing', 'sales'] // Sales might need to see catalog too? Yes.
-        },
-        {
-            name: 'Vendas',
-            href: '/admin/sales',
-            icon: ShoppingCart,
-            roles: ['admin', 'sales', 'finance']
+            roles: ['admin', 'pricing', 'sales']
         },
         {
             name: 'Configurações',
             href: '/admin/settings',
             icon: Settings,
             roles: ['admin', 'pricing']
+        },
+        {
+            name: 'Estúdios',
+            href: '/admin/studios',
+            icon: Activity,
+            roles: ['admin']
+        },
+        {
+            name: 'Usuários',
+            href: '/admin/users',
+            icon: Users,
+            roles: ['admin']
+        },
+        {
+            name: 'Vendas',
+            href: '/admin/sales',
+            icon: ShoppingCart,
+            roles: ['admin', 'sales', 'finance']
         }
     ];
 
@@ -83,8 +90,8 @@ export default function AdminSidebar() {
                             key={item.href}
                             href={item.href}
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
-                                    ? 'bg-orange-500/10 text-orange-500'
-                                    : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
+                                ? 'bg-orange-500/10 text-orange-500'
+                                : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
                                 }`}
                         >
                             <item.icon size={20} />

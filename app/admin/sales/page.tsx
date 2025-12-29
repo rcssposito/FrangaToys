@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Plus, Loader2, ArrowLeft, TrendingUp, Calendar, Trash2 } from 'lucide-react';
+import { Plus, Loader2, ArrowLeft, TrendingUp, Calendar, Trash2, Package } from 'lucide-react';
 import Link from 'next/link';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface Sale {
     id: number;
@@ -11,12 +13,24 @@ interface Sale {
     cliente_nome: string;
     valor_venda_final: number;
     lucro_real: number;
-    figuras: { nome: string };
+    quantidade: number;
+    observacao?: string;
+    figuras: {
+        nome: string;
+        studios: { nome: string } | { nome: string }[];
+    };
+}
+
+interface MonthGroup {
+    label: string;
+    totalVenda: number;
+    totalLucro: number;
+    sales: Sale[];
 }
 
 export default function SalesPage() {
-    const [sales, setSales] = useState<Sale[]>([]);
     const [loading, setLoading] = useState(true);
+    const [groups, setGroups] = useState<MonthGroup[]>([]);
 
     useEffect(() => {
         fetchSales();
@@ -25,13 +39,46 @@ export default function SalesPage() {
     const fetchSales = async () => {
         try {
             const res = await fetch('/api/admin/sales');
-            const data = await res.json();
-            if (res.ok) setSales(data);
+            const data: Sale[] = await res.json();
+
+            if (res.ok) {
+                processGroups(data);
+            }
         } catch (err) {
             toast.error('Erro ao carregar vendas');
         } finally {
             setLoading(false);
         }
+    };
+
+    const processGroups = (data: Sale[]) => {
+        const grouped: { [key: string]: MonthGroup } = {};
+        const order: string[] = [];
+
+        data.forEach(sale => {
+            const date = new Date(sale.data_venda);
+            // Label ex: "Dezembro 2025"
+            // Capitalize first letter
+            let label = format(date, 'MMMM yyyy', { locale: ptBR });
+            label = label.charAt(0).toUpperCase() + label.slice(1);
+
+            if (!grouped[label]) {
+                grouped[label] = {
+                    label,
+                    totalVenda: 0,
+                    totalLucro: 0,
+                    sales: []
+                };
+                order.push(label);
+            }
+
+            grouped[label].sales.push(sale);
+            grouped[label].totalVenda += sale.valor_venda_final;
+            grouped[label].totalLucro += sale.lucro_real;
+        });
+
+        const result = order.map(key => grouped[key]);
+        setGroups(result);
     };
 
     const handleDelete = async (id: number) => {
@@ -47,15 +94,23 @@ export default function SalesPage() {
             if (!res.ok) throw new Error('Erro ao excluir');
 
             toast.success('Venda removida');
-            setSales(prev => prev.filter(s => s.id !== id));
+            // Refresh list
+            fetchSales();
         } catch (err) {
             toast.error('Erro ao excluir venda');
         }
     };
 
+    const getStudioName = (figura: Sale['figuras']) => {
+        if (!figura?.studios) return '-';
+        if (Array.isArray(figura.studios)) return figura.studios[0]?.nome || '-';
+        // @ts-ignore
+        return figura.studios.nome || '-';
+    };
+
     return (
         <div className="min-h-screen bg-black text-white p-8">
-            <div className="max-w-5xl mx-auto">
+            <div className="max-w-6xl mx-auto">
 
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
@@ -71,56 +126,100 @@ export default function SalesPage() {
                     </Link>
                 </div>
 
-                {/* Lista */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-                    {loading ? (
-                        <div className="p-12 flex justify-center"><Loader2 className="animate-spin text-orange-500" /></div>
-                    ) : sales.length === 0 ? (
-                        <div className="p-12 text-center text-zinc-500">Nenhuma venda registrada ainda.</div>
-                    ) : (
-                        <table className="w-full text-left">
-                            <thead className="bg-zinc-950 text-zinc-400 text-xs uppercase tracking-wider">
-                                <tr>
-                                    <th className="p-4">Data</th>
-                                    <th className="p-4">Cliente</th>
-                                    <th className="p-4">Figura</th>
-                                    <th className="p-4 text-right">Valor Venda</th>
-                                    <th className="p-4 text-right text-green-500">Lucro Real</th>
-                                    <th className="p-4 w-10"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-zinc-800 text-sm">
-                                {sales.map(sale => (
-                                    <tr key={sale.id} className="hover:bg-zinc-800/50">
-                                        <td className="p-4 text-zinc-400 flex items-center gap-2">
-                                            <Calendar size={14} />
-                                            {new Date(sale.data_venda).toLocaleDateString()}
-                                        </td>
-                                        <td className="p-4 font-medium">{sale.cliente_nome}</td>
-                                        <td className="p-4 text-zinc-300">{sale.figuras?.nome || 'Desconhecida'}</td>
-                                        <td className="p-4 text-right">R$ {sale.valor_venda_final.toFixed(2)}</td>
-                                        <td className="p-4 text-right text-green-400 font-bold">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <TrendingUp size={14} />
-                                                R$ {sale.lucro_real?.toFixed(2)}
-                                            </div>
-                                        </td>
-                                        <td className="p-4">
-                                            <button
-                                                onClick={() => handleDelete(sale.id)}
-                                                className="p-2 hover:bg-red-500/20 text-zinc-600 hover:text-red-500 rounded transition-colors"
-                                                title="Excluir Venda"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
-                </div>
+                {/* Lista Agrupada */}
+                {loading ? (
+                    <div className="p-12 flex justify-center"><Loader2 className="animate-spin text-orange-500" /></div>
+                ) : groups.length === 0 ? (
+                    <div className="p-12 text-center text-zinc-500 bg-zinc-900 rounded-xl border border-zinc-800">
+                        Nenhuma venda registrada ainda.
+                    </div>
+                ) : (
+                    <div className="space-y-8">
+                        {groups.map((group) => (
+                            <div key={group.label} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                                {/* Group Header */}
+                                <div className="bg-zinc-950 px-6 py-4 flex justify-between items-center border-b border-zinc-800">
+                                    <h2 className="text-xl font-bold text-orange-500 flex items-center gap-2">
+                                        <Calendar size={20} />
+                                        {group.label}
+                                    </h2>
+                                    <div className="flex gap-6 text-sm">
+                                        <div>
+                                            <span className="text-zinc-500 block text-xs uppercase">Vendas</span>
+                                            <span className="font-bold text-white">R$ {group.totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-zinc-500 block text-xs uppercase">Lucro</span>
+                                            <span className="font-bold text-green-500">R$ {group.totalLucro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    </div>
+                                </div>
 
+                                {/* Table */}
+                                <table className="w-full text-left">
+                                    <thead className="bg-zinc-900/50 text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
+                                        <tr>
+                                            <th className="p-4 pl-6">Data</th>
+                                            <th className="p-4">Figura / Estúdio</th>
+                                            <th className="p-4 text-center">Qtd</th>
+                                            <th className="p-4">Cliente</th>
+                                            <th className="p-4 text-right">Valor</th>
+                                            <th className="p-4 text-right text-green-600">Lucro</th>
+                                            <th className="p-4 w-10"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-800 text-sm">
+                                        {group.sales.map(sale => (
+                                            <tr key={sale.id} className="hover:bg-zinc-800/50 transition-colors">
+                                                <td className="p-4 pl-6 text-zinc-400 font-mono">
+                                                    {new Date(sale.data_venda).toLocaleDateString('pt-BR')}
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="font-medium text-white">{sale.figuras?.nome || 'Desconhecida'}</div>
+                                                    <div className="text-xs text-zinc-500 uppercase tracking-wide mt-0.5">
+                                                        {getStudioName(sale.figuras)}
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    {sale.quantidade > 1 ? (
+                                                        <span className="bg-orange-500/10 text-orange-500 px-2 py-1 rounded text-xs font-bold ring-1 ring-orange-500/20">
+                                                            {sale.quantidade}x
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-zinc-600">1</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-4 text-zinc-300">
+                                                    {sale.cliente_nome}
+                                                    {sale.observacao && (
+                                                        <div className="text-xs text-zinc-500 mt-0.5 italic max-w-[150px] truncate" title={sale.observacao}>
+                                                            {sale.observacao}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="p-4 text-right font-medium">
+                                                    R$ {sale.valor_venda_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="p-4 text-right text-green-500/80 font-mono text-xs">
+                                                    R$ {sale.lucro_real?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="p-4 pr-6">
+                                                    <button
+                                                        onClick={() => handleDelete(sale.id)}
+                                                        className="p-2 hover:bg-red-500/10 text-zinc-600 hover:text-red-500 rounded transition-colors"
+                                                        title="Excluir Venda"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );

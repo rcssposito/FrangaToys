@@ -8,7 +8,7 @@ export const FiguraSchema = z.object({
   studio_id: z.number().nullable(),
   serie_id: z.number().nullable(),
   // Joined fields
-  serie: z.string().nullable().optional(), 
+  serie: z.string().nullable().optional(),
   categoria: z.string().nullable().optional(),
   studio: z.string().nullable().optional(),
   // Meta fields (joined or null)
@@ -32,4 +32,9 @@ export const FiltersSchema = z.object({
 export const EstudioSchema = z.object({
   id: z.number(),
   nome: z.string(),
+  custo_mensal: z.number().nullable().optional(),
+  qtd_display: z.number().nullable().optional(), // Now mostly read-only/legacy but kept
+  qualidade: z.number().nullable().optional(),
+  observacao: z.string().nullable().optional(),
+  figuras: z.array(z.object({ count: z.number() })).optional(),
 });

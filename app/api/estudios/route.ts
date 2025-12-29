@@ -6,7 +6,7 @@ export async function GET() {
     try {
         const { data, error } = await supabase
             .from('studios')
-            .select('id, nome')
+            .select('*, figuras(count)')
             .order('nome', { ascending: true });
 
         if (error) {

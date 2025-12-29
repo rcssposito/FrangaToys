@@ -9,7 +9,11 @@ export async function GET() {
             .from('vendas')
             .select(`
         *,
-        figuras ( nome, imagem_url )
+        figuras ( 
+            nome, 
+            imagem_url,
+            studios ( nome )
+        )
       `)
             .order('data_venda', { ascending: false });
 
@@ -25,12 +29,11 @@ export async function GET() {
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { figura_id, valor_venda_final, cliente_nome, canal_venda } = body;
+        const { figura_id, valor_venda_final, cliente_nome, canal_venda, quantidade = 1, observacao, data_venda } = body;
 
-        console.log('Registering sale for figure ID:', figura_id);
+        console.log('Registering sale for figure ID:', figura_id, 'Qty:', quantidade);
 
         // 1. Buscar dados técnicos da figura e as configurações globais de preço
-        // Isso garante que o cálculo é feito com dados frescos, sem depender da View
         const [metaRes, settingsRes] = await Promise.all([
             supabase.from('figuras_meta').select('*').eq('figura_id', figura_id).single(),
             supabase.from('pricing_params').select('*').eq('id', 1).single()
@@ -49,26 +52,38 @@ export async function POST(req: Request) {
         const custo_resina_raw = (meta.resina_kg || 0) * (settings.custo_resina_kg || 0);
         const custo_impressao_raw = (meta.horas_impressao || 0) * (settings.custo_h_impressao || 0);
 
-        const custo_producao_real = Math.ceil(custo_resina_raw + custo_impressao_raw);
-        const lucro_real = valor_venda_final - custo_producao_real;
+        const custo_unitario_real = Math.ceil(custo_resina_raw + custo_impressao_raw);
+        const custo_total_real = custo_unitario_real * quantidade;
+
+        const lucro_real = valor_venda_final - custo_total_real;
 
         console.log('--- LUCRO CALCULADO (API) ---');
         console.log('Figura ID:', figura_id);
-        console.log('Produção Raw:', (custo_resina_raw + custo_impressao_raw).toFixed(2));
-        console.log('Produção (Math.ceil):', custo_producao_real);
-        console.log('Venda:', valor_venda_final, 'Lucro:', lucro_real.toFixed(2));
+        console.log('Custo Unitário:', custo_unitario_real);
+        console.log('Quantidade:', quantidade);
+        console.log('Custo Total:', custo_total_real);
+        console.log('Venda Total:', valor_venda_final, 'Lucro Total:', lucro_real.toFixed(2));
+
+        const saleData: any = {
+            figura_id,
+            cliente_nome,
+            canal_venda,
+            valor_venda_final, // Valor total da venda
+            custo_producao_snapshot: custo_total_real, // Custo total da produção
+            lucro_real,
+            status: 'Concluída',
+            quantidade,
+            observacao
+        };
+
+        // Se data_venda for fornecida, usa ela. Senão o banco usa default now()
+        if (data_venda) {
+            saleData.data_venda = data_venda;
+        }
 
         const { data, error } = await supabase
             .from('vendas')
-            .insert([{
-                figura_id,
-                cliente_nome,
-                canal_venda,
-                valor_venda_final,
-                custo_producao_snapshot: custo_producao_real,
-                lucro_real,
-                status: 'Concluída'
-            }])
+            .insert([saleData])
             .select()
             .single();
 
