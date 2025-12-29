@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { toast } from 'sonner';
-import { Lock, Loader2 } from 'lucide-react';
+import { Lock, Loader2, ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -40,6 +41,11 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen bg-black flex items-center justify-center p-4">
+            <Link href="/" className="absolute top-8 left-8 text-zinc-400 hover:text-white flex items-center gap-2 transition-colors">
+                <ArrowLeft size={20} />
+                <span className="font-medium">Voltar para a Loja</span>
+            </Link>
+
             <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 p-8 rounded-2xl shadow-xl">
                 <div className="flex flex-col items-center mb-8">
                     <div className="w-12 h-12 bg-orange-500/10 rounded-full flex items-center justify-center mb-4">
@@ -57,7 +63,7 @@ export default function LoginPage() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
-                            placeholder="admin@frangatoys.com.br"
+                            placeholder="seu@email.com"
                             required
                         />
                     </div>
@@ -69,7 +75,7 @@ export default function LoginPage() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
-                            placeholder="••••••••"
+                            placeholder="Sua senha"
                             required
                         />
                     </div>
