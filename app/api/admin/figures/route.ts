@@ -118,26 +118,60 @@ export async function PUT(req: Request) {
         };
 
         // SMART SCALING LOGIC
-        if (meta.escala) {
-            const { data: currentMeta, error: fetchError } = await supabase
-                .from('figuras_meta')
-                .select('escala, altura_cm, largura_cm, profundidade_cm')
-                .eq('figura_id', id)
-                .single();
+        // SMART SCALING LOGIC (Non-Destructive)
+        // Fetch current meta including ORIGINAL dimensions
+        const { data: currentMeta, error: fetchError } = await supabase
+            .from('figuras_meta')
+            .select('escala, altura_cm, largura_cm, profundidade_cm, altura_original, largura_original, profundidade_original')
+            .eq('figura_id', id)
+            .single();
 
-            if (!fetchError && currentMeta) {
-                const oldScale = currentMeta.escala || 100;
-                const newScale = Number(meta.escala); // Ensure number
+        if (!fetchError && currentMeta) {
+            const oldScale = Number(currentMeta.escala) || 100;
+            const newScale = Number(meta.escala) || 100;
 
-                if (oldScale !== newScale && oldScale > 0) {
-                    const factor = newScale / oldScale;
+            const hasScaleChanged = oldScale !== newScale && newScale > 0;
 
-                    // Round to nearest integer (Standard Rounding: >= 0.5 rounds up)
-                    if (currentMeta.altura_cm) meta.altura_cm = Math.round(currentMeta.altura_cm * factor);
-                    if (currentMeta.largura_cm) meta.largura_cm = Math.round(currentMeta.largura_cm * factor);
-                    if (currentMeta.profundidade_cm) meta.profundidade_cm = Math.round(currentMeta.profundidade_cm * factor);
+            if (hasScaleChanged) {
+                // CASE 1: Scale Changed -> Recalculate dimensions from ORIGINAL
+                // If original is missing (shouldn't happen with backfill), backfill on the fly
+                const factor = newScale / 100.0;
+
+                const originalH = currentMeta.altura_original ?? (currentMeta.altura_cm ? currentMeta.altura_cm / (oldScale / 100.0) : 0);
+                const originalW = currentMeta.largura_original ?? (currentMeta.largura_cm ? currentMeta.largura_cm / (oldScale / 100.0) : 0);
+                const originalD = currentMeta.profundidade_original ?? (currentMeta.profundidade_cm ? currentMeta.profundidade_cm / (oldScale / 100.0) : 0);
+
+                meta.altura_cm = Math.round(Number(originalH) * factor);
+                meta.largura_cm = Math.round(Number(originalW) * factor);
+                meta.profundidade_cm = Math.round(Number(originalD) * factor);
+
+                // Ensure Originals are set if they were missing
+                meta.altura_original = originalH;
+                meta.largura_original = originalW;
+                meta.profundidade_original = originalD;
+
+            } else {
+                // CASE 2: Scale NOT Changed -> Check for Manual Dimension Edits
+                // If user edited height manually, we must update the ORIGINAL to match this new reality at current scale.
+                const scaleFactor = newScale / 100.0;
+
+                if (meta.altura_cm !== undefined && meta.altura_cm !== currentMeta.altura_cm) {
+                    meta.altura_original = meta.altura_cm / scaleFactor;
+                }
+                if (meta.largura_cm !== undefined && meta.largura_cm !== currentMeta.largura_cm) {
+                    meta.largura_original = meta.largura_cm / scaleFactor;
+                }
+                if (meta.profundidade_cm !== undefined && meta.profundidade_cm !== currentMeta.profundidade_cm) {
+                    meta.profundidade_original = meta.profundidade_cm / scaleFactor;
                 }
             }
+        } else {
+            // CASE 3: New Record (No currentMeta)
+            // Initialize Original Dimensions based on provided dimensions and scale
+            const scaleFactor = (Number(meta.escala) || 100) / 100.0;
+            if (meta.altura_cm) meta.altura_original = meta.altura_cm / scaleFactor;
+            if (meta.largura_cm) meta.largura_original = meta.largura_cm / scaleFactor;
+            if (meta.profundidade_cm) meta.profundidade_original = meta.profundidade_cm / scaleFactor;
         }
 
         console.log('Upserting meta for ID:', id, meta);
