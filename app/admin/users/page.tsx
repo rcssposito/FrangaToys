@@ -29,6 +29,7 @@ export default function UsersPage() {
     const [password, setPassword] = useState('');
     const [selectedRoles, setSelectedRoles] = useState<string[]>(['sales']);
     const [creating, setCreating] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
 
     useEffect(() => {
         fetchUsers();
@@ -46,29 +47,51 @@ export default function UsersPage() {
         }
     };
 
-    const handleCreate = async (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setCreating(true);
         try {
+            const method = isEditing ? 'PUT' : 'POST';
+            const body = { email, password, roles: selectedRoles };
+
             const res = await fetch('/api/admin/users', {
-                method: 'POST',
+                method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, roles: selectedRoles }),
+                body: JSON.stringify(body),
             });
 
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
 
-            toast.success('Usuário criado!');
+            toast.success(isEditing ? 'Usuário atualizado!' : 'Usuário criado!');
+
+            // Reset form
             setEmail('');
             setPassword('');
             setSelectedRoles(['sales']);
+            setIsEditing(false);
             fetchUsers();
         } catch (err: any) {
             toast.error(err.message);
         } finally {
             setCreating(false);
         }
+    };
+
+    const handleEdit = (user: User) => {
+        setEmail(user.email);
+        setSelectedRoles(user.roles || []);
+        setPassword(''); // Don't fill password
+        setIsEditing(true);
+        // Scroll to form
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleCancelEdit = () => {
+        setIsEditing(false);
+        setEmail('');
+        setPassword('');
+        setSelectedRoles(['sales']);
     };
 
     const handleDelete = async (id: number) => {
@@ -101,12 +124,6 @@ export default function UsersPage() {
     return (
         <div className="max-w-6xl mx-auto">
             <div className="flex items-center gap-4 mb-8">
-                {/* Back button removed as Sidebar handles navigation, but kept for mobile/habit? 
-                    Actually with Sidebar, breadcrumbs are better, but let's keep simple header.
-                    Wait, the existing page had ArrowLeft to /admin.
-                    With Sidebar, /admin is just another tab. 
-                    I'll keep the header minimal.
-                */}
                 <h1 className="text-3xl font-bold">Gerenciar Usuários</h1>
             </div>
 
@@ -123,7 +140,7 @@ export default function UsersPage() {
                                     <th className="p-4">Email</th>
                                     <th className="p-4">Funções</th>
                                     <th className="p-4 text-right">Data</th>
-                                    <th className="p-4 w-[50px]"></th>
+                                    <th className="p-4 w-[100px]"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-800">
@@ -142,10 +159,18 @@ export default function UsersPage() {
                                         <td className="p-4 text-zinc-500 text-sm text-right">
                                             {new Date(user.created_at).toLocaleDateString()}
                                         </td>
-                                        <td className="p-4">
+                                        <td className="p-4 flex gap-2 justify-end">
+                                            <button
+                                                onClick={() => handleEdit(user)}
+                                                className="p-2 text-zinc-500 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"
+                                                title="Editar"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                                            </button>
                                             <button
                                                 onClick={() => handleDelete(user.id)}
                                                 className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                                                title="Excluir"
                                             >
                                                 <Trash2 size={18} />
                                             </button>
@@ -160,29 +185,33 @@ export default function UsersPage() {
                 {/* Form */}
                 <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 h-fit sticky top-8">
                     <h2 className="text-lg font-bold mb-6 flex items-center gap-2 pb-4 border-b border-zinc-800">
-                        <Plus size={18} className="text-orange-500" /> Novo Usuário
+                        <Plus size={18} className="text-orange-500" />
+                        {isEditing ? 'Editar Usuário' : 'Novo Usuário'}
                     </h2>
-                    <form onSubmit={handleCreate} className="space-y-4">
+                    <form onSubmit={handleSave} className="space-y-4">
                         <div>
                             <label className="text-sm text-zinc-400 block mb-1">Email</label>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
-                                className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 outline-none focus:border-orange-500 text-sm"
+                                className={`w-full bg-zinc-950 border border-zinc-800 rounded p-2 outline-none focus:border-orange-500 text-sm ${isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 placeholder="ex: vendas@frangatoys.com"
                                 required
+                                disabled={isEditing}
                             />
                         </div>
                         <div>
-                            <label className="text-sm text-zinc-400 block mb-1">Senha</label>
+                            <label className="text-sm text-zinc-400 block mb-1">
+                                {isEditing ? 'Nova Senha (Opcional)' : 'Senha'}
+                            </label>
                             <input
                                 type="password"
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
                                 className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 outline-none focus:border-orange-500 text-sm"
-                                placeholder="******"
-                                required
+                                placeholder={isEditing ? "Deixe em branco para manter" : "******"}
+                                required={!isEditing}
                             />
                         </div>
 
@@ -203,12 +232,23 @@ export default function UsersPage() {
                             </div>
                         </div>
 
-                        <button
-                            disabled={creating}
-                            className="w-full bg-orange-600 hover:bg-orange-700 font-bold py-2 rounded transition-colors flex justify-center mt-4"
-                        >
-                            {creating ? <Loader2 className="animate-spin" size={20} /> : 'Cadastrar Usuário'}
-                        </button>
+                        <div className="flex gap-2 pt-2">
+                            {isEditing && (
+                                <button
+                                    type="button"
+                                    onClick={handleCancelEdit}
+                                    className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-2 rounded transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                            )}
+                            <button
+                                disabled={creating}
+                                className="flex-1 bg-orange-600 hover:bg-orange-700 font-bold py-2 rounded transition-colors flex justify-center"
+                            >
+                                {creating ? <Loader2 className="animate-spin" size={20} /> : (isEditing ? 'Salvar Alterações' : 'Cadastrar')}
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>

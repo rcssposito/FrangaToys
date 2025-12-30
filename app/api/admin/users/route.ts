@@ -150,3 +150,54 @@ export async function DELETE(req: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+// ATUALIZAR USUÁRIO (PUT)
+export async function PUT(req: Request) {
+    try {
+        const session = await checkAuth();
+        if (!session || !session.roles || !session.roles.includes('admin')) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        }
+
+        const { email, password, roles } = await req.json();
+
+        if (!email) {
+            return NextResponse.json({ error: 'Email obrigatório' }, { status: 400 });
+        }
+
+        // 1. Update Roles in DB (admin_users)
+        const { error: dbError } = await supabaseAdmin
+            .from('admin_users')
+            .update({ roles })
+            .eq('email', email);
+
+        if (dbError) throw dbError;
+
+        // 2. Update Password in Auth (if provided)
+        if (password && password.length > 0) {
+            // Need to find User ID by Email first
+            // Note: listUsers is efficient enough for small user base.
+            const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+
+            if (listError) throw listError;
+
+            const userToUpdate = users.find(u => u.email === email);
+
+            if (userToUpdate) {
+                const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+                    userToUpdate.id,
+                    { password }
+                );
+                if (updateError) throw updateError;
+            } else {
+                console.warn(`User ${email} not found in Auth to update password.`);
+                // We don't fail, maybe they are just in DB whitelist but not Auth yet.
+            }
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        console.error('Update User Error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
