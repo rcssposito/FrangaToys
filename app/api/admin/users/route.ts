@@ -70,8 +70,13 @@ export async function POST(req: Request) {
         });
 
         if (authError) {
-            console.error('Auth Create Error', authError);
-            return NextResponse.json({ error: authError.message }, { status: 500 });
+            // Se o usuário já existe no Auth, ignoramos o erro e prosseguimos para adicionar ao DB (admin_users)
+            if (authError.message?.includes('already been registered')) {
+                console.log('User already exists in Auth, adding to whitelist only.');
+            } else {
+                console.error('Auth Create Error', authError);
+                return NextResponse.json({ error: authError.message }, { status: 500 });
+            }
         }
 
         // 2. Create User in DB (Legacy/Profile)
