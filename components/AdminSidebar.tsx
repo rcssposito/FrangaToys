@@ -103,17 +103,17 @@ export default function AdminSidebar() {
 
             {/* User & Logout */}
             <div className="p-4 border-t border-zinc-900">
-                <div className="flex items-center gap-3 mb-4 px-2">
-                    <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-400">
+                <Link href="/admin/profile" className="flex items-center gap-3 mb-4 px-2 hover:bg-zinc-900 mx-[-8px] py-2 rounded-lg transition-colors group">
+                    <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-400 group-hover:text-white group-hover:bg-zinc-700 transition-colors">
                         {user?.email?.[0].toUpperCase()}
                     </div>
                     <div className="overflow-hidden">
-                        <p className="text-sm font-medium text-white truncate">{user?.email}</p>
+                        <p className="text-sm font-medium text-white truncate group-hover:text-orange-500 transition-colors">{user?.email}</p>
                         <p className="text-xs text-zinc-500 truncate capitalize">
                             {user?.roles?.join(', ')}
                         </p>
                     </div>
-                </div>
+                </Link>
 
                 <button
                     onClick={logout}

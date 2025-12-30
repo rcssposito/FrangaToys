@@ -1,6 +1,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 interface User {
     id: number;
@@ -21,31 +22,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
+    const supabase = createClient();
+
+    const fetchUser = async () => {
+        try {
+            const res = await fetch('/api/auth/me');
+            if (res.ok) {
+                const data = await res.json();
+                setUser(data.user);
+            } else {
+                setUser(null);
+            }
+        } catch (error) {
+            setUser(null);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        fetch('/api/auth/me')
-            .then(res => {
-                if (res.ok) return res.json();
-                throw new Error('Unauthorized');
-            })
-            .then(data => setUser(data.user))
-            .catch(() => setUser(null)) // Dont redirect here, middleware handles it. This is just for UI state.
-            .finally(() => setLoading(false));
+        // Initial fetch
+        fetchUser();
+
+        // Subscribe to Auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                fetchUser();
+            } else if (event === 'SIGNED_OUT') {
+                setUser(null);
+                router.push('/admin/login');
+            }
+        });
+
+        return () => {
+            subscription.unsubscribe();
+        };
     }, []);
 
     const logout = async () => {
-        // Implement logout logic (clear cookie typically done via API)
-        // For now just client side clear
-        await fetch('/api/auth/logout', { method: 'POST' }); // We need to create this maybe? Or just use existing pattern?
-        // Actually earlier pattern was just direct redirect, let's assume we implement a simple logout api later or handled by client clearing if needed.
-        // For simplicity now, just redirect to login which might clear cookies or just manual expire.
-        // Let's rely on standard practice: call logout API.
-
-        // Wait, we don't have a logout API yet in the plan effectively. Let's add a clear cookie logic if needed.
-        // Or cleaner: delete cookie using server action or route handler.
-        document.cookie = 'admin_session=; Max-Age=0; path=/;';
-        setUser(null);
-        router.push('/admin/login');
+        await supabase.auth.signOut();
+        // Redirect handled by onAuthStateChange
     };
 
     const hasRole = (role: string) => {

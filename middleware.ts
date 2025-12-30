@@ -1,35 +1,61 @@
-
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { verifySession } from '@/lib/auth';
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-    // 1. Verificar se é rota de admin
+    let response = NextResponse.next({
+        request: {
+            headers: request.headers,
+        },
+    });
+
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL! || process.env.SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! || process.env.SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                getAll() {
+                    return request.cookies.getAll();
+                },
+                setAll(cookiesToSet) {
+                    cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value));
+                    response = NextResponse.next({
+                        request: {
+                            headers: request.headers,
+                        },
+                    });
+                    cookiesToSet.forEach(({ name, value, options }) =>
+                        response.cookies.set(name, value, options)
+                    );
+                },
+            },
+        }
+    );
+
+    // Refresh session if expired - required for Server Components
+    // https://supabase.com/docs/guides/auth/server-side/nextjs
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // 1. Protection Logic for /admin
     if (request.nextUrl.pathname.startsWith('/admin')) {
 
-        // 2. Liberar login para evitar loop
+        // Allow public access to login page
         if (request.nextUrl.pathname === '/admin/login') {
-            return NextResponse.next();
+            // If already logged in, redirect to dashboard
+            if (user) {
+                return NextResponse.redirect(new URL('/admin', request.url));
+            }
+            return response;
         }
 
-        // 3. Verificar Cookie
-        const token = request.cookies.get('admin_session')?.value;
-
-        if (!token) {
+        // Redirect to login if not authenticated
+        if (!user) {
             return NextResponse.redirect(new URL('/admin/login', request.url));
         }
-
-        // 4. Verificar Validade do Token
-        const payload = await verifySession(token);
-
-        if (!payload) {
-            return NextResponse.redirect(new URL('/admin/login', request.url));
-        }
-
-        return NextResponse.next();
     }
+
+    return response;
 }
 
 export const config = {
-    matcher: '/admin/:path*',
+    matcher: ['/admin/:path*', '/auth/:path*'],
 };
