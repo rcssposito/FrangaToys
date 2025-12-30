@@ -51,6 +51,23 @@ export async function middleware(request: NextRequest) {
         if (!user) {
             return NextResponse.redirect(new URL('/admin/login', request.url));
         }
+
+        // 2. Authorization - Check if user is in admin_users whitelist
+        // The query uses the ANON key, so it relies on RLS policies allowing the read.
+        // If the user is NOT in the table (or RLS blocks them), this returns null/error.
+        const { data: adminUser } = await supabase
+            .from('admin_users')
+            .select('email')
+            .eq('email', user.email)
+            .single();
+
+        if (!adminUser) {
+            // User is authenticated but not authorized
+            await supabase.auth.signOut();
+            const url = new URL('/admin/login', request.url);
+            url.searchParams.set('error', 'unauthorized');
+            return NextResponse.redirect(url);
+        }
     }
 
     return response;

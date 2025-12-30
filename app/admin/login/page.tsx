@@ -1,18 +1,32 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Lock, Loader2, ArrowLeft, Fingerprint } from 'lucide-react';
+import { Lock, Loader2, ArrowLeft, Fingerprint, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
+    // State unused for now: email/password
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
+    const searchParams = useSearchParams();
     const supabase = createClient();
+
+    useEffect(() => {
+        const error = searchParams.get('error');
+        if (error === 'unauthorized') {
+            toast.error('Acesso Negado: Seu email não tem permissão de administrador.', {
+                duration: 5000,
+                // icon: <AlertCircle className="text-red-500" /> // Sonner icons are automatic or tricky with JSX sometimes, let's stick to text for stability or test.
+                description: 'Entre em contato com o suporte se acredita ser um erro.'
+            });
+        }
+    }, [searchParams]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();

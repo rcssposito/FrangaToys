@@ -70,41 +70,48 @@ export default function AdminDashboard() {
         { value: '11', label: 'Dezembro' },
     ];
 
+    const canViewFinance = hasRole('admin') || hasRole('finance');
+
     const kpis = [
         {
             title: `Faturamento ${month ? 'Mensal' : 'Anual'}`,
             value: data ? `R$ ${data.kpis.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-',
             icon: DollarSign,
             color: 'text-green-500',
-            bg: 'bg-green-500/10'
+            bg: 'bg-green-500/10',
+            restricted: true
         },
         {
             title: 'Lucro Total',
             value: data ? `R$ ${data.kpis.totalProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-',
             icon: TrendingUp,
             color: 'text-blue-500',
-            bg: 'bg-blue-500/10'
+            bg: 'bg-blue-500/10',
+            restricted: true
         },
         {
             title: 'Custo De Estúdios',
             value: data ? `R$ ${data.kpis.totalFixedCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-',
             icon: DollarSign,
             color: 'text-red-500',
-            bg: 'bg-red-500/10'
+            bg: 'bg-red-500/10',
+            restricted: true
         },
         {
             title: 'Vendas Realizadas',
             value: data ? data.kpis.totalSalesCount : '-',
             icon: ShoppingCart,
             color: 'text-orange-500',
-            bg: 'bg-orange-500/10'
+            bg: 'bg-orange-500/10',
+            restricted: false
         },
         {
             title: 'Modelos no Catálogo',
             value: data ? data.charts.inventoryByStudio.reduce((acc: number, item: any) => acc + item.value, 0) : '-',
             icon: Box,
             color: 'text-purple-500',
-            bg: 'bg-purple-500/10'
+            bg: 'bg-purple-500/10',
+            restricted: false
         }
     ];
 
@@ -135,6 +142,11 @@ export default function AdminDashboard() {
     // Expandable Chart Renderer
     const renderExpandedChart = () => {
         if (!expandedChart || !data) return null;
+
+        // Security check for expanded charts
+        if ((expandedChart === 'revenueVsCost' || expandedChart === 'revenueByStudio') && !canViewFinance) {
+            return null;
+        }
 
         let chartData: any[] = [];
         let ChartComponent: any = null;
@@ -325,56 +337,61 @@ export default function AdminDashboard() {
 
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
-                {kpis.map((kpi, idx) => (
-                    <div key={idx} className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl flex items-center justify-between">
-                        <div>
-                            <p className="text-zinc-500 text-sm font-medium uppercase tracking-wide">{kpi.title}</p>
-                            <p className="text-2xl font-bold mt-1">{loading ? '...' : kpi.value}</p>
+                {kpis.map((kpi, idx) => {
+                    if (kpi.restricted && !canViewFinance) return null;
+                    return (
+                        <div key={idx} className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl flex items-center justify-between">
+                            <div>
+                                <p className="text-zinc-500 text-sm font-medium uppercase tracking-wide">{kpi.title}</p>
+                                <p className="text-2xl font-bold mt-1">{loading ? '...' : kpi.value}</p>
+                            </div>
+                            <div className={`p-3 rounded-full ${kpi.bg}`}>
+                                <kpi.icon className={kpi.color} size={24} />
+                            </div>
                         </div>
-                        <div className={`p-3 rounded-full ${kpi.bg}`}>
-                            <kpi.icon className={kpi.color} size={24} />
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             {/* Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
                 {/* 1. Revenue Vs Cost (ROI) */}
-                <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
-                    <div className="flex justify-between items-start mb-6">
-                        <h2 className="text-lg font-bold flex items-center gap-2">
-                            <Activity size={20} className="text-emerald-500" />
-                            Rendimento vs Custo (Top Estúdios)
-                        </h2>
-                        <button onClick={() => setExpandedChart('revenueVsCost')} className="p-2 bg-zinc-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-zinc-700 text-zinc-400 hover:text-white" title="Expandir">
-                            <Maximize2 size={16} />
-                        </button>
+                {canViewFinance && (
+                    <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
+                        <div className="flex justify-between items-start mb-6">
+                            <h2 className="text-lg font-bold flex items-center gap-2">
+                                <Activity size={20} className="text-emerald-500" />
+                                Rendimento vs Custo (Top Estúdios)
+                            </h2>
+                            <button onClick={() => setExpandedChart('revenueVsCost')} className="p-2 bg-zinc-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-zinc-700 text-zinc-400 hover:text-white" title="Expandir">
+                                <Maximize2 size={16} />
+                            </button>
+                        </div>
+                        <div className="h-[300px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={data?.charts.revenueVsCost.slice(0, 10)} margin={{ left: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                    <XAxis
+                                        dataKey="name"
+                                        tick={{ fill: '#9ca3af', fontSize: 10 }}
+                                        interval={0}
+                                        angle={-45}
+                                        textAnchor="end"
+                                        height={60}
+                                    />
+                                    <YAxis hide />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', color: '#fff' }}
+                                        formatter={(value: number | undefined) => `R$ ${(value || 0).toLocaleString('pt-BR')}`}
+                                    />
+                                    <Bar dataKey="revenue" name="Rendimento" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="cost" name="Custo Mensal" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
-                    <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data?.charts.revenueVsCost.slice(0, 10)} margin={{ left: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                                <XAxis
-                                    dataKey="name"
-                                    tick={{ fill: '#9ca3af', fontSize: 10 }}
-                                    interval={0}
-                                    angle={-45}
-                                    textAnchor="end"
-                                    height={60}
-                                />
-                                <YAxis hide />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', color: '#fff' }}
-                                    formatter={(value: number | undefined) => `R$ ${(value || 0).toLocaleString('pt-BR')}`}
-                                />
-                                <Bar dataKey="revenue" name="Rendimento" fill="#10b981" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="cost" name="Custo Mensal" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
+                )}
 
                 {/* 2. Inventário por Estúdio */}
                 <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
@@ -412,37 +429,39 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* 3. Faturamento por Estúdio */}
-                <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
-                    <div className="flex justify-between items-start mb-6">
-                        <h2 className="text-lg font-bold flex items-center gap-2">
-                            <DollarSign size={20} className="text-blue-500" />
-                            Faturamento Histórico
-                        </h2>
-                        <button onClick={() => setExpandedChart('revenueByStudio')} className="p-2 bg-zinc-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-zinc-700 text-zinc-400 hover:text-white" title="Expandir">
-                            <Maximize2 size={16} />
-                        </button>
+                {canViewFinance && (
+                    <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
+                        <div className="flex justify-between items-start mb-6">
+                            <h2 className="text-lg font-bold flex items-center gap-2">
+                                <DollarSign size={20} className="text-blue-500" />
+                                Faturamento Histórico
+                            </h2>
+                            <button onClick={() => setExpandedChart('revenueByStudio')} className="p-2 bg-zinc-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-zinc-700 text-zinc-400 hover:text-white" title="Expandir">
+                                <Maximize2 size={16} />
+                            </button>
+                        </div>
+                        <div className="h-[300px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={data?.charts.revenueByStudio.slice(0, 10)} layout="vertical" margin={{ left: 40 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
+                                    <XAxis type="number" hide />
+                                    <YAxis
+                                        dataKey="name"
+                                        type="category"
+                                        tick={{ fill: '#9ca3af', fontSize: 12 }}
+                                        width={100}
+                                    />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff10' }} />
+                                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                                        {data?.charts.revenueByStudio.slice(0, 10).map((entry: any, index: number) => (
+                                            <Cell key={`cell-${index}`} fill="#3b82f6" />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
-                    <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data?.charts.revenueByStudio.slice(0, 10)} layout="vertical" margin={{ left: 40 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
-                                <XAxis type="number" hide />
-                                <YAxis
-                                    dataKey="name"
-                                    type="category"
-                                    tick={{ fill: '#9ca3af', fontSize: 12 }}
-                                    width={100}
-                                />
-                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff10' }} />
-                                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                                    {data?.charts.revenueByStudio.slice(0, 10).map((entry: any, index: number) => (
-                                        <Cell key={`cell-${index}`} fill="#3b82f6" />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
+                )}
 
                 {/* 4. Vendas (Qtd) por Estúdio */}
                 <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
