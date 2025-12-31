@@ -282,24 +282,15 @@ export default function AdminDashboard() {
             case 'salesByCategory':
                 if (drillDownCategory) {
                     title = "Vendas: " + drillDownCategory;
-
-                    // DEBUG: Log data to console
-                    console.log("DrillDown Category:", drillDownCategory);
-                    console.log("Raw SalesBySeries:", data.charts.salesBySeries);
-
                     chartData = (data.charts.salesBySeries || [])
                         .filter((s: any) => s.category === drillDownCategory)
                         .slice(0, 15);
 
-                    console.log("Filtered ChartData:", chartData);
-
                     if (chartData.length === 0) {
                         ChartComponent = (
-                            <div className="h-full w-full flex flex-col items-center justify-center p-8 border border-red-500 bg-red-900/10 text-center">
-                                <Box size={48} className="mb-4 text-red-400" />
-                                <p className="text-white text-lg font-bold">Nenhuma venda de série para esta categoria.</p>
-                                <p className="text-zinc-400 text-sm mt-2">Categoria: "{drillDownCategory}"</p>
-                                <p className="text-zinc-500 text-xs mt-4">Verifique o console (F12) para detalhes.</p>
+                            <div className="h-full flex flex-col items-center justify-center text-zinc-500">
+                                <Box size={48} className="mb-4 opacity-50" />
+                                <p>Nenhuma venda de série para esta categoria.</p>
                             </div>
                         );
                     } else {
