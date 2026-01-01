@@ -437,8 +437,9 @@ export default function AdminDashboard() {
                             onChange={(e) => setYear(e.target.value)}
                             className="bg-zinc-900 text-sm font-medium outline-none text-zinc-300 hover:text-white cursor-pointer px-2 rounded-md"
                         >
-                            <option value="2024" className="bg-zinc-900 text-zinc-200">2024</option>
-                            <option value="2025" className="bg-zinc-900 text-zinc-200">2025</option>
+                            {Array.from({ length: new Date().getFullYear() - 2024 + 1 }, (_, i) => 2024 + i).map(y => (
+                                <option key={y} value={y} className="bg-zinc-900 text-zinc-200">{y}</option>
+                            ))}
                         </select>
                         <div className="h-4 w-[1px] bg-zinc-700"></div>
                         <select
