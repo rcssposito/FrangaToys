@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, DollarSign, Box, Activity, Store, Maximize2, X, ArrowUpRight, ArrowDownRight, Clock, Tag, Layers } from 'lucide-react';
+import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, DollarSign, Box, Activity, Store, Maximize2, X, ArrowUpRight, ArrowDownRight, Clock, Tag, Layers, Ruler } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { toast } from 'sonner';
 
 export default function AdminDashboard() {
@@ -15,6 +15,9 @@ export default function AdminDashboard() {
     const [month, setMonth] = useState<string>(''); // '' = All months
     const [expandedChart, setExpandedChart] = useState<string | null>(null);
     const [drillDownCategory, setDrillDownCategory] = useState<string | null>(null);
+    const [drillDownStudio, setDrillDownStudio] = useState<string | null>(null);
+    const [drillDownSeries, setDrillDownSeries] = useState<string | null>(null);
+    const [seriesFilter, setSeriesFilter] = useState<string>('all');
 
     // Fetch Dashboard Data
     useEffect(() => {
@@ -186,13 +189,18 @@ export default function AdminDashboard() {
         return null;
     };
 
-    const CategoryTooltip = ({ active, payload }: any) => {
+    const CategoryTooltip = ({ active, payload, suffix = "vendas", formatter }: any) => {
         if (active && payload && payload.length) {
+            const data = payload[0].payload;
+            const value = payload[0].value;
+            // Handle if value is array (Recharts issue sometimes) or number
+            const safeValue = Array.isArray(value) ? value[0] : value;
+
             return (
                 <div className="bg-zinc-900 border border-zinc-700 p-3 rounded shadow-xl">
-                    <p className="font-bold text-white mb-1">{payload[0].name}</p>
+                    <p className="font-bold text-white mb-1">{data.name}</p>
                     <p className="text-zinc-300">
-                        {payload[0].value} vendas
+                        {formatter ? formatter(safeValue) : safeValue} {suffix}
                     </p>
                 </div>
             );
@@ -229,38 +237,127 @@ export default function AdminDashboard() {
                 );
                 break;
             case 'inventoryByStudio':
-                chartData = data.charts.inventoryByStudio;
-                title = "Modelos por Estúdio (Todos)";
-                ChartComponent = (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData} margin={{ left: 0, bottom: 50 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                            <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} interval={0} angle={-45} textAnchor="end" />
-                            <YAxis hide />
-                            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff10' }} />
-                            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                {chartData.map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#a855f7" />)}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
-                );
+                if (drillDownStudio) {
+                    title = "Modelos: " + drillDownStudio + " (Séries)";
+                    // Filter Series for this studio from the aggregated data
+                    const studioData = data.charts.inventoryByStudio.find((s: any) => s.name === drillDownStudio);
+
+                    if (!studioData || !studioData.series) {
+                        ChartComponent = (
+                            <div className="h-full flex flex-col items-center justify-center text-zinc-500">
+                                <Box size={48} className="mb-4 opacity-50" />
+                                <p>Nenhuma série encontrada para "{drillDownStudio}"</p>
+                            </div>
+                        );
+                    } else {
+                        // Transform { SeriesName: Count } to Array
+                        chartData = Object.entries(studioData.series)
+                            .map(([name, value]: any) => ({ name, value }))
+                            .sort((a: any, b: any) => b.value - a.value);
+
+                        ChartComponent = (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData} layout="vertical" margin={{ left: 40, right: 20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
+                                    <XAxis type="number" hide />
+                                    <YAxis dataKey="name" type="category" tick={{ fill: '#9ca3af', fontSize: 12 }} width={120} />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff10' }} />
+                                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                                        {chartData.map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#a855f7" />)}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        );
+                    }
+                } else {
+                    chartData = data.charts.inventoryByStudio;
+                    title = "Modelos por Estúdio (Todos)";
+                    ChartComponent = (
+                        <div className="w-full h-full flex flex-col">
+                            <p className="text-zinc-500 text-sm mb-2 text-center">Clique em uma barra para ver as séries</p>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData} margin={{ left: 0, bottom: 50 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                    <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} interval={0} angle={-45} textAnchor="end" />
+                                    <YAxis hide />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff10' }} />
+                                    <Bar dataKey="value" radius={[4, 4, 0, 0]} onClick={(data) => setDrillDownStudio(data?.name || null)} className="cursor-pointer">
+                                        {chartData.map((_e: any, index: number) => (
+                                            <Cell
+                                                key={`cell-${index}`}
+                                                fill="#a855f7"
+                                                className="hover:opacity-80 transition-opacity cursor-pointer"
+                                                onClick={() => setDrillDownStudio(_e.name || null)}
+                                            />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    );
+                }
                 break;
             case 'revenueByStudio':
-                chartData = data.charts.revenueByStudio;
-                title = "Faturamento Histórico (Todos)";
-                ChartComponent = (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData} layout="vertical" margin={{ left: 40, right: 20 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
-                            <XAxis type="number" hide />
-                            <YAxis dataKey="name" type="category" tick={{ fill: '#9ca3af', fontSize: 12 }} width={120} />
-                            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff10' }} />
-                            <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                                {chartData.map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#3b82f6" />)}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
-                );
+                if (drillDownStudio) {
+                    title = "Vendas: " + drillDownStudio + " (Séries)";
+                    // Filter Series that have sales for this studio
+                    chartData = (data.charts.salesBySeries || [])
+                        .map((s: any) => ({
+                            name: s.name,
+                            value: s.studios?.[drillDownStudio] || 0
+                        }))
+                        .filter((s: any) => s.value > 0)
+                        .sort((a: any, b: any) => b.value - a.value);
+
+                    if (chartData.length === 0) {
+                        ChartComponent = (
+                            <div className="h-full flex flex-col items-center justify-center text-zinc-500">
+                                <Box size={48} className="mb-4 opacity-50" />
+                                <p>Nenhuma venda encontrada para "{drillDownStudio}"</p>
+                            </div>
+                        );
+                    } else {
+                        ChartComponent = (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData} layout="vertical" margin={{ left: 40, right: 20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
+                                    <XAxis type="number" hide />
+                                    <YAxis dataKey="name" type="category" tick={{ fill: '#9ca3af', fontSize: 12 }} width={120} />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff10' }} />
+                                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                                        {chartData.map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#ec4899" />)}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        );
+                    }
+                } else {
+                    chartData = data.charts.revenueByStudio;
+                    title = "Faturamento Histórico (Todos)";
+                    ChartComponent = (
+                        <div className="w-full h-full flex flex-col">
+                            <p className="text-zinc-500 text-sm mb-2 text-center">Clique em uma barra para ver as séries</p>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData} layout="vertical" margin={{ left: 40, right: 20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
+                                    <XAxis type="number" hide />
+                                    <YAxis dataKey="name" type="category" tick={{ fill: '#9ca3af', fontSize: 12 }} width={120} />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff10' }} />
+                                    <Bar dataKey="value" radius={[0, 4, 4, 0]} onClick={(data) => setDrillDownStudio(data?.name || null)} className="cursor-pointer">
+                                        {chartData.map((_e: any, index: number) => (
+                                            <Cell
+                                                key={`cell-${index}`}
+                                                fill="#3b82f6"
+                                                className="hover:opacity-80 transition-opacity cursor-pointer"
+                                                onClick={() => setDrillDownStudio(_e.name || null)}
+                                            />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    );
+                }
                 break;
             case 'soldByStudio':
                 chartData = data.charts.soldByStudio;
@@ -350,6 +447,126 @@ export default function AdminDashboard() {
                     );
                 }
                 break;
+            case 'costByStudio':
+                chartData = data.charts.costByStudio || [];
+                title = "Custo Mensal por Estúdio (Top 20)";
+                ChartComponent = (
+                    <div className="w-full h-full flex flex-col">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={chartData.slice(0, 20)} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 12 }} interval={0} angle={-45} textAnchor="end" />
+                                <YAxis stroke="#ef4444" tickFormatter={(value) => `R$${value}`} />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', color: '#fff' }}
+                                    formatter={(value: any) => [`R$ ${(Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 'Custo Mensal']}
+                                />
+                                <Bar dataKey="value" name="Custo Mensal" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                );
+                break;
+            case 'inventoryBySeries':
+                if (drillDownSeries) {
+                    title = "Estúdios: " + drillDownSeries;
+                    const seriesData = (data.charts.inventoryBySeries || []).find((s: any) => s.name === drillDownSeries);
+
+                    if (!seriesData || !seriesData.studios) {
+                        ChartComponent = (
+                            <div className="h-full flex flex-col items-center justify-center text-zinc-500">
+                                <Box size={48} className="mb-4 opacity-50" />
+                                <p>Nenhum estúdio encontrado para "{drillDownSeries}"</p>
+                            </div>
+                        );
+                    } else {
+                        // Transform studios map to array
+                        chartData = Object.entries(seriesData.studios)
+                            .map(([name, value]: any) => ({ name, value }))
+                            .sort((a: any, b: any) => b.value - a.value);
+
+                        ChartComponent = (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData} layout="vertical" margin={{ left: 40, right: 20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
+                                    <XAxis type="number" hide />
+                                    <YAxis dataKey="name" type="category" tick={{ fill: '#9ca3af', fontSize: 12 }} width={120} />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff10' }} />
+                                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                                        {chartData.map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#f97316" />)}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        );
+                    }
+                } else {
+                    const allData = data.charts.inventoryBySeries || [];
+                    chartData = seriesFilter === 'all'
+                        ? allData
+                        : allData.filter((s: any) => s.category === seriesFilter);
+
+                    // Removed limit as requested by user
+                    // if (chartData.length > 50) chartData = chartData.slice(0, 50);
+
+                    title = "Séries em Estoque";
+
+                    // Filter Categories extraction (Sort by ID)
+                    const categoryMap = new Map();
+                    // Initialize with 'all'
+                    categoryMap.set('all', { name: 'Todas', id: 0 });
+
+                    allData.forEach((d: any) => {
+                        if (!categoryMap.has(d.category)) {
+                            // Backend sends 'categoryId' now (or default 999 for Outros)
+                            categoryMap.set(d.category, { name: d.category, id: d.categoryId || 999 });
+                        }
+                    });
+
+                    const categories = Array.from(categoryMap.values()).sort((a: any, b: any) => a.id - b.id);
+
+                    ChartComponent = (
+                        <div className="w-full h-full flex flex-col">
+                            {/* Filter Bar */}
+                            <div className="flex flex-wrap gap-2 mb-4 justify-center">
+                                {categories.map((cat: any) => (
+                                    <button
+                                        key={cat.name}
+                                        onClick={() => setSeriesFilter(cat.name === 'Todas' ? 'all' : cat.name)}
+                                        className={`px-3 py-1 text-xs rounded-full transition-colors border ${(seriesFilter === 'all' && cat.name === 'Todas') || seriesFilter === cat.name
+                                            ? 'bg-purple-600 text-white border-purple-500'
+                                            : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700'
+                                            }`}
+                                    >
+                                        {cat.name}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <p className="text-zinc-500 text-sm mb-2 text-center">Clique na barra para ver os estúdios</p>
+                            <div className="flex-1 min-h-0">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={chartData} layout="vertical" margin={{ left: 40, right: 20 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
+                                        <XAxis type="number" hide />
+                                        <YAxis dataKey="name" type="category" tick={{ fill: '#9ca3af', fontSize: 12 }} width={120} />
+                                        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff10' }} />
+                                        <Bar dataKey="value" radius={[0, 4, 4, 0]} onClick={(data) => setDrillDownSeries(data?.name || null)} className="cursor-pointer">
+                                            {chartData.map((_e: any, index: number) => (
+                                                <Cell
+                                                    key={`cell-${index}`}
+                                                    fill="#a855f7"
+                                                    className="hover:opacity-80 transition-opacity cursor-pointer"
+                                                    onClick={() => setDrillDownSeries(_e.name || null)}
+                                                />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    );
+                }
+                break;
             case 'salesBySeries':
                 chartData = data.charts.salesBySeries || [];
                 title = "Vendas por Série (Todos)";
@@ -371,7 +588,7 @@ export default function AdminDashboard() {
 
         const itemHeight = 40;
         const itemWidth = 60;
-        const isVertical = expandedChart === 'revenueByStudio' || expandedChart === 'soldByStudio' || expandedChart === 'salesBySeries' || (expandedChart === 'salesByCategory' && drillDownCategory);
+        const isVertical = expandedChart === 'revenueByStudio' || expandedChart === 'soldByStudio' || expandedChart === 'salesBySeries' || (expandedChart === 'salesByCategory' && drillDownCategory) || (expandedChart === 'revenueByStudio' && drillDownStudio) || (expandedChart === 'inventoryByStudio' && drillDownStudio) || (expandedChart === 'inventoryBySeries');
         const dynamicStyle = isVertical
             ? { height: `${Math.max(500, chartData.length * itemHeight)}px`, width: '100%' }
             : { width: `${Math.max(1000, chartData.length * itemWidth)}px`, height: '100%' };
@@ -384,13 +601,17 @@ export default function AdminDashboard() {
 
 
         return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { setExpandedChart(null); setDrillDownCategory(null); }}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { setExpandedChart(null); setDrillDownCategory(null); setDrillDownStudio(null); setDrillDownSeries(null); }}>
                 <div className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-6xl h-[80vh] flex flex-col shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
                     <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-950">
                         <div className="flex items-center gap-4">
-                            {drillDownCategory && (
+                            {(drillDownCategory || drillDownStudio || drillDownSeries) && (
                                 <button
-                                    onClick={() => setDrillDownCategory(null)}
+                                    onClick={() => {
+                                        if (drillDownCategory) setDrillDownCategory(null);
+                                        if (drillDownStudio) setDrillDownStudio(null);
+                                        if (drillDownSeries) setDrillDownSeries(null);
+                                    }}
                                     className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg transition-colors border border-zinc-700"
                                 >
                                     ← Voltar
@@ -401,7 +622,7 @@ export default function AdminDashboard() {
                                 {title}
                             </h2>
                         </div>
-                        <button onClick={() => { setExpandedChart(null); setDrillDownCategory(null); }} className="p-2 hover:bg-zinc-800 rounded-full transition-colors text-zinc-400 hover:text-white">
+                        <button onClick={() => { setExpandedChart(null); setDrillDownCategory(null); setDrillDownStudio(null); setDrillDownSeries(null); }} className="p-2 hover:bg-zinc-800 rounded-full transition-colors text-zinc-400 hover:text-white">
                             <X size={24} />
                         </button>
                     </div>
@@ -411,6 +632,7 @@ export default function AdminDashboard() {
                         </div>
                     </div>
                 </div>
+
             </div>
         );
     }
@@ -590,6 +812,7 @@ export default function AdminDashboard() {
 
             {/* Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                {/* ROW 1: FINANCE */}
                 {canViewFinance && (
                     <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
                         <div className="flex justify-between items-start mb-6">
@@ -616,51 +839,26 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
-                <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
-                    <div className="flex justify-between items-start mb-6">
-                        <h2 className="text-lg font-bold flex items-center gap-2">
-                            <Box size={20} className="text-purple-500" />
-                            Modelos por Estúdio (Automático)
-                        </h2>
-                        <button onClick={() => setExpandedChart('inventoryByStudio')} className="p-2 bg-zinc-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-zinc-700 text-zinc-400 hover:text-white" title="Expandir">
-                            <Maximize2 size={16} />
-                        </button>
-                    </div>
-                    <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data?.charts.inventoryByStudio.slice(0, 15)}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                                <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={60} />
-                                <YAxis hide />
-                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff10' }} />
-                                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                    {data?.charts.inventoryByStudio.slice(0, 15).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#a855f7" />)}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
                 {canViewFinance && (
                     <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
                         <div className="flex justify-between items-start mb-6">
                             <h2 className="text-lg font-bold flex items-center gap-2">
-                                <DollarSign size={20} className="text-blue-500" />
-                                Faturamento Histórico
+                                <Activity size={20} className="text-red-500" />
+                                Custo por Estúdio
                             </h2>
-                            <button onClick={() => setExpandedChart('revenueByStudio')} className="p-2 bg-zinc-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-zinc-700 text-zinc-400 hover:text-white" title="Expandir">
+                            <button onClick={() => setExpandedChart('costByStudio')} className="p-2 bg-zinc-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-zinc-700 text-zinc-400 hover:text-white" title="Expandir">
                                 <Maximize2 size={16} />
                             </button>
                         </div>
                         <div className="h-[300px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={data?.charts.revenueByStudio.slice(0, 10)} layout="vertical" margin={{ left: 40 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
-                                    <XAxis type="number" hide />
-                                    <YAxis dataKey="name" type="category" tick={{ fill: '#9ca3af', fontSize: 12 }} width={100} />
-                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff10' }} />
-                                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                                        {data?.charts.revenueByStudio.slice(0, 10).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#3b82f6" />)}
+                                <BarChart data={data?.charts.costByStudio.slice(0, 10)} margin={{ left: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                    <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={60} />
+                                    <YAxis hide />
+                                    <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number) => `R$ ${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />} cursor={{ fill: '#ffffff10' }} />
+                                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                                        {data?.charts.costByStudio.slice(0, 10).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#ef4444" />)}
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
@@ -668,32 +866,8 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
-                <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
-                    <div className="flex justify-between items-start mb-6">
-                        <h2 className="text-lg font-bold flex items-center gap-2">
-                            <ShoppingCart size={20} className="text-orange-500" />
-                            Unidades Vendidas
-                        </h2>
-                        <button onClick={() => setExpandedChart('soldByStudio')} className="p-2 bg-zinc-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-zinc-700 text-zinc-400 hover:text-white" title="Expandir">
-                            <Maximize2 size={16} />
-                        </button>
-                    </div>
-                    <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data?.charts.soldByStudio.slice(0, 10)} layout="vertical" margin={{ left: 40 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
-                                <XAxis type="number" hide />
-                                <YAxis dataKey="name" type="category" tick={{ fill: '#9ca3af', fontSize: 12 }} width={100} />
-                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff10' }} />
-                                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                                    {data?.charts.soldByStudio.slice(0, 10).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#f97316" />)}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
 
-                {/* New Charts Row: Category & Series SAFE ACCESS ADDED */}
+                {/* ROW 2: SALES */}
                 <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
                     <div className="flex justify-between items-start mb-6">
                         <h2 className="text-lg font-bold flex items-center gap-2">
@@ -740,13 +914,123 @@ export default function AdminDashboard() {
                     </div>
                     <div className="h-[300px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={(data?.charts?.salesBySeries || []).slice(0, 10)} layout="vertical" margin={{ left: 40 }}>
+                            <BarChart data={(data?.charts?.salesBySeries || []).slice(0, 10)} layout="vertical" margin={{ left: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
                                 <XAxis type="number" hide />
-                                <YAxis dataKey="name" type="category" tick={{ fill: '#9ca3af', fontSize: 12 }} width={100} />
-                                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff10' }} />
+                                <YAxis dataKey="name" type="category" tick={{ fill: '#9ca3af', fontSize: 11 }} width={110} />
+                                <Tooltip content={<CategoryTooltip suffix="vendas" />} cursor={{ fill: '#ffffff10' }} />
                                 <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                                     {(data?.charts?.salesBySeries || []).slice(0, 10).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#ec4899" />)}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+
+                {/* ROW 3: INVENTORY (PRODUCTION / DETAILS) */}
+                <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
+                    <div className="flex justify-between items-start mb-6">
+                        <h2 className="text-lg font-bold flex items-center gap-2">
+                            <Box size={20} className="text-purple-500" />
+                            Modelos por Estúdio (Automático)
+                        </h2>
+                        <button onClick={() => setExpandedChart('inventoryByStudio')} className="p-2 bg-zinc-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-zinc-700 text-zinc-400 hover:text-white" title="Expandir">
+                            <Maximize2 size={16} />
+                        </button>
+                    </div>
+                    <div className="h-[300px] w-full flex justify-center items-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data?.charts.inventoryByStudio}>
+                                <PolarGrid stroke="#3f3f46" />
+                                <PolarAngleAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                                <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
+                                <Radar name="Modelos" dataKey="value" stroke="#a855f7" fill="#a855f7" fillOpacity={0.5} />
+                                <Tooltip content={<CategoryTooltip suffix="modelos" />} />
+                            </RadarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
+                    <div className="flex justify-between items-start mb-6">
+                        <h2 className="text-lg font-bold flex items-center gap-2">
+                            <Layers size={20} className="text-purple-500" />
+                            Modelos por Série
+                        </h2>
+                        <button onClick={() => setExpandedChart('inventoryBySeries')} className="p-2 bg-zinc-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-zinc-700 text-zinc-400 hover:text-white" title="Expandir">
+                            <Maximize2 size={16} />
+                        </button>
+                    </div>
+                    <div className="h-[300px] w-full flex justify-center text-xs">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={(data?.charts.inventoryBySeries || []).slice(0, 5)}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {(data?.charts.inventoryBySeries || []).slice(0, 5).map((entry: any, index: number) => (
+                                        <Cell key={`cell-${index}`} fill={['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a855f7'][index % 5]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip content={<CategoryTooltip suffix="figuras" />} />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+
+                {/* ROW 4: ANALYTICS (REVENUE + SOLD) */}
+                <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
+                    <div className="flex justify-between items-start mb-6">
+                        <h2 className="text-lg font-bold flex items-center gap-2">
+                            <DollarSign size={20} className="text-blue-500" />
+                            Faturamento por Estúdio
+                        </h2>
+                        <button onClick={() => setExpandedChart('revenueByStudio')} className="p-2 bg-zinc-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-zinc-700 text-zinc-400 hover:text-white" title="Expandir">
+                            <Maximize2 size={16} />
+                        </button>
+                    </div>
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={data?.charts.revenueByStudio.slice(0, 10)} margin={{ left: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={60} />
+                                <YAxis hide />
+                                <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number) => `R$ ${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />} cursor={{ fill: '#ffffff10' }} />
+                                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                                    {data?.charts.revenueByStudio.slice(0, 10).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#3b82f6" />)}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
+                    <div className="flex justify-between items-start mb-6">
+                        <h2 className="text-lg font-bold flex items-center gap-2">
+                            <ShoppingCart size={20} className="text-orange-500" />
+                            Unidades Vendidas
+                        </h2>
+                        <button onClick={() => setExpandedChart('soldByStudio')} className="p-2 bg-zinc-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-zinc-700 text-zinc-400 hover:text-white" title="Expandir">
+                            <Maximize2 size={16} />
+                        </button>
+                    </div>
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={data?.charts.soldByStudio.slice(0, 10)} margin={{ left: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={60} />
+                                <YAxis hide />
+                                <Tooltip content={<CategoryTooltip suffix="unid." />} cursor={{ fill: '#ffffff10' }} />
+                                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                                    {data?.charts.soldByStudio.slice(0, 10).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#f97316" />)}
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>

@@ -74,7 +74,7 @@ export async function GET(req: Request) {
         // 3. Fetch Studio Details
         const { data: studios, error: studiosError } = await supabase
             .from('studios')
-            .select('nome, custo_mensal, qtd_display, figuras(count)');
+            .select('nome, custo_mensal, qtd_display, figuras(id, series:series(nome, categorias:categorias(nome, id)), figuras_meta(escala, resina_kg, horas_pintura))');
 
         if (studiosError) throw studiosError;
 
@@ -125,7 +125,7 @@ export async function GET(req: Request) {
         const studioSalesMap: { [key: string]: { revenue: number, profit: number, itemsSold: number } } = {};
         const productSalesMap: { [key: string]: { id: number, name: string, studio: string, revenue: number, qty: number } } = {};
         const categorySalesMap: { [key: string]: number } = {};
-        const seriesSalesMap: { [key: string]: { value: number, category: string } } = {};
+        const seriesSalesMap: { [key: string]: { value: number, category: string, studios: { [key: string]: number } } } = {};
 
         sales.forEach(sale => {
             // @ts-ignore
@@ -165,9 +165,15 @@ export async function GET(req: Request) {
                 categorySalesMap[categoryName] = (categorySalesMap[categoryName] || 0) + (sale.quantidade || 1); // Count unit sales
 
                 if (!seriesSalesMap[seriesName]) {
-                    seriesSalesMap[seriesName] = { value: 0, category: categoryName };
+                    seriesSalesMap[seriesName] = { value: 0, category: categoryName, studios: {} };
                 }
                 seriesSalesMap[seriesName].value += (sale.quantidade || 1);
+
+                // Studio breakdown for this series
+                if (!seriesSalesMap[seriesName].studios[studioName]) {
+                    seriesSalesMap[seriesName].studios[studioName] = 0;
+                }
+                seriesSalesMap[seriesName].studios[studioName] += (sale.quantidade || 1);
             }
         });
 
@@ -188,14 +194,93 @@ export async function GET(req: Request) {
             }));
 
         const inventoryByStudio = studios
-            .map(s => ({
-                name: s.nome,
+            .map(s => {
+                const seriesCount: { [key: string]: number } = {};
                 // @ts-ignore
-                value: s.figuras?.[0]?.count || 0
-            }))
+                s.figuras?.forEach((f: any) => {
+                    const sName = f.series?.nome || 'Sem Série';
+                    seriesCount[sName] = (seriesCount[sName] || 0) + 1;
+                });
+
+                return {
+                    name: s.nome,
+                    // @ts-ignore
+                    value: s.figuras?.length || 0,
+                    series: seriesCount
+                };
+            })
             .sort((a, b) => b.value - a.value);
 
         const totalInventoryCount = inventoryByStudio.reduce((acc, item) => acc + item.value, 0);
+
+        // --- New Aggregation: Inventory by Series & Scale ---
+        const seriesInventoryMap: { [key: string]: { value: number, category: string, categoryId: number, studios: { [key: string]: number } } } = {};
+        const scaleInventoryMap: { [key: string]: number } = {};
+        const resourcesByStudioMap: { [key: string]: { resin: number, paint: number } } = {};
+
+        studios.forEach(s => {
+            // @ts-ignore
+            s.figuras?.forEach((f: any) => {
+                // --- Series Logic ---
+                const seriesData = Array.isArray(f.series) ? f.series[0] : f.series;
+                const sName = seriesData?.nome || 'Sem Série';
+
+                const catData = Array.isArray(seriesData?.categorias) ? seriesData.categorias[0] : seriesData?.categorias;
+                const cName = catData?.nome || 'Outros';
+                const cId = catData?.id || 999;
+
+                if (!seriesInventoryMap[sName]) {
+                    seriesInventoryMap[sName] = { value: 0, category: cName, categoryId: cId, studios: {} };
+                }
+                seriesInventoryMap[sName].value += 1;
+
+                const studioName = s.nome;
+                seriesInventoryMap[sName].studios[studioName] = (seriesInventoryMap[sName].studios[studioName] || 0) + 1;
+
+                if (!resourcesByStudioMap[studioName]) {
+                    resourcesByStudioMap[studioName] = { resin: 0, paint: 0 };
+                }
+
+                // --- Scale Logic (New) ---
+                const meta = Array.isArray(f.figuras_meta) ? f.figuras_meta[0] : f.figuras_meta;
+                const scaleRaw = meta?.escala;
+                let scaleLabel = 'Outros';
+
+                if (scaleRaw) {
+                    // Normalize common scales if needed, or just use raw value if clean
+                    // Assuming scale is stored as number (e.g. 10 for 1/10) or string '1/10'
+                    // Based on previous files, it seemed to be a number (escala: number | string).
+                    // Let's assume it might be 10, 6, 4 etc. and convert to '1/10', '1/6'
+                    // OR if it's already '1/10', use it. 
+                    // Let's check api/admin/figures/page.tsx, it had placeholder="100".
+                    // Let's assume it's a number representing the denominator (e.g. 6 for 1/6) or just a string.
+                    // The user asked for "1/10, 1/6".
+                    // If it's a number, I'll format it. If string, use as is.
+                    scaleLabel = !isNaN(Number(scaleRaw)) ? `1/${scaleRaw}` : String(scaleRaw);
+                }
+
+                scaleInventoryMap[scaleLabel] = (scaleInventoryMap[scaleLabel] || 0) + 1;
+
+                // --- Resources Logic (New) ---
+                if (meta) {
+                    resourcesByStudioMap[studioName].resin += (Number(meta.resina_kg) || 0);
+                    resourcesByStudioMap[studioName].paint += (Number(meta.horas_pintura) || 0);
+                }
+            });
+        });
+
+        const inventoryBySeries = Object.entries(seriesInventoryMap)
+            .map(([name, data]) => ({ name, value: data.value, category: data.category, categoryId: data.categoryId, studios: data.studios }))
+            .sort((a, b) => b.value - a.value);
+
+        const inventoryByScale = Object.entries(scaleInventoryMap)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value);
+
+        const resourcesByStudio = Object.entries(resourcesByStudioMap)
+            .map(([name, data]) => ({ name, resin: Math.round(data.resin * 10) / 10, paint: Math.round(data.paint) })) // Round 1 decimal
+            .sort((a, b) => b.resin - a.resin)
+            .slice(0, 10); // Top 10
 
         const revenueByStudio = Object.entries(studioSalesMap)
             .map(([name, data]) => ({ name, value: data.revenue }))
@@ -207,6 +292,10 @@ export async function GET(req: Request) {
 
         const soldByStudio = Object.entries(studioSalesMap)
             .map(([name, data]) => ({ name, value: data.itemsSold }))
+            .sort((a, b) => b.value - a.value);
+
+        const costByStudio = studios
+            .map(s => ({ name: s.nome, value: s.custo_mensal || 0 }))
             .sort((a, b) => b.value - a.value);
 
         const revenueVsCost = studios.map(s => {
@@ -226,7 +315,7 @@ export async function GET(req: Request) {
             .sort((a, b) => b.value - a.value);
 
         const salesBySeries = Object.entries(seriesSalesMap)
-            .map(([name, data]) => ({ name, value: data.value, category: data.category }))
+            .map(([name, data]) => ({ name, value: data.value, category: data.category, studios: data.studios }))
             .sort((a, b) => b.value - a.value);
 
         return NextResponse.json({
@@ -248,9 +337,13 @@ export async function GET(req: Request) {
                 profitByStudio,
                 soldByStudio,
                 inventoryByStudio,
+                salesByCategory,
+                salesBySeries,
                 revenueVsCost,
-                salesByCategory, // New
-                salesBySeries    // New
+                inventoryBySeries,
+                inventoryByScale,
+                resourcesByStudio,
+                costByStudio
             },
             lists: {
                 topProducts,
