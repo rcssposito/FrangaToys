@@ -43,11 +43,13 @@ export async function GET(req: Request) {
                     ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0)) +
                     ((meta.horas_pintura || 0) * (settings.custo_h_pintura || 0));
 
+                const roundTo5 = (val: number) => Math.ceil(val / 5) * 5;
+
                 return {
                     id: item.id,
                     Figura: item.nome,
-                    "Básico (R$)": Number((custoBase * settings.margem_basica).toFixed(2)),
-                    "Premium (R$)": Number((custoBase * settings.margem_premium).toFixed(2))
+                    "Básico (R$)": roundTo5(custoBase * settings.margem_basica),
+                    "Premium (R$)": roundTo5(custoBase * settings.margem_premium)
                 };
             });
 

@@ -153,9 +153,12 @@ export default function DataGridPage() {
             (res_kg * settings.custo_resina_kg) +
             (h_pint * settings.custo_h_pintura);
 
+        // Round up to nearest multiple of 5
+        const roundTo5 = (val: number) => Math.ceil(val / 5) * 5;
+
         return {
-            basic: custoBase * settings.margem_basica,
-            premium: custoBase * settings.margem_premium
+            basic: roundTo5(custoBase * settings.margem_basica),
+            premium: roundTo5(custoBase * settings.margem_premium)
         };
     };
 
@@ -297,10 +300,10 @@ export default function DataGridPage() {
                                         </td>
 
                                         <td className="p-4 text-right font-mono font-bold text-green-400">
-                                            R$ {prices.basic.toFixed(2)}
+                                            R$ {prices.basic}
                                         </td>
                                         <td className="p-4 text-right font-mono font-bold text-purple-400">
-                                            R$ {prices.premium.toFixed(2)}
+                                            R$ {prices.premium}
                                         </td>
 
                                         <td className="p-3 text-center">
