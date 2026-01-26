@@ -2,45 +2,50 @@
 import { Metadata } from 'next';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { FigureDetails } from '@/components/Gallery/FigureDetails';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 interface Props {
-    params: Promise<{ slug: string }>;
+    params: Promise<{ id: string }>;
 }
 
 // 1. Gerar Metadata Dinâmico para WhatsApp/SEO
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-    const { slug } = await params;
+    const { id } = await params;
 
-    const { data } = await supabase
+    let query = supabase
         .from('figuras')
         .select(`
             nome,
+            slug,
             imagem_url,
             series ( nome )
         `)
-        .eq('slug', slug)
+        .eq('id', id)
         .single();
 
+    const { data } = await query;
     const figure = data as any;
+
     if (!figure) return { title: 'Figura não encontrada' };
 
     const title = `${figure.nome} | Franga Toys`;
     const description = `Confira os detalhes de ${figure.nome} ${figure.series?.nome ? `da série ${figure.series.nome}` : ''}. Faça seu orçamento de figuras 3D!`;
-
-    // URL direta do ImageKit (Custo Zero no Vercel)
     const imageUrl = figure.imagem_url;
 
     return {
         title,
         description,
+        alternates: {
+            canonical: `https://frangatoys.com.br/figura/${figure.slug || id}`,
+        },
         openGraph: {
             title,
             description,
             images: imageUrl ? [{ url: imageUrl, width: 1200, height: 1200 }] : [],
             type: 'website',
+            url: `https://frangatoys.com.br/figura/${figure.slug || id}`,
         },
         twitter: {
             card: 'summary_large_image',
@@ -53,12 +58,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 // 2. Componente da Página (Server Side)
 export default async function FiguraPage({ params }: Props) {
-    const { slug } = await params;
+    const { id } = await params;
 
     const { data: figure, error } = await supabase
         .from('figuras')
         .select(`
             *,
+            slug,
             series ( 
                 nome,
                 categorias ( nome )
@@ -66,11 +72,11 @@ export default async function FiguraPage({ params }: Props) {
             figuras_meta ( * ),
             studios ( nome )
         `)
-        .eq('slug', slug)
+        .eq('id', id)
         .single();
 
     if (error || !figure) {
-        console.error("Figure fetch error:", error, "Slug:", slug);
+        console.error("Figure fetch error:", error, "ID:", id);
         notFound();
     }
 
@@ -86,7 +92,7 @@ export default async function FiguraPage({ params }: Props) {
         altura_cm: figure.figuras_meta?.altura_cm,
         largura_cm: figure.figuras_meta?.largura_cm,
         profundidade_cm: figure.figuras_meta?.profundidade_cm,
-        slug: figure.slug, // Pass slug to component if needed for sharing
+        slug: figure.slug,
     };
 
     // JSON-LD Structured Data (Product)
@@ -102,9 +108,9 @@ export default async function FiguraPage({ params }: Props) {
         },
         offers: {
             '@type': 'Offer',
-            url: `https://frangatoys.com.br/figura/${figure.slug}`,
+            url: `https://frangatoys.com.br/figura/${figure.id}`,
             priceCurrency: 'BRL',
-            availability: 'https://schema.org/PreOrder', // Most are made to order? Or InStock?
+            availability: 'https://schema.org/PreOrder',
         },
     };
 

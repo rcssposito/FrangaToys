@@ -15,7 +15,6 @@ export const FiguraSchema = z.object({
   altura_cm: z.number().nullable().optional(),
   largura_cm: z.number().nullable().optional(),
   profundidade_cm: z.number().nullable().optional(),
-  slug: z.string().nullable().optional(),
 });
 
 export type FiguraDTO = z.infer<typeof FiguraSchema>;

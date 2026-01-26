@@ -23,7 +23,7 @@ export const MobileCard = ({ figure, className }: MobileCardProps) => {
                 className
             )}
         >
-            <Link href={`/figura/${figure.slug || figure.id}`} scroll={false} className="flex w-full">
+            <Link href={`/figura/${figure.id}`} scroll={false} className="flex w-full">
                 {/* Left: Image (Square-ish) */}
                 <div className="relative w-36 sm:w-48 aspect-[4/5] bg-zinc-900 border-r border-zinc-800 flex-shrink-0">
                     <Image

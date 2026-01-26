@@ -31,7 +31,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .order('id', { ascending: false });
 
     const figureRoutes = (figures || []).map((figure) => ({
-        url: `${baseUrl}/figura/${figure.slug || figure.id}`, // Fallback to ID if slug missing (safety)
+        url: `${baseUrl}/figura/${figure.id}`,
         lastModified: new Date(), // or figure.updated_at if available and valid date
         changeFrequency: 'weekly' as const,
         priority: 0.8,

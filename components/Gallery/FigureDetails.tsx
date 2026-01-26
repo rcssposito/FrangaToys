@@ -17,7 +17,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
     const { addToCart, removeFromCart, isInCart } = useCart();
 
     const handleShare = async () => {
-        const shareUrl = `${window.location.origin}/figura/${figure.slug || figure.id}`;
+        const shareUrl = `${window.location.origin}/figura/${figure.id}`;
 
         if (navigator.share) {
             try {
