@@ -15,6 +15,8 @@ export const FiguraSchema = z.object({
   altura_cm: z.number().nullable().optional(),
   largura_cm: z.number().nullable().optional(),
   profundidade_cm: z.number().nullable().optional(),
+  slug: z.string().nullable().optional(),
+  preco: z.number().nullable().optional(),
 });
 
 export type FiguraDTO = z.infer<typeof FiguraSchema>;
@@ -33,7 +35,7 @@ export const EstudioSchema = z.object({
   id: z.number(),
   nome: z.string(),
   custo_mensal: z.number().nullable().optional(),
-  qtd_display: z.number().nullable().optional(), // Now mostly read-only/legacy but kept
+  qtd_display: z.number().nullable().optional(),
   qualidade: z.number().nullable().optional(),
   observacao: z.string().nullable().optional(),
   figuras: z.array(z.object({ count: z.number() })).optional(),

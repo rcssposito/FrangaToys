@@ -170,7 +170,7 @@ export default function AdminDashboard() {
     const menuItems = [
         { label: 'Gerenciar Usuários', href: '/admin/users', roles: ['admin'], icon: Users },
         { label: 'Gerenciar Estúdios', href: '/admin/studios', roles: ['admin'], icon: Activity },
-        { label: 'Catálogo & Preços', href: '/admin/figures', roles: ['admin', 'pricing'], icon: Package },
+        { label: 'Gerenciador de Catálogo', href: '/admin/figures', roles: ['admin', 'pricing'], icon: Package },
         { label: 'Histórico de Vendas', href: '/admin/sales', roles: ['admin', 'sales'], icon: ShoppingCart },
         { label: 'Configurações', href: '/admin/settings', roles: ['admin'], icon: Settings },
     ];
@@ -1031,6 +1031,72 @@ export default function AdminDashboard() {
                                 <Tooltip content={<CategoryTooltip suffix="unid." />} cursor={{ fill: '#ffffff10' }} />
                                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                                     {data?.charts.soldByStudio.slice(0, 10).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#f97316" />)}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+            </div>
+
+            {/* Price Analytics Section */}
+            <h2 className="text-xl font-bold mt-8 mb-4 flex items-center gap-2">
+                <DollarSign className="text-green-500" />
+                Analytics de Preço <span className="text-sm font-normal text-zinc-500">(Baseado em Orçamento Premium)</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
+                {/* KPI: Potential Value */}
+                <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl flex flex-col justify-center items-center">
+                    <h3 className="text-zinc-400 text-sm font-medium uppercase tracking-wider mb-2">Potencial de Estoque</h3>
+                    <p className="text-4xl font-bold text-white">
+                        {data?.charts.totalPortfolioValue?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00'}
+                    </p>
+                    <p className="text-zinc-500 text-xs mt-2 text-center max-w-[200px]">
+                        Soma do valor de venda sugerido (Premium) de todas as figuras cadastradas.
+                    </p>
+                </div>
+
+                {/* Chart: Avg Price by Studio */}
+                <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
+                    <div className="flex justify-between items-start mb-6">
+                        <h2 className="text-lg font-bold flex items-center gap-2">
+                            <Tag size={20} className="text-purple-500" />
+                            Ticket Médio por Estúdio
+                        </h2>
+                    </div>
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={data?.charts.avgPriceByStudio?.slice(0, 10) || []} margin={{ left: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={60} />
+                                <YAxis hide />
+                                <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number) => `R$ ${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />} cursor={{ fill: '#ffffff10' }} />
+                                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                                    {(data?.charts.avgPriceByStudio || []).slice(0, 10).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#a855f7" />)}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Chart: Price Distribution */}
+                <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl relative group">
+                    <div className="flex justify-between items-start mb-6">
+                        <h2 className="text-lg font-bold flex items-center gap-2">
+                            <Layers size={20} className="text-blue-500" />
+                            Distribuição de Preço
+                        </h2>
+                    </div>
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={data?.charts.priceDistribution || []} margin={{ left: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={60} />
+                                <YAxis hide />
+                                <Tooltip content={<CategoryTooltip suffix="figuras" />} cursor={{ fill: '#ffffff10' }} />
+                                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                                    {(data?.charts.priceDistribution || []).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#3b82f6" />)}
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>

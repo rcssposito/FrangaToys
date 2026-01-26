@@ -78,6 +78,24 @@ export async function GET(req: Request) {
 
         if (studiosError) throw studiosError;
 
+        // 4. Fetch Pricing View (Budget)
+        // Note: usage of quote for special column names
+        const { data: pricingData, error: pricingError } = await supabase
+            .from('vw_figuras_orcamento')
+            .select('id, "Figura", "Total (R$)", "Premium (R$)"');
+
+        // Map to cleaner objects
+        const pricingMap = new Map(); // ID -> { premium, cost }
+        if (pricingData) {
+            pricingData.forEach((row: any) => {
+                pricingMap.set(row.id, {
+                    name: row['Figura'],
+                    cost: row['Total (R$)'] || 0,
+                    price: row['Premium (R$)'] || 0
+                });
+            });
+        }
+
         // --- KPI Calculation & Trends ---
         const calculateKPIs = (data: any[]) => {
             const paidSales = data.filter(s => (s.valor_venda_final || 0) > 0);
@@ -318,6 +336,47 @@ export async function GET(req: Request) {
             .map(([name, data]) => ({ name, value: data.value, category: data.category, studios: data.studios }))
             .sort((a, b) => b.value - a.value);
 
+        // --- New Price Analytics ---
+        let totalPortfolioValue = 0;
+        const priceBucketCounts: Record<string, number> = { "0-300": 0, "300-600": 0, "600-900": 0, "900+": 0 };
+
+        // Ensure pricingMap is populated (we did this in step 4)
+        pricingMap.forEach((val) => {
+            totalPortfolioValue += Number(val.price);
+            const p = Number(val.price);
+            if (p < 300) priceBucketCounts["0-300"]++;
+            else if (p < 600) priceBucketCounts["300-600"]++;
+            else if (p < 900) priceBucketCounts["600-900"]++;
+            else priceBucketCounts["900+"]++;
+        });
+
+        // Avg Price by Studio
+        const avgPriceByStudio = studios.map(s => {
+            let sum = 0;
+            let count = 0;
+            if (s.figuras) {
+                s.figuras.forEach((f: any) => {
+                    const pEntry = pricingMap.get(f.id);
+                    if (pEntry && pEntry.price > 0) {
+                        sum += Number(pEntry.price);
+                        count++;
+                    }
+                });
+            }
+            return {
+                name: s.nome,
+                value: count > 0 ? (sum / count) : 0,
+                count
+            };
+        }).filter(s => s.value > 0).sort((a, b) => b.value - a.value);
+
+        const priceDistribution = [
+            { name: 'R$ 0 - 300', value: priceBucketCounts["0-300"] },
+            { name: 'R$ 300 - 600', value: priceBucketCounts["300-600"] },
+            { name: 'R$ 600 - 900', value: priceBucketCounts["600-900"] },
+            { name: 'R$ 900+', value: priceBucketCounts["900+"] }
+        ];
+
         return NextResponse.json({
             kpis: {
                 totalRevenue: currentKPIs.revenue,
@@ -343,7 +402,11 @@ export async function GET(req: Request) {
                 inventoryBySeries,
                 inventoryByScale,
                 resourcesByStudio,
-                costByStudio
+                costByStudio,
+                // New Charts
+                avgPriceByStudio,
+                priceDistribution,
+                totalPortfolioValue,
             },
             lists: {
                 topProducts,
