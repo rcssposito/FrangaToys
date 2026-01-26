@@ -78,16 +78,39 @@ export async function GET(req: Request) {
 
         if (studiosError) throw studiosError;
 
-        // 4. Fetch Pricing View (Budget)
-        // Note: usage of quote for special column names
-        const { data: pricingData, error: pricingError } = await supabase
-            .from('vw_figuras_orcamento')
-            .select('id, "Figura", "Total (R$)", "Premium (R$)"');
+        // 4. Fetch Pricing View (Budget) - WITH PAGINATION
+        // Supabase API might limit rows even if we request more.
+        const allPricingData: any[] = [];
+        let page = 0;
+        const pageSize = 1000;
+        let hasMore = true;
+
+        while (hasMore) {
+            const { data: batch, error: batchError } = await supabase
+                .from('vw_figuras_orcamento')
+                .select('id, "Figura", "Total (R$)", "Premium (R$)"')
+                .range(page * pageSize, (page + 1) * pageSize - 1);
+
+            if (batchError) {
+                console.error("Error fetching pricing batch:", batchError);
+                break;
+            }
+
+            if (batch && batch.length > 0) {
+                allPricingData.push(...batch);
+                if (batch.length < pageSize) hasMore = false;
+                page++;
+            } else {
+                hasMore = false;
+            }
+        }
+
+        console.log(`[PricingDebug] Total Rows Fetched: ${allPricingData.length}`);
 
         // Map to cleaner objects
         const pricingMap = new Map(); // ID -> { premium, cost }
-        if (pricingData) {
-            pricingData.forEach((row: any) => {
+        if (allPricingData) {
+            allPricingData.forEach((row: any) => {
                 pricingMap.set(row.id, {
                     name: row['Figura'],
                     cost: row['Total (R$)'] || 0,
@@ -338,26 +361,38 @@ export async function GET(req: Request) {
 
         // --- New Price Analytics ---
         let totalPortfolioValue = 0;
+        let totalPortfolioBasic = 0;
         const priceBucketCounts: Record<string, number> = { "0-300": 0, "300-600": 0, "600-900": 0, "900+": 0 };
 
         // Ensure pricingMap is populated (we did this in step 4)
+        console.log(`[PricingDebug] Map Size: ${pricingMap.size}`);
         pricingMap.forEach((val) => {
-            totalPortfolioValue += Number(val.price);
-            const p = Number(val.price);
+            const raw = val.price; // Premium
+            const rawBasic = val.cost; // Basic (mapped from 'Total (R$)')
+
+            const num = Number(raw);
+            const numBasic = Number(rawBasic);
+
+            if (!isNaN(num)) totalPortfolioValue += num;
+            if (!isNaN(numBasic)) totalPortfolioBasic += numBasic;
+
+            const p = num;
             if (p < 300) priceBucketCounts["0-300"]++;
             else if (p < 600) priceBucketCounts["300-600"]++;
             else if (p < 900) priceBucketCounts["600-900"]++;
             else priceBucketCounts["900+"]++;
         });
+        console.log(`[PricingDebug] Total Premium: ${totalPortfolioValue}`);
+        console.log(`[PricingDebug] Total Basic: ${totalPortfolioBasic}`);
 
-        // Avg Price by Studio
+        // Avg Price by Studio (Filter out Zeros)
         const avgPriceByStudio = studios.map(s => {
             let sum = 0;
             let count = 0;
             if (s.figuras) {
                 s.figuras.forEach((f: any) => {
                     const pEntry = pricingMap.get(f.id);
-                    if (pEntry && pEntry.price > 0) {
+                    if (pEntry && Number(pEntry.price) > 0) { // STRICTLY > 0
                         sum += Number(pEntry.price);
                         count++;
                     }
@@ -407,6 +442,7 @@ export async function GET(req: Request) {
                 avgPriceByStudio,
                 priceDistribution,
                 totalPortfolioValue,
+                totalPortfolioBasic,
             },
             lists: {
                 topProducts,

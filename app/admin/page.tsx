@@ -383,7 +383,7 @@ export default function AdminDashboard() {
                         .filter((s: any) => s.category === drillDownCategory)
                         .slice(0, 15);
 
-                    if (chartData.length === 0) {
+                    if (!chartData || chartData.length === 0) {
                         ChartComponent = (
                             <div className="h-full flex flex-col items-center justify-center text-zinc-500">
                                 <Box size={48} className="mb-4 opacity-50" />
@@ -423,7 +423,6 @@ export default function AdminDashboard() {
                                         fill="#8884d8"
                                         dataKey="value"
                                         onClick={(data: any) => {
-                                            console.log("Pie clicked:", data);
                                             const category = data?.name || data?.payload?.name;
                                             if (category) setDrillDownCategory(category);
                                         }}
@@ -447,7 +446,44 @@ export default function AdminDashboard() {
                     );
                 }
                 break;
-            case 'costByStudio':
+            case 'avgPriceByStudio':
+                chartData = data.charts.avgPriceByStudio || [];
+
+                if (!chartData || chartData.length === 0) {
+                    ChartComponent = <div className="flex h-full items-center justify-center text-zinc-500">Sem dados para exibir.</div>;
+                } else {
+                    title = "Ticket Médio por Estúdio (Ranking Completo)";
+                    // Calc dynamic height
+                    const dynamicHeight = Math.max(600, chartData.length * 40);
+
+                    ChartComponent = (
+                        <div className="h-full w-full overflow-hidden flex flex-col">
+                            <div className="flex-1 overflow-y-auto custom-scrollbar pr-4">
+                                <div style={{ height: dynamicHeight, width: '100%', minHeight: '100%' }}>
+                                    <ResponsiveContainer width="99%" height="100%">
+                                        <BarChart
+                                            data={chartData}
+                                            layout="vertical"
+                                            margin={{ left: 20, right: 30, top: 20, bottom: 20 }}
+                                        >
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
+                                            <XAxis type="number" tickFormatter={(v) => `R$ ${v}`} tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                                            <YAxis dataKey="name" type="category" width={150} tick={{ fill: '#e4e4e7', fontSize: 11, fontWeight: 500 }} />
+                                            <Tooltip
+                                                cursor={{ fill: '#ffffff10' }}
+                                                content={<CategoryTooltip suffix="" formatter={(v: number, name: any, item: any) => `R$ ${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${item?.payload?.count || 0} modelos)`} />}
+                                            />
+                                            <Bar dataKey="value" name="Ticket Médio" fill="#a855f7" radius={[0, 4, 4, 0]} barSize={24}>
+                                                {chartData.map((e: any, index: number) => <Cell key={index} fill="#a855f7" />)}
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
+                break;
                 chartData = data.charts.costByStudio || [];
                 title = "Custo Mensal por Estúdio (Top 20)";
                 ChartComponent = (
@@ -1046,15 +1082,23 @@ export default function AdminDashboard() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
 
-                {/* KPI: Potential Value */}
-                <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl flex flex-col justify-center items-center">
-                    <h3 className="text-zinc-400 text-sm font-medium uppercase tracking-wider mb-2">Potencial de Estoque</h3>
-                    <p className="text-4xl font-bold text-white">
-                        {data?.charts.totalPortfolioValue?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00'}
-                    </p>
-                    <p className="text-zinc-500 text-xs mt-2 text-center max-w-[200px]">
-                        Soma do valor de venda sugerido (Premium) de todas as figuras cadastradas.
-                    </p>
+                {/* KPI Column: Potentials */}
+                <div className="flex flex-col gap-4">
+                    {/* KPI: Premium Potential */}
+                    <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl flex flex-col justify-center items-center flex-1">
+                        <h3 className="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-1">Potencial (Premium)</h3>
+                        <p className="text-3xl font-bold text-green-400">
+                            {data?.charts.totalPortfolioValue?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00'}
+                        </p>
+                    </div>
+
+                    {/* KPI: Basic Potential */}
+                    <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl flex flex-col justify-center items-center flex-1">
+                        <h3 className="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-1">Potencial (Básico)</h3>
+                        <p className="text-3xl font-bold text-zinc-300">
+                            {data?.charts.totalPortfolioBasic?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00'}
+                        </p>
+                    </div>
                 </div>
 
                 {/* Chart: Avg Price by Studio */}
@@ -1064,6 +1108,9 @@ export default function AdminDashboard() {
                             <Tag size={20} className="text-purple-500" />
                             Ticket Médio por Estúdio
                         </h2>
+                        <button onClick={() => setExpandedChart('avgPriceByStudio')} className="p-2 bg-zinc-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-zinc-700 text-zinc-400 hover:text-white" title="Expandir">
+                            <Maximize2 size={16} />
+                        </button>
                     </div>
                     <div className="h-[300px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
