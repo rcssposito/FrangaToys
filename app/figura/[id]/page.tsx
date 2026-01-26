@@ -88,8 +88,32 @@ export default async function FiguraPage({ params }: Props) {
         profundidade_cm: figure.figuras_meta?.profundidade_cm,
     };
 
+    // JSON-LD Structured Data (Product)
+    const jsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: figure.nome,
+        image: figure.imagem_url ? [figure.imagem_url] : [],
+        description: `Figura ${figure.nome} da série ${figure.series?.nome}. Produzida em resina 4k.`,
+        brand: {
+            '@type': 'Brand',
+            name: 'Franga Toys',
+        },
+        offers: {
+            '@type': 'Offer',
+            url: `https://frangatoys.com.br/figura/${figure.id}`,
+            priceCurrency: 'BRL',
+            availability: 'https://schema.org/PreOrder', // Most are made to order? Or InStock?
+        },
+    };
+
     return (
         <div className="min-h-screen bg-black text-white p-4 sm:p-8">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
+
             <div className="max-w-5xl mx-auto">
                 <Link
                     href="/"
