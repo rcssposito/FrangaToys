@@ -42,7 +42,7 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                 {/* === FRONT FACE === */}
                 <div className="absolute inset-0 backface-hidden">
                     <div className="relative w-full h-full bg-[#121214] rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-600 transition-all shadow-lg hover:shadow-xl">
-                        <Link href={`/figura/${figure.id}`} scroll={false}>
+                        <Link href={`/figura/${figure.slug || figure.id}`} scroll={false}>
                             <Image
                                 loader={imageKitLoader}
                                 src={imageUrl}

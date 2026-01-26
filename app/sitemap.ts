@@ -27,11 +27,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // We only want available or visible figures ideally, but let's take all for now.
     const { data: figures } = await supabase
         .from('figuras')
-        .select('id, updated_at')
+        .select('id, slug, updated_at')
         .order('id', { ascending: false });
 
     const figureRoutes = (figures || []).map((figure) => ({
-        url: `${baseUrl}/figura/${figure.id}`,
+        url: `${baseUrl}/figura/${figure.slug || figure.id}`, // Fallback to ID if slug missing (safety)
         lastModified: new Date(), // or figure.updated_at if available and valid date
         changeFrequency: 'weekly' as const,
         priority: 0.8,

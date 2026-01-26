@@ -7,12 +7,12 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 interface Props {
-    params: Promise<{ id: string }>;
+    params: Promise<{ slug: string }>;
 }
 
 // 1. Gerar Metadata Dinâmico para WhatsApp/SEO
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-    const { id } = await params;
+    const { slug } = await params;
 
     const { data } = await supabase
         .from('figuras')
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             imagem_url,
             series ( nome )
         `)
-        .eq('id', id)
+        .eq('slug', slug)
         .single();
 
     const figure = data as any;
@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 // 2. Componente da Página (Server Side)
 export default async function FiguraPage({ params }: Props) {
-    const { id } = await params;
+    const { slug } = await params;
 
     const { data: figure, error } = await supabase
         .from('figuras')
@@ -66,11 +66,11 @@ export default async function FiguraPage({ params }: Props) {
             figuras_meta ( * ),
             studios ( nome )
         `)
-        .eq('id', id)
+        .eq('slug', slug)
         .single();
 
     if (error || !figure) {
-        console.error("Figure fetch error:", error, "ID:", id);
+        console.error("Figure fetch error:", error, "Slug:", slug);
         notFound();
     }
 
@@ -86,6 +86,7 @@ export default async function FiguraPage({ params }: Props) {
         altura_cm: figure.figuras_meta?.altura_cm,
         largura_cm: figure.figuras_meta?.largura_cm,
         profundidade_cm: figure.figuras_meta?.profundidade_cm,
+        slug: figure.slug, // Pass slug to component if needed for sharing
     };
 
     // JSON-LD Structured Data (Product)
@@ -101,7 +102,7 @@ export default async function FiguraPage({ params }: Props) {
         },
         offers: {
             '@type': 'Offer',
-            url: `https://frangatoys.com.br/figura/${figure.id}`,
+            url: `https://frangatoys.com.br/figura/${figure.slug}`,
             priceCurrency: 'BRL',
             availability: 'https://schema.org/PreOrder', // Most are made to order? Or InStock?
         },
