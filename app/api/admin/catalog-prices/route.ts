@@ -48,6 +48,7 @@ export async function GET(req: Request) {
                 return {
                     id: item.id,
                     Figura: item.nome,
+                    resina_kg: meta.resina_kg || 0, // Adicionado para cálculo de estoque no PDV
                     "Básico (R$)": roundTo5(custoBase * settings.margem_basica),
                     "Premium (R$)": roundTo5(custoBase * settings.margem_premium)
                 };
@@ -56,15 +57,42 @@ export async function GET(req: Request) {
             return NextResponse.json(formatted);
         }
 
-        // 3. Caso sem busca: Usa a View apenas para carga inicial (limitada a 100 por performance)
+        // 3. Caso sem busca: Pega os últimos adicionados ou por ordem alfabética
         const { data, error } = await supabase
-            .from('vw_figuras_orcamento')
-            .select('*')
-            .order('Figura', { ascending: true })
+            .from('figuras')
+            .select(`
+                id,
+                nome,
+                figuras_meta (
+                    resina_kg,
+                    horas_impressao,
+                    horas_pintura
+                )
+            `)
+            .order('nome', { ascending: true })
             .limit(100);
 
         if (error) throw error;
-        return NextResponse.json(data);
+
+        const formatted = data.map((item: any) => {
+            const meta = item.figuras_meta || {};
+            const custoBase =
+                ((meta.resina_kg || 0) * (settings.custo_resina_kg || 0)) +
+                ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0)) +
+                ((meta.horas_pintura || 0) * (settings.custo_h_pintura || 0));
+
+            const roundTo5 = (val: number) => Math.ceil(val / 5) * 5;
+
+            return {
+                id: item.id,
+                Figura: item.nome,
+                resina_kg: meta.resina_kg || 0,
+                "Básico (R$)": roundTo5(custoBase * settings.margem_basica),
+                "Premium (R$)": roundTo5(custoBase * settings.margem_premium)
+            };
+        });
+
+        return NextResponse.json(formatted);
 
     } catch (error: any) {
         console.error('Catalog Search Error:', error);

@@ -25,76 +25,98 @@ export async function GET() {
     }
 }
 
-// REGISTRAR VENDA
+// REGISTRAR VENDA (SUPORTA CARRINHO / MÚLTIPLOS ITENS)
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { figura_id, valor_venda_final, cliente_nome, canal_venda, quantidade = 1, observacao, data_venda } = body;
-
-        console.log('Registering sale for figure ID:', figura_id, 'Qty:', quantidade);
-
-        // 1. Buscar dados técnicos da figura e as configurações globais de preço
-        const [metaRes, settingsRes] = await Promise.all([
-            supabase.from('figuras_meta').select('*').eq('figura_id', figura_id).single(),
-            supabase.from('pricing_params').select('*').eq('id', 1).single()
-        ]);
-
-        if (metaRes.error || settingsRes.error) {
-            console.error('Error fetching data for calc:', { metaError: metaRes.error, setError: settingsRes.error });
-            throw new Error('Falha ao obter dados para cálculo de lucro');
-        }
-
-        const meta = metaRes.data;
-        const settings = settingsRes.data;
-
-        // O custo de produção real é apenas o material e a máquina (conforme solicitado)
-        // Aplicando a regra de arredondamento para cima
-        const custo_resina_raw = (meta.resina_kg || 0) * (settings.custo_resina_kg || 0);
-        const custo_impressao_raw = (meta.horas_impressao || 0) * (settings.custo_h_impressao || 0);
-
-        const custo_unitario_real = Math.ceil(custo_resina_raw + custo_impressao_raw);
-        const custo_total_real = custo_unitario_real * quantidade;
-
-        const lucro_real = valor_venda_final - custo_total_real;
-
-        console.log('--- LUCRO CALCULADO (API) ---');
-        console.log('Figura ID:', figura_id);
-        console.log('Custo Unitário:', custo_unitario_real);
-        console.log('Quantidade:', quantidade);
-        console.log('Custo Total:', custo_total_real);
-        console.log('Venda Total:', valor_venda_final, 'Lucro Total:', lucro_real.toFixed(2));
-
-        const saleData: any = {
-            figura_id,
+        const {
+            carrinho, // Array de { id, nome, quantidade, valor_final, resina_kg }
             cliente_nome,
             canal_venda,
-            valor_venda_final, // Valor total da venda
-            custo_producao_snapshot: custo_total_real, // Custo total da produção
-            lucro_real,
-            status: 'Concluída',
-            quantidade,
+            data_venda,
             observacao
-        };
+        } = body;
 
-        // Se data_venda for fornecida, usa ela. Senão o banco usa default now()
-        if (data_venda) {
-            saleData.data_venda = data_venda;
+        if (!carrinho || !Array.isArray(carrinho) || carrinho.length === 0) {
+            throw new Error('Carrinho vazio ou inválido');
         }
 
-        const { data, error } = await supabase
-            .from('vendas')
-            .insert([saleData])
-            .select()
+        console.log(`Registering ${carrinho.length} items for client ${cliente_nome}`);
+
+        // 1. Buscar configurações globais de preço (para saber custo de resina/h_impressao atual)
+        const { data: settings, error: settingsError } = await supabase
+            .from('pricing_params')
+            .select('*')
+            .eq('id', 1)
             .single();
 
-        if (error) {
-            console.error('Error inserting sale:', error);
-            throw error;
+        if (settingsError) throw new Error('Falha ao obter parâmetros de precificação');
+
+        let totalResinaConsumida = 0;
+        const salesToInsert = [];
+
+        // 2. Processar cada item do carrinho para calcular lucros individuais (snapshot)
+        for (const item of carrinho) {
+            // Buscar metadados técnicos da figura (escala, horas, etc)
+            const { data: meta, error: metaError } = await supabase
+                .from('figuras_meta')
+                .select('*')
+                .eq('figura_id', item.id)
+                .single();
+
+            if (metaError) {
+                console.error(`Error fetching meta for figure ${item.id}:`, metaError);
+                continue; // Pular item se houver erro ou usar valores default
+            }
+
+            // Cálculo do custo (apenas resina + horas de impressão conforme regra de negócio)
+            const custo_resina_raw = (meta.resina_kg || 0) * (settings.custo_resina_kg || 0);
+            const custo_impressao_raw = (meta.horas_impressao || 0) * (settings.custo_h_impressao || 0);
+
+            const custo_unitario_real = Math.ceil(custo_resina_raw + custo_impressao_raw);
+            const custo_total_real = custo_unitario_real * item.quantidade;
+            const lucro_real = item.valor_final - custo_total_real;
+
+            totalResinaConsumida += (meta.resina_kg || 0) * item.quantidade;
+
+            salesToInsert.push({
+                figura_id: item.id,
+                cliente_nome,
+                canal_venda,
+                valor_venda_final: item.valor_final,
+                custo_producao_snapshot: custo_total_real,
+                lucro_real,
+                status: 'Concluída',
+                quantidade: item.quantidade,
+                observacao: observacao || '',
+                data_venda: data_venda || new Date().toISOString()
+            });
         }
 
-        return NextResponse.json(data);
+        // 3. Inserir vendas em lote
+        const { data: insertedData, error: insertError } = await supabase
+            .from('vendas')
+            .insert(salesToInsert)
+            .select();
+
+        if (insertError) throw insertError;
+
+        // 4. DEDUZIR ESTOQUE DE RESINA
+        if (totalResinaConsumida > 0) {
+            const novoEstoque = Math.max(0, (settings.estoque_resina_kg || 0) - totalResinaConsumida);
+
+            const { error: stockError } = await supabase
+                .from('pricing_params')
+                .update({ estoque_resina_kg: novoEstoque })
+                .eq('id', 1);
+
+            if (stockError) console.error('Falha ao deduzir estoque de resina:', stockError);
+            else console.log(`Estoque de resina atualizado: -${totalResinaConsumida.toFixed(3)}kg. Novo saldo: ${novoEstoque.toFixed(3)}kg`);
+        }
+
+        return NextResponse.json(insertedData);
     } catch (error: any) {
-        console.error('Sales POST API Crash:', error);
+        console.error('Sales POST Batch API Crash:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
