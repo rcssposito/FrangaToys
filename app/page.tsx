@@ -56,8 +56,12 @@ export default function Home() {
 
         {/* Header - Desktop */}
         <div className="hidden sm:flex items-center justify-center relative mb-8 px-4 py-4">
-          <Link href="/" className="text-3xl font-bold tracking-tight hover:opacity-80 transition-opacity">
-            Galeria <span className="text-orange-500">Franga Toys</span>
+          <Link href="/" className="hover:opacity-80 transition-opacity">
+            <img
+              src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
+              alt="Franga Toys Logo"
+              className="h-32 object-contain"
+            />
           </Link>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
             <CartIndicator onClick={() => setIsDrawerOpen(true)} className="hover:bg-zinc-900 px-3 py-2 rounded-lg" />

@@ -106,9 +106,13 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                 <div className="w-10 flex justify-start">
                     <CartIndicator onClick={onOpenCart} />
                 </div>
-                <h1 className="text-lg font-bold tracking-tight">
-                    Galeria <span className="text-orange-500">Franga Toys</span>
-                </h1>
+                <div className="flex-1 flex justify-center">
+                    <img
+                        src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
+                        alt="Logo"
+                        className="h-16 object-contain"
+                    />
+                </div>
                 <div className="w-10 flex justify-end">
                     <Link href="/admin" className="p-1 text-zinc-500 hover:text-white transition-colors">
                         <Settings size={18} />
