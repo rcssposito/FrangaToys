@@ -16,7 +16,7 @@ export async function GET(
     try {
         const { id } = await params;
 
-        // Fetch figure data and pricing from vw_figuras_orcamento
+        // 1. Fetch prices and basic info from the view
         const { data: figure, error } = await supabase
             .from('vw_figuras_orcamento')
             .select('*')
@@ -28,16 +28,40 @@ export async function GET(
             return new Response('Figure not found', { status: 404 });
         }
 
-        // Fetch original figure to get the image url and studio
-        const { data: figureDetails } = await supabase
+        // 2. Fetch technical details and images from tables
+        const { data: details } = await supabase
             .from('figuras')
-            .select('imagem_url, studio_id, studios(nome)')
+            .select(`
+                imagem_url, 
+                studios(nome),
+                figuras_meta(
+                    altura_cm, 
+                    largura_cm, 
+                    profundidade_cm, 
+                    altura_original, 
+                    largura_original, 
+                    profundidade_original
+                )
+            `)
             .eq('id', id)
             .single();
 
-        const imageUrl = figureDetails?.imagem_url || '';
-        const studiosField = figureDetails?.studios as any;
-        const studioName = (Array.isArray(studiosField) ? studiosField[0]?.nome : studiosField?.nome) || 'N/A';
+        const imageUrl = details?.imagem_url || '';
+        const studioName = (details?.studios as any)?.nome || 'N/A';
+        const meta = (Array.isArray(details?.figuras_meta) ? details?.figuras_meta[0] : details?.figuras_meta) as any || {};
+
+        const formatDim = (current: any, original: any) => {
+            const curr = Number(current) || 0;
+            const orig = Number(original) || 0;
+            if (orig > 0 && Math.abs(curr - orig) > 0.1) {
+                return `${Math.round(curr)} (${Math.round(orig)}) cm`;
+            }
+            return `${Math.round(curr)} cm`;
+        };
+
+        const alturaStr = formatDim(meta.altura_cm, meta.altura_original);
+        const larguraStr = formatDim(meta.largura_cm, meta.largura_original);
+        const profundidadeStr = formatDim(meta.profundidade_cm, meta.profundidade_original);
 
         return new ImageResponse(
             (
@@ -47,95 +71,99 @@ export async function GET(
                         width: '100%',
                         display: 'flex',
                         flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'flex-end',
-                        backgroundColor: '#1E1E1E',
+                        backgroundColor: '#121212',
                         position: 'relative',
-                        fontFamily: 'sans-serif',
+                        fontFamily: 'Inter, "sans-serif"',
                     }}
                 >
-                    {/* Background Image */}
-                    {imageUrl && (
+                    {/* Main Image Container */}
+                    <div style={{ display: 'flex', flex: 1, position: 'relative', overflow: 'hidden' }}>
+                        {imageUrl && (
+                            <img
+                                src={imageUrl}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                }}
+                            />
+                        )}
+
+                        {/* Logo Top Left */}
                         <img
-                            src={imageUrl}
+                            src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
                             style={{
                                 position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover',
-                                opacity: 0.9,
+                                top: 40,
+                                left: 40,
+                                width: 220,
                             }}
                         />
-                    )}
-
-                    {/* Top Right Logo/Watermark (Optional) */}
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: 20,
-                            right: 20,
-                            display: 'flex',
-                            color: 'rgba(255, 255, 255, 0.4)',
-                            fontSize: 24,
-                            fontWeight: 'bold',
-                        }}
-                    >
-                        FRANGA TOYS
                     </div>
 
-                    {/* Price Box */}
-                    <div
-                        style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            width: '80%',
-                            backgroundColor: 'rgba(30,30,30, 0.85)',
-                            borderRadius: 8,
-                            marginBottom: 40,
-                            padding: '16px',
-                            fontFamily: 'sans-serif', // Added font family to fix some text rendering
-                        }}
-                    >
-                        <div style={{ display: 'flex', justifyContent: 'center', color: 'white', fontSize: 32, paddingBottom: 10 }}>
-                            Básico: R$ {(figure['Básico (R$)'] || 0).toFixed(2).replace('.', ',')}
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'center', backgroundColor: '#E04A00', color: 'white', fontSize: 36, fontWeight: 'bold', padding: '10px 0', borderRadius: 4 }}>
-                            Premium: R$ {(figure['Premium (R$)'] || 0).toFixed(2).replace('.', ',')}
-                        </div>
-                    </div>
-
-                    {/* Footer Bar */}
+                    {/* Footer Section */}
                     <div
                         style={{
                             display: 'flex',
                             width: '100%',
                             backgroundColor: 'black',
-                            padding: '20px 40px',
-                            alignItems: 'center',
+                            padding: '40px',
                             justifyContent: 'space-between',
-                            fontFamily: 'sans-serif'
+                            alignItems: 'center',
                         }}
                     >
-                        {/* Title */}
-                        <div style={{ display: 'flex', color: 'white', fontSize: 42, fontWeight: 'bold' }}>
-                            {figure['Figure']}
+                        {/* Left: Info details with Icons */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'white', fontSize: 28, fontWeight: 600 }}>
+                                <span style={{ fontSize: 32 }}>📏</span>
+                                <span>Altura: <span style={{ color: '#aaa', marginLeft: 8 }}>{alturaStr}</span></span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'white', fontSize: 28, fontWeight: 600 }}>
+                                <span style={{ fontSize: 32 }}>📐</span>
+                                <span>Largura: <span style={{ color: '#aaa', marginLeft: 8 }}>{larguraStr}</span></span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'white', fontSize: 28, fontWeight: 600 }}>
+                                <span style={{ fontSize: 32 }}>📦</span>
+                                <span>Profundidade: <span style={{ color: '#aaa', marginLeft: 8 }}>{profundidadeStr}</span></span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'white', fontSize: 28, fontWeight: 600 }}>
+                                <span style={{ fontSize: 32 }}>🏷️</span>
+                                <span>Estúdio: <span style={{ color: '#EA580C', marginLeft: 8 }}>{studioName}</span></span>
+                            </div>
                         </div>
 
-                        {/* Details */}
-                        <div style={{ display: 'flex', flexDirection: 'column', color: 'white', fontSize: 24, gap: 8 }}>
-                            <div style={{ display: 'flex' }}>
-                                📐 Altura: {figure['A (cm)']} cm
+                        {/* Right: Prices */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            {/* Básico Bar */}
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    backgroundColor: '#1E1E1E',
+                                    borderRadius: 8,
+                                    width: 380,
+                                    height: 60,
+                                    padding: '0 20px',
+                                    border: '1px solid #333',
+                                }}
+                            >
+                                <span style={{ flex: 1, textAlign: 'right', color: 'white', fontSize: 24, paddingRight: 10 }}>Básico:</span>
+                                <span style={{ flex: 1, textAlign: 'left', color: 'white', fontSize: 26, fontWeight: 'bold' }}>R$ {(figure['Básico (R$)'] || 0).toFixed(2).replace('.', ',')}</span>
                             </div>
-                            <div style={{ display: 'flex' }}>
-                                📏 Largura: {figure['L (cm)']} cm
-                            </div>
-                            <div style={{ display: 'flex' }}>
-                                📦 Profundidade: {figure['P (cm)']} cm
-                            </div>
-                            <div style={{ display: 'flex', color: '#E04A00', fontWeight: 'bold' }}>
-                                🏷️ Estúdio: {studioName}
+                            {/* Premium Bar */}
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    backgroundColor: '#EA580C',
+                                    borderRadius: 8,
+                                    width: 380,
+                                    height: 60,
+                                    padding: '0 20px',
+                                }}
+                            >
+                                <span style={{ flex: 1, textAlign: 'right', color: 'white', fontSize: 24, paddingRight: 10, fontWeight: 600 }}>Premium:</span>
+                                <span style={{ flex: 1, textAlign: 'left', color: 'white', fontSize: 26, fontWeight: 'bold' }}>R$ {(figure['Premium (R$)'] || 0).toFixed(2).replace('.', ',')}</span>
                             </div>
                         </div>
                     </div>
@@ -143,7 +171,7 @@ export async function GET(
             ),
             {
                 width: 800,
-                height: 1200, // Format similar to the print format ratio you shared
+                height: 1200,
             }
         );
     } catch (e) {
