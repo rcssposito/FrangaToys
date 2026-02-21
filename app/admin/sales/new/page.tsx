@@ -9,6 +9,7 @@ import Link from 'next/link';
 interface CatalogItem {
     id: number;
     Figura: string;
+    studio: string;
     "Básico (R$)": number;
     "Premium (R$)": number;
     resina_kg: number;
@@ -183,7 +184,11 @@ export default function NewSalePage() {
                                     >
                                         <div className="flex flex-col">
                                             <span className="font-medium text-sm group-hover:text-white transition-colors">{item.Figura}</span>
-                                            <span className="text-[10px] text-zinc-500">{(item.resina_kg || 0).toFixed(3)}kg resina</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] text-orange-500/80 font-medium tracking-tight whitespace-nowrap">{item.studio}</span>
+                                                <span className="text-zinc-800 text-[8px]">•</span>
+                                                <span className="text-[10px] text-zinc-500">{(item.resina_kg || 0).toFixed(3)}kg resina</span>
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className="text-emerald-500 text-xs font-mono font-bold">R$ {item['Básico (R$)']}</span>

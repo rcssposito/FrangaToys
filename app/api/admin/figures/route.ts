@@ -82,13 +82,13 @@ export async function GET(req: NextRequest) {
                 categoria: cat.nome || 'Outros',
                 categoria_id: cat.id || 0,
                 imagem_url: item.imagem_url,
-                altura_cm: meta.altura_cm || 0,
-                largura_cm: meta.largura_cm || 0,
-                profundidade_cm: meta.profundidade_cm || 0,
-                resina_kg: meta.resina_kg || 0,
-                horas_impressao: meta.horas_impressao || 0,
-                horas_pintura: meta.horas_pintura || 0,
-                escala: meta.escala || 100,
+                altura_cm: meta.altura_cm ?? 0,
+                largura_cm: meta.largura_cm ?? 0,
+                profundidade_cm: meta.profundidade_cm ?? 0,
+                resina_kg: meta.resina_kg ?? 0,
+                horas_impressao: meta.horas_impressao ?? 0,
+                horas_pintura: meta.horas_pintura ?? 0,
+                escala: meta.escala ?? 100,
             };
         });
 
@@ -137,41 +137,41 @@ export async function PUT(req: Request) {
                 // If original is missing (shouldn't happen with backfill), backfill on the fly
                 const factor = newScale / 100.0;
 
-                const originalH = currentMeta.altura_original ?? (currentMeta.altura_cm ? currentMeta.altura_cm / (oldScale / 100.0) : 0);
-                const originalW = currentMeta.largura_original ?? (currentMeta.largura_cm ? currentMeta.largura_cm / (oldScale / 100.0) : 0);
-                const originalD = currentMeta.profundidade_original ?? (currentMeta.profundidade_cm ? currentMeta.profundidade_cm / (oldScale / 100.0) : 0);
+                const originalH = currentMeta.altura_original ?? (currentMeta.altura_cm && oldScale > 0 ? currentMeta.altura_cm / (oldScale / 100.0) : null);
+                const originalW = currentMeta.largura_original ?? (currentMeta.largura_cm && oldScale > 0 ? currentMeta.largura_cm / (oldScale / 100.0) : null);
+                const originalD = currentMeta.profundidade_original ?? (currentMeta.profundidade_cm && oldScale > 0 ? currentMeta.profundidade_cm / (oldScale / 100.0) : null);
 
-                meta.altura_cm = Math.round(Number(originalH) * factor);
-                meta.largura_cm = Math.round(Number(originalW) * factor);
-                meta.profundidade_cm = Math.round(Number(originalD) * factor);
+                if (originalH !== null) meta.altura_cm = Math.round(Number(originalH) * factor);
+                if (originalW !== null) meta.largura_cm = Math.round(Number(originalW) * factor);
+                if (originalD !== null) meta.profundidade_cm = Math.round(Number(originalD) * factor);
 
-                // Ensure Originals are set if they were missing
-                meta.altura_original = originalH;
-                meta.largura_original = originalW;
-                meta.profundidade_original = originalD;
+                // Ensure Originals are set if they were missing and we have them now
+                if (originalH !== null) meta.altura_original = originalH;
+                if (originalW !== null) meta.largura_original = originalW;
+                if (originalD !== null) meta.profundidade_original = originalD;
 
             } else {
                 // CASE 2: Scale NOT Changed -> Check for Manual Dimension Edits
                 // If user edited height manually, we must update the ORIGINAL to match this new reality at current scale.
-                const scaleFactor = newScale / 100.0;
+                const scaleFactor = (newScale || 100) / 100.0;
 
                 if (meta.altura_cm !== undefined && meta.altura_cm !== currentMeta.altura_cm) {
-                    meta.altura_original = meta.altura_cm / scaleFactor;
+                    meta.altura_original = meta.altura_cm !== null ? meta.altura_cm / scaleFactor : null;
                 }
                 if (meta.largura_cm !== undefined && meta.largura_cm !== currentMeta.largura_cm) {
-                    meta.largura_original = meta.largura_cm / scaleFactor;
+                    meta.largura_original = meta.largura_cm !== null ? meta.largura_cm / scaleFactor : null;
                 }
                 if (meta.profundidade_cm !== undefined && meta.profundidade_cm !== currentMeta.profundidade_cm) {
-                    meta.profundidade_original = meta.profundidade_cm / scaleFactor;
+                    meta.profundidade_original = meta.profundidade_cm !== null ? meta.profundidade_cm / scaleFactor : null;
                 }
             }
         } else {
             // CASE 3: New Record (No currentMeta)
             // Initialize Original Dimensions based on provided dimensions and scale
             const scaleFactor = (Number(meta.escala) || 100) / 100.0;
-            if (meta.altura_cm) meta.altura_original = meta.altura_cm / scaleFactor;
-            if (meta.largura_cm) meta.largura_original = meta.largura_cm / scaleFactor;
-            if (meta.profundidade_cm) meta.profundidade_original = meta.profundidade_cm / scaleFactor;
+            if (meta.altura_cm !== undefined) meta.altura_original = meta.altura_cm !== null ? meta.altura_cm / scaleFactor : null;
+            if (meta.largura_cm !== undefined) meta.largura_original = meta.largura_cm !== null ? meta.largura_cm / scaleFactor : null;
+            if (meta.profundidade_cm !== undefined) meta.profundidade_original = meta.profundidade_cm !== null ? meta.profundidade_cm / scaleFactor : null;
         }
 
         console.log('Upserting meta for ID:', id, meta);

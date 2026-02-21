@@ -24,6 +24,7 @@ export async function GET(req: Request) {
                 .select(`
                     id,
                     nome,
+                    studios ( nome ),
                     figuras_meta (
                         resina_kg,
                         horas_impressao,
@@ -48,6 +49,7 @@ export async function GET(req: Request) {
                 return {
                     id: item.id,
                     Figura: item.nome,
+                    studio: item.studios?.nome || 'N/A',
                     resina_kg: meta.resina_kg || 0, // Adicionado para cálculo de estoque no PDV
                     "Básico (R$)": roundTo5(custoBase * settings.margem_basica),
                     "Premium (R$)": roundTo5(custoBase * settings.margem_premium)
@@ -63,6 +65,7 @@ export async function GET(req: Request) {
             .select(`
                 id,
                 nome,
+                studios ( nome ),
                 figuras_meta (
                     resina_kg,
                     horas_impressao,
@@ -86,6 +89,7 @@ export async function GET(req: Request) {
             return {
                 id: item.id,
                 Figura: item.nome,
+                studio: item.studios?.nome || 'N/A',
                 resina_kg: meta.resina_kg || 0,
                 "Básico (R$)": roundTo5(custoBase * settings.margem_basica),
                 "Premium (R$)": roundTo5(custoBase * settings.margem_premium)

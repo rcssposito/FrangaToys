@@ -90,16 +90,22 @@ export default function DataGridPage() {
     const handleSave = async (figure: Figure) => {
         setSavingId(figure.id);
 
-        // Ensure values are numbers for API
+        // Ensure values are numbers for API, or null if empty
+        const toNumberOrNull = (val: any) => {
+            if (val === '' || val === null || val === undefined) return null;
+            const num = Number(val);
+            return isNaN(num) ? null : num;
+        };
+
         const payload = {
             ...figure,
-            resina_kg: Number(figure.resina_kg),
-            horas_impressao: Number(figure.horas_impressao),
-            horas_pintura: Number(figure.horas_pintura),
-            altura_cm: Number(figure.altura_cm),
-            largura_cm: Number(figure.largura_cm),
-            profundidade_cm: Number(figure.profundidade_cm),
-            escala: Number(figure.escala),
+            resina_kg: toNumberOrNull(figure.resina_kg),
+            horas_impressao: toNumberOrNull(figure.horas_impressao),
+            horas_pintura: toNumberOrNull(figure.horas_pintura),
+            altura_cm: toNumberOrNull(figure.altura_cm),
+            largura_cm: toNumberOrNull(figure.largura_cm),
+            profundidade_cm: toNumberOrNull(figure.profundidade_cm),
+            escala: toNumberOrNull(figure.escala) || 100,
         };
 
         try {
