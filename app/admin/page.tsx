@@ -975,11 +975,11 @@ export default function AdminDashboard() {
                             <Maximize2 size={16} />
                         </button>
                     </div>
-                    <div className="h-[300px] w-full flex justify-center items-center">
+                    <div className="h-[400px] w-full flex justify-center items-center">
                         <ResponsiveContainer width="100%" height="100%">
-                            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data?.charts.inventoryByStudio}>
+                            <RadarChart cx="50%" cy="50%" outerRadius="55%" data={data?.charts.inventoryByStudio}>
                                 <PolarGrid stroke="#3f3f46" />
-                                <PolarAngleAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                                <PolarAngleAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} />
                                 <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
                                 <Radar name="Modelos" dataKey="value" stroke="#a855f7" fill="#a855f7" fillOpacity={0.5} />
                                 <Tooltip content={<CategoryTooltip suffix="modelos" />} />
@@ -998,15 +998,15 @@ export default function AdminDashboard() {
                             <Maximize2 size={16} />
                         </button>
                     </div>
-                    <div className="h-[300px] w-full flex justify-center text-xs">
+                    <div className="h-[400px] w-full flex justify-center text-xs">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
                                     data={(data?.charts.inventoryBySeries || []).slice(0, 5)}
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
+                                    innerRadius={80}
+                                    outerRadius={110}
                                     paddingAngle={5}
                                     dataKey="value"
                                 >
