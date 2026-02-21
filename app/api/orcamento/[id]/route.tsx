@@ -36,7 +36,8 @@ export async function GET(
             .single();
 
         const imageUrl = figureDetails?.imagem_url || '';
-        const studioName = figureDetails?.studios?.nome || 'N/A';
+        const studiosField = figureDetails?.studios as any;
+        const studioName = (Array.isArray(studiosField) ? studiosField[0]?.nome : studiosField?.nome) || 'N/A';
 
         return new ImageResponse(
             (
