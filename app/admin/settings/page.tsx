@@ -13,6 +13,7 @@ export default function SettingsPage() {
         custo_h_impressao: 0,
         custo_h_pintura: 0,
         custo_resina_kg: 0,
+        estoque_resina_kg: 0,
         margem_basica: 0,
         margem_premium: 0
     });
@@ -86,6 +87,15 @@ export default function SettingsPage() {
                                     type="number" step="0.01"
                                     value={formData.custo_resina_kg}
                                     onChange={e => handleChange('custo_resina_kg', e.target.value)}
+                                    className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 outline-none focus:border-green-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm text-zinc-400 mb-1">Estoque Resina (Kg)</label>
+                                <input
+                                    type="number" step="0.01"
+                                    value={formData.estoque_resina_kg}
+                                    onChange={e => handleChange('estoque_resina_kg', e.target.value)}
                                     className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 outline-none focus:border-green-500"
                                 />
                             </div>

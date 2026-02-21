@@ -25,6 +25,7 @@ export async function GET() {
                     custo_h_impressao: 1.00,
                     custo_h_pintura: 50.00,
                     custo_resina_kg: 250.00,
+                    estoque_resina_kg: 0,
                     margem_basica: 1.40,
                     margem_premium: 1.70
                 }])
@@ -58,6 +59,7 @@ export async function PUT(req: Request) {
                 custo_h_impressao: body.custo_h_impressao,
                 custo_h_pintura: body.custo_h_pintura,
                 custo_resina_kg: body.custo_resina_kg,
+                estoque_resina_kg: body.estoque_resina_kg,
                 margem_basica: body.margem_basica,
                 margem_premium: body.margem_premium
             })
