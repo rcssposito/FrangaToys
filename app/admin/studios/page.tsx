@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { ArrowLeft, Save, DollarSign, Star, Box, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, DollarSign, Star, Box, Loader2, Trash, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import { useRouter } from 'next/navigation';
@@ -21,6 +21,8 @@ export default function StudiosPage() {
     const [studios, setStudios] = useState<Studio[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState<number | null>(null);
+    const [isAdding, setIsAdding] = useState(false);
+    const [newStudioName, setNewStudioName] = useState('');
     const { hasRole, user } = usePermission();
     const router = useRouter();
 
@@ -73,6 +75,58 @@ export default function StudiosPage() {
             toast.error('Erro ao salvar alterações');
         } finally {
             setSaving(null);
+        }
+    };
+
+    const handleAddStudio = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newStudioName.trim()) return;
+
+        setIsAdding(true);
+        try {
+            const res = await fetch('/api/admin/studios', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nome: newStudioName.trim() })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || errData.message || 'Falha ao adicionar estúdio');
+            }
+
+            toast.success('Estúdio adicionado!');
+            setNewStudioName('');
+            fetchStudios(); // Refresh the list
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error.message || 'Erro ao adicionar estúdio');
+        } finally {
+            setIsAdding(false);
+        }
+    };
+
+    const handleDelete = async (id: number, count: number = 0) => {
+        if (count > 0) {
+            toast.error(`Não é possível excluir. Existem ${count} figuras vinculadas.`);
+            return;
+        }
+
+        if (!confirm('Você tem certeza que deseja excluir este estúdio?')) return;
+
+        try {
+            const res = await fetch(`/api/admin/studios?id=${id}`, {
+                method: 'DELETE'
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error || 'Falha ao excluir o estúdio');
+
+            toast.success('Estúdio removido!');
+            fetchStudios(); // Refresh the list
+        } catch (error: any) {
+            toast.error(error.message || 'Erro ao excluir estúdio');
         }
     };
 
@@ -164,17 +218,50 @@ export default function StudiosPage() {
                                             </td>
 
                                             <td className="p-4 text-right">
-                                                <button
-                                                    onClick={() => handleUpdate(studio)}
-                                                    disabled={saving === studio.id}
-                                                    className="bg-zinc-800 hover:bg-orange-600 text-zinc-400 hover:text-white p-2 rounded transition-colors"
-                                                    title="Salvar"
-                                                >
-                                                    {saving === studio.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                                </button>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={() => handleUpdate(studio)}
+                                                        disabled={saving === studio.id}
+                                                        className="bg-zinc-800 hover:bg-orange-600 text-zinc-400 hover:text-white p-2 rounded transition-colors"
+                                                        title="Salvar"
+                                                    >
+                                                        {saving === studio.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(studio.id, studio.figuras?.[0]?.count || 0)}
+                                                        className="bg-zinc-800 hover:bg-red-600 text-zinc-400 hover:text-white p-2 rounded transition-colors"
+                                                        title="Excluir"
+                                                    >
+                                                        <Trash size={16} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
+
+                                    {/* Add New Studio Row */}
+                                    <tr className="bg-zinc-950/50">
+                                        <td className="p-4" colSpan={5}>
+                                            <form onSubmit={handleAddStudio} className="flex items-center gap-3">
+                                                <input
+                                                    type="text"
+                                                    value={newStudioName}
+                                                    onChange={(e) => setNewStudioName(e.target.value)}
+                                                    placeholder="Novo Estúdio..."
+                                                    className="w-full max-w-sm bg-zinc-900 border border-zinc-700 rounded p-2 focus:border-orange-500 outline-none placeholder:text-zinc-600"
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    disabled={isAdding || !newStudioName.trim()}
+                                                    className="flex items-center gap-2 bg-zinc-800 hover:bg-orange-600 disabled:opacity-50 disabled:hover:bg-zinc-800 text-zinc-300 hover:text-white px-4 py-2 rounded transition-colors"
+                                                >
+                                                    {isAdding ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                                                    <span>Adicionar</span>
+                                                </button>
+                                            </form>
+                                        </td>
+                                        <td className="p-4"></td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>

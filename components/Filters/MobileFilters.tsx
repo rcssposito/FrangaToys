@@ -228,6 +228,8 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                                         </label>
                                     </div>
 
+
+
                                     {/* Studios */}
                                     <div>
                                         <h4 className="text-sm font-bold text-zinc-400 mb-3 uppercase tracking-wider">Estúdios</h4>

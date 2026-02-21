@@ -22,29 +22,29 @@ export async function GET(req: NextRequest) {
         let query = supabase
             .from('figuras')
             .select(`
-id,
-    nome,
-    imagem_url,
-    disponivel,
-    studio_id,
-    serie_id,
-    ${seriesJoin} (
-        id,
-        nome,
-        ${categoryJoin} (
             id,
-            nome
-        )
-        ),
-studios: studios(
-    id,
-    nome
-),
-    figuras_meta(
-        altura_cm,
-        largura_cm,
-        profundidade_cm
-    )
+            nome,
+            imagem_url,
+            disponivel,
+            studio_id,
+            serie_id,
+            ${seriesJoin} (
+                id,
+                nome,
+                ${categoryJoin} (
+                    id,
+                    nome
+                )
+             ),
+            studios: studios(
+                id,
+                nome
+            ),
+            figuras_meta(
+                altura_cm,
+                largura_cm,
+                profundidade_cm
+            )
         `);
 
         // --- Filters ---
@@ -81,7 +81,7 @@ studios: studios(
             query = query.order('nome', { ascending: true });
         }
 
-        // 6. Pagination
+        // 7. Pagination
         const limit = parseInt(filters.limit || '20'); // Lower default limit for smoother loading
         const page = parseInt(queryParams.page as string || '0');
         const from = page * limit;
@@ -96,7 +96,7 @@ studios: studios(
         }
 
         // Transform to DTO
-        let items = data.map((item: any) => {
+        const items = data.map((item: any) => {
             const meta = Array.isArray(item.figuras_meta) ? item.figuras_meta[0] : item.figuras_meta;
             return {
                 id: item.id,

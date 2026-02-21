@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 
 interface Figure {
@@ -138,6 +138,25 @@ export default function DataGridPage() {
             toast.error('Erro ao excluir figura');
         } finally {
             setDeletingId(null);
+        }
+    };
+
+    const handleDownloadImage = async (id: number, nome: string) => {
+        try {
+            toast.loading(`Gerando cartão de ${nome}...`, { id: 'gera-cartao' });
+
+            const url = `/api/orcamento/${id}`;
+            const link = document.createElement('a');
+            link.href = url;
+            // The browser will download the generated image
+            link.download = `Orcamento_${nome.replace(/[^a-z0-9]/gi, '_')}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success('Cartão gerado!', { id: 'gera-cartao' });
+        } catch (err) {
+            toast.error('Erro ao gerar cartão', { id: 'gera-cartao' });
         }
     };
 
@@ -323,6 +342,13 @@ export default function DataGridPage() {
                                                     title="Excluir"
                                                 >
                                                     {deletingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDownloadImage(f.id, f.nome)}
+                                                    className="p-2 bg-blue-500/10 text-blue-500 rounded hover:bg-blue-500 hover:text-white transition-all"
+                                                    title="Baixar Cartão Orçamento"
+                                                >
+                                                    <ImageIcon size={16} />
                                                 </button>
                                             </div>
                                         </td>
