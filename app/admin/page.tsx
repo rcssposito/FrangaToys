@@ -18,6 +18,7 @@ export default function AdminDashboard() {
     const [drillDownStudio, setDrillDownStudio] = useState<string | null>(null);
     const [drillDownSeries, setDrillDownSeries] = useState<string | null>(null);
     const [seriesFilter, setSeriesFilter] = useState<string>('all');
+    const [drillDownPriceBucket, setDrillDownPriceBucket] = useState<string | null>(null);
 
     // Fetch Dashboard Data
     useEffect(() => {
@@ -620,6 +621,71 @@ export default function AdminDashboard() {
                     </ResponsiveContainer>
                 );
                 break;
+            case 'priceDistribution':
+                if (drillDownPriceBucket) {
+                    title = "Modelos na Faixa: " + drillDownPriceBucket;
+                    const bucketData = (data.charts.priceDistribution || []).find((b: any) => b.name === drillDownPriceBucket);
+
+                    if (!bucketData || !bucketData.figures || bucketData.figures.length === 0) {
+                        ChartComponent = (
+                            <div className="h-full flex flex-col items-center justify-center text-zinc-500">
+                                <Box size={48} className="mb-4 opacity-50" />
+                                <p>Nenhum modelo nesta faixa.</p>
+                            </div>
+                        );
+                    } else {
+                        // Render a list of figures instead of a chart since we want to see the specific figures
+                        ChartComponent = (
+                            <div className="w-full h-full overflow-auto pr-2">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="text-xs uppercase bg-zinc-950/30 text-zinc-500 sticky top-0 backdrop-blur-md">
+                                        <tr>
+                                            <th className="px-4 py-3">ID</th>
+                                            <th className="px-4 py-3">Modelo</th>
+                                            <th className="px-4 py-3 text-right">Preço</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-800">
+                                        {bucketData.figures.map((f: any, idx: number) => (
+                                            <tr key={idx} className="hover:bg-zinc-800/50 transition-colors">
+                                                <td className="px-4 py-3 text-zinc-500">#{f.id}</td>
+                                                <td className="px-4 py-3 font-medium text-white">{f.name}</td>
+                                                <td className="px-4 py-3 text-right text-emerald-400">R$ {f.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        );
+                    }
+                } else {
+                    chartData = data.charts.priceDistribution || [];
+                    title = "Distribuição de Preço do Catálogo";
+                    ChartComponent = (
+                        <div className="w-full h-full flex flex-col">
+                            <p className="text-zinc-500 text-sm mb-2 text-center">Clique na barra para ver os modelos que se encaixam nesta faixa de preço</p>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData} margin={{ left: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                    <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 12 }} interval={0} angle={0} height={40} />
+                                    <YAxis hide />
+                                    <Tooltip content={<CategoryTooltip suffix="figuras" />} cursor={{ fill: '#ffffff10' }} />
+                                    <Bar dataKey="value" radius={[4, 4, 0, 0]} onClick={(data) => setDrillDownPriceBucket(data?.name || null)} className="cursor-pointer">
+                                        {chartData.map((_e: any, index: number) => (
+                                            <Cell
+                                                key={`cell-${index}`}
+                                                fill="#3b82f6"
+                                                className="hover:opacity-80 transition-opacity cursor-pointer"
+                                                onClick={() => setDrillDownPriceBucket(_e.name || null)}
+                                            />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    );
+                }
+                break;
         }
 
         const itemHeight = 40;
@@ -637,16 +703,17 @@ export default function AdminDashboard() {
 
 
         return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { setExpandedChart(null); setDrillDownCategory(null); setDrillDownStudio(null); setDrillDownSeries(null); }}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { setExpandedChart(null); setDrillDownCategory(null); setDrillDownStudio(null); setDrillDownSeries(null); setDrillDownPriceBucket(null); }}>
                 <div className="bg-zinc-900 border border-zinc-800 rounded-xl w-full max-w-6xl h-[80vh] flex flex-col shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
                     <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-950">
                         <div className="flex items-center gap-4">
-                            {(drillDownCategory || drillDownStudio || drillDownSeries) && (
+                            {(drillDownCategory || drillDownStudio || drillDownSeries || drillDownPriceBucket) && (
                                 <button
                                     onClick={() => {
                                         if (drillDownCategory) setDrillDownCategory(null);
                                         if (drillDownStudio) setDrillDownStudio(null);
                                         if (drillDownSeries) setDrillDownSeries(null);
+                                        if (drillDownPriceBucket) setDrillDownPriceBucket(null);
                                     }}
                                     className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-lg transition-colors border border-zinc-700"
                                 >
@@ -658,7 +725,7 @@ export default function AdminDashboard() {
                                 {title}
                             </h2>
                         </div>
-                        <button onClick={() => { setExpandedChart(null); setDrillDownCategory(null); setDrillDownStudio(null); setDrillDownSeries(null); }} className="p-2 hover:bg-zinc-800 rounded-full transition-colors text-zinc-400 hover:text-white">
+                        <button onClick={() => { setExpandedChart(null); setDrillDownCategory(null); setDrillDownStudio(null); setDrillDownSeries(null); setDrillDownPriceBucket(null); }} className="p-2 hover:bg-zinc-800 rounded-full transition-colors text-zinc-400 hover:text-white">
                             <X size={24} />
                         </button>
                     </div>
@@ -1134,6 +1201,9 @@ export default function AdminDashboard() {
                             <Layers size={20} className="text-blue-500" />
                             Distribuição de Preço
                         </h2>
+                        <button onClick={() => setExpandedChart('priceDistribution')} className="p-2 bg-zinc-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-zinc-700 text-zinc-400 hover:text-white" title="Expandir">
+                            <Maximize2 size={16} />
+                        </button>
                     </div>
                     <div className="h-[300px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
@@ -1142,8 +1212,15 @@ export default function AdminDashboard() {
                                 <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={60} />
                                 <YAxis hide />
                                 <Tooltip content={<CategoryTooltip suffix="figuras" />} cursor={{ fill: '#ffffff10' }} />
-                                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                    {(data?.charts.priceDistribution || []).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#3b82f6" />)}
+                                <Bar dataKey="value" radius={[4, 4, 0, 0]} onClick={(bdata) => { setExpandedChart('priceDistribution'); setDrillDownPriceBucket(bdata?.name || null); }} className="cursor-pointer">
+                                    {(data?.charts.priceDistribution || []).map((_e: any, index: number) => (
+                                        <Cell
+                                            key={`cell-${index}`}
+                                            fill="#3b82f6"
+                                            className="hover:opacity-80 transition-opacity cursor-pointer"
+                                            onClick={() => { setExpandedChart('priceDistribution'); setDrillDownPriceBucket(_e.name || null); }}
+                                        />
+                                    ))}
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>

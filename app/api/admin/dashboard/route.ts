@@ -362,28 +362,83 @@ export async function GET(req: Request) {
         // --- New Price Analytics ---
         let totalPortfolioValue = 0;
         let totalPortfolioBasic = 0;
-        const priceBucketCounts: Record<string, number> = { "0-300": 0, "300-600": 0, "600-900": 0, "900+": 0 };
+
+        // Collect all valid premium prices to determine the dynamic range
+        const validItems: { id: number, name: string, price: number }[] = [];
 
         // Ensure pricingMap is populated (we did this in step 4)
         console.log(`[PricingDebug] Map Size: ${pricingMap.size}`);
-        pricingMap.forEach((val) => {
+        pricingMap.forEach((val, key) => {
             const raw = val.price; // Premium
             const rawBasic = val.cost; // Basic (mapped from 'Total (R$)')
 
             const num = Number(raw);
             const numBasic = Number(rawBasic);
 
-            if (!isNaN(num)) totalPortfolioValue += num;
+            if (!isNaN(num)) {
+                totalPortfolioValue += num;
+                if (num > 0) validItems.push({ id: key, name: val.name, price: num }); // Keep only > 0 for distribution
+            }
             if (!isNaN(numBasic)) totalPortfolioBasic += numBasic;
-
-            const p = num;
-            if (p < 300) priceBucketCounts["0-300"]++;
-            else if (p < 600) priceBucketCounts["300-600"]++;
-            else if (p < 900) priceBucketCounts["600-900"]++;
-            else priceBucketCounts["900+"]++;
         });
+
         console.log(`[PricingDebug] Total Premium: ${totalPortfolioValue}`);
         console.log(`[PricingDebug] Total Basic: ${totalPortfolioBasic}`);
+
+        // Calculate dynamic distribution if we have prices
+        let priceDistribution: { name: string, value: number, sortKey: number, figures: any[] }[] = [];
+
+        if (validItems.length > 0) {
+            // Find Min and Max
+            const minPrice = Math.min(...validItems.map(i => i.price));
+            const maxPrice = Math.max(...validItems.map(i => i.price));
+
+            if (maxPrice === minPrice) {
+                // Edge case: all items have the exact same price
+                priceDistribution = [{
+                    name: `R$ ${minPrice.toFixed(0)}`,
+                    value: validItems.length,
+                    sortKey: minPrice,
+                    figures: validItems.sort((a, b) => b.price - a.price)
+                }];
+            } else {
+                // Divide the range into 4 buckets
+                const range = maxPrice - minPrice;
+                let step = Math.ceil(range / 4);
+
+                // Round step to a "cleaner" number (e.g., nearest 50, 100, 500)
+                if (step > 1000) step = Math.ceil(step / 500) * 500;
+                else if (step > 500) step = Math.ceil(step / 100) * 100;
+                else if (step > 100) step = Math.ceil(step / 50) * 50;
+                else step = Math.ceil(step / 10) * 10;
+
+                // Create Bucket definitions
+                const buckets = [
+                    { min: 0, max: step, name: `R$ 0 - ${step}`, figures: [] as any[] },
+                    { min: step, max: step * 2, name: `R$ ${step} - ${step * 2}`, figures: [] as any[] },
+                    { min: step * 2, max: step * 3, name: `R$ ${step * 2} - ${step * 3}`, figures: [] as any[] },
+                    { min: step * 3, max: Infinity, name: `R$ ${step * 3}+`, figures: [] as any[] }
+                ];
+
+                // Assign prices to buckets
+                validItems.forEach(item => {
+                    const p = item.price;
+                    if (p < buckets[0].max) buckets[0].figures.push(item);
+                    else if (p < buckets[1].max) buckets[1].figures.push(item);
+                    else if (p < buckets[2].max) buckets[2].figures.push(item);
+                    else buckets[3].figures.push(item);
+                });
+
+                priceDistribution = buckets.map(b => ({
+                    name: b.name,
+                    value: b.figures.length,
+                    sortKey: b.min,
+                    figures: b.figures.sort((a, b) => b.price - a.price)
+                }));
+            }
+        } else {
+            priceDistribution = [];
+        }
 
         // Avg Price by Studio (Filter out Zeros)
         const avgPriceByStudio = studios.map(s => {
@@ -405,12 +460,7 @@ export async function GET(req: Request) {
             };
         }).filter(s => s.value > 0).sort((a, b) => b.value - a.value);
 
-        const priceDistribution = [
-            { name: 'R$ 0 - 300', value: priceBucketCounts["0-300"] },
-            { name: 'R$ 300 - 600', value: priceBucketCounts["300-600"] },
-            { name: 'R$ 600 - 900', value: priceBucketCounts["600-900"] },
-            { name: 'R$ 900+', value: priceBucketCounts["900+"] }
-        ];
+
 
         return NextResponse.json({
             kpis: {
