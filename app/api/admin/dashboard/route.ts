@@ -74,7 +74,7 @@ export async function GET(req: Request) {
         // 3. Fetch Studio Details
         const { data: studios, error: studiosError } = await supabase
             .from('studios')
-            .select('nome, custo_mensal, qtd_display, figuras(id, series:series(nome, categorias:categorias(nome, id)), figuras_meta(escala, resina_kg, horas_pintura))');
+            .select('nome, custo_mensal, qtd_display, figuras(id, imagem_url, series:series(nome, categorias:categorias(nome, id)), figuras_meta(escala, resina_kg, horas_pintura))');
 
         if (studiosError) throw studiosError;
 
@@ -86,6 +86,8 @@ export async function GET(req: Request) {
         let hasMore = true;
 
         while (hasMore) {
+            // Also fetching 'imagem_url' from the view or related, but vw_figuras_orcamento doesn't have it.
+            // Wait, we need the image. The view might not have it. Let's map it from the main query later.
             const { data: batch, error: batchError } = await supabase
                 .from('vw_figuras_orcamento')
                 .select('id, "Figura", "Total (R$)", "Premium (R$)"')
@@ -364,10 +366,25 @@ export async function GET(req: Request) {
         let totalPortfolioBasic = 0;
 
         // Collect all valid premium prices to determine the dynamic range
-        const validItems: { id: number, name: string, price: number }[] = [];
+        const validItems: { id: number, name: string, price: number, image_url: string }[] = [];
+
+        // Build a map of Images from the 'figuras' we fetched in the studios query
+        const imageMap = new Map<number, string>();
+        if (studios) {
+            studios.forEach(s => {
+                if (s.figuras) {
+                    s.figuras.forEach((f: any) => {
+                        if (f.imagem_url) {
+                            imageMap.set(f.id, f.imagem_url);
+                        }
+                    });
+                }
+            });
+        }
 
         // Ensure pricingMap is populated (we did this in step 4)
         console.log(`[PricingDebug] Map Size: ${pricingMap.size}`);
+
         pricingMap.forEach((val, key) => {
             const raw = val.price; // Premium
             const rawBasic = val.cost; // Basic (mapped from 'Total (R$)')
@@ -377,7 +394,14 @@ export async function GET(req: Request) {
 
             if (!isNaN(num)) {
                 totalPortfolioValue += num;
-                if (num > 0) validItems.push({ id: key, name: val.name, price: num }); // Keep only > 0 for distribution
+                if (num > 0) {
+                    validItems.push({
+                        id: key,
+                        name: val.name,
+                        price: num,
+                        image_url: imageMap.get(key) || ''
+                    });
+                }
             }
             if (!isNaN(numBasic)) totalPortfolioBasic += numBasic;
         });

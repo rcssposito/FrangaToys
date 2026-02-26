@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
+import { usePermission } from '@/hooks/usePermission';
 
 interface Figure {
     id: number;
@@ -38,6 +39,9 @@ export default function DataGridPage() {
     const [savingId, setSavingId] = useState<number | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+
+    const { hasRole } = usePermission();
+    const canEdit = hasRole('admin') || hasRole('pricing');
 
     // Modal State
     const [previewImage, setPreviewImage] = useState<{ url: string, nome: string } | null>(null);
@@ -282,38 +286,54 @@ export default function DataGridPage() {
                                         </td>
 
                                         <td className="p-2">
-                                            <input
-                                                type="number" step="1"
-                                                className="w-16 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block text-orange-400 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                value={f.escala || ''}
-                                                onChange={e => handleChange(f.id, 'escala', e.target.value)}
-                                                placeholder="100"
-                                            />
+                                            {canEdit ? (
+                                                <input
+                                                    type="number" step="1"
+                                                    className="w-16 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block text-orange-400 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                    value={f.escala || ''}
+                                                    onChange={e => handleChange(f.id, 'escala', e.target.value)}
+                                                    placeholder="100"
+                                                />
+                                            ) : (
+                                                <div className="text-center text-orange-400 font-bold">{f.escala || 100}</div>
+                                            )}
                                         </td>
 
                                         <td className="p-2">
-                                            <input
-                                                type="number" step="0.001"
-                                                className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                value={f.resina_kg === 0 ? '' : f.resina_kg}
-                                                onChange={e => handleChange(f.id, 'resina_kg', e.target.value)}
-                                            />
+                                            {canEdit ? (
+                                                <input
+                                                    type="number" step="0.001"
+                                                    className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                    value={f.resina_kg === 0 ? '' : f.resina_kg}
+                                                    onChange={e => handleChange(f.id, 'resina_kg', e.target.value)}
+                                                />
+                                            ) : (
+                                                <div className="text-center text-zinc-300">{f.resina_kg || '0'}</div>
+                                            )}
                                         </td>
                                         <td className="p-2">
-                                            <input
-                                                type="number" step="0.1"
-                                                className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                value={f.horas_impressao === 0 ? '' : f.horas_impressao}
-                                                onChange={e => handleChange(f.id, 'horas_impressao', e.target.value)}
-                                            />
+                                            {canEdit ? (
+                                                <input
+                                                    type="number" step="0.1"
+                                                    className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                    value={f.horas_impressao === 0 ? '' : f.horas_impressao}
+                                                    onChange={e => handleChange(f.id, 'horas_impressao', e.target.value)}
+                                                />
+                                            ) : (
+                                                <div className="text-center text-zinc-300">{f.horas_impressao || '0'}</div>
+                                            )}
                                         </td>
                                         <td className="p-2">
-                                            <input
-                                                type="number" step="0.1"
-                                                className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                value={f.horas_pintura === 0 ? '' : f.horas_pintura}
-                                                onChange={e => handleChange(f.id, 'horas_pintura', e.target.value)}
-                                            />
+                                            {canEdit ? (
+                                                <input
+                                                    type="number" step="0.1"
+                                                    className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                    value={f.horas_pintura === 0 ? '' : f.horas_pintura}
+                                                    onChange={e => handleChange(f.id, 'horas_pintura', e.target.value)}
+                                                />
+                                            ) : (
+                                                <div className="text-center text-zinc-300">{f.horas_pintura || '0'}</div>
+                                            )}
                                         </td>
 
                                         <td className="p-2">
@@ -333,22 +353,26 @@ export default function DataGridPage() {
 
                                         <td className="p-3 text-center">
                                             <div className="flex gap-2 justify-center">
-                                                <button
-                                                    onClick={() => handleSave(f)}
-                                                    disabled={savingId === f.id}
-                                                    className="p-2 bg-orange-500/10 text-orange-500 rounded hover:bg-orange-500 hover:text-white transition-all disabled:opacity-50"
-                                                    title="Salvar"
-                                                >
-                                                    {savingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(f.id, f.nome)}
-                                                    disabled={deletingId === f.id}
-                                                    className="p-2 bg-red-500/10 text-red-500 rounded hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
-                                                    title="Excluir"
-                                                >
-                                                    {deletingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                                                </button>
+                                                {canEdit && (
+                                                    <button
+                                                        onClick={() => handleSave(f)}
+                                                        disabled={savingId === f.id}
+                                                        className="p-2 bg-orange-500/10 text-orange-500 rounded hover:bg-orange-500 hover:text-white transition-all disabled:opacity-50"
+                                                        title="Salvar"
+                                                    >
+                                                        {savingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                                    </button>
+                                                )}
+                                                {canEdit && (
+                                                    <button
+                                                        onClick={() => handleDelete(f.id, f.nome)}
+                                                        disabled={deletingId === f.id}
+                                                        className="p-2 bg-red-500/10 text-red-500 rounded hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
+                                                        title="Excluir"
+                                                    >
+                                                        {deletingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => handleDownloadImage(f.id, f.nome)}
                                                     className="p-2 bg-blue-500/10 text-blue-500 rounded hover:bg-blue-500 hover:text-white transition-all"

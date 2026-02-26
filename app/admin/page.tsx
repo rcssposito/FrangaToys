@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, DollarSign, Box, Activity, Store, Maximize2, X, ArrowUpRight, ArrowDownRight, Clock, Tag, Layers, Ruler } from 'lucide-react';
+import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, DollarSign, Box, Activity, Store, Maximize2, X, ArrowUpRight, ArrowDownRight, Clock, Tag, Layers, Ruler, ImageIcon, ExternalLink } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { toast } from 'sonner';
@@ -17,8 +17,9 @@ export default function AdminDashboard() {
     const [drillDownCategory, setDrillDownCategory] = useState<string | null>(null);
     const [drillDownStudio, setDrillDownStudio] = useState<string | null>(null);
     const [drillDownSeries, setDrillDownSeries] = useState<string | null>(null);
-    const [seriesFilter, setSeriesFilter] = useState<string>('all');
     const [drillDownPriceBucket, setDrillDownPriceBucket] = useState<string | null>(null);
+    const [seriesFilter, setSeriesFilter] = useState<string>('all');
+    const [previewImage, setPreviewImage] = useState<{ url: string, nome: string } | null>(null);
 
     // Fetch Dashboard Data
     useEffect(() => {
@@ -171,7 +172,7 @@ export default function AdminDashboard() {
     const menuItems = [
         { label: 'Gerenciar Usuários', href: '/admin/users', roles: ['admin'], icon: Users },
         { label: 'Gerenciar Estúdios', href: '/admin/studios', roles: ['admin'], icon: Activity },
-        { label: 'Gerenciador de Catálogo', href: '/admin/figures', roles: ['admin', 'pricing'], icon: Package },
+        { label: 'Catálogo & Precificação', href: '/admin/figures', roles: ['admin', 'pricing', 'marketing'], icon: Package },
         { label: 'Histórico de Vendas', href: '/admin/sales', roles: ['admin', 'sales'], icon: ShoppingCart },
         { label: 'Configurações', href: '/admin/settings', roles: ['admin'], icon: Settings },
     ];
@@ -641,7 +642,7 @@ export default function AdminDashboard() {
                                     <thead className="text-xs uppercase bg-zinc-950/30 text-zinc-500 sticky top-0 backdrop-blur-md">
                                         <tr>
                                             <th className="px-4 py-3">ID</th>
-                                            <th className="px-4 py-3">Modelo</th>
+                                            <th className="px-4 py-3">Modelo (Clique p/ ver)</th>
                                             <th className="px-4 py-3 text-right">Preço</th>
                                         </tr>
                                     </thead>
@@ -649,8 +650,25 @@ export default function AdminDashboard() {
                                         {bucketData.figures.map((f: any, idx: number) => (
                                             <tr key={idx} className="hover:bg-zinc-800/50 transition-colors">
                                                 <td className="px-4 py-3 text-zinc-500">#{f.id}</td>
-                                                <td className="px-4 py-3 font-medium text-white">{f.name}</td>
-                                                <td className="px-4 py-3 text-right text-emerald-400">R$ {f.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                                <td className="px-4 py-3 font-medium text-white">
+                                                    <button
+                                                        onClick={() => {
+                                                            if (f.image_url) {
+                                                                setPreviewImage({ url: f.image_url, nome: f.name });
+                                                            } else {
+                                                                toast.info('Sem imagem cadastrada');
+                                                            }
+                                                        }}
+                                                        className={`flex items-center gap-2 hover:text-orange-500 transition-colors text-left ${!f.image_url ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                                        title={f.image_url ? "Clique para ver a foto" : "Sem foto cadastrada"}
+                                                    >
+                                                        {f.name}
+                                                        {f.image_url && <ExternalLink size={14} className="text-zinc-500" />}
+                                                    </button>
+                                                </td>
+                                                <td className="px-4 py-3 text-right text-emerald-400 font-medium">
+                                                    R$ {f.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -1229,6 +1247,33 @@ export default function AdminDashboard() {
 
             </div>
 
+            {/* MODAL DE IMAGEM */}
+            {previewImage && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center">
+                        <button
+                            className="absolute -top-10 right-0 text-white hover:text-orange-500 z-50 transition-colors bg-zinc-900 rounded-full p-2"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewImage(null);
+                            }}
+                        >
+                            <X size={24} />
+                        </button>
+
+                        <img
+                            src={previewImage.url}
+                            alt={previewImage.nome}
+                            className="w-auto h-auto max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+                            onClick={e => e.stopPropagation()}
+                        />
+                        <p className="text-white mt-4 font-bold text-center text-lg">{previewImage.nome}</p>
+                    </div>
+                </div>
+            )}
 
             {renderExpandedChart()}
         </div>
