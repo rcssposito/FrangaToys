@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck } from 'lucide-react';
+import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { usePermission } from '@/hooks/usePermission';
 
 interface Sale {
     id: number;
@@ -31,6 +33,7 @@ const COLUMNS = [
 export default function KanbanPage() {
     const [sales, setSales] = useState<Sale[]>([]);
     const [loading, setLoading] = useState(true);
+    const { hasRole } = usePermission();
 
     useEffect(() => {
         fetchTasks();
@@ -188,6 +191,14 @@ export default function KanbanPage() {
                                                         Cliente: <span className="text-zinc-300 font-medium">{task.cliente_nome}</span>
                                                     </div>
                                                 </div>
+                                                <Link
+                                                    href={`/api/admin/kanban/os/${task.id}`}
+                                                    target="_blank"
+                                                    title="Imprimir Ordem de Serviço (OS)"
+                                                    className="p-1.5 hover:bg-zinc-800 text-zinc-500 hover:text-orange-500 rounded transition-colors"
+                                                >
+                                                    <FileText size={18} />
+                                                </Link>
                                             </div>
 
                                             <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-zinc-800/50">

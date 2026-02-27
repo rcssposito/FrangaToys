@@ -28,7 +28,8 @@ export default function StudiosPage() {
 
     // Protect Route
     useEffect(() => {
-        if (!loading && user && !hasRole('admin')) {
+        const canAccess = hasRole('admin') || hasRole('pricing');
+        if (!loading && user && !canAccess) {
             toast.error('Acesso negado');
             router.push('/admin');
         }
@@ -36,7 +37,8 @@ export default function StudiosPage() {
 
     // Fetch studios
     useEffect(() => {
-        if (hasRole('admin')) {
+        const canAccess = hasRole('admin') || hasRole('pricing');
+        if (canAccess) {
             fetchStudios();
         }
     }, [hasRole]);
@@ -227,13 +229,15 @@ export default function StudiosPage() {
                                                     >
                                                         {saving === studio.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleDelete(studio.id, studio.figuras?.[0]?.count || 0)}
-                                                        className="bg-zinc-800 hover:bg-red-600 text-zinc-400 hover:text-white p-2 rounded transition-colors"
-                                                        title="Excluir"
-                                                    >
-                                                        <Trash size={16} />
-                                                    </button>
+                                                    {hasRole('admin') && (
+                                                        <button
+                                                            onClick={() => handleDelete(studio.id, studio.figuras?.[0]?.count || 0)}
+                                                            className="bg-zinc-800 hover:bg-red-600 text-zinc-400 hover:text-white p-2 rounded transition-colors"
+                                                            title="Excluir"
+                                                        >
+                                                            <Trash size={16} />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>

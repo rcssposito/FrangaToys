@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Plus, Loader2, ArrowLeft, TrendingUp, Calendar, Trash2, Package, Paintbrush, DollarSign, RotateCcw, Receipt } from 'lucide-react';
 import Link from 'next/link';
+import { usePermission } from '@/hooks/usePermission';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -36,6 +37,7 @@ interface MonthGroup {
 export default function SalesPage() {
     const [loading, setLoading] = useState(true);
     const [groups, setGroups] = useState<MonthGroup[]>([]);
+    const { hasRole } = usePermission();
 
     useEffect(() => {
         fetchSales();
@@ -172,10 +174,12 @@ export default function SalesPage() {
                                             <span className="text-zinc-500 block text-xs uppercase">Vendas</span>
                                             <span className="font-bold text-white">R$ {group.totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                         </div>
-                                        <div>
-                                            <span className="text-zinc-500 block text-xs uppercase">Lucro</span>
-                                            <span className="font-bold text-green-500">R$ {group.totalLucro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                        </div>
+                                        {(hasRole('admin') || hasRole('finance')) && (
+                                            <div>
+                                                <span className="text-zinc-500 block text-xs uppercase">Lucro</span>
+                                                <span className="font-bold text-green-500">R$ {group.totalLucro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -189,8 +193,12 @@ export default function SalesPage() {
                                             <th className="p-4">Cliente</th>
                                             <th className="p-4">Vendedor / Opcionais</th>
                                             <th className="p-4 text-right">Valor</th>
-                                            <th className="p-4 text-right text-red-500/80" title="Custo de Resina e Tempo Máquina">Custo Base</th>
-                                            <th className="p-4 text-right text-green-600">Lucro Líquido</th>
+                                            {hasRole('admin') || hasRole('finance') ? (
+                                                <>
+                                                    <th className="p-4 text-right text-red-500/80" title="Custo de Resina e Tempo Máquina">Custo Base</th>
+                                                    <th className="p-4 text-right text-green-600">Lucro Líquido</th>
+                                                </>
+                                            ) : null}
                                             <th className="p-4 w-10"></th>
                                         </tr>
                                     </thead>
@@ -249,12 +257,16 @@ export default function SalesPage() {
                                                 <td className="p-4 text-right font-medium">
                                                     R$ {sale.valor_venda_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                 </td>
-                                                <td className="p-4 text-right text-red-400/80 font-mono text-xs" title="Custo do material (Resina + Impressão)">
-                                                    - R$ {(sale.custo_producao_snapshot || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                </td>
-                                                <td className="p-4 text-right text-green-500/80 font-mono text-xs" title="Já descontado material, extras e comissões">
-                                                    R$ {sale.lucro_real?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                </td>
+                                                {hasRole('admin') || hasRole('finance') ? (
+                                                    <>
+                                                        <td className="p-4 text-right text-red-400/80 font-mono text-xs" title="Custo do material (Resina + Impressão)">
+                                                            - R$ {(sale.custo_producao_snapshot || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="p-4 text-right text-green-500/80 font-mono text-xs" title="Já descontado material, extras e comissões">
+                                                            R$ {sale.lucro_real?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                    </>
+                                                ) : null}
                                                 <td className="p-4 pr-6 flex items-center justify-end gap-2 text-right">
                                                     {sale.status === 'Concluída' && (
                                                         <button
@@ -274,13 +286,15 @@ export default function SalesPage() {
                                                     >
                                                         <Receipt size={16} />
                                                     </Link>
-                                                    <button
-                                                        onClick={() => handleDelete(sale.id)}
-                                                        className="p-2 hover:bg-red-500/10 text-zinc-600 hover:text-red-500 rounded transition-colors"
-                                                        title="Excluir Venda"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    {hasRole('admin') && (
+                                                        <button
+                                                            onClick={() => handleDelete(sale.id)}
+                                                            className="p-2 hover:bg-red-500/10 text-zinc-600 hover:text-red-500 rounded transition-colors"
+                                                            title="Excluir Venda"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}

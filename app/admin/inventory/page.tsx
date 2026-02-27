@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Plus, Loader2, ArrowLeft, Trash2, PackageOpen, Pipette, Edit2, Check, X, Search, Layers, Droplet } from 'lucide-react';
 import Link from 'next/link';
+import { usePermission } from '@/hooks/usePermission';
 
 interface InventoryItem {
     id: string;
@@ -18,6 +19,7 @@ interface InventoryItem {
 export default function InventoryPage() {
     const [items, setItems] = useState<InventoryItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const { hasRole } = usePermission();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterCategory, setFilterCategory] = useState<string>('Todas');
@@ -309,13 +311,15 @@ export default function InventoryPage() {
                                                         >
                                                             <Edit2 size={16} />
                                                         </button>
-                                                        <button
-                                                            onClick={() => handleDelete(item.id, item.nome)}
-                                                            className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors"
-                                                            title="Excluir"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
+                                                        {hasRole('admin') && (
+                                                            <button
+                                                                onClick={() => handleDelete(item.id, item.nome)}
+                                                                className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors"
+                                                                title="Excluir"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>

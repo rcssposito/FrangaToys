@@ -19,6 +19,7 @@ const AVAILABLE_ROLES = [
     { id: 'pricing', label: 'Precificação' },
     { id: 'finance', label: 'Financeiro' },
     { id: 'orcamento', label: 'Orçamento' },
+    { id: 'production', label: 'Produção' },
 ];
 
 export default function UsersPage() {
@@ -150,11 +151,14 @@ export default function UsersPage() {
                                         <td className="p-4 font-medium">{user.email}</td>
                                         <td className="p-4">
                                             <div className="flex gap-2 flex-wrap">
-                                                {user.roles?.map(role => (
-                                                    <span key={role} className={`text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300 border border-zinc-700 capitalize`}>
-                                                        {role}
-                                                    </span>
-                                                ))}
+                                                {user.roles?.map(role => {
+                                                    const roleLabel = AVAILABLE_ROLES.find(r => r.id === role)?.label || role;
+                                                    return (
+                                                        <span key={role} className="text-xs px-2 py-1 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                                                            {roleLabel}
+                                                        </span>
+                                                    );
+                                                })}
                                             </div>
                                         </td>
                                         <td className="p-4 text-zinc-500 text-sm text-right">

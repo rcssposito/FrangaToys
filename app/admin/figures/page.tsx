@@ -381,7 +381,7 @@ export default function DataGridPage() {
                                                         {savingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                                                     </button>
                                                 )}
-                                                {canEdit && (
+                                                {hasRole('admin') && (
                                                     <button
                                                         onClick={() => handleDelete(f.id, f.nome)}
                                                         disabled={deletingId === f.id}

@@ -43,7 +43,7 @@ export default function AdminSidebar() {
             name: 'Vendas',
             href: '/admin/sales',
             icon: ShoppingCart,
-            roles: ['admin', 'sales']
+            roles: ['admin', 'sales', 'finance']
         },
         {
             name: 'Kanban',
@@ -55,19 +55,19 @@ export default function AdminSidebar() {
             name: 'Comissões',
             href: '/admin/commissions',
             icon: DollarSign,
-            roles: ['admin']
+            roles: ['admin', 'finance']
         },
         {
             name: 'Estoque',
             href: '/admin/inventory',
             icon: PackageOpen,
-            roles: ['admin', 'sales']
+            roles: ['admin', 'sales', 'production']
         },
         {
             name: 'Estúdios',
             href: '/admin/studios',
             icon: Activity,
-            roles: ['admin']
+            roles: ['admin', 'pricing']
         },
         {
             name: 'Usuários',
