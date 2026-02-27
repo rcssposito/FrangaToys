@@ -16,7 +16,8 @@ import {
     Activity,
     DollarSign,
     Menu,
-    X
+    X,
+    KanbanSquare
 } from 'lucide-react';
 
 export default function AdminSidebar() {
@@ -42,6 +43,12 @@ export default function AdminSidebar() {
             href: '/admin/sales',
             icon: ShoppingCart,
             roles: ['admin', 'sales']
+        },
+        {
+            name: 'Kanban',
+            href: '/admin/kanban',
+            icon: KanbanSquare,
+            roles: ['admin', 'sales', 'production']
         },
         {
             name: 'Comissões',

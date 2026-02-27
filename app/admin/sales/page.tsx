@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Plus, Loader2, ArrowLeft, TrendingUp, Calendar, Trash2, Package, Paintbrush, DollarSign } from 'lucide-react';
+import { Plus, Loader2, ArrowLeft, TrendingUp, Calendar, Trash2, Package, Paintbrush, DollarSign, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -19,6 +19,7 @@ interface Sale {
     comissao_vendedor?: number;
     pintura_freelancer?: boolean;
     observacao?: string;
+    status?: string;
     figuras: {
         nome: string;
         studios: { nome: string } | { nome: string }[];
@@ -102,6 +103,25 @@ export default function SalesPage() {
             fetchSales();
         } catch (err) {
             toast.error('Erro ao excluir venda');
+        }
+    };
+
+    const handleSendToKanban = async (id: number) => {
+        if (!confirm('Deseja reenviar esta venda para a Fila de Impressão do Kanban?')) return;
+
+        try {
+            const res = await fetch('/api/admin/kanban', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, status: 'Fila de Impressão' })
+            });
+
+            if (!res.ok) throw new Error('Erro ao atualizar status');
+
+            toast.success('Enviado para o Kanban!');
+            fetchSales();
+        } catch (err) {
+            toast.error('Erro ao reenviar para o Kanban');
         }
     };
 
@@ -235,7 +255,16 @@ export default function SalesPage() {
                                                 <td className="p-4 text-right text-green-500/80 font-mono text-xs" title="Já descontado material, extras e comissões">
                                                     R$ {sale.lucro_real?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                 </td>
-                                                <td className="p-4 pr-6">
+                                                <td className="p-4 pr-6 flex items-center justify-end gap-2 text-right">
+                                                    {sale.status === 'Concluída' && (
+                                                        <button
+                                                            onClick={() => handleSendToKanban(sale.id)}
+                                                            className="p-2 hover:bg-orange-500/10 text-zinc-600 hover:text-orange-500 rounded transition-colors"
+                                                            title="Reativar no Kanban (Fila de Impressão)"
+                                                        >
+                                                            <RotateCcw size={16} />
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => handleDelete(sale.id)}
                                                         className="p-2 hover:bg-red-500/10 text-zinc-600 hover:text-red-500 rounded transition-colors"

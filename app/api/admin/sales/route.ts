@@ -111,7 +111,7 @@ export async function POST(req: Request) {
                 valor_venda_final: item.valor_final,
                 custo_producao_snapshot: custo_total_real,
                 lucro_real,
-                status: 'Concluída',
+                status: 'Fila de Impressão', // Atualizado para fluxo Kanban
                 quantidade: item.quantidade,
                 observacao: observacao || '',
                 data_venda: data_venda || new Date().toISOString()
