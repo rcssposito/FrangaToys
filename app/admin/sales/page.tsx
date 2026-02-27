@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Plus, Loader2, ArrowLeft, TrendingUp, Calendar, Trash2, Package, Paintbrush, DollarSign, RotateCcw } from 'lucide-react';
+import { Plus, Loader2, ArrowLeft, TrendingUp, Calendar, Trash2, Package, Paintbrush, DollarSign, RotateCcw, Receipt } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -265,6 +265,15 @@ export default function SalesPage() {
                                                             <RotateCcw size={16} />
                                                         </button>
                                                     )}
+                                                    <Link
+                                                        href={`/api/admin/receipt/${sale.id}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="p-2 hover:bg-blue-500/10 text-zinc-600 hover:text-blue-500 rounded transition-colors"
+                                                        title="Gerar Recibo de Venda"
+                                                    >
+                                                        <Receipt size={16} />
+                                                    </Link>
                                                     <button
                                                         onClick={() => handleDelete(sale.id)}
                                                         className="p-2 hover:bg-red-500/10 text-zinc-600 hover:text-red-500 rounded transition-colors"
