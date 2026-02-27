@@ -19,9 +19,9 @@ export default function AdminLayout({
 
     return (
         <AuthProvider>
-            <div className="min-h-screen bg-black text-white md:pl-64">
+            <div className="min-h-screen bg-black text-white md:pl-64 pt-16 md:pt-0">
                 <AdminSidebar />
-                <main className="p-8">
+                <main className="p-4 md:p-8">
                     {children}
                 </main>
             </div>

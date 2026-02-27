@@ -169,14 +169,6 @@ export default function AdminDashboard() {
         }
     ];
 
-    const menuItems = [
-        { label: 'Gerenciar Usuários', href: '/admin/users', roles: ['admin'], icon: Users },
-        { label: 'Gerenciar Estúdios', href: '/admin/studios', roles: ['admin'], icon: Activity },
-        { label: 'Catálogo & Precificação', href: '/admin/figures', roles: ['admin', 'pricing', 'orcamento'], icon: Package },
-        { label: 'Histórico de Vendas', href: '/admin/sales', roles: ['admin', 'sales'], icon: ShoppingCart },
-        { label: 'Configurações', href: '/admin/settings', roles: ['admin'], icon: Settings },
-    ];
-
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             return (
@@ -797,17 +789,7 @@ export default function AdminDashboard() {
                         </select>
                     </div>
 
-                    <div className="flex gap-2 flex-wrap">
-                        {menuItems.map(item => {
-                            if (!item.roles.some(r => hasRole(r))) return null;
-                            return (
-                                <Link key={item.href} href={item.href} className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 px-4 py-2 rounded-lg border border-zinc-800 transition-colors text-sm font-medium">
-                                    <item.icon size={16} className="text-zinc-500" />
-                                    {item.label}
-                                </Link>
-                            )
-                        })}
-                    </div>
+
                 </div>
             </header>
 
