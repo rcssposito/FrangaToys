@@ -42,6 +42,8 @@ export default function DataGridPage() {
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
 
     const { hasRole } = usePermission();
+    // Check if user has permission to edit (admin or pricing)
+    // Users with ONLY 'orcamento' role can view but not edit
     const canEdit = hasRole('admin') || hasRole('pricing');
 
     // Modal State

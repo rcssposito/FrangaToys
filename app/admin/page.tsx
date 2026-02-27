@@ -172,7 +172,7 @@ export default function AdminDashboard() {
     const menuItems = [
         { label: 'Gerenciar Usuários', href: '/admin/users', roles: ['admin'], icon: Users },
         { label: 'Gerenciar Estúdios', href: '/admin/studios', roles: ['admin'], icon: Activity },
-        { label: 'Catálogo & Precificação', href: '/admin/figures', roles: ['admin', 'pricing', 'marketing'], icon: Package },
+        { label: 'Catálogo & Precificação', href: '/admin/figures', roles: ['admin', 'pricing', 'orcamento'], icon: Package },
         { label: 'Histórico de Vendas', href: '/admin/sales', roles: ['admin', 'sales'], icon: ShoppingCart },
         { label: 'Configurações', href: '/admin/settings', roles: ['admin'], icon: Settings },
     ];
