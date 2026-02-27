@@ -33,6 +33,8 @@ export async function POST(req: Request) {
             carrinho, // Array de { id, nome, quantidade, valor_final, resina_kg }
             cliente_nome,
             canal_venda,
+            vendedor, // Email do usuário na sessão
+            pintura_freelancer, // Booleano do checkbox
             data_venda,
             observacao
         } = body;
@@ -42,6 +44,9 @@ export async function POST(req: Request) {
         }
 
         console.log(`Registering ${carrinho.length} items for client ${cliente_nome}`);
+        if (vendedor) {
+            console.log(`Sale made by vendor: ${vendedor}`);
+        }
 
         // 1. Buscar configurações globais de preço (para saber custo de resina/h_impressao atual)
         const { data: settings, error: settingsError } = await supabase
@@ -75,7 +80,24 @@ export async function POST(req: Request) {
 
             const custo_unitario_real = Math.ceil(custo_resina_raw + custo_impressao_raw);
             const custo_total_real = custo_unitario_real * item.quantidade;
-            const lucro_real = item.valor_final - custo_total_real;
+
+            // Deduções
+            let comissao_vendedor = 0;
+            const OWNER_EMAIL = 'rcssposito@gmail.com';
+
+            if (vendedor && vendedor.toLowerCase() !== OWNER_EMAIL.toLowerCase()) {
+                // 15% de comissão sobre o valor final do item (apenas se não for o dono)
+                comissao_vendedor = Math.round(item.valor_final * 0.15);
+            }
+
+            let custo_pintura_freelancer = 0;
+            if (pintura_freelancer) {
+                // Custo do freelancer = horas de pintura * R$ 50
+                custo_pintura_freelancer = Math.ceil((meta.horas_pintura || 0) * 50) * item.quantidade;
+            }
+
+            // Lucro Real = Valor Final - Custos da Impressora - Custo Terceiro - Comissão
+            const lucro_real = item.valor_final - custo_total_real - custo_pintura_freelancer - comissao_vendedor;
 
             totalResinaConsumida += (meta.resina_kg || 0) * item.quantidade;
 
@@ -83,6 +105,9 @@ export async function POST(req: Request) {
                 figura_id: item.id,
                 cliente_nome,
                 canal_venda,
+                vendedor,
+                comissao_vendedor,
+                pintura_freelancer,
                 valor_venda_final: item.valor_final,
                 custo_producao_snapshot: custo_total_real,
                 lucro_real,

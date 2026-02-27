@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Plus, Loader2, ArrowLeft, TrendingUp, Calendar, Trash2, Package } from 'lucide-react';
+import { Plus, Loader2, ArrowLeft, TrendingUp, Calendar, Trash2, Package, Paintbrush, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -14,6 +14,9 @@ interface Sale {
     valor_venda_final: number;
     lucro_real: number;
     quantidade: number;
+    vendedor?: string;
+    comissao_vendedor?: number;
+    pintura_freelancer?: boolean;
     observacao?: string;
     figuras: {
         nome: string;
@@ -163,8 +166,9 @@ export default function SalesPage() {
                                             <th className="p-4">Figura / Estúdio</th>
                                             <th className="p-4 text-center">Qtd</th>
                                             <th className="p-4">Cliente</th>
+                                            <th className="p-4">Vendedor / Opcionais</th>
                                             <th className="p-4 text-right">Valor</th>
-                                            <th className="p-4 text-right text-green-600">Lucro</th>
+                                            <th className="p-4 text-right text-green-600">Lucro Líquido</th>
                                             <th className="p-4 w-10"></th>
                                         </tr>
                                     </thead>
@@ -175,7 +179,14 @@ export default function SalesPage() {
                                                     {new Date(sale.data_venda).toLocaleDateString('pt-BR')}
                                                 </td>
                                                 <td className="p-4">
-                                                    <div className="font-medium text-white">{sale.figuras?.nome || 'Desconhecida'}</div>
+                                                    <div className="font-medium text-white flex items-center gap-2">
+                                                        {sale.figuras?.nome || 'Desconhecida'}
+                                                        {sale.pintura_freelancer && (
+                                                            <span title="Pintura Terceirizada (Freelancer)" className="bg-orange-500/20 text-orange-400 p-0.5 rounded border border-orange-500/30">
+                                                                <Paintbrush size={12} />
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <div className="text-xs text-zinc-500 uppercase tracking-wide mt-0.5">
                                                         {getStudioName(sale.figuras)}
                                                     </div>
@@ -197,10 +208,26 @@ export default function SalesPage() {
                                                         </div>
                                                     )}
                                                 </td>
+                                                <td className="p-4">
+                                                    {sale.vendedor ? (
+                                                        <div className="flex flex-col">
+                                                            <span className="text-xs font-semibold text-zinc-300 truncate max-w-[120px]" title={sale.vendedor.split('@')[0]}>
+                                                                @{sale.vendedor.split('@')[0]}
+                                                            </span>
+                                                            {(sale.comissao_vendedor ?? 0) > 0 && (
+                                                                <span className="text-[10px] text-fuchsia-400 font-mono mt-0.5 flex items-center gap-0.5">
+                                                                    <DollarSign size={10} /> {(sale.comissao_vendedor ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (15%)
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs text-zinc-600 italic">Loja Direta</span>
+                                                    )}
+                                                </td>
                                                 <td className="p-4 text-right font-medium">
                                                     R$ {sale.valor_venda_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                 </td>
-                                                <td className="p-4 text-right text-green-500/80 font-mono text-xs">
+                                                <td className="p-4 text-right text-green-500/80 font-mono text-xs" title="Já descontado resina, horas e comissões">
                                                     R$ {sale.lucro_real?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                 </td>
                                                 <td className="p-4 pr-6">

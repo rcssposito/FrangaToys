@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2, Plus, Minus, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2, Plus, Minus, AlertTriangle, CheckCircle2, User } from 'lucide-react';
 import Link from 'next/link';
+import { usePermission } from '@/hooks/usePermission';
 
 interface CatalogItem {
     id: number;
@@ -22,6 +23,7 @@ interface CartItem extends CatalogItem {
 
 export default function NewSalePage() {
     const router = useRouter();
+    const { user } = usePermission();
     const [items, setItems] = useState<CatalogItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -32,6 +34,7 @@ export default function NewSalePage() {
     const [cliente, setCliente] = useState('');
     const [dataVenda, setDataVenda] = useState(new Date().toISOString().split('T')[0]);
     const [canal, setCanal] = useState('Whatsapp');
+    const [pinturaFreelancer, setPinturaFreelancer] = useState(false);
     const [observacao, setObservacao] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
@@ -127,6 +130,8 @@ export default function NewSalePage() {
                     cliente_nome: cliente,
                     canal_venda: canal,
                     data_venda: dataVenda,
+                    pintura_freelancer: pinturaFreelancer,
+                    vendedor: user?.email || '',
                     observacao
                 }),
             });
@@ -274,6 +279,13 @@ export default function NewSalePage() {
 
                         {/* Dados da Venda */}
                         <form onSubmit={handleSubmit} className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4 shadow-lg">
+                            {user?.email && (
+                                <div className="flex items-center gap-2 mb-2 p-3 bg-zinc-950/50 border border-zinc-800/50 rounded-lg text-sm text-zinc-400">
+                                    <User size={16} className="text-zinc-500" />
+                                    <span>Vendedor Atual:</span>
+                                    <span className="font-semibold text-zinc-200">{user.email}</span>
+                                </div>
+                            )}
                             <div className="grid md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs text-zinc-500 uppercase font-bold mb-1">Cliente</label>
@@ -310,6 +322,20 @@ export default function NewSalePage() {
                                     </div>
                                 </div>
                             </div>
+
+                            <div className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 p-3 rounded-lg">
+                                <input
+                                    type="checkbox"
+                                    id="freelancer"
+                                    checked={pinturaFreelancer}
+                                    onChange={(e) => setPinturaFreelancer(e.target.checked)}
+                                    className="w-4 h-4 rounded border-zinc-700 text-orange-500 focus:ring-orange-500 bg-zinc-900"
+                                />
+                                <label htmlFor="freelancer" className="text-sm font-medium text-zinc-300 cursor-pointer select-none flex-1">
+                                    Pintura será feita por Freelancer? (-R$ 50/h)
+                                </label>
+                            </div>
+
                             <div>
                                 <label className="block text-xs text-zinc-500 uppercase font-bold mb-1">Observações (Opcional)</label>
                                 <textarea
