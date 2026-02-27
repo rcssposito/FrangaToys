@@ -37,7 +37,7 @@ export async function GET() {
 
         const { data: users, error } = await supabaseAdmin
             .from('admin_users')
-            .select('id, email, created_at, roles')
+            .select('id, email, created_at, roles, nome')
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
-        const { email, password, roles } = await req.json();
+        const { email, password, roles, nome } = await req.json();
 
         if (!email || !password) {
             return NextResponse.json({ error: 'Email e senha obrigatórios' }, { status: 400 });
@@ -88,7 +88,8 @@ export async function POST(req: Request) {
             .insert([{
                 email,
                 password_hash: hash,
-                roles: roles || ['admin']
+                roles: roles || ['admin'],
+                nome: nome || email.split('@')[0]
             }])
             .select()
             .single();
@@ -159,7 +160,7 @@ export async function PUT(req: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
-        const { email, password, roles } = await req.json();
+        const { email, password, roles, nome } = await req.json();
 
         if (!email) {
             return NextResponse.json({ error: 'Email obrigatório' }, { status: 400 });
@@ -168,7 +169,7 @@ export async function PUT(req: Request) {
         // 1. Update Roles in DB (admin_users)
         const { error: dbError } = await supabaseAdmin
             .from('admin_users')
-            .update({ roles })
+            .update({ roles, nome })
             .eq('email', email);
 
         if (dbError) throw dbError;

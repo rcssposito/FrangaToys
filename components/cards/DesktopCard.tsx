@@ -133,6 +133,11 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                             <h3 className="font-bold text-lg leading-tight drop-shadow-md">
                                 {figure.nome}
                             </h3>
+                            {figure.codigo && (
+                                <span className="text-[10px] font-mono text-orange-500/80 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
+                                    {figure.codigo}
+                                </span>
+                            )}
 
                             <div className="w-full text-sm font-medium space-y-2 px-2">
                                 <div className="flex justify-between border-b border-white/10 pb-1">

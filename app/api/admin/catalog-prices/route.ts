@@ -24,6 +24,7 @@ export async function GET(req: Request) {
                 .select(`
                     id,
                     nome,
+                    codigo,
                     studios ( nome ),
                     figuras_meta (
                         resina_kg,
@@ -31,7 +32,7 @@ export async function GET(req: Request) {
                         horas_pintura
                     )
                 `)
-                .ilike('nome', `%${search}%`)
+                .or(`nome.ilike.%${search}%,codigo.ilike.%${search}%`)
                 .limit(50);
 
             if (error) throw error;
@@ -54,6 +55,7 @@ export async function GET(req: Request) {
                 return {
                     id: item.id,
                     Figura: item.nome,
+                    codigo: item.codigo,
                     studio: item.studios?.nome || 'N/A',
                     resina_kg: meta.resina_kg || 0, // Adicionado para cálculo de estoque no PDV
                     horas_pintura: meta.horas_pintura || 0,
@@ -101,6 +103,7 @@ export async function GET(req: Request) {
             return {
                 id: item.id,
                 Figura: item.nome,
+                codigo: item.codigo,
                 studio: item.studios?.nome || 'N/A',
                 resina_kg: meta.resina_kg || 0,
                 horas_pintura: meta.horas_pintura || 0,

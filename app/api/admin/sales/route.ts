@@ -5,21 +5,36 @@ import { supabaseAdmin as supabase } from '@/lib/supabase';
 // LISTAR VENDAS (Histórico)
 export async function GET() {
     try {
-        const { data, error } = await supabase
+        const { data: sales, error } = await supabase
             .from('vendas')
             .select(`
-        *,
-        figuras ( 
-            nome, 
-            imagem_url,
-            studios ( nome )
-        )
-      `)
+                *,
+                figuras ( 
+                    nome, 
+                    imagem_url,
+                    studios ( nome )
+                )
+            `)
             .order('data_venda', { ascending: false });
 
         if (error) throw error;
 
-        return NextResponse.json(data);
+        // Fetch display names for vendors
+        const { data: users } = await supabase
+            .from('admin_users')
+            .select('email, nome');
+
+        const userMap = (users || []).reduce((acc: any, u) => {
+            acc[u.email.toLowerCase()] = u.nome;
+            return acc;
+        }, {});
+
+        const formatted = sales.map(s => ({
+            ...s,
+            vendedor_nome: userMap[(s.vendedor || '').toLowerCase()] || s.vendedor || 'Ateliê'
+        }));
+
+        return NextResponse.json(formatted);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

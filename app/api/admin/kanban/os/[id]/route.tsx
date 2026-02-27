@@ -31,6 +31,7 @@ export async function GET(
                 vendedor,
                 figuras (
                     nome,
+                    codigo,
                     imagem_url,
                     studios (nome),
                     figuras_meta (
@@ -53,6 +54,15 @@ export async function GET(
         const fig = sale.figuras as any;
         const meta = (Array.isArray(fig?.figuras_meta) ? fig.figuras_meta[0] : fig?.figuras_meta) || {};
         const studio = (Array.isArray(fig?.studios) ? fig.studios[0] : fig?.studios) || {};
+
+        // Fetch seller display name
+        const { data: userData } = await supabase
+            .from('admin_users')
+            .select('nome')
+            .eq('email', sale.vendedor)
+            .single();
+
+        const vendedorNome = userData?.nome || sale.vendedor?.split('@')[0].toUpperCase() || 'FRANGUINHA';
 
         return new ImageResponse(
             (
@@ -96,7 +106,12 @@ export async function GET(
 
                             <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 20 }}>
                                 <span style={{ fontSize: 12, textTransform: 'uppercase', color: '#999', fontWeight: '800', letterSpacing: '1px' }}>Peça / Modelo</span>
-                                <span style={{ fontSize: 26, fontWeight: '800', color: '#111' }}>{fig?.nome}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <span style={{ fontSize: 26, fontWeight: '800', color: '#111' }}>{fig?.nome}</span>
+                                    {fig?.codigo && (
+                                        <span style={{ fontSize: 14, fontWeight: '900', backgroundColor: '#000', color: '#fff', padding: '2px 8px', borderRadius: 4, marginTop: 4 }}>{fig.codigo}</span>
+                                    )}
+                                </div>
                                 <span style={{ fontSize: 16, color: '#ea580c', fontWeight: 'bold', marginTop: 2 }}>Estúdio: {studio?.nome || 'N/A'}</span>
                             </div>
 
@@ -147,8 +162,8 @@ export async function GET(
                                     )}
                                 </div>
                             )}
-                            <div style={{ display: 'flex', background: '#000', padding: '10px', borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginTop: 12 }}>
-                                <span style={{ color: '#fff', fontSize: 12, fontWeight: '900', letterSpacing: '1px' }}>VENDEDOR: @{sale.vendedor?.split('@')[0].toUpperCase() || 'ATELIÊ'}</span>
+                            <div style={{ display: 'flex', background: '#000', padding: '12px', borderRadius: 10, justifyContent: 'center', alignItems: 'center' }}>
+                                <span style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: '1px' }}>VENDEDOR: @{vendedorNome.toUpperCase()}</span>
                             </div>
                         </div>
                     </div>

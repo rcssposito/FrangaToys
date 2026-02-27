@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const FiguraSchema = z.object({
   id: z.number(),
   nome: z.string(),
+  codigo: z.string().nullable().optional(),
   imagem_url: z.string().nullable(),
   disponivel: z.boolean(),
   studio_id: z.number().nullable(),

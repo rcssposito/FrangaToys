@@ -78,6 +78,11 @@ export const MobileCard = ({ figure, className }: MobileCardProps) => {
                                     {figure.studio}
                                 </span>
                             )}
+                            {figure.codigo && (
+                                <span className="text-[10px] text-orange-500 font-mono font-bold">
+                                    #{figure.codigo}
+                                </span>
+                            )}
                             {figure.categoria && (
                                 <span className="text-[10px] text-zinc-500 truncate max-w-[50%]">
                                     {figure.categoria}

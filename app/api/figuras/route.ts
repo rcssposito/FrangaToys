@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
             .select(`
             id,
             nome,
+            codigo,
             imagem_url,
             disponivel,
             tem_extras,
@@ -102,6 +103,7 @@ export async function GET(req: NextRequest) {
             return {
                 id: item.id,
                 nome: item.nome,
+                codigo: item.codigo,
                 imagem_url: item.imagem_url,
                 disponivel: item.disponivel,
                 tem_extras: item.tem_extras || false,

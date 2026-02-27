@@ -39,6 +39,7 @@ export default async function FigureModalPage({ params }: Props) {
         altura_cm: figure.figuras_meta?.altura_cm,
         largura_cm: figure.figuras_meta?.largura_cm,
         profundidade_cm: figure.figuras_meta?.profundidade_cm,
+        codigo: figure.codigo,
     };
 
     return <InterceptedModal figure={figureDto as any} />;

@@ -9,6 +9,7 @@ import Link from 'next/link';
 interface User {
     id: number;
     email: string;
+    nome?: string;
     roles: string[];
     created_at: string;
 }
@@ -29,6 +30,7 @@ export default function UsersPage() {
     // Form State
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [nome, setNome] = useState('');
     const [selectedRoles, setSelectedRoles] = useState<string[]>(['sales']);
     const [creating, setCreating] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -54,7 +56,7 @@ export default function UsersPage() {
         setCreating(true);
         try {
             const method = isEditing ? 'PUT' : 'POST';
-            const body = { email, password, roles: selectedRoles };
+            const body = { email, password, roles: selectedRoles, nome };
 
             const res = await fetch('/api/admin/users', {
                 method,
@@ -70,6 +72,7 @@ export default function UsersPage() {
             // Reset form
             setEmail('');
             setPassword('');
+            setNome('');
             setSelectedRoles(['sales']);
             setIsEditing(false);
             fetchUsers();
@@ -82,6 +85,7 @@ export default function UsersPage() {
 
     const handleEdit = (user: User) => {
         setEmail(user.email);
+        setNome(user.nome || '');
         setSelectedRoles(user.roles || []);
         setPassword(''); // Don't fill password
         setIsEditing(true);
@@ -93,6 +97,7 @@ export default function UsersPage() {
         setIsEditing(false);
         setEmail('');
         setPassword('');
+        setNome('');
         setSelectedRoles(['sales']);
     };
 
@@ -137,18 +142,24 @@ export default function UsersPage() {
                         <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-orange-500" /></div>
                     ) : (
                         <table className="w-full text-left">
-                            <thead className="bg-zinc-950 text-zinc-500 text-xs uppercase tracking-wider">
-                                <tr>
+                            <thead className="bg-zinc-950/20">
+                                <tr className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest border-b border-zinc-800/50">
+                                    <th className="p-4">Vendedor</th>
                                     <th className="p-4">Email</th>
                                     <th className="p-4">Funções</th>
-                                    <th className="p-4 text-right">Data</th>
+                                    <th className="p-4 text-right">Cadastrado</th>
                                     <th className="p-4 w-[100px]"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-800">
                                 {users.map(user => (
                                     <tr key={user.id} className="hover:bg-zinc-800/30 transition-colors">
-                                        <td className="p-4 font-medium">{user.email}</td>
+                                        <td className="p-4">
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-zinc-100">{user.nome || '--'}</span>
+                                            </div>
+                                        </td>
+                                        <td className="p-4 text-sm text-zinc-400 font-medium">{user.email}</td>
                                         <td className="p-4">
                                             <div className="flex gap-2 flex-wrap">
                                                 {user.roles?.map(role => {
@@ -195,7 +206,18 @@ export default function UsersPage() {
                     </h2>
                     <form onSubmit={handleSave} className="space-y-4">
                         <div>
-                            <label className="text-sm text-zinc-400 block mb-1">Email</label>
+                            <label className="text-sm text-zinc-400 block mb-1 font-medium">Nome do Vendedor</label>
+                            <input
+                                type="text"
+                                value={nome}
+                                onChange={e => setNome(e.target.value)}
+                                className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 outline-none focus:border-orange-500 text-sm transition-all"
+                                placeholder="Ex: João Silva"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm text-zinc-400 block mb-1 font-medium">Email de Acesso</label>
                             <input
                                 type="email"
                                 value={email}

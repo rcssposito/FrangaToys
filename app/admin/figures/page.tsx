@@ -10,6 +10,7 @@ import { usePermission } from '@/hooks/usePermission';
 interface Figure {
     id: number;
     nome: string;
+    codigo?: string;
     serie: string;
     categoria: string;
     categoria_id: number;
@@ -258,18 +259,19 @@ export default function DataGridPage() {
                 {/* Tabela */}
                 <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-auto shadow-2xl max-h-[75vh]">
                     <table className="w-full text-left border-collapse whitespace-nowrap relative">
-                        <thead className="bg-zinc-950 text-zinc-400 text-[10px] uppercase tracking-wider sticky top-0 z-10">
-                            <tr>
-                                <th className="p-4 min-w-[220px]">Figura (Clique p/ ver)</th>
-                                <th className="p-4 text-center">Escala (%)</th>
-                                <th className="p-4 text-center">KG Resina</th>
-                                <th className="p-4 text-center">H. Impressão</th>
-                                <th className="p-4 text-center">H. Pintura</th>
-                                <th className="p-4 text-center">Medidas (cm)</th>
-                                <th className="p-4 text-center">Extras</th>
-                                <th className="p-4 text-right text-green-500">Básico (R$)</th>
-                                <th className="p-4 text-right text-purple-400">Premium (R$)</th>
-                                <th className="p-4 text-center">Ações</th>
+                        <thead className="bg-[#121214] sticky top-0 z-10">
+                            <tr className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest border-b border-zinc-800">
+                                <th className="pl-4 pr-0 py-3"><div className="-mr-[100px]">Figura (Clique p/ ver)</div></th>
+                                <th className="pl-1 pr-4 py-3 text-center">SKU</th>
+                                <th className="px-4 py-3 text-center">Escala (%)</th>
+                                <th className="px-4 py-3 text-center">KG Resina</th>
+                                <th className="px-4 py-3 text-center">H. Impressão</th>
+                                <th className="px-4 py-3 text-center">H. Pintura</th>
+                                <th className="px-4 py-3 text-center">Medidas (cm)</th>
+                                <th className="px-4 py-3 text-center uppercase">Extras</th>
+                                <th className="px-4 py-3 text-center text-green-500">Básico (R$)</th>
+                                <th className="px-4 py-3 text-center text-fuchsia-500">Premium (R$)</th>
+                                <th className="px-4 py-3 text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-800 text-sm">
@@ -277,17 +279,22 @@ export default function DataGridPage() {
                                 const prices = calculatePrices(f);
                                 return (
                                     <tr key={f.id} className="hover:bg-zinc-800/30 transition-colors group">
-                                        <td className="p-3">
+                                        <td className="pl-4 pr-0 py-4">
                                             <div
                                                 onClick={() => f.imagem_url && setPreviewImage({ url: f.imagem_url, nome: f.nome })}
-                                                className="cursor-pointer text-left group/name"
+                                                className="cursor-pointer text-left group/name -mr-[100px]"
                                             >
-                                                <div className="font-bold text-white leading-tight group-hover/name:text-orange-500 transition-colors flex items-center gap-2">
+                                                <h3 className="text-sm font-bold text-zinc-100 group-hover:text-orange-500 transition-colors">
                                                     {f.nome}
-                                                    {f.imagem_url && <ExternalLink size={12} className="opacity-0 group-hover/name:opacity-100" />}
-                                                </div>
-                                                <div className="text-[11px] text-zinc-500">{f.categoria} - {f.serie}</div>
+                                                </h3>
+                                                <div className="text-xs text-zinc-500">{f.categoria} - {f.serie}</div>
                                             </div>
+                                        </td>
+
+                                        <td className="pl-1 pr-3 py-4 text-center">
+                                            <span className="font-mono text-[10px] bg-zinc-950 text-zinc-400 px-2 py-1 rounded border border-zinc-800">
+                                                {f.codigo || '--'}
+                                            </span>
                                         </td>
 
                                         <td className="p-2">
@@ -403,43 +410,45 @@ export default function DataGridPage() {
                                     </tr>
                                 );
                             })}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                        </tbody >
+                    </table >
+                </div >
+            </div >
 
             {/* Image Preview Modal */}
-            {previewImage && (
-                <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200"
-                    onClick={() => setPreviewImage(null)}
-                >
+            {
+                previewImage && (
                     <div
-                        className="relative max-w-4xl w-full bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-zinc-800"
-                        onClick={e => e.stopPropagation()}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200"
+                        onClick={() => setPreviewImage(null)}
                     >
-                        <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/50">
-                            <h3 className="font-bold text-lg">{previewImage.nome}</h3>
-                            <button
-                                onClick={() => setPreviewImage(null)}
-                                className="p-2 hover:bg-zinc-800 rounded-full transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <div className="p-2 flex justify-center bg-zinc-950">
-                            <img
-                                src={previewImage.url}
-                                alt={previewImage.nome}
-                                className="max-h-[70vh] w-auto object-contain rounded-lg"
-                            />
-                        </div>
-                        <div className="p-4 text-center text-zinc-500 text-xs">
-                            Imagens carregadas via ImageKit
+                        <div
+                            className="relative max-w-4xl w-full bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-zinc-800"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/50">
+                                <h3 className="font-bold text-lg">{previewImage.nome}</h3>
+                                <button
+                                    onClick={() => setPreviewImage(null)}
+                                    className="p-2 hover:bg-zinc-800 rounded-full transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <div className="p-2 flex justify-center bg-zinc-950">
+                                <img
+                                    src={previewImage.url}
+                                    alt={previewImage.nome}
+                                    className="max-h-[70vh] w-auto object-contain rounded-lg"
+                                />
+                            </div>
+                            <div className="p-4 text-center text-zinc-500 text-xs">
+                                Imagens carregadas via ImageKit
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }

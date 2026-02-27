@@ -10,6 +10,7 @@ import { usePermission } from '@/hooks/usePermission';
 interface CatalogItem {
     id: number;
     Figura: string;
+    codigo?: string;
     studio: string;
     "Básico (R$)": number;
     "Premium (R$)": number;
@@ -199,6 +200,8 @@ export default function NewSalePage() {
                                         <div className="flex flex-col">
                                             <span className="font-medium text-sm group-hover:text-white transition-colors">{item.Figura}</span>
                                             <div className="flex items-center gap-2">
+                                                <span className="text-[10px] text-zinc-400 font-mono bg-zinc-950 px-1.5 py-0.5 rounded border border-zinc-800">{item.codigo || '--'}</span>
+                                                <span className="text-zinc-800 text-[8px]">•</span>
                                                 <span className="text-[10px] text-orange-500/80 font-medium tracking-tight whitespace-nowrap">{item.studio}</span>
                                                 <span className="text-zinc-800 text-[8px]">•</span>
                                                 <span className="text-[10px] text-zinc-500">{(item.resina_kg || 0).toFixed(3)}kg resina</span>

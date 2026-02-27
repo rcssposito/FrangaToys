@@ -17,6 +17,7 @@ interface Sale {
     custo_producao_snapshot?: number;
     quantidade: number;
     vendedor?: string;
+    vendedor_nome?: string;
     comissao_vendedor?: number;
     pintura_freelancer?: boolean;
     observacao?: string;
@@ -241,8 +242,8 @@ export default function SalesPage() {
                                                 <td className="p-4">
                                                     {sale.vendedor ? (
                                                         <div className="flex flex-col">
-                                                            <span className="text-xs font-semibold text-zinc-300 truncate max-w-[120px]" title={sale.vendedor.split('@')[0]}>
-                                                                @{sale.vendedor.split('@')[0]}
+                                                            <span className="text-xs font-bold text-zinc-100 truncate max-w-[120px]" title={sale.vendedor}>
+                                                                {sale.vendedor_nome || sale.vendedor?.split('@')[0] || 'Franguinha'}
                                                             </span>
                                                             {(sale.comissao_vendedor ?? 0) > 0 && (
                                                                 <span className="text-[10px] text-fuchsia-400 font-mono mt-0.5 flex items-center gap-0.5">

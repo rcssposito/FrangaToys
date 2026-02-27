@@ -15,6 +15,8 @@ interface Sale {
     quantidade: number;
     pintura_freelancer?: boolean;
     observacao?: string;
+    vendedor?: string;
+    vendedor_nome?: string;
     figuras: {
         nome: string;
         imagem_url: string;
@@ -189,6 +191,9 @@ export default function KanbanPage() {
                                                     </div>
                                                     <div className="text-xs text-zinc-500 truncate" title={task.cliente_nome}>
                                                         Cliente: <span className="text-zinc-300 font-medium">{task.cliente_nome}</span>
+                                                    </div>
+                                                    <div className="text-[10px] text-zinc-600 mt-1 uppercase font-bold">
+                                                        Vendedor: <span className="text-zinc-500">{task.vendedor_nome || task.vendedor?.split('@')[0] || 'Franguinha'}</span>
                                                     </div>
                                                 </div>
                                                 <Link

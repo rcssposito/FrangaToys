@@ -59,7 +59,14 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
             <div className="mt-4 w-full max-w-2xl bg-zinc-900/90 border border-white/10 rounded-xl p-4 backdrop-blur-md shadow-2xl">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="text-center sm:text-left">
-                        <h2 className="text-xl font-bold text-white mb-1">{figure.nome}</h2>
+                        <div className="flex items-center gap-3 mb-1">
+                            <h2 className="text-lg font-bold text-white">{figure.nome}</h2>
+                            {figure.codigo && (
+                                <span className="text-[10px] bg-zinc-800 text-orange-500 font-mono font-bold px-2 py-0.5 rounded border border-orange-500/20 shadow-sm">
+                                    #{figure.codigo}
+                                </span>
+                            )}
+                        </div>
                         <div className="text-sm text-zinc-400 flex flex-wrap justify-center sm:justify-start gap-x-4 gap-y-1">
                             <span>{figure.altura_cm ? `Alt: ${figure.altura_cm}cm` : ''}</span>
                             <span>{figure.largura_cm ? `Lrg: ${figure.largura_cm}cm` : ''}</span>

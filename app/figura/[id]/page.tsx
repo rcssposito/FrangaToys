@@ -93,6 +93,7 @@ export default async function FiguraPage({ params }: Props) {
         largura_cm: figure.figuras_meta?.largura_cm,
         profundidade_cm: figure.figuras_meta?.profundidade_cm,
         slug: figure.slug,
+        codigo: figure.codigo,
     };
 
     // JSON-LD Structured Data (Product)

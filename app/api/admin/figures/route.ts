@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
             .select(`
         id, 
         nome, 
+        codigo,
         imagem_url,
         tem_extras,
         serie_id,
@@ -79,6 +80,7 @@ export async function GET(req: NextRequest) {
             return {
                 id: item.id,
                 nome: item.nome,
+                codigo: item.codigo,
                 serie: (Array.isArray(item.series) ? item.series[0]?.nome : item.series?.nome) || 'Sem Série',
                 categoria: cat.nome || 'Outros',
                 categoria_id: cat.id || 0,
