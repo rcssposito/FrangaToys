@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
         id, 
         nome, 
         imagem_url,
+        tem_extras,
         serie_id,
         ${seriesJoin} ( 
             nome, 
@@ -82,6 +83,7 @@ export async function GET(req: NextRequest) {
                 categoria: cat.nome || 'Outros',
                 categoria_id: cat.id || 0,
                 imagem_url: item.imagem_url,
+                tem_extras: item.tem_extras || false,
                 altura_cm: meta.altura_cm ?? 0,
                 largura_cm: meta.largura_cm ?? 0,
                 profundidade_cm: meta.profundidade_cm ?? 0,
@@ -104,7 +106,18 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: Request) {
     try {
         const body = await req.json();
-        const { id, nome, serie, imagem_url, ...rawMeta } = body;
+        const { id, nome, serie, imagem_url, tem_extras, ...rawMeta } = body;
+
+        if (tem_extras !== undefined) {
+            const { error: figError } = await supabase
+                .from('figuras')
+                .update({ tem_extras })
+                .eq('id', id);
+
+            if (figError) {
+                console.error('Error updating figuras:', figError);
+            }
+        }
 
         // Filter to ensure only valid columns are passed to Supabase
         const meta: any = {

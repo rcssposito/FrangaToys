@@ -18,6 +18,7 @@ const AVAILABLE_ROLES = [
     { id: 'sales', label: 'Vendas' },
     { id: 'pricing', label: 'Precificação' },
     { id: 'finance', label: 'Financeiro' },
+    { id: 'marketing', label: 'Marketing' },
 ];
 
 export default function UsersPage() {

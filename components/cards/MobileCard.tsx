@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { FiguraDTO } from '@/lib/dto';
+import { Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { clsx } from 'clsx';
 import { getOptimizedImageUrl } from '@/lib/image-utils';
@@ -36,13 +38,33 @@ export const MobileCard = ({ figure, className }: MobileCardProps) => {
                     />
 
                     {/* Available Badge on Image */}
-                    {figure.disponivel && (
-                        <div className="absolute top-2 left-2 z-10">
-                            <span className="bg-green-600/90 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wide shadow-sm">
-                                À Venda
-                            </span>
-                        </div>
-                    )}
+                    <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
+                        {figure.disponivel && (
+                            <div className="relative flex items-center bg-green-600/90 text-white text-[9px] font-bold pl-1.5 pr-2.5 py-0.5 shadow-md self-start"
+                                style={{
+                                    clipPath: 'polygon(0 0, 85% 0, 100% 50%, 85% 100%, 0 100%)',
+                                    borderTopLeftRadius: '0.25rem',
+                                    borderBottomLeftRadius: '0.25rem'
+                                }}>
+                                <span className="uppercase tracking-wide">Disponível</span>
+                                {/* The Hole */}
+                                <div className="absolute right-0.5 top-1/2 -translate-y-1/2 w-0.5 h-0.5 bg-black/40 rounded-full" />
+                            </div>
+                        )}
+                        {figure.tem_extras && (
+                            <div className="relative flex items-center gap-1 bg-gradient-to-r from-purple-600/90 to-fuchsia-600/90 text-white text-[9px] font-bold pl-1.5 pr-2.5 py-0.5 shadow-md self-start"
+                                style={{
+                                    clipPath: 'polygon(0 0, 85% 0, 100% 50%, 85% 100%, 0 100%)',
+                                    borderTopLeftRadius: '0.25rem',
+                                    borderBottomLeftRadius: '0.25rem'
+                                }}>
+                                <Sparkles className="w-2.5 h-2.5 text-purple-200" />
+                                <span className="uppercase tracking-wide">Com Extras</span>
+                                {/* The Hole */}
+                                <div className="absolute right-0.5 top-1/2 -translate-y-1/2 w-0.5 h-0.5 bg-black/40 rounded-full" />
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Right: Content */}

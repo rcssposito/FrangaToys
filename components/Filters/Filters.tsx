@@ -147,7 +147,7 @@ export const Filters = ({ filters, onChange, categories }: FiltersProps) => {
                                 checked={filters.incluirNaoVendaveis === 'true'}
                                 onChange={(e) => onChange({ ...filters, incluirNaoVendaveis: e.target.checked ? 'true' : 'false' })}
                             />
-                            <span className="text-sm text-white">Incluir itens <em>não</em> à venda</span>
+                            <span className="text-sm text-white">Exibir itens indisponíveis</span>
                         </label>
                     </div>
 

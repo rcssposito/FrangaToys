@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
             nome,
             imagem_url,
             disponivel,
+            tem_extras,
             studio_id,
             serie_id,
             ${seriesJoin} (
@@ -103,6 +104,7 @@ export async function GET(req: NextRequest) {
                 nome: item.nome,
                 imagem_url: item.imagem_url,
                 disponivel: item.disponivel,
+                tem_extras: item.tem_extras || false,
                 studio_id: item.studio_id,
                 serie_id: item.serie_id,
                 serie: item.series?.nome || null,

@@ -21,6 +21,7 @@ interface Figure {
     horas_impressao: number | string;
     horas_pintura: number | string;
     escala: number | string;
+    tem_extras?: boolean;
 }
 
 interface PricingSettings {
@@ -87,7 +88,7 @@ export default function DataGridPage() {
         return () => clearTimeout(timer);
     }, [fetchFigures]); // fetchFigures depends on selectedCategoryId and search
 
-    const handleChange = (id: number, field: keyof Figure, value: string) => {
+    const handleChange = (id: number, field: keyof Figure, value: string | boolean) => {
         setFigures(prev => prev.map(f => f.id === id ? { ...f, [field]: value } : f));
     };
 
@@ -110,6 +111,7 @@ export default function DataGridPage() {
             largura_cm: toNumberOrNull(figure.largura_cm),
             profundidade_cm: toNumberOrNull(figure.profundidade_cm),
             escala: toNumberOrNull(figure.escala) || 100,
+            tem_extras: !!figure.tem_extras,
         };
 
         try {
@@ -262,6 +264,7 @@ export default function DataGridPage() {
                                 <th className="p-4 text-center">H. Impressão</th>
                                 <th className="p-4 text-center">H. Pintura</th>
                                 <th className="p-4 text-center">Medidas (cm)</th>
+                                <th className="p-4 text-center">Extras</th>
                                 <th className="p-4 text-right text-green-500">Básico (R$)</th>
                                 <th className="p-4 text-right text-purple-400">Premium (R$)</th>
                                 <th className="p-4 text-center">Ações</th>
@@ -342,6 +345,19 @@ export default function DataGridPage() {
                                                 <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="L" value={f.largura_cm === 0 ? '' : f.largura_cm} onChange={e => handleChange(f.id, 'largura_cm', e.target.value)} />
                                                 <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="P" value={f.profundidade_cm === 0 ? '' : f.profundidade_cm} onChange={e => handleChange(f.id, 'profundidade_cm', e.target.value)} />
                                             </div>
+                                        </td>
+
+                                        <td className="p-2 text-center">
+                                            {canEdit ? (
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-4 h-4 accent-orange-500 mx-auto block cursor-pointer bg-zinc-800 border-zinc-700"
+                                                    checked={f.tem_extras || false}
+                                                    onChange={e => handleChange(f.id, 'tem_extras', e.target.checked)}
+                                                />
+                                            ) : (
+                                                <div className="text-zinc-400 text-[11px]">{f.tem_extras ? 'Sim' : 'Não'}</div>
+                                            )}
                                         </td>
 
                                         <td className="p-4 text-right font-mono font-bold text-green-400">

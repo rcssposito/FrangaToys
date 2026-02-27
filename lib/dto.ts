@@ -17,6 +17,7 @@ export const FiguraSchema = z.object({
   profundidade_cm: z.number().nullable().optional(),
   slug: z.string().nullable().optional(),
   preco: z.number().nullable().optional(),
+  tem_extras: z.boolean().nullable().optional(),
 });
 
 export type FiguraDTO = z.infer<typeof FiguraSchema>;

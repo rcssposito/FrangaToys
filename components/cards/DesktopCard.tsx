@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ImageIcon, Maximize2, X, Sparkles } from 'lucide-react';
 import { FiguraDTO } from '@/lib/dto';
 import Image from 'next/image';
 import { clsx } from 'clsx';
@@ -66,13 +67,33 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                         </div>
 
                         {/* Badge */}
-                        {figure.disponivel && (
-                            <div className="absolute top-3 left-3 z-10 pointer-events-none">
-                                <span className="bg-green-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider shadow-sm">
-                                    À Venda
-                                </span>
-                            </div>
-                        )}
+                        <div className="absolute top-3 left-3 z-10 pointer-events-none flex flex-col gap-1 items-start">
+                            {figure.disponivel && (
+                                <div className="relative flex items-center bg-green-500/90 text-white text-[10px] font-bold pl-2 pr-3 py-0.5 shadow-md self-start"
+                                    style={{
+                                        clipPath: 'polygon(0 0, 85% 0, 100% 50%, 85% 100%, 0 100%)',
+                                        borderTopLeftRadius: '0.25rem',
+                                        borderBottomLeftRadius: '0.25rem'
+                                    }}>
+                                    <span className="uppercase tracking-wider">Disponível</span>
+                                    {/* The Hole */}
+                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-1 bg-black/40 rounded-full" />
+                                </div>
+                            )}
+                            {figure.tem_extras && (
+                                <div className="relative flex items-center gap-1 bg-gradient-to-r from-purple-600/90 to-fuchsia-600/90 text-white text-[10px] font-bold pl-2 pr-3 py-0.5 shadow-md self-start"
+                                    style={{
+                                        clipPath: 'polygon(0 0, 85% 0, 100% 50%, 85% 100%, 0 100%)',
+                                        borderTopLeftRadius: '0.25rem',
+                                        borderBottomLeftRadius: '0.25rem'
+                                    }}>
+                                    <Sparkles className="w-3 h-3 text-purple-200" />
+                                    <span className="uppercase tracking-wider">Com Extras</span>
+                                    {/* The Hole */}
+                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-1 bg-black/40 rounded-full" />
+                                </div>
+                            )}
+                        </div>
 
                         {/* Footer */}
                         <div className="absolute bottom-0 inset-x-0 p-3 bg-zinc-900/95 border-t border-white/5 backdrop-blur-sm pointer-events-none">
