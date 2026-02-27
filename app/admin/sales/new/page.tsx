@@ -14,6 +14,8 @@ interface CatalogItem {
     "Básico (R$)": number;
     "Premium (R$)": number;
     resina_kg: number;
+    horas_pintura: number;
+    custo_producao: number;
 }
 
 interface CartItem extends CatalogItem {
@@ -106,6 +108,13 @@ export default function NewSalePage() {
     const totalVenda = cart.reduce((acc, i) => acc + (i.valor_final || 0), 0);
     const totalResinaNecessaria = cart.reduce((acc, i) => acc + (i.resina_kg * i.quantidade), 0);
     const temEstoqueSuficiente = totalResinaNecessaria <= estoqueResina;
+
+    // Novos cálculos dinâmicos de lucro e custos
+    const totalCustoProducao = cart.reduce((acc, i) => acc + ((i.custo_producao || 0) * i.quantidade), 0);
+    const totalFreelancer = pinturaFreelancer ? cart.reduce((acc, i) => acc + (Math.ceil((i.horas_pintura || 0) * 50) * i.quantidade), 0) : 0;
+    const OWNER_EMAIL = 'rcssposito@gmail.com';
+    const totalComissao = (user?.email && user.email.toLowerCase() !== OWNER_EMAIL.toLowerCase()) ? Math.round(totalVenda * 0.15) : 0;
+    const lucroEstimado = totalVenda - totalCustoProducao - totalFreelancer - totalComissao;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -270,9 +279,31 @@ export default function NewSalePage() {
                             </div>
 
                             {cart.length > 0 && (
-                                <div className="p-4 bg-zinc-950/60 border-t border-zinc-800 flex justify-between items-center text-lg">
-                                    <span className="text-zinc-400 font-medium">TOTAL:</span>
-                                    <span className="font-black text-emerald-500 tracking-tight">R$ {totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                <div className="p-4 bg-zinc-950/80 border-t border-zinc-800 flex flex-col gap-2 text-sm shadow-inner">
+                                    <div className="flex justify-between items-center text-zinc-400 font-medium">
+                                        <span>Valor Bruto (Subtotal):</span>
+                                        <span>R$ {totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-red-400/90 font-mono text-xs">
+                                        <span title="Resina gasta + Horas rodando a impressora">(-) Custo Produção (Material):</span>
+                                        <span>- R$ {totalCustoProducao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    {pinturaFreelancer && totalFreelancer > 0 && (
+                                        <div className="flex justify-between items-center text-orange-400/90 font-mono text-xs">
+                                            <span title="Pagamento de terceiros">(-) Pintura Freelancer:</span>
+                                            <span>- R$ {totalFreelancer.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    )}
+                                    {totalComissao > 0 && (
+                                        <div className="flex justify-between items-center text-fuchsia-400/90 font-mono text-xs">
+                                            <span title="Sua comissão por essa venda">(-) Sua Comissão (15%):</span>
+                                            <span>- R$ {totalComissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center pt-3 border-t border-zinc-800/50 mt-1">
+                                        <span className="text-zinc-300 font-bold uppercase tracking-wide text-xs">Lucro Líquido Real:</span>
+                                        <span className="font-black text-emerald-500 tracking-tight text-xl">R$ {lucroEstimado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                    </div>
                                 </div>
                             )}
                         </div>

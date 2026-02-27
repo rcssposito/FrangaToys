@@ -46,11 +46,18 @@ export async function GET(req: Request) {
 
                 const roundTo5 = (val: number) => Math.ceil(val / 5) * 5;
 
+                const custoProducao = Math.ceil(
+                    ((meta.resina_kg || 0) * (settings.custo_resina_kg || 0)) +
+                    ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0))
+                );
+
                 return {
                     id: item.id,
                     Figura: item.nome,
                     studio: item.studios?.nome || 'N/A',
                     resina_kg: meta.resina_kg || 0, // Adicionado para cálculo de estoque no PDV
+                    horas_pintura: meta.horas_pintura || 0,
+                    custo_producao: custoProducao,
                     "Básico (R$)": roundTo5(custoBase * settings.margem_basica),
                     "Premium (R$)": roundTo5(custoBase * settings.margem_premium)
                 };
@@ -86,11 +93,18 @@ export async function GET(req: Request) {
 
             const roundTo5 = (val: number) => Math.ceil(val / 5) * 5;
 
+            const custoProducao = Math.ceil(
+                ((meta.resina_kg || 0) * (settings.custo_resina_kg || 0)) +
+                ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0))
+            );
+
             return {
                 id: item.id,
                 Figura: item.nome,
                 studio: item.studios?.nome || 'N/A',
                 resina_kg: meta.resina_kg || 0,
+                horas_pintura: meta.horas_pintura || 0,
+                custo_producao: custoProducao,
                 "Básico (R$)": roundTo5(custoBase * settings.margem_basica),
                 "Premium (R$)": roundTo5(custoBase * settings.margem_premium)
             };

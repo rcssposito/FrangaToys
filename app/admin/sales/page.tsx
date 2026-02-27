@@ -13,6 +13,7 @@ interface Sale {
     cliente_nome: string;
     valor_venda_final: number;
     lucro_real: number;
+    custo_producao_snapshot?: number;
     quantidade: number;
     vendedor?: string;
     comissao_vendedor?: number;
@@ -168,6 +169,7 @@ export default function SalesPage() {
                                             <th className="p-4">Cliente</th>
                                             <th className="p-4">Vendedor / Opcionais</th>
                                             <th className="p-4 text-right">Valor</th>
+                                            <th className="p-4 text-right text-red-500/80" title="Custo de Resina e Tempo Máquina">Custo Base</th>
                                             <th className="p-4 text-right text-green-600">Lucro Líquido</th>
                                             <th className="p-4 w-10"></th>
                                         </tr>
@@ -227,7 +229,10 @@ export default function SalesPage() {
                                                 <td className="p-4 text-right font-medium">
                                                     R$ {sale.valor_venda_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                 </td>
-                                                <td className="p-4 text-right text-green-500/80 font-mono text-xs" title="Já descontado resina, horas e comissões">
+                                                <td className="p-4 text-right text-red-400/80 font-mono text-xs" title="Custo do material (Resina + Impressão)">
+                                                    - R$ {(sale.custo_producao_snapshot || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="p-4 text-right text-green-500/80 font-mono text-xs" title="Já descontado material, extras e comissões">
                                                     R$ {sale.lucro_real?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                 </td>
                                                 <td className="p-4 pr-6">
