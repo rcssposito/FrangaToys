@@ -17,7 +17,8 @@ import {
     DollarSign,
     Menu,
     X,
-    KanbanSquare
+    KanbanSquare,
+    PackageOpen
 } from 'lucide-react';
 
 export default function AdminSidebar() {
@@ -55,6 +56,12 @@ export default function AdminSidebar() {
             href: '/admin/commissions',
             icon: DollarSign,
             roles: ['admin']
+        },
+        {
+            name: 'Estoque',
+            href: '/admin/inventory',
+            icon: PackageOpen,
+            roles: ['admin', 'sales']
         },
         {
             name: 'Estúdios',
