@@ -6,21 +6,42 @@
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f9f7f2;
+  /* Softer Off-White */
+  --foreground: #1a1a1a;
+  --card-bg: #ffffff;
+  --card-border: rgba(0, 0, 0, 0.08);
+  --input-bg: #fcfaf7;
+  --input-border: rgba(0, 0, 0, 0.12);
+  --text-muted: #64748b;
+  --accent-orange: #f97316;
+  --accent-emerald: #10b981;
+  --accent-fuchsia: #d946ef;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+[data-theme='dark'] {
+  --background: #0f1115;
+  /* Deep Pastel Charcoal */
+  --foreground: #e2e8f0;
+  --card-bg: #1a1d23;
+  --card-border: rgba(255, 255, 255, 0.06);
+  --input-bg: #0a0c10;
+  --input-border: rgba(255, 255, 255, 0.1);
+  --text-muted: #94a3b8;
+  --accent-orange: #fb923c;
+  --accent-emerald: #34d399;
+  --accent-fuchsia: #f472b6;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 3D Utility Classes for Card Flip with Vendor Prefixes */

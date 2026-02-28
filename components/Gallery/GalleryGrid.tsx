@@ -48,7 +48,7 @@ export const GalleryGrid = ({ filters }: GalleryGridProps) => {
         return (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 animate-pulse">
                 {[...Array(10)].map((_, i) => (
-                    <div key={i} className="aspect-[4/5] bg-zinc-900 rounded-xl" />
+                    <div key={i} className="aspect-[4/5] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl animate-pulse shadow-[var(--shadow-sm)]" />
                 ))}
             </div>
         );
@@ -59,7 +59,7 @@ export const GalleryGrid = ({ filters }: GalleryGridProps) => {
     }
 
     if (!data || data.pages[0].items.length === 0) {
-        return <div className="text-center py-20 text-zinc-500">Nenhum item encontrado.</div>;
+        return <div className="text-center py-20 text-[var(--text-muted)] font-medium">Nenhum item encontrado.</div>;
     }
 
     return (

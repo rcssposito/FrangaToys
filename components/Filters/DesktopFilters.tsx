@@ -97,7 +97,7 @@ export const DesktopFilters = ({ filters, onChange, categories }: FiltersProps) 
                     onFocus={() => isFocused.current = true}
                     onBlur={() => isFocused.current = false}
                     placeholder="Buscar por nome, série ou estúdio..."
-                    className="w-full px-4 py-3 rounded border border-gray-700 bg-[#121826] text-white focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-gray-500"
+                    className="w-full px-4 py-3 rounded border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-[var(--text-muted)] shadow-[var(--shadow-sm)] transition-all"
                 />
                 <label className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2 items-center text-sm select-none cursor-pointer">
                     <input
@@ -106,7 +106,7 @@ export const DesktopFilters = ({ filters, onChange, categories }: FiltersProps) 
                         checked={filters.novidades === 'true'}
                         onChange={(e) => onChange({ ...filters, novidades: e.target.checked ? 'true' : 'false' })}
                     />
-                    <span className="text-gray-300">Novidades</span>
+                    <span className="text-[var(--text-muted)] font-medium">Novidades</span>
                 </label>
             </div>
 
@@ -115,10 +115,10 @@ export const DesktopFilters = ({ filters, onChange, categories }: FiltersProps) 
                 <button
                     onClick={() => setShowAdvanced(!showAdvanced)}
                     className={clsx(
-                        "px-4 py-1.5 rounded-md border text-sm font-medium transition-colors",
+                        "px-4 py-1.5 rounded-md border text-sm font-medium transition-all shadow-[var(--shadow-sm)]",
                         showAdvanced
-                            ? "bg-black border-orange-500 text-orange-500 ring-1 ring-orange-500"
-                            : "bg-black border-gray-700 text-white hover:border-orange-500"
+                            ? "bg-[var(--card-bg)] border-orange-500 text-orange-500 ring-1 ring-orange-500"
+                            : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--foreground)] hover:border-orange-500"
                     )}
                 >
                     Busca avançada
@@ -127,7 +127,7 @@ export const DesktopFilters = ({ filters, onChange, categories }: FiltersProps) 
 
             {/* 3. Advanced Panel */}
             {showAdvanced && (
-                <div className="rounded-lg border border-gray-800 bg-[#0d1117] p-6 animate-in fade-in slide-in-from-top-2">
+                <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-6 animate-in fade-in slide-in-from-top-2 shadow-[var(--shadow-md)]">
 
                     {/* Sorting */}
                     <div className="mb-6">
@@ -139,9 +139,9 @@ export const DesktopFilters = ({ filters, onChange, categories }: FiltersProps) 
                             </label>
                             <label className="inline-flex items-center gap-2 cursor-pointer opacity-50">
                                 <input type="checkbox" className="accent-orange-500 w-4 h-4" disabled />
-                                <span className="text-white text-sm font-bold">Z/A</span>
+                                <span className="text-[var(--foreground)] text-sm font-bold">Z/A</span>
                             </label>
-                            <span className="text-xs text-zinc-500">("Novidades" é atalho para ID desc)</span>
+                            <span className="text-xs text-[var(--text-muted)]">("Novidades" é atalho para ID desc)</span>
                         </div>
                     </div>
 
@@ -153,10 +153,10 @@ export const DesktopFilters = ({ filters, onChange, categories }: FiltersProps) 
                                 const isSelected = filters.studioIds?.split(',').includes(String(studio.id));
                                 return (
                                     <label key={studio.id} className={clsx(
-                                        "flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-all select-none",
+                                        "flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-all select-none shadow-[var(--shadow-sm)]",
                                         isSelected
-                                            ? "bg-white text-black border-white font-medium"
-                                            : "bg-transparent border-zinc-700 text-zinc-300 hover:border-zinc-500"
+                                            ? "bg-orange-500 text-white border-orange-500 font-bold"
+                                            : "bg-[var(--input-bg)] border-[var(--input-border)] text-[var(--text-muted)] hover:border-orange-500/50"
                                     )}>
                                         <input
                                             type="checkbox"
@@ -180,16 +180,15 @@ export const DesktopFilters = ({ filters, onChange, categories }: FiltersProps) 
                                 checked={filters.incluirNaoVendaveis === 'true'}
                                 onChange={(e) => onChange({ ...filters, incluirNaoVendaveis: e.target.checked ? 'true' : 'false' })}
                             />
-                            <span className="text-sm text-white">Exibir itens indisponíveis</span>
+                            <span className="text-sm text-[var(--foreground)] font-medium">Exibir itens indisponíveis</span>
                         </label>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex gap-3 pt-4 border-t border-gray-800">
+                    <div className="flex gap-3 pt-4 border-t border-[var(--card-border)]">
 
                         <button
                             onClick={handleClear}
-                            className="px-6 py-2 rounded border border-zinc-700 bg-black hover:bg-zinc-900 text-white text-sm transition-transform active:scale-95"
+                            className="px-6 py-2 rounded border border-[var(--card-border)] bg-[var(--background)] hover:bg-[var(--input-bg)] text-[var(--foreground)] text-sm transition-all active:scale-95 shadow-[var(--shadow-sm)]"
                         >
                             Limpar
                         </button>
@@ -204,8 +203,8 @@ export const DesktopFilters = ({ filters, onChange, categories }: FiltersProps) 
                     className={clsx(
                         "px-6 py-1.5 text-sm font-bold rounded-sm transition-all border",
                         (!filters.categoria || filters.categoria === 'Todos')
-                            ? "bg-orange-500 text-white border-orange-500"
-                            : "bg-black text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-600"
+                            ? "bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20"
+                            : "bg-[var(--card-bg)] text-[var(--text-muted)] border-[var(--card-border)] hover:text-orange-500 hover:border-orange-500/30 shadow-[var(--shadow-sm)]"
                     )}
                 >
                     Todos
@@ -217,8 +216,8 @@ export const DesktopFilters = ({ filters, onChange, categories }: FiltersProps) 
                         className={clsx(
                             "px-6 py-1.5 text-sm font-bold rounded-sm transition-all border",
                             filters.categoria === cat
-                                ? "bg-orange-500 text-white border-orange-500"
-                                : "bg-black text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-600"
+                                ? "bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20"
+                                : "bg-[var(--card-bg)] text-[var(--text-muted)] border-[var(--card-border)] hover:text-orange-500 hover:border-orange-500/30 shadow-[var(--shadow-sm)]"
                         )}
                     >
                         {cat}

@@ -99,15 +99,15 @@ export const DesktopModal = ({ figure, isOpen, onClose, onNext, onPrev, currentI
                 </div>
 
                 {/* Details Footer */}
-                <div className="mt-4 w-full max-w-2xl bg-zinc-900/90 border border-white/10 rounded-xl p-4 backdrop-blur-md shadow-2xl">
+                <div className="mt-4 w-full max-w-2xl bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl p-4 backdrop-blur-md shadow-2xl transition-all">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div className="text-center sm:text-left">
-                            <h2 className="text-xl font-bold text-white mb-1">{figure.nome}</h2>
-                            <div className="text-sm text-zinc-400 flex flex-wrap justify-center sm:justify-start gap-x-4 gap-y-1">
+                            <h2 className="text-xl font-bold text-[var(--foreground)] mb-1 tracking-tight">{figure.nome}</h2>
+                            <div className="text-[11px] text-[var(--text-muted)] font-medium flex flex-wrap justify-center sm:justify-start gap-x-4 gap-y-1">
                                 <span>{figure.altura_cm ? `Alt: ${figure.altura_cm}cm` : ''}</span>
                                 <span>{figure.largura_cm ? `Lrg: ${figure.largura_cm}cm` : ''}</span>
                                 <span>{figure.profundidade_cm ? `Prof: ${figure.profundidade_cm}cm` : ''}</span>
-                                {figure.studio && <span className="text-orange-400">{figure.studio}</span>}
+                                {figure.studio && <span className="text-orange-500 font-bold">{figure.studio}</span>}
                             </div>
                         </div>
 
@@ -124,7 +124,7 @@ export const DesktopModal = ({ figure, isOpen, onClose, onNext, onPrev, currentI
                             {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar ao Orçamento"}
                         </button>
                     </div>
-                    <div className="absolute -top-3 right-4 bg-zinc-800 text-xs px-2 py-0.5 rounded text-zinc-400">
+                    <div className="absolute -top-3 right-4 bg-[var(--input-bg)] border border-[var(--card-border)] text-[10px] font-bold px-2 py-0.5 rounded text-[var(--text-muted)] shadow-sm">
                         {currentIndex + 1} / {total}
                     </div>
                 </div>

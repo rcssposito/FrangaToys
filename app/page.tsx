@@ -14,6 +14,8 @@ import { z } from 'zod';
 import Link from 'next/link';
 import { Settings } from 'lucide-react';
 
+import ThemeToggle from '@/components/common/ThemeToggle';
+
 type FilterState = z.infer<typeof FiltersSchema>;
 
 const CATEGORIES = ['Anime', 'Games', 'Marvel', 'DC'];
@@ -51,7 +53,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-black text-white px-0 sm:px-4 py-4 sm:py-8">
+    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] px-0 sm:px-4 py-4 sm:py-8 transition-colors duration-500">
       <div className="w-full sm:max-w-[95%] mx-auto">
 
         {/* Header - Desktop */}
@@ -63,11 +65,12 @@ export default function Home() {
               className="h-32 object-contain"
             />
           </Link>
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-            <CartIndicator onClick={() => setIsDrawerOpen(true)} className="hover:bg-zinc-900 px-3 py-2 rounded-lg" />
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
+            <ThemeToggle />
+            <CartIndicator onClick={() => setIsDrawerOpen(true)} className="hover:bg-zinc-900/10 dark:hover:bg-zinc-800/50 px-3 py-2 rounded-lg" />
             <Link
-              href="/api/auth/logout"
-              className="p-2 text-zinc-500 hover:text-white transition-colors"
+              href="/admin/figures"
+              className="p-2 text-[var(--text-muted)] hover:text-orange-500 transition-colors"
               title="Acessar Admin"
             >
               <Settings size={20} />

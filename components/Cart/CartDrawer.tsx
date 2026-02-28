@@ -63,16 +63,16 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="fixed inset-y-0 right-0 w-full max-w-md bg-[#18181b] border-l border-zinc-800 shadow-2xl z-[70] flex flex-col"
+                        className="fixed inset-y-0 right-0 w-full max-w-md bg-[var(--card-bg)] border-l border-[var(--card-border)] shadow-2xl z-[70] flex flex-col transition-all duration-300"
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between p-4 border-b border-zinc-800">
-                            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                                Orçamento <span className="text-zinc-500 text-sm font-normal">({totalItems} itens)</span>
+                        <div className="flex items-center justify-between p-4 border-b border-[var(--card-border)]">
+                            <h2 className="text-lg font-bold text-[var(--foreground)] flex items-center gap-2">
+                                Orçamento <span className="text-[var(--text-muted)] text-sm font-normal">({totalItems} itens)</span>
                             </h2>
                             <button
                                 onClick={onClose}
-                                className="p-2 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors"
+                                className="p-2 hover:bg-[var(--input-bg)] rounded-full text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
                             >
                                 <X size={20} />
                             </button>
@@ -81,11 +81,11 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                         {/* List */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-4">
                             {items.length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center text-zinc-500 gap-4">
-                                    <div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center">
+                                <div className="h-full flex flex-col items-center justify-center text-[var(--text-muted)] gap-4">
+                                    <div className="w-16 h-16 bg-[var(--input-bg)] rounded-full flex items-center justify-center border border-[var(--card-border)] shadow-inner">
                                         <Trash2 size={32} className="opacity-20" />
                                     </div>
-                                    <p>Seu carrinho está vazio.</p>
+                                    <p className="font-medium">Seu carrinho está vazio.</p>
                                 </div>
                             ) : (
                                 items.map((item) => (
@@ -95,9 +95,9 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, x: -10 }}
-                                        className="flex gap-3 bg-zinc-900/50 p-2 rounded-lg border border-zinc-800 items-center"
+                                        className="flex gap-3 bg-[var(--input-bg)]/50 p-2 rounded-lg border border-[var(--card-border)] items-center shadow-sm"
                                     >
-                                        <div className="relative w-16 h-16 bg-zinc-800 rounded flex-shrink-0 overflow-hidden">
+                                        <div className="relative w-16 h-16 bg-[var(--input-bg)] border border-[var(--card-border)] rounded flex-shrink-0 overflow-hidden shadow-inner">
                                             <Image
                                                 loader={imageKitLoader}
                                                 src={getOptimizedImageUrl(item.imagem_url)}
@@ -107,15 +107,15 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                                             />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="font-medium text-white truncate">{item.nome}</h3>
-                                            <div className="text-xs text-zinc-400">
+                                            <h3 className="font-bold text-[var(--foreground)] truncate text-sm">{item.nome}</h3>
+                                            <div className="text-[10px] text-[var(--text-muted)] font-medium">
                                                 {item.studio && <span className="block">{item.studio}</span>}
                                                 {item.categoria && <span className="block">{item.categoria}</span>}
                                             </div>
                                         </div>
                                         <button
                                             onClick={() => removeFromCart(item.id)}
-                                            className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-950/20 rounded transition-colors"
+                                            className="p-2 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/5 rounded transition-all"
                                             title="Remover"
                                         >
                                             <Trash2 size={16} />
@@ -127,12 +127,12 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
 
                         {/* Footer */}
                         {items.length > 0 && (
-                            <div className="p-4 border-t border-zinc-800 bg-zinc-900/30 space-y-3">
+                            <div className="p-4 border-t border-[var(--card-border)] bg-[var(--background)]/50 space-y-3">
                                 <button
                                     onClick={clearCart}
-                                    className="w-full py-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                                    className="w-full py-2 text-xs text-[var(--text-muted)] hover:text-[var(--foreground)] font-medium transition-colors"
                                 >
-                                    Limpar orçamente
+                                    Limpar orçamento
                                 </button>
                                 <button
                                     onClick={handleCheckout}

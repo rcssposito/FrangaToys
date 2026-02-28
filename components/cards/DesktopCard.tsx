@@ -42,7 +42,7 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
 
                 {/* === FRONT FACE === */}
                 <div className="absolute inset-0 backface-hidden">
-                    <div className="relative w-full h-full bg-[#121214] rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-600 transition-all shadow-lg hover:shadow-xl">
+                    <div className="relative w-full h-full bg-[var(--card-bg)] rounded-lg overflow-hidden border border-[var(--card-border)] hover:border-orange-500/50 transition-all shadow-[var(--shadow-md)] hover:shadow-[var(--shadow-lg)] group-hover:-translate-y-1">
                         <Link href={`/figura/${figure.id}`} scroll={false}>
                             <Image
                                 loader={imageKitLoader}
@@ -96,8 +96,8 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                         </div>
 
                         {/* Footer */}
-                        <div className="absolute bottom-0 inset-x-0 p-3 bg-zinc-900/95 border-t border-white/5 backdrop-blur-sm pointer-events-none">
-                            <h3 className="text-sm font-medium text-gray-200 line-clamp-1 text-center truncate">
+                        <div className="absolute bottom-0 inset-x-0 p-3 bg-[var(--card-bg)]/90 border-t border-[var(--card-border)] backdrop-blur-md pointer-events-none group-hover:bg-orange-500/5 transition-all">
+                            <h3 className="text-sm font-bold text-[var(--foreground)] line-clamp-1 text-center truncate tracking-tight">
                                 {figure.nome}
                             </h3>
                         </div>
@@ -105,7 +105,7 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                 </div>
 
                 {/* === BACK FACE === */}
-                <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-lg overflow-hidden border border-zinc-700 bg-black">
+                <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-lg overflow-hidden border border-[var(--card-border)] bg-[var(--card-bg)] shadow-[var(--shadow-lg)]">
                     {/* Background Image (Blurred/Darkened) */}
                     <div className="absolute inset-0 opacity-30">
                         <Image
@@ -118,7 +118,7 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                     </div>
 
                     {/* Content Overlay */}
-                    <div className="relative z-10 flex flex-col h-full bg-black/60 p-4 text-white">
+                    <div className="relative z-10 flex flex-col h-full bg-[var(--card-bg)]/80 backdrop-blur-sm p-4 text-[var(--foreground)]">
 
                         {/* Header Hint */}
                         <div className="flex justify-center mb-4">
@@ -140,20 +140,20 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                             )}
 
                             <div className="w-full text-sm font-medium space-y-2 px-2">
-                                <div className="flex justify-between border-b border-white/10 pb-1">
-                                    <span className="text-zinc-300">Altura</span>
+                                <div className="flex justify-between border-b border-[var(--card-border)] pb-1">
+                                    <span className="text-[var(--text-muted)] font-medium">Altura</span>
                                     <span>{figure.altura_cm ? `${figure.altura_cm} cm` : '-'}</span>
                                 </div>
-                                <div className="flex justify-between border-b border-white/10 pb-1">
-                                    <span className="text-zinc-300">Largura</span>
+                                <div className="flex justify-between border-b border-[var(--card-border)] pb-1">
+                                    <span className="text-[var(--text-muted)] font-medium">Largura</span>
                                     <span>{figure.largura_cm ? `${figure.largura_cm} cm` : '-'}</span>
                                 </div>
-                                <div className="flex justify-between border-b border-white/10 pb-1">
-                                    <span className="text-zinc-300">Profund.</span>
+                                <div className="flex justify-between border-b border-[var(--card-border)] pb-1">
+                                    <span className="text-[var(--text-muted)] font-medium">Profund.</span>
                                     <span>{figure.profundidade_cm ? `${figure.profundidade_cm} cm` : '-'}</span>
                                 </div>
-                                <div className="flex justify-between border-b border-white/10 pb-1">
-                                    <span className="text-zinc-300">Estúdio</span>
+                                <div className="flex justify-between border-b border-[var(--card-border)] pb-1">
+                                    <span className="text-[var(--text-muted)] font-medium">Estúdio</span>
                                     <span className="text-orange-400">{figure.studio || '-'}</span>
                                 </div>
                             </div>

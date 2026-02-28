@@ -20,6 +20,7 @@ import {
     KanbanSquare,
     PackageOpen
 } from 'lucide-react';
+import ThemeToggle from '@/components/common/ThemeToggle';
 
 export default function AdminSidebar() {
     const [isOpen, setIsOpen] = useState(false);
@@ -86,12 +87,12 @@ export default function AdminSidebar() {
     return (
         <>
             {/* Mobile Header Toggle */}
-            <div className="md:hidden fixed top-0 left-0 w-full h-16 bg-zinc-950 border-b border-zinc-900 flex items-center justify-between px-4 z-40">
+            <div className="md:hidden fixed top-0 left-0 w-full h-16 bg-[var(--card-bg)] border-b border-[var(--card-border)] flex items-center justify-between px-4 z-40">
                 <h1 className="text-xl font-bold text-orange-500 flex items-center gap-2">
                     <Store size={24} />
                     FrangaAdmin
                 </h1>
-                <button onClick={() => setIsOpen(!isOpen)} className="p-2 text-zinc-400 hover:text-white">
+                <button onClick={() => setIsOpen(!isOpen)} className="p-2 text-[var(--text-muted)] hover:text-orange-500 transition-colors">
                     {isOpen ? <X size={24} /> : <Menu size={24} />}
                 </button>
             </div>
@@ -99,24 +100,24 @@ export default function AdminSidebar() {
             {/* Backdrop for mobile */}
             {isOpen && (
                 <div
-                    className="md:hidden fixed inset-0 bg-black/50 z-40"
+                    className="md:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-all"
                     onClick={() => setIsOpen(false)}
                 />
             )}
 
             <aside className={`
-                w-64 bg-zinc-950 border-r border-zinc-900 h-screen fixed left-0 top-0 flex flex-col z-50
-                transition-transform duration-300 ease-in-out
+                w-64 bg-[var(--card-bg)] border-r border-[var(--card-border)] h-screen fixed left-0 top-0 flex flex-col z-50
+                transition-all duration-300 ease-in-out shadow-[var(--shadow-md)]
                 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
                 md:translate-x-0
             `}>
                 {/* Header */}
-                <div className="p-6 border-b border-zinc-900">
+                <div className="p-6 border-b border-[var(--card-border)]">
                     <h1 className="text-xl font-bold text-orange-500 flex items-center gap-2">
                         <Store size={24} />
                         FrangaAdmin
                     </h1>
-                    <p className="text-xs text-zinc-500 mt-1">v2.0 RBAC Active</p>
+                    <p className="text-xs text-[var(--text-muted)] mt-1 font-medium">v2.0 Chiaroscuro Ready</p>
                 </div>
 
                 {/* Navigation */}
@@ -140,9 +141,9 @@ export default function AdminSidebar() {
                                 key={item.href}
                                 href={item.href}
                                 onClick={() => setIsOpen(false)}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
-                                    ? 'bg-orange-500/10 text-orange-500'
-                                    : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
+                                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive
+                                    ? 'bg-orange-500/10 text-orange-500 font-bold shadow-sm'
+                                    : 'text-[var(--text-muted)] hover:bg-[var(--input-bg)] hover:text-[var(--foreground)]'
                                     }`}
                             >
                                 <item.icon size={20} />
@@ -153,26 +154,27 @@ export default function AdminSidebar() {
                 </nav>
 
                 {/* User & Logout */}
-                <div className="p-4 border-t border-zinc-900">
-                    <Link href="/admin/profile" className="flex items-center gap-3 mb-4 px-2 hover:bg-zinc-900 mx-[-8px] py-2 rounded-lg transition-colors group">
-                        <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-400 group-hover:text-white group-hover:bg-zinc-700 transition-colors">
+                <div className="p-4 border-t border-[var(--card-border)] bg-[var(--background)]/50">
+                    <Link href="/admin/profile" className="flex items-center gap-3 mb-4 px-2 hover:bg-[var(--input-bg)] mx-[-8px] py-2 rounded-lg transition-all group">
+                        <div className="w-8 h-8 rounded-full bg-[var(--input-bg)] border border-[var(--input-border)] flex items-center justify-center text-xs font-bold text-[var(--text-muted)] group-hover:text-orange-500 group-hover:border-orange-500/30 transition-all shadow-sm">
                             {user?.email?.[0].toUpperCase()}
                         </div>
                         <div className="overflow-hidden">
-                            <p className="text-sm font-medium text-white truncate group-hover:text-orange-500 transition-colors">{user?.email}</p>
-                            <p className="text-xs text-zinc-500 truncate capitalize">
-                                {user?.roles?.join(', ')}
+                            <p className="text-sm font-bold text-[var(--foreground)] truncate group-hover:text-orange-500 transition-colors">{user?.email}</p>
+                            <p className="text-[10px] text-[var(--text-muted)] truncate capitalize font-medium tracking-tight">
+                                {user?.roles?.join(' • ')}
                             </p>
                         </div>
                     </Link>
 
                     <button
                         onClick={logout}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-red-400 hover:bg-zinc-900 rounded-lg transition-colors text-sm"
+                        className="flex-1 flex items-center gap-2 px-4 py-2.5 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/5 rounded-lg transition-all text-sm font-medium border border-transparent hover:border-red-500/10"
                     >
                         <LogOut size={16} />
                         Sair
                     </button>
+                    <ThemeToggle />
                 </div>
             </aside>
         </>

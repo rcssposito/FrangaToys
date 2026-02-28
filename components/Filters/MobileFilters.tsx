@@ -13,6 +13,7 @@ import Link from 'next/link';
 type FilterState = z.infer<typeof FiltersSchema>;
 
 import { CartIndicator } from '@/components/Cart/CartIndicator';
+import ThemeToggle from '@/components/common/ThemeToggle';
 
 interface MobileFiltersProps {
     filters: FilterState;
@@ -99,11 +100,11 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
     const activeCount = countActiveFilters();
 
     return (
-        <div className="w-full flex flex-col mb-4 sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-white/5 pb-2 pt-2">
+        <div className="w-full flex flex-col mb-4 sticky top-0 z-30 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--card-border)] pb-2 pt-2 transition-all">
 
             {/* 0. Mobile Brand Header */}
             <div className="px-4 py-2 flex items-center justify-between relative">
-                <div className="w-10 flex justify-start">
+                <div className="w-12 flex justify-start items-center gap-2">
                     <CartIndicator onClick={onOpenCart} />
                 </div>
                 <div className="flex-1 flex justify-center">
@@ -113,8 +114,9 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                         className="h-16 object-contain"
                     />
                 </div>
-                <div className="w-10 flex justify-end">
-                    <Link href="/admin" className="p-1 text-zinc-500 hover:text-white transition-colors">
+                <div className="w-12 flex justify-end items-center gap-2">
+                    <ThemeToggle />
+                    <Link href="/admin" className="p-1 text-[var(--text-muted)] hover:text-orange-500 transition-colors">
                         <Settings size={18} />
                     </Link>
                 </div>
@@ -130,16 +132,16 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                         onFocus={() => isFocused.current = true}
                         onBlur={() => isFocused.current = false}
                         placeholder="Buscar..."
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-800 bg-zinc-900 text-white text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-all placeholder:text-zinc-600 shadow-inner"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-all placeholder:text-[var(--text-muted)] shadow-[var(--shadow-sm)]"
                     />
                 </div>
                 <button
                     onClick={() => setIsSheetOpen(true)}
                     className={clsx(
-                        "relative flex items-center justify-center w-11 h-11 rounded-xl border transition-all active:scale-95 shadow-sm",
+                        "relative flex items-center justify-center w-11 h-11 rounded-xl border transition-all active:scale-95 shadow-[var(--shadow-sm)]",
                         activeCount > 0
-                            ? "bg-orange-600/10 border-orange-500/50 text-orange-500"
-                            : "bg-zinc-900 border-zinc-800 text-zinc-400"
+                            ? "bg-orange-500/10 border-orange-500/50 text-orange-500"
+                            : "bg-[var(--input-bg)] border-[var(--input-border)] text-[var(--text-muted)]"
                     )}
                 >
                     <SlidersHorizontal size={20} />
@@ -155,10 +157,10 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                     <button
                         onClick={() => onChange({ ...filters, categoria: undefined })}
                         className={clsx(
-                            "whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-medium border transition-all active:scale-95",
+                            "whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95",
                             (!filters.categoria || filters.categoria === 'Todos')
-                                ? "bg-white text-black border-white shadow-md shadow-white/10"
-                                : "bg-zinc-900 text-zinc-400 border-zinc-800"
+                                ? "bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20"
+                                : "bg-[var(--card-bg)] text-[var(--text-muted)] border-[var(--card-border)] shadow-[var(--shadow-sm)]"
                         )}
                     >
                         Todos
@@ -168,10 +170,10 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                             key={cat}
                             onClick={() => onChange({ ...filters, categoria: filters.categoria === cat ? undefined : cat })}
                             className={clsx(
-                                "whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-medium border transition-all active:scale-95",
+                                "whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95",
                                 filters.categoria === cat
-                                    ? "bg-white text-black border-white shadow-md shadow-white/10"
-                                    : "bg-zinc-900 text-zinc-400 border-zinc-800"
+                                    ? "bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20"
+                                    : "bg-[var(--card-bg)] text-[var(--text-muted)] border-[var(--card-border)] shadow-[var(--shadow-sm)]"
                             )}
                         >
                             {cat}
@@ -197,12 +199,12 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                                 animate={{ y: 0 }}
                                 exit={{ y: "100%" }}
                                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                                className="fixed bottom-0 left-0 right-0 z-[10000] bg-[#0d1117] border-t border-zinc-800 rounded-t-2xl max-h-[85vh] flex flex-col shadow-2xl"
+                                className="fixed bottom-0 left-0 right-0 z-[10000] bg-[var(--background)] border-t border-[var(--card-border)] rounded-t-2xl max-h-[85vh] flex flex-col shadow-2xl"
                             >
                                 {/* Sheet Header */}
-                                <div className="flex items-center justify-between p-4 border-b border-zinc-800">
-                                    <h3 className="font-bold text-lg">Filtros</h3>
-                                    <button onClick={() => setIsSheetOpen(false)} className="p-2 text-zinc-400 hover:text-white">
+                                <div className="flex items-center justify-between p-4 border-b border-[var(--card-border)]">
+                                    <h3 className="font-bold text-lg text-[var(--foreground)]">Filtros</h3>
+                                    <button onClick={() => setIsSheetOpen(false)} className="p-2 text-[var(--text-muted)] hover:text-orange-500 transition-colors">
                                         <X size={20} />
                                     </button>
                                 </div>
@@ -212,8 +214,8 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
 
                                     {/* Toggles */}
                                     <div className="space-y-4">
-                                        <label className="flex items-center justify-between p-3 rounded-lg bg-zinc-900/50">
-                                            <span className="font-medium text-sm">Apenas Novidades</span>
+                                        <label className="flex items-center justify-between p-3 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] shadow-sm">
+                                            <span className="font-bold text-sm text-[var(--foreground)]">Apenas Novidades</span>
                                             <input
                                                 type="checkbox"
                                                 className="accent-orange-500 w-5 h-5"
@@ -221,8 +223,8 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                                                 onChange={(e) => onChange({ ...filters, novidades: e.target.checked ? 'true' : 'false' })}
                                             />
                                         </label>
-                                        <label className="flex items-center justify-between p-3 rounded-lg bg-zinc-900/50">
-                                            <span className="font-medium text-sm">Exibir Indisponíveis</span>
+                                        <label className="flex items-center justify-between p-3 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] shadow-sm">
+                                            <span className="font-bold text-sm text-[var(--foreground)]">Exibir Indisponíveis</span>
                                             <input
                                                 type="checkbox"
                                                 className="accent-orange-500 w-5 h-5"
@@ -236,20 +238,20 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
 
                                     {/* Studios */}
                                     <div>
-                                        <h4 className="text-sm font-bold text-zinc-400 mb-3 uppercase tracking-wider">Estúdios</h4>
+                                        <h4 className="text-sm font-bold text-[var(--text-muted)] mb-3 uppercase tracking-wider">Estúdios</h4>
                                         <div className="grid grid-cols-2 gap-2">
                                             {estudios?.map(studio => {
                                                 const isSelected = filters.studioIds?.split(',').includes(String(studio.id));
                                                 return (
                                                     <label key={studio.id} className={clsx(
-                                                        "flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all",
+                                                        "flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all shadow-sm",
                                                         isSelected
-                                                            ? "bg-orange-900/20 border-orange-500/50 text-orange-200"
-                                                            : "bg-zinc-900/30 border-zinc-800 text-zinc-400"
+                                                            ? "bg-orange-500 text-white border-orange-500 font-bold"
+                                                            : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--text-muted)]"
                                                     )}>
                                                         <input
                                                             type="checkbox"
-                                                            className="accent-orange-500 w-4 h-4"
+                                                            className={clsx("w-4 h-4", isSelected ? "accent-white" : "accent-orange-500")}
                                                             checked={!!isSelected}
                                                             onChange={() => toggleStudio(studio.id)}
                                                         />
@@ -262,10 +264,10 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                                 </div>
 
                                 {/* Sheet Footer */}
-                                <div className="p-4 border-t border-zinc-800 bg-[#0d1117] pb-8">
+                                <div className="p-4 border-t border-[var(--card-border)] bg-[var(--background)] pb-8">
                                     <button
                                         onClick={() => setIsSheetOpen(false)}
-                                        className="w-full bg-orange-600 text-white font-bold py-3 rounded-lg active:scale-95 transition-transform"
+                                        className="w-full bg-orange-600 text-white font-bold py-3 rounded-lg active:scale-95 transition-all shadow-lg shadow-orange-500/20"
                                     >
                                         Ver Resultados
                                     </button>

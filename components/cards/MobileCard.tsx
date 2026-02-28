@@ -21,13 +21,13 @@ export const MobileCard = ({ figure, className }: MobileCardProps) => {
     return (
         <div
             className={clsx(
-                "w-full bg-[#121214] border border-zinc-800 rounded-lg overflow-hidden shadow-sm active:opacity-95 transition-opacity",
+                "w-full bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg overflow-hidden shadow-[var(--shadow-sm)] active:opacity-95 transition-all",
                 className
             )}
         >
             <Link href={`/figura/${figure.id}`} scroll={false} className="flex w-full">
                 {/* Left: Image (Square-ish) */}
-                <div className="relative w-36 sm:w-48 aspect-[4/5] bg-zinc-900 border-r border-zinc-800 flex-shrink-0">
+                <div className="relative w-36 sm:w-48 aspect-[4/5] bg-[var(--input-bg)] border-r border-[var(--card-border)] flex-shrink-0">
                     <Image
                         loader={imageKitLoader}
                         src={getOptimizedImageUrl(figure.imagem_url)}
@@ -74,7 +74,7 @@ export const MobileCard = ({ figure, className }: MobileCardProps) => {
                     <div className="mb-1">
                         <div className="flex items-center gap-2 mb-1">
                             {figure.studio && (
-                                <span className="text-[10px] text-zinc-400 border border-zinc-800 px-1.5 py-0.5 rounded bg-zinc-900/50">
+                                <span className="text-[10px] text-[var(--text-muted)] border border-[var(--card-border)] px-1.5 py-0.5 rounded bg-[var(--input-bg)] font-medium">
                                     {figure.studio}
                                 </span>
                             )}
@@ -84,27 +84,27 @@ export const MobileCard = ({ figure, className }: MobileCardProps) => {
                                 </span>
                             )}
                             {figure.categoria && (
-                                <span className="text-[10px] text-zinc-500 truncate max-w-[50%]">
+                                <span className="text-[10px] text-[var(--text-muted)] truncate max-w-[50%] font-medium">
                                     {figure.categoria}
                                 </span>
                             )}
                         </div>
-                        <h3 className="text-sm font-bold text-gray-100 leading-snug line-clamp-2">
+                        <h3 className="text-sm font-bold text-[var(--foreground)] leading-snug line-clamp-2 uppercase tracking-tight">
                             {figure.nome}
                         </h3>
                     </div>
 
                     {/* Specs (Compact) */}
                     <div className="mt-auto space-y-2">
-                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-zinc-400">
-                            {figure.altura_cm && <span>H: <span className="text-zinc-300">{figure.altura_cm}cm</span></span>}
-                            {figure.largura_cm && <span>W: <span className="text-zinc-300">{figure.largura_cm}cm</span></span>}
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[var(--text-muted)] font-medium">
+                            {figure.altura_cm && <span>H: <span className="text-[var(--foreground)] font-bold">{figure.altura_cm}cm</span></span>}
+                            {figure.largura_cm && <span>W: <span className="text-[var(--foreground)] font-bold">{figure.largura_cm}cm</span></span>}
                         </div>
 
                         {/* Actions */}
                         <div className="flex gap-2 mt-2">
                             <div
-                                className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs py-2 rounded font-medium transition-colors border border-zinc-700 text-center"
+                                className="flex-1 bg-[var(--input-bg)] hover:bg-[var(--card-bg)] text-[var(--text-muted)] text-xs py-2 rounded font-bold transition-all border border-[var(--input-border)] text-center shadow-sm"
                             >
                                 Detalhes
                             </div>

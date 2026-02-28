@@ -18,7 +18,7 @@ export default function RootLayout({
   modal: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body className={inter.className}>
         <Providers>
           {children}

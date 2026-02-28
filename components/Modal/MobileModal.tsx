@@ -37,14 +37,14 @@ export const MobileModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIn
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col">
+        <div className="fixed inset-0 z-50 bg-[var(--background)] flex flex-col transition-all duration-300">
 
             {/* 1. Header Navigation */}
-            <div className="flex items-center justify-between p-4 z-20 bg-gradient-to-b from-black/80 to-transparent">
-                <button onClick={onClose} className="p-2 bg-black/40 rounded-full text-white backdrop-blur">
+            <div className="flex items-center justify-between p-4 z-20 bg-gradient-to-b from-[var(--background)]/80 to-transparent">
+                <button onClick={onClose} className="p-2 bg-[var(--card-bg)]/40 rounded-full text-[var(--foreground)] backdrop-blur border border-[var(--card-border)] shadow-lg">
                     <X size={20} />
                 </button>
-                <div className="px-3 py-1 rounded-full bg-black/40 text-xs text-white backdrop-blur">
+                <div className="px-3 py-1 rounded-full bg-[var(--card-bg)]/40 text-[10px] font-bold text-[var(--foreground)] backdrop-blur border border-[var(--card-border)] shadow-sm">
                     {currentIndex + 1} / {total}
                 </div>
             </div>
@@ -73,31 +73,31 @@ export const MobileModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIn
                 </button>
             </div>
 
-            {/* 3. Bottom Sheet Details (Always visible or slide up?) - Let's do Bottom Block */}
-            <div className="bg-gradient-to-t from-black via-black to-transparent pt-10 pb-6 px-4 z-20">
-                <h2 className="text-xl font-bold text-white mb-2 leading-tight">{figure.nome}</h2>
+            {/* 3. Bottom Sheet Details */}
+            <div className="bg-gradient-to-t from-[var(--background)] via-[var(--background)] to-transparent pt-10 pb-6 px-4 z-20 border-t border-[var(--card-border)]/10">
+                <h2 className="text-xl font-bold text-[var(--foreground)] mb-2 leading-tight tracking-tight">{figure.nome}</h2>
 
-                <div className="grid grid-cols-2 gap-y-1 text-sm text-zinc-400 mb-6">
-                    <div className="flex justify-between border-b border-white/5 pr-4 py-1">
-                        <span>Altura</span> <span className="text-zinc-200">{figure.altura_cm || '-'} cm</span>
+                <div className="grid grid-cols-2 gap-y-1 text-xs text-[var(--text-muted)] font-medium mb-6">
+                    <div className="flex justify-between border-b border-[var(--card-border)]/50 pr-4 py-1">
+                        <span>Altura</span> <span className="text-[var(--foreground)] font-bold">{figure.altura_cm || '-'} cm</span>
                     </div>
-                    <div className="flex justify-between border-b border-white/5 pr-4 py-1">
-                        <span>Largura</span> <span className="text-zinc-200">{figure.largura_cm || '-'} cm</span>
+                    <div className="flex justify-between border-b border-[var(--card-border)]/50 pr-4 py-1">
+                        <span>Largura</span> <span className="text-[var(--foreground)] font-bold">{figure.largura_cm || '-'} cm</span>
                     </div>
-                    <div className="flex justify-between border-b border-white/5 pr-4 py-1">
-                        <span>Profund.</span> <span className="text-zinc-200">{figure.profundidade_cm || '-'} cm</span>
+                    <div className="flex justify-between border-b border-[var(--card-border)]/50 pr-4 py-1">
+                        <span>Profund.</span> <span className="text-[var(--foreground)] font-bold">{figure.profundidade_cm || '-'} cm</span>
                     </div>
-                    <div className="flex justify-between border-b border-white/5 pr-4 py-1">
-                        <span>Estúdio</span> <span className="text-orange-400">{figure.studio || '-'}</span>
+                    <div className="flex justify-between border-b border-[var(--card-border)]/50 pr-4 py-1">
+                        <span>Estúdio</span> <span className="text-orange-500 font-bold">{figure.studio || '-'}</span>
                     </div>
                 </div>
 
                 <button
                     className={clsx(
-                        "w-full text-white font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 transition-colors active:scale-95",
+                        "w-full text-white font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg",
                         isInCart(figure.id)
-                            ? "bg-green-600 hover:bg-green-700"
-                            : "bg-orange-600 hover:bg-orange-700"
+                            ? "bg-green-600 hover:bg-green-700 shadow-green-500/20"
+                            : "bg-orange-600 hover:bg-orange-700 shadow-orange-500/20"
                     )}
                     onClick={() => isInCart(figure.id) ? removeFromCart(figure.id) : addToCart(figure)}
                 >

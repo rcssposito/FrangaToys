@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
+import ThemeToggle from '@/components/common/ThemeToggle';
 
 interface Figure {
     id: number;
@@ -232,35 +233,36 @@ export default function DataGridPage() {
                             placeholder="Buscar figura..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-4 py-3 outline-none focus:border-orange-500 transition-colors"
+                            className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg pl-10 pr-4 py-3 outline-none focus:border-orange-500 transition-all shadow-[var(--shadow-sm)] text-[var(--foreground)] placeholder:text-[var(--text-muted)]"
                         />
                     </div>
                 </div>
 
-                {/* Filters */}
-                <div className="flex gap-2 overflow-x-auto pb-4 mb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-zinc-700">
-                    <button
-                        onClick={() => setSelectedCategoryId(null)}
-                        className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${!selectedCategoryId ? 'bg-orange-500 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
-                    >
-                        Todas
-                    </button>
-                    {CATEGORY_FILTERS.map(cat => (
+                <div className="flex gap-4 items-center mb-6">
+                    <div className="flex-1 flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-zinc-700">
                         <button
-                            key={cat.id}
-                            onClick={() => setSelectedCategoryId(cat.id)}
-                            className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${selectedCategoryId === cat.id ? 'bg-orange-500 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+                            onClick={() => setSelectedCategoryId(null)}
+                            className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${!selectedCategoryId ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] hover:bg-[var(--input-bg)] hover:text-[var(--foreground)]'}`}
                         >
-                            {cat.label}
+                            Todas
                         </button>
-                    ))}
+                        {CATEGORY_FILTERS.map(cat => (
+                            <button
+                                key={cat.id}
+                                onClick={() => setSelectedCategoryId(cat.id)}
+                                className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${selectedCategoryId === cat.id ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] hover:bg-[var(--input-bg)] hover:text-[var(--foreground)]'}`}
+                            >
+                                {cat.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Tabela */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-auto shadow-2xl max-h-[75vh]">
+                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl overflow-auto shadow-[var(--shadow-md)] backdrop-blur-sm max-h-[75vh]">
                     <table className="w-full text-left border-collapse whitespace-nowrap relative">
-                        <thead className="bg-[#121214] sticky top-0 z-10">
-                            <tr className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest border-b border-zinc-800">
+                        <thead className="bg-[var(--background)] sticky top-0 z-10">
+                            <tr className="text-[var(--text-muted)] text-[10px] uppercase font-bold tracking-widest border-b border-[var(--card-border)]">
                                 <th className="pl-4 pr-2 py-4 w-[350px]">Figura</th>
                                 <th className="px-3 py-4 text-center">SKU</th>
                                 <th className="px-3 py-4 text-center">Escala (%)</th>
@@ -269,39 +271,39 @@ export default function DataGridPage() {
                                 <th className="px-2 py-4 text-center text-[10px]">H. Pintura</th>
                                 <th className="px-3 py-4 text-center">Medidas (cm)</th>
                                 <th className="px-3 py-4 text-center uppercase">Extras</th>
-                                <th className="px-4 py-4 text-center text-emerald-500">Básico (R$)</th>
-                                <th className="px-4 py-4 text-center text-fuchsia-500">Premium (R$)</th>
-                                <th className="px-4 py-4 text-right">Ações</th>
+                                <th className="px-4 py-4 text-center text-[var(--accent-emerald)]">Básico (R$)</th>
+                                <th className="px-4 py-4 text-center text-[var(--accent-fuchsia)]">Premium (R$)</th>
+                                <th className="px-4 py-4 text-right">AÇÕES</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-zinc-800 text-sm">
+                        <tbody className="divide-y divide-[var(--card-border)] text-sm">
                             {figures.map(f => {
                                 const prices = calculatePrices(f);
                                 return (
-                                    <tr key={f.id} className="hover:bg-zinc-800/30 transition-colors group">
+                                    <tr key={f.id} className="hover:bg-orange-500/[0.02] transition-colors group">
                                         <td className="pl-4 pr-2 py-4 w-[350px]">
                                             <div
                                                 onClick={() => f.imagem_url && setPreviewImage({ url: f.imagem_url, nome: f.nome })}
                                                 className="cursor-pointer text-left group/name"
                                             >
-                                                <h3 className="text-sm font-bold text-zinc-100 group-hover:text-orange-500 transition-colors truncate max-w-[340px]">
+                                                <h3 className="text-sm font-bold text-[var(--foreground)] group-hover:text-orange-500 transition-colors truncate max-w-[340px]">
                                                     {f.nome}
                                                 </h3>
-                                                <div className="text-xs text-zinc-500 truncate max-w-[340px]">{f.categoria} - {f.serie}</div>
+                                                <div className="text-xs text-[var(--text-muted)] truncate max-w-[340px]">{f.categoria} - {f.serie}</div>
                                             </div>
                                         </td>
 
                                         <td className="px-3 py-4 text-center">
-                                            <span className="font-mono text-[10px] bg-[#0a0a0a] text-zinc-500 px-2 py-1 rounded-sm border border-zinc-800/50">
+                                            <span className="font-mono text-[10px] bg-[var(--input-bg)] text-[var(--text-muted)] px-2 py-1 rounded-sm border border-[var(--input-border)]">
                                                 {f.codigo || '--'}
                                             </span>
                                         </td>
 
                                         <td className="px-3 py-4">
-                                            <div className="flex items-center justify-center gap-2 bg-[#0a0a0a] border border-zinc-800 rounded-sm p-1.5 w-fit mx-auto transition-colors">
+                                            <div className="flex items-center justify-center gap-2 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm p-1.5 w-fit mx-auto transition-all shadow-[var(--shadow-sm)] group-hover:border-orange-500/30">
                                                 <button
                                                     onClick={() => handleChange(f.id, 'escala', Math.max(1, (Number(f.escala) || 0) - 10).toString())}
-                                                    className="p-1 hover:text-orange-500 text-zinc-600 transition-colors"
+                                                    className="p-1 hover:text-orange-500 text-[var(--text-muted)] transition-colors"
                                                 >
                                                     <Minus size={14} />
                                                 </button>
@@ -313,7 +315,7 @@ export default function DataGridPage() {
                                                 />
                                                 <button
                                                     onClick={() => handleChange(f.id, 'escala', ((Number(f.escala) || 0) + 10).toString())}
-                                                    className="p-1 hover:text-orange-500 text-zinc-600 transition-colors"
+                                                    className="p-1 hover:text-orange-500 text-[var(--text-muted)] transition-colors"
                                                 >
                                                     <Plus size={14} />
                                                 </button>
@@ -325,7 +327,7 @@ export default function DataGridPage() {
                                                 type="number" step="0.001"
                                                 value={f.resina_kg}
                                                 onChange={e => handleChange(f.id, 'resina_kg', e.target.value)}
-                                                className="w-24 bg-[#0a0a0a] border border-zinc-800 rounded-sm px-2 py-2 text-center text-sm font-bold text-zinc-100 outline-none focus:border-zinc-700 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                className="w-24 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-center text-sm font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
                                             />
                                         </td>
 
@@ -334,7 +336,7 @@ export default function DataGridPage() {
                                                 type="number"
                                                 value={f.horas_impressao}
                                                 onChange={e => handleChange(f.id, 'horas_impressao', e.target.value)}
-                                                className="w-16 bg-[#0a0a0a] border border-zinc-800 rounded-sm px-2 py-2 text-center text-sm font-bold text-zinc-100 outline-none focus:border-zinc-700 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                className="w-16 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-center text-sm font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
                                             />
                                         </td>
 
@@ -343,20 +345,20 @@ export default function DataGridPage() {
                                                 type="number"
                                                 value={f.horas_pintura}
                                                 onChange={e => handleChange(f.id, 'horas_pintura', e.target.value)}
-                                                className="w-16 bg-[#0a0a0a] border border-zinc-800 rounded-sm px-2 py-2 text-center text-sm font-bold text-zinc-100 outline-none focus:border-zinc-700 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                className="w-16 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-center text-sm font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
                                             />
                                         </td>
 
                                         <td className="px-3 py-4 text-center">
                                             <div className="flex gap-1 justify-center">
-                                                <div className="w-10 bg-[#0a0a0a] border border-zinc-800 rounded-sm py-1.5 flex flex-col items-center justify-center">
-                                                    <span className="text-[11px] font-black text-zinc-200">{f.altura_cm || '0'}</span>
+                                                <div className="w-10 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 flex flex-col items-center justify-center shadow-[var(--shadow-sm)]">
+                                                    <span className="text-[11px] font-black text-[var(--foreground)]">{f.altura_cm || '0'}</span>
                                                 </div>
-                                                <div className="w-10 bg-[#0a0a0a] border border-zinc-800 rounded-sm py-1.5 flex flex-col items-center justify-center">
-                                                    <span className="text-[11px] font-black text-zinc-200">{f.largura_cm || '0'}</span>
+                                                <div className="w-10 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 flex flex-col items-center justify-center shadow-[var(--shadow-sm)]">
+                                                    <span className="text-[11px] font-black text-[var(--foreground)]">{f.largura_cm || '0'}</span>
                                                 </div>
-                                                <div className="w-10 bg-[#0a0a0a] border border-zinc-800 rounded-sm py-1.5 flex flex-col items-center justify-center">
-                                                    <span className="text-[11px] font-black text-zinc-200">{f.profundidade_cm || '0'}</span>
+                                                <div className="w-10 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 flex flex-col items-center justify-center shadow-[var(--shadow-sm)]">
+                                                    <span className="text-[11px] font-black text-[var(--foreground)]">{f.profundidade_cm || '0'}</span>
                                                 </div>
                                             </div>
                                         </td>
@@ -366,16 +368,16 @@ export default function DataGridPage() {
                                                 type="checkbox"
                                                 checked={f.tem_extras}
                                                 onChange={e => handleChange(f.id, 'tem_extras', e.target.checked)}
-                                                className="w-5 h-5 rounded-sm border-zinc-800 text-orange-500 bg-[#0a0a0a] focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                                                className="w-5 h-5 rounded-sm border-[var(--input-border)] text-orange-500 bg-[var(--input-bg)] focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all"
                                             />
                                         </td>
 
                                         <td className="px-4 py-4 text-center">
-                                            <div className="text-[15px] font-black text-emerald-500 whitespace-nowrap">R$ {prices.basic}</div>
+                                            <div className="text-[15px] font-black text-[var(--accent-emerald)] whitespace-nowrap drop-shadow-sm">R$ {prices.basic}</div>
                                         </td>
 
                                         <td className="px-4 py-4 text-center">
-                                            <div className="text-[15px] font-black text-fuchsia-500 whitespace-nowrap">R$ {prices.premium}</div>
+                                            <div className="text-[15px] font-black text-[var(--accent-fuchsia)] whitespace-nowrap drop-shadow-sm">R$ {prices.premium}</div>
                                         </td>
 
                                         <td className="px-4 py-4 text-right">
@@ -383,7 +385,7 @@ export default function DataGridPage() {
                                                 <button
                                                     onClick={() => handleSave(f)}
                                                     disabled={savingId === f.id}
-                                                    className="p-2.5 bg-orange-500/10 text-orange-500 rounded-md hover:bg-orange-500 hover:text-white transition-all disabled:opacity-50 border border-orange-500/20"
+                                                    className="p-2.5 bg-orange-500/10 text-orange-500 rounded-md hover:bg-orange-500 hover:text-white transition-all disabled:opacity-50 border border-orange-500/20 shadow-[var(--shadow-sm)]"
                                                     title="Salvar"
                                                 >
                                                     {savingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
@@ -392,7 +394,7 @@ export default function DataGridPage() {
                                                     <button
                                                         onClick={() => handleDelete(f.id, f.nome)}
                                                         disabled={deletingId === f.id}
-                                                        className="p-2.5 bg-red-500/10 text-red-500 rounded-md hover:bg-red-500 hover:text-white transition-all disabled:opacity-50 border border-red-500/20"
+                                                        className="p-2.5 bg-red-500/10 text-red-500 rounded-md hover:bg-red-500 hover:text-white transition-all disabled:opacity-50 border border-red-500/20 shadow-[var(--shadow-sm)]"
                                                         title="Excluir"
                                                     >
                                                         {deletingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
@@ -400,7 +402,7 @@ export default function DataGridPage() {
                                                 )}
                                                 <button
                                                     onClick={() => handleDownloadImage(f.id, f.nome)}
-                                                    className="p-2.5 bg-blue-500/10 text-blue-500 rounded-md hover:bg-blue-500 hover:text-white transition-all border border-blue-500/20"
+                                                    className="p-2.5 bg-blue-500/10 text-blue-500 rounded-md hover:bg-blue-500 hover:text-white transition-all border border-blue-500/20 shadow-[var(--shadow-sm)]"
                                                     title="Baixar Cartão"
                                                 >
                                                     <ImageIcon size={16} />
