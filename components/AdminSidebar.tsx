@@ -87,51 +87,49 @@ export default function AdminSidebar() {
     return (
         <>
             {/* Mobile Header Toggle */}
-            <div className="md:hidden fixed top-0 left-0 w-full h-16 bg-[var(--card-bg)] border-b border-[var(--card-border)] flex items-center justify-between px-4 z-40">
-                <h1 className="text-xl font-bold text-orange-500 flex items-center gap-2">
-                    <Store size={24} />
-                    FrangaAdmin
+            <div className="md:hidden fixed top-0 left-0 w-full h-16 bg-[var(--card-bg)] border-b border-[var(--card-border)] flex items-center justify-between px-6 z-40 shadow-sm transition-colors duration-300">
+                <h1 className="text-xl font-black text-orange-500 flex items-center gap-2 tracking-tighter">
+                    <Store size={28} strokeWidth={2.5} />
+                    FRANGA<span className="text-[var(--foreground)] opacity-90">ADMIN</span>
                 </h1>
-                <button onClick={() => setIsOpen(!isOpen)} className="p-2 text-[var(--text-muted)] hover:text-orange-500 transition-colors">
-                    {isOpen ? <X size={24} /> : <Menu size={24} />}
+                <button onClick={() => setIsOpen(!isOpen)} className="p-2.5 bg-[var(--input-bg)] rounded-xl text-[var(--text-muted)] hover:text-orange-500 border border-[var(--card-border)] transition-all active:scale-90">
+                    {isOpen ? <X size={24} strokeWidth={2.5} /> : <Menu size={24} strokeWidth={2.5} />}
                 </button>
             </div>
 
             {/* Backdrop for mobile */}
             {isOpen && (
                 <div
-                    className="md:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-all"
+                    className="md:hidden fixed inset-0 bg-[var(--background)]/60 backdrop-blur-md z-40 transition-all duration-500"
                     onClick={() => setIsOpen(false)}
                 />
             )}
 
             <aside className={`
                 w-64 bg-[var(--card-bg)] border-r border-[var(--card-border)] h-screen fixed left-0 top-0 flex flex-col z-50
-                transition-all duration-300 ease-in-out shadow-[var(--shadow-md)]
+                transition-all duration-500 ease-in-out shadow-[var(--shadow-xl)]
                 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
                 md:translate-x-0
             `}>
                 {/* Header */}
-                <div className="p-6 border-b border-[var(--card-border)]">
-                    <h1 className="text-xl font-bold text-orange-500 flex items-center gap-2">
-                        <Store size={24} />
-                        FrangaAdmin
+                <div className="p-8 border-b border-[var(--card-border)] bg-[var(--background)]/10">
+                    <h1 className="text-2xl font-black text-orange-500 flex items-center gap-3 tracking-tighter">
+                        <Store size={32} strokeWidth={2.5} />
+                        <div>
+                            <p className="leading-tight">FRANGA</p>
+                            <p className="text-[var(--foreground)] opacity-90 leading-tight">ADMIN</p>
+                        </div>
                     </h1>
-                    <p className="text-xs text-[var(--text-muted)] mt-1 font-medium">v2.0 Chiaroscuro Ready</p>
+                    <div className="flex items-center gap-2 mt-4">
+                        <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Chiaroscuro v2.0</p>
+                    </div>
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+                <nav className="flex-1 p-5 space-y-1.5 overflow-y-auto custom-scrollbar">
                     {menuItems.map((item) => {
-                        // Check if user has ANY of the required roles (or is admin)
-                        // The hasRole function checks if user has specific role OR admin.
-                        // But here we might pass array. Let's simplify:
-                        // If item.roles includes ANY of user.roles -> Show.
-                        // But hasRole checks one role.
-                        // Let's iterate.
-
                         const canView = item.roles.some(r => hasRole(r));
-
                         if (!canView) return null;
 
                         const isActive = pathname === item.href;
@@ -141,40 +139,45 @@ export default function AdminSidebar() {
                                 key={item.href}
                                 href={item.href}
                                 onClick={() => setIsOpen(false)}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive
-                                    ? 'bg-orange-500/10 text-orange-500 font-bold shadow-sm'
-                                    : 'text-[var(--text-muted)] hover:bg-[var(--input-bg)] hover:text-[var(--foreground)]'
+                                className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all relative group overflow-hidden ${isActive
+                                    ? 'bg-orange-500 text-white font-black shadow-lg shadow-orange-500/20 active:scale-95'
+                                    : 'text-[var(--text-muted)] hover:bg-[var(--input-bg)] hover:text-[var(--foreground)] font-bold'
                                     }`}
                             >
-                                <item.icon size={20} />
-                                <span className="font-medium">{item.name}</span>
+                                <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} className={`${isActive ? 'scale-110' : 'group-hover:scale-110 group-hover:text-orange-500'} transition-all`} />
+                                <span className="text-sm tracking-tight">{item.name}</span>
+                                {isActive && (
+                                    <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-white/40" />
+                                )}
                             </Link>
                         );
                     })}
                 </nav>
 
                 {/* User & Logout */}
-                <div className="p-4 border-t border-[var(--card-border)] bg-[var(--background)]/50">
-                    <Link href="/admin/profile" className="flex items-center gap-3 mb-4 px-2 hover:bg-[var(--input-bg)] mx-[-8px] py-2 rounded-lg transition-all group">
-                        <div className="w-8 h-8 rounded-full bg-[var(--input-bg)] border border-[var(--input-border)] flex items-center justify-center text-xs font-bold text-[var(--text-muted)] group-hover:text-orange-500 group-hover:border-orange-500/30 transition-all shadow-sm">
+                <div className="p-6 border-t border-[var(--card-border)] bg-[var(--background)]/20 backdrop-blur-sm space-y-4">
+                    <Link href="/admin/profile" className="flex items-center gap-3 p-3 bg-[var(--input-bg)] hover:bg-[var(--card-bg)] rounded-[1.25rem] border border-[var(--card-border)] transition-all group shadow-sm active:scale-95">
+                        <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-sm font-black text-orange-500 group-hover:scale-110 transition-all shadow-inner">
                             {user?.email?.[0].toUpperCase()}
                         </div>
                         <div className="overflow-hidden">
-                            <p className="text-sm font-bold text-[var(--foreground)] truncate group-hover:text-orange-500 transition-colors">{user?.email}</p>
-                            <p className="text-[10px] text-[var(--text-muted)] truncate capitalize font-medium tracking-tight">
-                                {user?.roles?.join(' • ')}
+                            <p className="text-xs font-black text-[var(--foreground)] truncate group-hover:text-orange-500 transition-colors uppercase tracking-tight">{user?.email?.split('@')[0]}</p>
+                            <p className="text-[9px] text-[var(--text-muted)] truncate font-black uppercase tracking-widest opacity-60">
+                                {user?.roles?.[0]}
                             </p>
                         </div>
                     </Link>
 
-                    <button
-                        onClick={logout}
-                        className="flex-1 flex items-center gap-2 px-4 py-2.5 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/5 rounded-lg transition-all text-sm font-medium border border-transparent hover:border-red-500/10"
-                    >
-                        <LogOut size={16} />
-                        Sair
-                    </button>
-                    <ThemeToggle />
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={logout}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-500/5 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all text-[10px] font-black uppercase tracking-widest border border-red-500/20 hover:border-red-500 shadow-sm active:scale-95"
+                        >
+                            <LogOut size={16} strokeWidth={2.5} />
+                            SAIR
+                        </button>
+                        <ThemeToggle />
+                    </div>
                 </div>
             </aside>
         </>

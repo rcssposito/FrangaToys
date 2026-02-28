@@ -74,31 +74,36 @@ export default function ProfilePage() {
     };
 
     return (
-        <div className="space-y-8 max-w-2xl">
-            <div>
-                <h1 className="text-3xl font-bold text-white mb-2">Meu Perfil</h1>
-                <p className="text-zinc-400">Gerencie suas credenciais de acesso.</p>
+        <div className="space-y-10 max-w-2xl transition-colors duration-300">
+            <div className="flex items-center gap-4">
+                <div className="p-3.5 bg-orange-500/10 text-orange-500 rounded-2xl shadow-sm border border-orange-500/20">
+                    <Fingerprint size={32} />
+                </div>
+                <div>
+                    <h1 className="text-3xl font-black tracking-tight text-[var(--foreground)]">Meu Perfil</h1>
+                    <p className="text-[var(--text-muted)] text-sm font-medium mt-1">Gerencie suas credenciais de acesso e segurança.</p>
+                </div>
             </div>
 
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-6">
-                <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-1">Email</label>
-                    <div className="p-3 bg-zinc-950 border border-zinc-800 rounded-lg text-white">
+            <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl p-8 space-y-8 shadow-[var(--shadow-md)]">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] block ml-1">Email de Acesso</label>
+                    <div className="p-4 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl text-[var(--foreground)] font-black text-lg shadow-inner">
                         {user?.email}
                     </div>
                 </div>
 
-                {/* Passkey Section - Hidden until enabled in Supabase Dashboard
-                <div className="pt-4 border-t border-zinc-800 opacity-50 pointer-events-none grayscale">
-                    <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                        <Fingerprint className="text-orange-500" />
+                <div className="pt-6 border-t border-[var(--card-border)]">
+                    <h2 className="text-xl font-black text-[var(--foreground)] mb-4 flex items-center gap-3 tracking-tight opacity-50">
+                        <Fingerprint className="text-orange-500" size={24} />
                         Passkeys (Biometria)
                     </h2>
-                    <p className="text-zinc-400 text-sm mb-6">
-                        Funcionalidade indisponível no momento. Aguardando ativação no servidor.
-                    </p>
+                    <div className="p-6 bg-[var(--background)]/50 border border-dashed border-[var(--card-border)] rounded-2xl text-center">
+                        <p className="text-[var(--text-muted)] text-sm font-black uppercase tracking-widest opacity-40">
+                            Funcionalidade em desenvolvimento
+                        </p>
+                    </div>
                 </div>
-                */}
             </div>
         </div>
     );

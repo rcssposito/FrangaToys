@@ -139,58 +139,58 @@ export default function StudiosPage() {
     };
 
     return (
-        <div className="min-h-screen bg-black text-white p-8">
+        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] p-8 transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 <div className="flex items-center gap-4 mb-8">
-                    <Link href="/admin" className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
+                    <Link href="/admin" className="p-2 bg-[var(--card-bg)] border border-[var(--card-border)] hover:bg-[var(--input-bg)] rounded-xl transition-all shadow-sm text-[var(--text-muted)] hover:text-orange-500">
                         <ArrowLeft size={20} />
                     </Link>
                     <div>
-                        <h1 className="text-3xl font-bold flex items-center gap-2">
+                        <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
                             Gerenciar Estúdios
                         </h1>
-                        <p className="text-zinc-400">Configure custos e métricas de cada estúdio.</p>
+                        <p className="text-[var(--text-muted)] font-medium">Configure custos e métricas de cada estúdio.</p>
                     </div>
                 </div>
 
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl overflow-hidden shadow-[var(--shadow-md)]">
                     {loading ? (
                         <div className="p-12 flex justify-center"><Loader2 className="animate-spin text-orange-500" /></div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
-                                <thead className="bg-zinc-950 text-zinc-400 text-xs uppercase tracking-wider">
+                                <thead className="bg-[var(--background)] text-[var(--text-muted)] text-[10px] uppercase font-bold tracking-widest">
                                     <tr>
-                                        <th className="p-4 border-b border-zinc-800">Estúdio</th>
-                                        <th className="p-4 border-b border-zinc-800 w-[150px]">Custo Mensal (R$)</th>
-                                        <th className="p-4 border-b border-zinc-800 w-[150px]">Total Modelos (Auto)</th>
-                                        <th className="p-4 border-b border-zinc-800 w-[120px]">Qualidade (1-5)</th>
-                                        <th className="p-4 border-b border-zinc-800">Observações</th>
-                                        <th className="p-4 border-b border-zinc-800 w-[80px]"></th>
+                                        <th className="p-4 border-b border-[var(--card-border)]">Estúdio</th>
+                                        <th className="p-4 border-b border-[var(--card-border)] w-[150px]">Custo Mensal (R$)</th>
+                                        <th className="p-4 border-b border-[var(--card-border)] w-[150px]">Total Modelos (Auto)</th>
+                                        <th className="p-4 border-b border-[var(--card-border)] w-[120px]">Qualidade (1-5)</th>
+                                        <th className="p-4 border-b border-[var(--card-border)]">Observações</th>
+                                        <th className="p-4 border-b border-[var(--card-border)] w-[80px]"></th>
                                     </tr>
                                 </thead>
-                                <tbody className="text-sm divide-y divide-zinc-800">
+                                <tbody className="text-sm divide-y divide-[var(--card-border)]">
                                     {studios.map(studio => (
-                                        <tr key={studio.id} className="hover:bg-zinc-800/30 group">
-                                            <td className="p-4 font-bold text-lg">{studio.nome}</td>
+                                        <tr key={studio.id} className="hover:bg-orange-500/[0.02] transition-colors group">
+                                            <td className="p-4 font-black text-xl tracking-tight text-[var(--foreground)]">{studio.nome}</td>
 
                                             <td className="p-4">
                                                 <div className="relative">
-                                                    <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                                                    <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                                                     <input
                                                         type="number"
                                                         value={studio.custo_mensal ?? ''}
                                                         onChange={(e) => handleChange(studio.id, 'custo_mensal', e.target.value === '' ? '' : parseFloat(e.target.value))}
                                                         placeholder="0.00"
-                                                        className="w-full bg-zinc-950 border border-zinc-700 rounded p-2 pl-8 focus:border-orange-500 outline-none placeholder:text-zinc-600"
+                                                        className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg p-2 pl-8 focus:border-orange-500 outline-none text-[var(--foreground)] placeholder:text-[var(--text-muted)] transition-all font-bold"
                                                     />
                                                 </div>
                                             </td>
 
                                             <td className="p-4">
-                                                <div className="flex items-center gap-2 text-zinc-400">
+                                                <div className="flex items-center gap-2 text-[var(--text-muted)]">
                                                     <Box size={14} />
-                                                    <span className="font-mono text-lg">
+                                                    <span className="font-black text-lg tracking-tighter">
                                                         {studio.figuras?.[0]?.count || 0}
                                                     </span>
                                                 </div>
@@ -201,7 +201,7 @@ export default function StudiosPage() {
                                                     <select
                                                         value={studio.qualidade || 5}
                                                         onChange={(e) => handleChange(studio.id, 'qualidade', parseInt(e.target.value))}
-                                                        className="bg-zinc-950 border border-zinc-700 rounded p-2 focus:border-orange-500 outline-none"
+                                                        className="bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg p-2 focus:border-orange-500 outline-none text-[var(--foreground)] font-bold transition-all"
                                                     >
                                                         {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
                                                     </select>
@@ -215,7 +215,7 @@ export default function StudiosPage() {
                                                     value={studio.observacao || ''}
                                                     onChange={(e) => handleChange(studio.id, 'observacao', e.target.value)}
                                                     placeholder="Notas..."
-                                                    className="w-full bg-transparent border-b border-transparent focus:border-zinc-700 outline-none text-zinc-400 focus:text-white"
+                                                    className="w-full bg-transparent border-b border-transparent focus:border-[var(--card-border)] outline-none text-[var(--text-muted)] focus:text-[var(--foreground)] transition-all font-medium"
                                                 />
                                             </td>
 
@@ -224,7 +224,7 @@ export default function StudiosPage() {
                                                     <button
                                                         onClick={() => handleUpdate(studio)}
                                                         disabled={saving === studio.id}
-                                                        className="bg-zinc-800 hover:bg-orange-600 text-zinc-400 hover:text-white p-2 rounded transition-colors"
+                                                        className="bg-orange-500/10 hover:bg-orange-500 text-orange-500 hover:text-white p-2.5 rounded-lg transition-all border border-orange-500/20 shadow-sm"
                                                         title="Salvar"
                                                     >
                                                         {saving === studio.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
@@ -232,7 +232,7 @@ export default function StudiosPage() {
                                                     {hasRole('admin') && (
                                                         <button
                                                             onClick={() => handleDelete(studio.id, studio.figuras?.[0]?.count || 0)}
-                                                            className="bg-zinc-800 hover:bg-red-600 text-zinc-400 hover:text-white p-2 rounded transition-colors"
+                                                            className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white p-2.5 rounded-lg transition-all border border-red-500/20 shadow-sm"
                                                             title="Excluir"
                                                         >
                                                             <Trash size={16} />
@@ -244,7 +244,7 @@ export default function StudiosPage() {
                                     ))}
 
                                     {/* Add New Studio Row */}
-                                    <tr className="bg-zinc-950/50">
+                                    <tr className="bg-[var(--background)]/50">
                                         <td className="p-4" colSpan={5}>
                                             <form onSubmit={handleAddStudio} className="flex items-center gap-3">
                                                 <input
@@ -252,12 +252,12 @@ export default function StudiosPage() {
                                                     value={newStudioName}
                                                     onChange={(e) => setNewStudioName(e.target.value)}
                                                     placeholder="Novo Estúdio..."
-                                                    className="w-full max-w-sm bg-zinc-900 border border-zinc-700 rounded p-2 focus:border-orange-500 outline-none placeholder:text-zinc-600"
+                                                    className="w-full max-w-sm bg-[var(--card-bg)] border border-[var(--input-border)] rounded-lg p-3 focus:border-orange-500 outline-none text-[var(--foreground)] placeholder:text-[var(--text-muted)] transition-all font-bold shadow-sm"
                                                 />
                                                 <button
                                                     type="submit"
                                                     disabled={isAdding || !newStudioName.trim()}
-                                                    className="flex items-center gap-2 bg-zinc-800 hover:bg-orange-600 disabled:opacity-50 disabled:hover:bg-zinc-800 text-zinc-300 hover:text-white px-4 py-2 rounded transition-colors"
+                                                    className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold px-6 py-3 rounded-lg transition-all shadow-lg shadow-orange-500/20"
                                                 >
                                                     {isAdding ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
                                                     <span>Adicionar</span>

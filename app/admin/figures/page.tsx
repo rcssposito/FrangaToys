@@ -212,34 +212,34 @@ export default function DataGridPage() {
     if (duplicateIds.length > 0) console.error('Duplicate IDs detected:', duplicateIds);
 
     return (
-        <div className="min-h-screen bg-black text-white p-8 relative">
+        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] p-8 relative transition-colors duration-300">
             <div className="mx-auto max-w-[1500px]">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div className="flex items-center gap-4">
-                        <Link href="/admin" className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
+                        <Link href="/admin" className="p-2 hover:bg-[var(--input-bg)] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg transition-all shadow-sm text-[var(--text-muted)] hover:text-orange-500">
                             <ArrowLeft size={20} />
                         </Link>
                         <div>
-                            <h1 className="text-3xl font-bold">Catálogo & Precificação</h1>
-                            <p className="text-zinc-400 text-sm">Clique no nome para ver a foto. Edite custos abaixo.</p>
+                            <h1 className="text-3xl font-bold tracking-tight">Catálogo & Precificação</h1>
+                            <p className="text-[var(--text-muted)] text-sm font-medium">Clique no nome para ver a foto. Edite custos abaixo.</p>
                         </div>
                     </div>
                     {/* Search Bar */}
                     <div className="relative w-full md:w-96">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
                         <input
                             type="text"
                             placeholder="Buscar figura..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg pl-10 pr-4 py-3 outline-none focus:border-orange-500 transition-all shadow-[var(--shadow-sm)] text-[var(--foreground)] placeholder:text-[var(--text-muted)]"
+                            className="w-full bg-[var(--card-bg)] border border-[var(--input-border)] rounded-lg pl-10 pr-4 py-3 outline-none focus:border-orange-500 transition-all shadow-[var(--shadow-sm)] text-[var(--foreground)] placeholder:text-[var(--text-muted)]"
                         />
                     </div>
                 </div>
 
                 <div className="flex gap-4 items-center mb-6">
-                    <div className="flex-1 flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-zinc-700">
+                    <div className="flex-1 flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[var(--card-border)]">
                         <button
                             onClick={() => setSelectedCategoryId(null)}
                             className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${!selectedCategoryId ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] hover:bg-[var(--input-bg)] hover:text-[var(--foreground)]'}`}
@@ -351,15 +351,27 @@ export default function DataGridPage() {
 
                                         <td className="px-3 py-4 text-center">
                                             <div className="flex gap-1 justify-center">
-                                                <div className="w-10 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 flex flex-col items-center justify-center shadow-[var(--shadow-sm)]">
-                                                    <span className="text-[11px] font-black text-[var(--foreground)]">{f.altura_cm || '0'}</span>
-                                                </div>
-                                                <div className="w-10 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 flex flex-col items-center justify-center shadow-[var(--shadow-sm)]">
-                                                    <span className="text-[11px] font-black text-[var(--foreground)]">{f.largura_cm || '0'}</span>
-                                                </div>
-                                                <div className="w-10 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 flex flex-col items-center justify-center shadow-[var(--shadow-sm)]">
-                                                    <span className="text-[11px] font-black text-[var(--foreground)]">{f.profundidade_cm || '0'}</span>
-                                                </div>
+                                                <input
+                                                    type="number" step="0.1"
+                                                    value={f.altura_cm}
+                                                    onChange={e => handleChange(f.id, 'altura_cm', e.target.value)}
+                                                    className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
+                                                    title="Altura"
+                                                />
+                                                <input
+                                                    type="number" step="0.1"
+                                                    value={f.largura_cm}
+                                                    onChange={e => handleChange(f.id, 'largura_cm', e.target.value)}
+                                                    className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
+                                                    title="Largura"
+                                                />
+                                                <input
+                                                    type="number" step="0.1"
+                                                    value={f.profundidade_cm}
+                                                    onChange={e => handleChange(f.id, 'profundidade_cm', e.target.value)}
+                                                    className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
+                                                    title="Profundidade"
+                                                />
                                             </div>
                                         </td>
 
