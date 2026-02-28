@@ -76,7 +76,19 @@ export default function DataGridPage() {
             const res = await fetch(`/api/admin/figures?${params.toString()}`);
             if (!res.ok) throw new Error('Falha ao carregar');
             const data = await res.json();
-            setFigures(data);
+
+            // Format 0s and nulls as empty strings for placeholders
+            const formattedData = data.map((f: Figure) => ({
+                ...f,
+                resina_kg: Number(f.resina_kg) === 0 ? '' : f.resina_kg,
+                horas_impressao: Number(f.horas_impressao) === 0 ? '' : f.horas_impressao,
+                horas_pintura: Number(f.horas_pintura) === 0 ? '' : f.horas_pintura,
+                altura_cm: Number(f.altura_cm) === 0 ? '' : f.altura_cm,
+                largura_cm: Number(f.largura_cm) === 0 ? '' : f.largura_cm,
+                profundidade_cm: Number(f.profundidade_cm) === 0 ? '' : f.profundidade_cm,
+            }));
+
+            setFigures(formattedData);
         } catch (error) {
             toast.error('Erro ao carregar figuras');
         } finally {
@@ -325,7 +337,8 @@ export default function DataGridPage() {
                                         <td className="px-3 py-4 text-center">
                                             <input
                                                 type="number" step="0.001"
-                                                value={f.resina_kg}
+                                                value={f.resina_kg ?? ''}
+                                                placeholder="0"
                                                 onChange={e => handleChange(f.id, 'resina_kg', e.target.value)}
                                                 className="w-24 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-center text-sm font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
                                             />
@@ -334,7 +347,8 @@ export default function DataGridPage() {
                                         <td className="px-2 py-4 text-center">
                                             <input
                                                 type="number"
-                                                value={f.horas_impressao}
+                                                value={f.horas_impressao ?? ''}
+                                                placeholder="0"
                                                 onChange={e => handleChange(f.id, 'horas_impressao', e.target.value)}
                                                 className="w-16 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-center text-sm font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
                                             />
@@ -343,7 +357,8 @@ export default function DataGridPage() {
                                         <td className="px-2 py-4 text-center">
                                             <input
                                                 type="number"
-                                                value={f.horas_pintura}
+                                                value={f.horas_pintura ?? ''}
+                                                placeholder="0"
                                                 onChange={e => handleChange(f.id, 'horas_pintura', e.target.value)}
                                                 className="w-16 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-center text-sm font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
                                             />
@@ -353,21 +368,24 @@ export default function DataGridPage() {
                                             <div className="flex gap-1 justify-center">
                                                 <input
                                                     type="number" step="0.1"
-                                                    value={f.altura_cm}
+                                                    value={f.altura_cm ?? ''}
+                                                    placeholder="0"
                                                     onChange={e => handleChange(f.id, 'altura_cm', e.target.value)}
                                                     className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
                                                     title="Altura"
                                                 />
                                                 <input
                                                     type="number" step="0.1"
-                                                    value={f.largura_cm}
+                                                    value={f.largura_cm ?? ''}
+                                                    placeholder="0"
                                                     onChange={e => handleChange(f.id, 'largura_cm', e.target.value)}
                                                     className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
                                                     title="Largura"
                                                 />
                                                 <input
                                                     type="number" step="0.1"
-                                                    value={f.profundidade_cm}
+                                                    value={f.profundidade_cm ?? ''}
+                                                    placeholder="0"
                                                     onChange={e => handleChange(f.id, 'profundidade_cm', e.target.value)}
                                                     className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
                                                     title="Profundidade"
