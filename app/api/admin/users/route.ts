@@ -31,7 +31,7 @@ const checkAuth = async (): Promise<Session | null> => {
 export async function GET() {
     try {
         const session = await checkAuth();
-        if (!session || !session.roles || !session.roles.includes('admin')) {
+        if (!session || !session.roles || (!session.roles.includes('admin') && !session.roles.includes('finance'))) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 

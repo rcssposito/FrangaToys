@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 
@@ -261,17 +261,17 @@ export default function DataGridPage() {
                     <table className="w-full text-left border-collapse whitespace-nowrap relative">
                         <thead className="bg-[#121214] sticky top-0 z-10">
                             <tr className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest border-b border-zinc-800">
-                                <th className="pl-4 pr-0 py-3"><div className="-mr-[100px]">Figura (Clique p/ ver)</div></th>
-                                <th className="pl-1 pr-4 py-3 text-center">SKU</th>
-                                <th className="px-4 py-3 text-center">Escala (%)</th>
-                                <th className="px-4 py-3 text-center">KG Resina</th>
-                                <th className="px-4 py-3 text-center">H. Impressão</th>
-                                <th className="px-4 py-3 text-center">H. Pintura</th>
-                                <th className="px-4 py-3 text-center">Medidas (cm)</th>
-                                <th className="px-4 py-3 text-center uppercase">Extras</th>
-                                <th className="px-4 py-3 text-center text-green-500">Básico (R$)</th>
-                                <th className="px-4 py-3 text-center text-fuchsia-500">Premium (R$)</th>
-                                <th className="px-4 py-3 text-right">Ações</th>
+                                <th className="pl-4 pr-2 py-4 w-[350px]">Figura</th>
+                                <th className="px-3 py-4 text-center">SKU</th>
+                                <th className="px-3 py-4 text-center">Escala (%)</th>
+                                <th className="px-3 py-4 text-center">KG Resina</th>
+                                <th className="px-2 py-4 text-center text-[10px]">H. Impressão</th>
+                                <th className="px-2 py-4 text-center text-[10px]">H. Pintura</th>
+                                <th className="px-3 py-4 text-center">Medidas (cm)</th>
+                                <th className="px-3 py-4 text-center uppercase">Extras</th>
+                                <th className="px-4 py-4 text-center text-emerald-500">Básico (R$)</th>
+                                <th className="px-4 py-4 text-center text-fuchsia-500">Premium (R$)</th>
+                                <th className="px-4 py-4 text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-800 text-sm">
@@ -279,120 +279,120 @@ export default function DataGridPage() {
                                 const prices = calculatePrices(f);
                                 return (
                                     <tr key={f.id} className="hover:bg-zinc-800/30 transition-colors group">
-                                        <td className="pl-4 pr-0 py-4">
+                                        <td className="pl-4 pr-2 py-4 w-[350px]">
                                             <div
                                                 onClick={() => f.imagem_url && setPreviewImage({ url: f.imagem_url, nome: f.nome })}
-                                                className="cursor-pointer text-left group/name -mr-[100px]"
+                                                className="cursor-pointer text-left group/name"
                                             >
-                                                <h3 className="text-sm font-bold text-zinc-100 group-hover:text-orange-500 transition-colors">
+                                                <h3 className="text-sm font-bold text-zinc-100 group-hover:text-orange-500 transition-colors truncate max-w-[340px]">
                                                     {f.nome}
                                                 </h3>
-                                                <div className="text-xs text-zinc-500">{f.categoria} - {f.serie}</div>
+                                                <div className="text-xs text-zinc-500 truncate max-w-[340px]">{f.categoria} - {f.serie}</div>
                                             </div>
                                         </td>
 
-                                        <td className="pl-1 pr-3 py-4 text-center">
-                                            <span className="font-mono text-[10px] bg-zinc-950 text-zinc-400 px-2 py-1 rounded border border-zinc-800">
+                                        <td className="px-3 py-4 text-center">
+                                            <span className="font-mono text-[10px] bg-[#0a0a0a] text-zinc-500 px-2 py-1 rounded-sm border border-zinc-800/50">
                                                 {f.codigo || '--'}
                                             </span>
                                         </td>
 
-                                        <td className="p-2">
-                                            {canEdit ? (
+                                        <td className="px-3 py-4">
+                                            <div className="flex items-center justify-center gap-2 bg-[#0a0a0a] border border-zinc-800 rounded-sm p-1.5 w-fit mx-auto transition-colors">
+                                                <button
+                                                    onClick={() => handleChange(f.id, 'escala', Math.max(1, (Number(f.escala) || 0) - 10).toString())}
+                                                    className="p-1 hover:text-orange-500 text-zinc-600 transition-colors"
+                                                >
+                                                    <Minus size={14} />
+                                                </button>
                                                 <input
-                                                    type="number" step="1"
-                                                    className="w-16 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block text-orange-400 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                    value={f.escala || ''}
+                                                    type="number"
+                                                    value={f.escala}
                                                     onChange={e => handleChange(f.id, 'escala', e.target.value)}
-                                                    placeholder="100"
+                                                    className="w-10 bg-transparent text-center text-sm font-black text-orange-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                 />
-                                            ) : (
-                                                <div className="text-center text-orange-400 font-bold">{f.escala || 100}</div>
-                                            )}
-                                        </td>
-
-                                        <td className="p-2">
-                                            {canEdit ? (
-                                                <input
-                                                    type="number" step="0.001"
-                                                    className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                    value={f.resina_kg === 0 ? '' : f.resina_kg}
-                                                    onChange={e => handleChange(f.id, 'resina_kg', e.target.value)}
-                                                />
-                                            ) : (
-                                                <div className="text-center text-zinc-300">{f.resina_kg || '0'}</div>
-                                            )}
-                                        </td>
-                                        <td className="p-2">
-                                            {canEdit ? (
-                                                <input
-                                                    type="number" step="0.1"
-                                                    className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                    value={f.horas_impressao === 0 ? '' : f.horas_impressao}
-                                                    onChange={e => handleChange(f.id, 'horas_impressao', e.target.value)}
-                                                />
-                                            ) : (
-                                                <div className="text-center text-zinc-300">{f.horas_impressao || '0'}</div>
-                                            )}
-                                        </td>
-                                        <td className="p-2">
-                                            {canEdit ? (
-                                                <input
-                                                    type="number" step="0.1"
-                                                    className="w-20 bg-black/40 border border-zinc-700 rounded px-2 py-1.5 text-center focus:border-orange-500 outline-none mx-auto block [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                    value={f.horas_pintura === 0 ? '' : f.horas_pintura}
-                                                    onChange={e => handleChange(f.id, 'horas_pintura', e.target.value)}
-                                                />
-                                            ) : (
-                                                <div className="text-center text-zinc-300">{f.horas_pintura || '0'}</div>
-                                            )}
-                                        </td>
-
-                                        <td className="p-2">
-                                            <div className="flex gap-1 justify-center">
-                                                <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="A" value={f.altura_cm === 0 ? '' : f.altura_cm} onChange={e => handleChange(f.id, 'altura_cm', e.target.value)} />
-                                                <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="L" value={f.largura_cm === 0 ? '' : f.largura_cm} onChange={e => handleChange(f.id, 'largura_cm', e.target.value)} />
-                                                <input className="w-10 bg-zinc-800/50 border-none rounded px-1 py-1 text-center text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="P" value={f.profundidade_cm === 0 ? '' : f.profundidade_cm} onChange={e => handleChange(f.id, 'profundidade_cm', e.target.value)} />
+                                                <button
+                                                    onClick={() => handleChange(f.id, 'escala', ((Number(f.escala) || 0) + 10).toString())}
+                                                    className="p-1 hover:text-orange-500 text-zinc-600 transition-colors"
+                                                >
+                                                    <Plus size={14} />
+                                                </button>
                                             </div>
                                         </td>
 
-                                        <td className="p-2 text-center">
-                                            {canEdit ? (
-                                                <input
-                                                    type="checkbox"
-                                                    className="w-4 h-4 accent-orange-500 mx-auto block cursor-pointer bg-zinc-800 border-zinc-700"
-                                                    checked={f.tem_extras || false}
-                                                    onChange={e => handleChange(f.id, 'tem_extras', e.target.checked)}
-                                                />
-                                            ) : (
-                                                <div className="text-zinc-400 text-[11px]">{f.tem_extras ? 'Sim' : 'Não'}</div>
-                                            )}
+                                        <td className="px-3 py-4 text-center">
+                                            <input
+                                                type="number" step="0.001"
+                                                value={f.resina_kg}
+                                                onChange={e => handleChange(f.id, 'resina_kg', e.target.value)}
+                                                className="w-24 bg-[#0a0a0a] border border-zinc-800 rounded-sm px-2 py-2 text-center text-sm font-bold text-zinc-100 outline-none focus:border-zinc-700 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            />
                                         </td>
 
-                                        <td className="p-4 text-right font-mono font-bold text-green-400">
-                                            R$ {prices.basic}
-                                        </td>
-                                        <td className="p-4 text-right font-mono font-bold text-purple-400">
-                                            R$ {prices.premium}
+                                        <td className="px-2 py-4 text-center">
+                                            <input
+                                                type="number"
+                                                value={f.horas_impressao}
+                                                onChange={e => handleChange(f.id, 'horas_impressao', e.target.value)}
+                                                className="w-16 bg-[#0a0a0a] border border-zinc-800 rounded-sm px-2 py-2 text-center text-sm font-bold text-zinc-100 outline-none focus:border-zinc-700 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            />
                                         </td>
 
-                                        <td className="p-3 text-center">
-                                            <div className="flex gap-2 justify-center">
-                                                {canEdit && (
-                                                    <button
-                                                        onClick={() => handleSave(f)}
-                                                        disabled={savingId === f.id}
-                                                        className="p-2 bg-orange-500/10 text-orange-500 rounded hover:bg-orange-500 hover:text-white transition-all disabled:opacity-50"
-                                                        title="Salvar"
-                                                    >
-                                                        {savingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                                    </button>
-                                                )}
+                                        <td className="px-2 py-4 text-center">
+                                            <input
+                                                type="number"
+                                                value={f.horas_pintura}
+                                                onChange={e => handleChange(f.id, 'horas_pintura', e.target.value)}
+                                                className="w-16 bg-[#0a0a0a] border border-zinc-800 rounded-sm px-2 py-2 text-center text-sm font-bold text-zinc-100 outline-none focus:border-zinc-700 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            />
+                                        </td>
+
+                                        <td className="px-3 py-4 text-center">
+                                            <div className="flex gap-1 justify-center">
+                                                <div className="w-10 bg-[#0a0a0a] border border-zinc-800 rounded-sm py-1.5 flex flex-col items-center justify-center">
+                                                    <span className="text-[11px] font-black text-zinc-200">{f.altura_cm || '0'}</span>
+                                                </div>
+                                                <div className="w-10 bg-[#0a0a0a] border border-zinc-800 rounded-sm py-1.5 flex flex-col items-center justify-center">
+                                                    <span className="text-[11px] font-black text-zinc-200">{f.largura_cm || '0'}</span>
+                                                </div>
+                                                <div className="w-10 bg-[#0a0a0a] border border-zinc-800 rounded-sm py-1.5 flex flex-col items-center justify-center">
+                                                    <span className="text-[11px] font-black text-zinc-200">{f.profundidade_cm || '0'}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td className="px-3 py-4 text-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={f.tem_extras}
+                                                onChange={e => handleChange(f.id, 'tem_extras', e.target.checked)}
+                                                className="w-5 h-5 rounded-sm border-zinc-800 text-orange-500 bg-[#0a0a0a] focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                                            />
+                                        </td>
+
+                                        <td className="px-4 py-4 text-center">
+                                            <div className="text-[15px] font-black text-emerald-500 whitespace-nowrap">R$ {prices.basic}</div>
+                                        </td>
+
+                                        <td className="px-4 py-4 text-center">
+                                            <div className="text-[15px] font-black text-fuchsia-500 whitespace-nowrap">R$ {prices.premium}</div>
+                                        </td>
+
+                                        <td className="px-4 py-4 text-right">
+                                            <div className="flex gap-2 justify-end">
+                                                <button
+                                                    onClick={() => handleSave(f)}
+                                                    disabled={savingId === f.id}
+                                                    className="p-2.5 bg-orange-500/10 text-orange-500 rounded-md hover:bg-orange-500 hover:text-white transition-all disabled:opacity-50 border border-orange-500/20"
+                                                    title="Salvar"
+                                                >
+                                                    {savingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                                </button>
                                                 {hasRole('admin') && (
                                                     <button
                                                         onClick={() => handleDelete(f.id, f.nome)}
                                                         disabled={deletingId === f.id}
-                                                        className="p-2 bg-red-500/10 text-red-500 rounded hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
+                                                        className="p-2.5 bg-red-500/10 text-red-500 rounded-md hover:bg-red-500 hover:text-white transition-all disabled:opacity-50 border border-red-500/20"
                                                         title="Excluir"
                                                     >
                                                         {deletingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
@@ -400,8 +400,8 @@ export default function DataGridPage() {
                                                 )}
                                                 <button
                                                     onClick={() => handleDownloadImage(f.id, f.nome)}
-                                                    className="p-2 bg-blue-500/10 text-blue-500 rounded hover:bg-blue-500 hover:text-white transition-all"
-                                                    title="Baixar Cartão Orçamento"
+                                                    className="p-2.5 bg-blue-500/10 text-blue-500 rounded-md hover:bg-blue-500 hover:text-white transition-all border border-blue-500/20"
+                                                    title="Baixar Cartão"
                                                 >
                                                     <ImageIcon size={16} />
                                                 </button>

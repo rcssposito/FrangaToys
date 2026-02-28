@@ -32,6 +32,10 @@ export default function NewSalePage() {
     const [search, setSearch] = useState('');
     const [estoqueResina, setEstoqueResina] = useState(0);
 
+    const [vendedores, setVendedores] = useState<{ email: string; nome?: string }[]>([]);
+    const [vendedorSelecionado, setVendedorSelecionado] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
     // Cart and Form
     const [cart, setCart] = useState<CartItem[]>([]);
     const [cliente, setCliente] = useState('');
@@ -39,11 +43,21 @@ export default function NewSalePage() {
     const [canal, setCanal] = useState('Whatsapp');
     const [pinturaFreelancer, setPinturaFreelancer] = useState(false);
     const [observacao, setObservacao] = useState('');
-    const [submitting, setSubmitting] = useState(false);
+
+    const isFinanceOrAdmin = user?.roles?.some(r => r === 'admin' || r === 'finance');
 
     useEffect(() => {
         fetchSettings();
-    }, []);
+        if (isFinanceOrAdmin) {
+            fetchVendedores();
+        }
+    }, [user]);
+
+    useEffect(() => {
+        if (user?.email && !vendedorSelecionado) {
+            setVendedorSelecionado(user.email);
+        }
+    }, [user, vendedorSelecionado]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -59,6 +73,18 @@ export default function NewSalePage() {
             if (res.ok) setEstoqueResina(data.estoque_resina_kg || 0);
         } catch (err) {
             console.error('Erro ao buscar estoque:', err);
+        }
+    };
+
+    const fetchVendedores = async () => {
+        try {
+            const res = await fetch('/api/admin/users');
+            if (res.ok) {
+                const data = await res.json();
+                setVendedores(data);
+            }
+        } catch (err) {
+            console.error('Erro ao buscar vendedores:', err);
         }
     };
 
@@ -114,7 +140,9 @@ export default function NewSalePage() {
     const totalCustoProducao = cart.reduce((acc, i) => acc + ((i.custo_producao || 0) * i.quantidade), 0);
     const totalFreelancer = pinturaFreelancer ? cart.reduce((acc, i) => acc + (Math.ceil((i.horas_pintura || 0) * 50) * i.quantidade), 0) : 0;
     const OWNER_EMAIL = 'rcssposito@gmail.com';
-    const totalComissao = (user?.email && user.email.toLowerCase() !== OWNER_EMAIL.toLowerCase()) ? Math.round(totalVenda * 0.15) : 0;
+    const emailComissao = vendedorSelecionado || user?.email;
+    const nomeVendedorComissao = vendedores.find(v => v.email === emailComissao)?.nome || emailComissao;
+    const totalComissao = (emailComissao && emailComissao.toLowerCase() !== OWNER_EMAIL.toLowerCase()) ? Math.round(totalVenda * 0.15) : 0;
     const lucroEstimado = totalVenda - totalCustoProducao - totalFreelancer - totalComissao;
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -141,7 +169,7 @@ export default function NewSalePage() {
                     canal_venda: canal,
                     data_venda: dataVenda,
                     pintura_freelancer: pinturaFreelancer,
-                    vendedor: user?.email || '',
+                    vendedor: vendedorSelecionado || user?.email || '',
                     observacao
                 }),
             });
@@ -299,7 +327,7 @@ export default function NewSalePage() {
                                     )}
                                     {totalComissao > 0 && (
                                         <div className="flex justify-between items-center text-fuchsia-400/90 font-mono text-xs">
-                                            <span title="Sua comissão por essa venda">(-) Sua Comissão (15%):</span>
+                                            <span title="Comissão do vendedor">(-) Comissão {nomeVendedorComissao} (15%):</span>
                                             <span>- R$ {totalComissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     )}
@@ -313,8 +341,29 @@ export default function NewSalePage() {
 
                         {/* Dados da Venda */}
                         <form onSubmit={handleSubmit} className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4 shadow-lg">
-                            {user?.email && (
-                                <div className="flex items-center gap-2 mb-2 p-3 bg-zinc-950/50 border border-zinc-800/50 rounded-lg text-sm text-zinc-400">
+                            {isFinanceOrAdmin && vendedores.length > 0 ? (
+                                <div className="space-y-1 mb-4">
+                                    <label className="block text-[10px] text-zinc-500 uppercase font-black ml-1">Selecionar Vendedor</label>
+                                    <div className="flex items-center gap-2 p-1 bg-zinc-950/50 border border-zinc-800/50 rounded-lg">
+                                        <div className="p-2 bg-zinc-900 rounded-md text-zinc-400">
+                                            <User size={16} />
+                                        </div>
+                                        <select
+                                            value={vendedorSelecionado}
+                                            onChange={e => setVendedorSelecionado(e.target.value)}
+                                            className="flex-1 bg-transparent border-none outline-none text-sm font-semibold text-zinc-100 py-2 pr-4 cursor-pointer"
+                                        >
+                                            <option value="" disabled className="bg-zinc-900">Selecione o vendedor</option>
+                                            {vendedores.map(v => (
+                                                <option key={v.email} value={v.email} className="bg-zinc-900">
+                                                    {v.nome || v.email}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            ) : user?.email && (
+                                <div className="flex items-center gap-2 mb-4 p-3 bg-zinc-950/50 border border-zinc-800/50 rounded-lg text-sm text-zinc-400">
                                     <User size={16} className="text-zinc-500" />
                                     <span>Vendedor Atual:</span>
                                     <span className="font-semibold text-zinc-200">{user.email}</span>

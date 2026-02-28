@@ -33,6 +33,7 @@ export async function GET(
             .from('figuras')
             .select(`
                 imagem_url, 
+                tem_extras,
                 studios(nome),
                 figuras_meta(
                     altura_cm, 
@@ -99,6 +100,28 @@ export async function GET(
                                 width: 220,
                             }}
                         />
+
+                        {/* Extras Badge Top Right */}
+                        {details?.tem_extras && (
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    top: 40,
+                                    right: 40,
+                                    backgroundColor: '#EA580C',
+                                    color: 'white',
+                                    padding: '12px 24px',
+                                    borderRadius: '12px',
+                                    fontSize: 28,
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+                                    border: '2px solid rgba(255,255,255,0.2)'
+                                }}
+                            >
+                                TEM EXTRAS
+                            </div>
+                        )}
                     </div>
 
                     {/* Footer Section */}
