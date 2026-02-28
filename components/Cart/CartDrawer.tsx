@@ -19,7 +19,6 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
     const drawerRef = useRef<HTMLDivElement>(null);
     const [step, setStep] = useState<'cart' | 'checkout'>('cart');
     const [nome, setNome] = useState('');
-    const [telefone, setTelefone] = useState('');
     const [observacoes, setObservacoes] = useState('');
 
     // Salesperson selection state
@@ -65,14 +64,13 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
 
     const handleCheckout = () => {
         if (items.length === 0) return;
-        if (!nome || !telefone) {
-            toast.error('Por favor, preencha nome e WhatsApp!');
+        if (!nome) {
+            toast.error('Por favor, preencha o seu nome!');
             return;
         }
 
         let msg = `*NOVO PEDIDO DE ORÇAMENTO*\n\n`;
         msg += `*Cliente:* ${nome}\n`;
-        msg += `*WhatsApp:* ${telefone}\n`;
         if (observacoes) msg += `*Observações:* ${observacoes}\n\n`;
         msg += `------------------------\n\n`;
         msg += `*ITENS SOLICITADOS:*\n\n`;
@@ -266,33 +264,24 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                                         <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-2xl flex flex-col gap-2">
                                             <h3 className="font-bold text-[var(--foreground)] leading-tight">Quase lá!</h3>
                                             <p className="text-sm tracking-tight text-[var(--text-muted)] leading-relaxed">
-                                                Preencha seus dados para que possamos enviar o seu orçamento personalizado via WhatsApp.
+                                                Preencha seus dados para que possamos enviar o seu orçamento personalizado via WhatsApp.<br /><br />
+                                                Por ser um processo de criação manual e artesanal, o prazo mínimo de entrega é de 30 dias após pagamento.
+                                            </p>
+                                            <p className="text-[10px] tracking-tight text-[var(--text-muted)] italic opacity-80 mt-1">
+                                                *As imagens são pinturas digitais das estátuas e usadas apenas para referências, podendo haver diferenças nos tons e acabamentos finais.
                                             </p>
                                         </div>
 
                                         <div className="space-y-4">
                                             <div className="space-y-1.5 focus-within:text-orange-500 transition-colors">
                                                 <label className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 ml-1">
-                                                    <User size={14} /> Nome Completo *
+                                                    <User size={14} /> Nome *
                                                 </label>
                                                 <input
                                                     type="text"
                                                     value={nome}
                                                     onChange={(e) => setNome(e.target.value)}
                                                     placeholder="Como gosta de ser chamado"
-                                                    className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] text-[var(--foreground)] rounded-xl px-4 py-3 outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-medium placeholder-[var(--text-muted)]/50"
-                                                />
-                                            </div>
-
-                                            <div className="space-y-1.5 focus-within:text-orange-500 transition-colors">
-                                                <label className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 ml-1">
-                                                    <Phone size={14} /> WhatsApp *
-                                                </label>
-                                                <input
-                                                    type="tel"
-                                                    value={telefone}
-                                                    onChange={(e) => setTelefone(e.target.value)}
-                                                    placeholder="(11) 90000-0000"
                                                     className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] text-[var(--foreground)] rounded-xl px-4 py-3 outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-medium placeholder-[var(--text-muted)]/50"
                                                 />
                                             </div>
@@ -352,7 +341,7 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                                 ) : (
                                     <button
                                         onClick={handleCheckout}
-                                        disabled={!nome || !telefone}
+                                        disabled={!nome}
                                         className="w-full bg-[#25D366] hover:bg-[#128C7E] disabled:bg-[var(--card-border)] disabled:text-[var(--text-muted)] text-white font-black uppercase tracking-wider py-4 rounded-xl flex items-center justify-center gap-3 transition-all shadow-lg shadow-[#25D366]/20 active:scale-95 disabled:active:scale-100 disabled:shadow-none"
                                     >
                                         <Send size={20} strokeWidth={2.5} />

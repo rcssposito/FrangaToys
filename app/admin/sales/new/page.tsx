@@ -180,7 +180,39 @@ export default function NewSalePage() {
             }
 
             toast.success('Venda registrada com sucesso!');
-            router.push('/admin/sales');
+
+            // Gerar Link do WhatsApp para notificar a nova venda
+            const numeroDestino = '5511959757551'; // O número da loja/dono
+            let msg = `*🚀 NOVA VENDA REGISTRADA E ENVIADA PARA A FILA (KANBAN) 🚀*\n\n`;
+            msg += `*Vendedor:* ${vendedorSelecionado || user?.email}\n`;
+            msg += `*Cliente:* ${cliente}\n`;
+            msg += `*Data:* ${dataVenda.split('-').reverse().join('/')}\n`;
+            msg += `*Canal:* ${canal}\n`;
+            msg += `*Pintura:* ${pinturaFreelancer ? 'Terceirizada' : 'Interna'}\n`;
+            if (observacao) msg += `*Obs:* ${observacao}\n`;
+            msg += `\n*📦 ITENS VENDIDOS:*\n`;
+
+            cart.forEach(item => {
+                msg += `👉 ${item.quantidade}x ${item.Figura} - R$ ${item.valor_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+            });
+
+            msg += `\n*💰 RESUMO FINANCEIRO:*\n`;
+            msg += `Bruto: R$ ${totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+            msg += `Custo Estimado: R$ ${totalCustoProducao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+            if (totalFreelancer > 0) msg += `Pintor: R$ ${totalFreelancer.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+            if (totalComissao > 0) msg += `Comissão: R$ ${totalComissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+            msg += `\n*✅ LUCRO LÍQUIDO:* R$ ${lucroEstimado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+
+            const waLink = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(msg)}`;
+
+            // Tenta abrir numa nova aba
+            window.open(waLink, '_blank');
+
+            // Depois de um momento, redireciona o painel para a lista de Kanban/Vendas
+            setTimeout(() => {
+                router.push('/admin/kanban');
+            }, 1000);
+
         } catch (err: any) {
             toast.error(err.message || 'Erro ao salvar venda');
         } finally {
