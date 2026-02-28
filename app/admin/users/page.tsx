@@ -10,6 +10,7 @@ interface User {
     id: number;
     email: string;
     nome?: string;
+    telefone?: string;
     roles: string[];
     created_at: string;
 }
@@ -29,8 +30,8 @@ export default function UsersPage() {
 
     // Form State
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
     const [nome, setNome] = useState('');
+    const [telefone, setTelefone] = useState('');
     const [selectedRoles, setSelectedRoles] = useState<string[]>(['sales']);
     const [creating, setCreating] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -56,7 +57,7 @@ export default function UsersPage() {
         setCreating(true);
         try {
             const method = isEditing ? 'PUT' : 'POST';
-            const body = { email, password, roles: selectedRoles, nome };
+            const body = { email, roles: selectedRoles, nome, telefone };
 
             const res = await fetch('/api/admin/users', {
                 method,
@@ -71,8 +72,8 @@ export default function UsersPage() {
 
             // Reset form
             setEmail('');
-            setPassword('');
             setNome('');
+            setTelefone('');
             setSelectedRoles(['sales']);
             setIsEditing(false);
             fetchUsers();
@@ -86,8 +87,8 @@ export default function UsersPage() {
     const handleEdit = (user: User) => {
         setEmail(user.email);
         setNome(user.nome || '');
+        setTelefone(user.telefone || '');
         setSelectedRoles(user.roles || []);
-        setPassword(''); // Don't fill password
         setIsEditing(true);
         // Scroll to form
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -96,8 +97,8 @@ export default function UsersPage() {
     const handleCancelEdit = () => {
         setIsEditing(false);
         setEmail('');
-        setPassword('');
         setNome('');
+        setTelefone('');
         setSelectedRoles(['sales']);
     };
 
@@ -156,54 +157,64 @@ export default function UsersPage() {
                             <table className="w-full text-left">
                                 <thead className="bg-[var(--background)]/30">
                                     <tr className="text-[var(--text-muted)] text-[10px] uppercase font-black tracking-widest border-b border-[var(--card-border)]">
-                                        <th className="p-5 pl-8">Vendedor</th>
-                                        <th className="p-5">Email</th>
+                                        <th className="p-5 pl-8">Usuário</th>
+                                        <th className="p-5">WhatsApp</th>
                                         <th className="p-5">Funções</th>
-                                        <th className="p-5 text-right">Cadastrado</th>
                                         <th className="p-5 w-[100px]"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[var(--card-border)]">
                                     {users.map(user => (
-                                        <tr key={user.id} className="hover:bg-orange-500/[0.02] transition-colors group">
+                                        <tr key={user.id} className="hover:bg-[var(--card-bg)] transition-colors group">
                                             <td className="p-5 pl-8">
-                                                <div className="flex flex-col">
-                                                    <span className="font-black text-[var(--foreground)] text-lg tracking-tight">{user.nome || '--'}</span>
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-black text-lg shadow-sm">
+                                                        {(user.nome || user.email).charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-black text-[var(--foreground)] text-base tracking-tight">{user.nome || '--'}</span>
+                                                        <span className="text-xs text-[var(--text-muted)] font-medium font-mono">{user.email}</span>
+                                                    </div>
                                                 </div>
                                             </td>
-                                            <td className="p-5 text-sm text-[var(--text-muted)] font-medium font-mono">
-                                                {user.email}
+                                            <td className="p-5">
+                                                {user.telefone ? (
+                                                    <span className="text-xs font-mono bg-orange-500/10 text-orange-500 py-1.5 px-3 rounded-md font-bold tracking-tight border border-orange-500/20 inline-flex items-center gap-2">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                                                        {user.telefone}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs text-[var(--text-muted)] italic opacity-50">Não informado</span>
+                                                )}
                                             </td>
                                             <td className="p-5">
-                                                <div className="flex gap-2 flex-wrap">
+                                                <div className="flex gap-1.5 flex-wrap">
                                                     {user.roles?.map(role => {
                                                         const roleLabel = AVAILABLE_ROLES.find(r => r.id === role)?.label || role;
+                                                        const isAdmin = role === 'admin';
                                                         return (
-                                                            <span key={role} className="text-[10px] px-2.5 py-1 rounded-md bg-[var(--input-bg)] text-[var(--foreground)] border border-[var(--card-border)] font-black shadow-sm uppercase tracking-wider">
+                                                            <span key={role} className={`text-[9px] px-2 py-1 rounded bg-[var(--input-bg)] ${isAdmin ? 'text-orange-500 border-orange-500/30' : 'text-[var(--text-muted)] border-[var(--card-border)]'} border font-black shadow-sm uppercase tracking-widest`}>
                                                                 {roleLabel}
                                                             </span>
                                                         );
                                                     })}
                                                 </div>
                                             </td>
-                                            <td className="p-5 text-[var(--text-muted)] text-xs text-right font-bold">
-                                                {new Date(user.created_at).toLocaleDateString()}
-                                            </td>
                                             <td className="p-5">
-                                                <div className="flex gap-3 justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button
                                                         onClick={() => handleEdit(user)}
-                                                        className="p-2.5 text-[var(--text-muted)] hover:text-orange-500 hover:bg-orange-500/10 border border-transparent hover:border-orange-500/20 rounded-xl transition-all shadow-sm"
+                                                        className="p-2 text-[var(--text-muted)] hover:text-orange-500 bg-[var(--input-bg)] hover:bg-orange-500/10 border border-[var(--card-border)] hover:border-orange-500/20 rounded-lg transition-all shadow-sm"
                                                         title="Editar Usuário"
                                                     >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(user.id)}
-                                                        className="p-2.5 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 rounded-xl transition-all shadow-sm"
+                                                        className="p-2 text-[var(--text-muted)] hover:text-red-500 bg-[var(--input-bg)] hover:bg-red-500/10 border border-[var(--card-border)] hover:border-red-500/20 rounded-lg transition-all shadow-sm"
                                                         title="Excluir Usuário"
                                                     >
-                                                        <Trash2 size={18} strokeWidth={2.5} />
+                                                        <Trash2 size={16} strokeWidth={2.5} />
                                                     </button>
                                                 </div>
                                             </td>
@@ -246,17 +257,15 @@ export default function UsersPage() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] block ml-1">
-                                {isEditing ? 'Nova Senha (Opcional)' : 'Senha'}
-                            </label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] block ml-1">Telefone / WhatsApp</label>
                             <input
-                                type="password"
-                                value={password}
-                                onChange={e => setPassword(e.target.value)}
-                                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold shadow-sm transition-all focus:ring-4 focus:ring-orange-500/5 text-[var(--foreground)]"
-                                placeholder={isEditing ? "Deixe em branco para manter" : "******"}
-                                required={!isEditing}
+                                type="tel"
+                                value={telefone}
+                                onChange={e => setTelefone(e.target.value)}
+                                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold shadow-sm transition-all focus:ring-4 focus:ring-orange-500/5 text-[var(--foreground)] font-mono"
+                                placeholder="Ex: 5511999999999"
                             />
+                            <p className="text-[9px] text-[var(--text-muted)] ml-1 font-medium">Usado para rotear os pedidos do carrinho. Inclua DDI (55) e DDD. Somente números.</p>
                         </div>
 
                         <div className="space-y-4">

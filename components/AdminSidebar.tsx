@@ -77,6 +77,12 @@ export default function AdminSidebar() {
             roles: ['admin']
         },
         {
+            name: 'Vendedores',
+            href: '/admin/salespersons',
+            icon: Users,
+            roles: ['admin']
+        },
+        {
             name: 'Configurações',
             href: '/admin/settings',
             icon: Settings,

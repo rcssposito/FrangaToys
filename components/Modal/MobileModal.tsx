@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { FiguraDTO } from '@/lib/dto';
 import { X, ChevronLeft, ChevronRight, Share } from 'lucide-react';
 import Image from 'next/image';
@@ -22,18 +22,22 @@ interface MobileModalProps {
 export const MobileModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIndex, total }: MobileModalProps) => {
     const { addToCart, removeFromCart, isInCart } = useCart();
 
+    const [quantity, setQuantity] = useState(1);
+    const [finish, setFinish] = useState<'basic' | 'premium'>('basic');
+
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
+            setQuantity(1);
+            setFinish('basic');
         }
         return () => { document.body.style.overflow = 'unset'; };
-    }, [isOpen]);
+    }, [isOpen, figure?.id]);
 
     if (!isOpen || !figure) return null;
 
-    const buildBudgetLink = () => {
-        const msg = `Olá! Quero orçamento da figura: ${figure.nome}${figure.categoria ? ` (${figure.categoria})` : ''}.`;
-        return `https://wa.me/5511959737551?text=${encodeURIComponent(msg)}`;
+    const handleAddToCart = () => {
+        addToCart({ ...figure, quantity, finish } as any);
     };
 
     return (
@@ -41,7 +45,7 @@ export const MobileModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIn
 
             {/* 1. Header Navigation */}
             <div className="flex items-center justify-between p-4 z-20 bg-gradient-to-b from-[var(--background)]/80 to-transparent">
-                <button onClick={onClose} className="p-2 bg-[var(--card-bg)]/40 rounded-full text-[var(--foreground)] backdrop-blur border border-[var(--card-border)] shadow-lg">
+                <button onClick={onClose} className="p-2 bg-[var(--card-bg)]/40 rounded-full text-[var(--foreground)] backdrop-blur border border-[var(--card-border)] shadow-lg active:scale-95 transition-transform">
                     <X size={20} />
                 </button>
                 <div className="px-3 py-1 rounded-full bg-[var(--card-bg)]/40 text-[10px] font-bold text-[var(--foreground)] backdrop-blur border border-[var(--card-border)] shadow-sm">
@@ -74,34 +78,64 @@ export const MobileModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIn
             </div>
 
             {/* 3. Bottom Sheet Details */}
-            <div className="bg-gradient-to-t from-[var(--background)] via-[var(--background)] to-transparent pt-10 pb-6 px-4 z-20 border-t border-[var(--card-border)]/10">
-                <h2 className="text-xl font-bold text-[var(--foreground)] mb-2 leading-tight tracking-tight">{figure.nome}</h2>
+            <div className="bg-[var(--card-bg)] border-t border-[var(--card-border)] rounded-t-3xl pt-6 pb-6 px-5 z-20 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+                <h2 className="text-xl font-black text-[var(--foreground)] mb-3 leading-tight tracking-tight">{figure.nome}</h2>
 
-                <div className="grid grid-cols-2 gap-y-1 text-xs text-[var(--text-muted)] font-medium mb-6">
-                    <div className="flex justify-between border-b border-[var(--card-border)]/50 pr-4 py-1">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-[var(--text-muted)] font-medium mb-5">
+                    <div className="flex justify-between border-b border-[var(--card-border)]/50 pb-1">
                         <span>Altura</span> <span className="text-[var(--foreground)] font-bold">{figure.altura_cm || '-'} cm</span>
                     </div>
-                    <div className="flex justify-between border-b border-[var(--card-border)]/50 pr-4 py-1">
+                    <div className="flex justify-between border-b border-[var(--card-border)]/50 pb-1">
                         <span>Largura</span> <span className="text-[var(--foreground)] font-bold">{figure.largura_cm || '-'} cm</span>
                     </div>
-                    <div className="flex justify-between border-b border-[var(--card-border)]/50 pr-4 py-1">
+                    <div className="flex justify-between border-b border-[var(--card-border)]/50 pb-1">
                         <span>Profund.</span> <span className="text-[var(--foreground)] font-bold">{figure.profundidade_cm || '-'} cm</span>
                     </div>
-                    <div className="flex justify-between border-b border-[var(--card-border)]/50 pr-4 py-1">
+                    <div className="flex justify-between border-b border-[var(--card-border)]/50 pb-1">
                         <span>Estúdio</span> <span className="text-orange-500 font-bold">{figure.studio || '-'}</span>
                     </div>
                 </div>
 
+                {!isInCart(figure.id) && (
+                    <div className="flex gap-3 mb-5">
+                        <div className="flex items-center bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl shadow-sm overflow-hidden flex-1 h-12">
+                            <button
+                                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                className="w-12 h-full flex items-center justify-center text-[var(--text-muted)] hover:text-orange-500 hover:bg-orange-500/10 transition-colors active:bg-orange-500/20 font-black text-lg"
+                            >
+                                -
+                            </button>
+                            <span className="flex-1 flex items-center justify-center text-sm font-black text-[var(--foreground)] border-x border-[var(--card-border)] shadow-inner">
+                                {quantity}
+                            </span>
+                            <button
+                                onClick={() => setQuantity(quantity + 1)}
+                                className="w-12 h-full flex items-center justify-center text-[var(--text-muted)] hover:text-orange-500 hover:bg-orange-500/10 transition-colors active:bg-orange-500/20 font-black text-lg"
+                            >
+                                +
+                            </button>
+                        </div>
+                        <select
+                            value={finish}
+                            onChange={(e) => setFinish(e.target.value as 'basic' | 'premium')}
+                            className="flex-[1.5] text-sm font-bold bg-[var(--input-bg)] border border-[var(--card-border)] text-[var(--foreground)] rounded-xl px-3 outline-none focus:border-orange-500/50 shadow-sm cursor-pointer hover:border-orange-500/30 transition-colors h-12"
+                        >
+                            <option value="basic">Acabamento Básico</option>
+                            <option value="premium">Acabamento Premium</option>
+                        </select>
+                    </div>
+                )}
+
                 <button
                     className={clsx(
-                        "w-full text-white font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg",
+                        "w-full text-white font-black uppercase tracking-wider text-sm py-4 rounded-xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg",
                         isInCart(figure.id)
-                            ? "bg-green-600 hover:bg-green-700 shadow-green-500/20"
-                            : "bg-orange-600 hover:bg-orange-700 shadow-orange-500/20"
+                            ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
+                            : "bg-orange-500 hover:bg-orange-600 shadow-orange-500/20"
                     )}
-                    onClick={() => isInCart(figure.id) ? removeFromCart(figure.id) : addToCart(figure)}
+                    onClick={() => isInCart(figure.id) ? removeFromCart(figure.id) : handleAddToCart()}
                 >
-                    <Share size={18} />
+                    <Share size={20} strokeWidth={2.5} />
                     {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar ao Orçamento"}
                 </button>
             </div>

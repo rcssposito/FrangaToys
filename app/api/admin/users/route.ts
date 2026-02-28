@@ -37,7 +37,7 @@ export async function GET() {
 
         const { data: users, error } = await supabaseAdmin
             .from('admin_users')
-            .select('id, email, created_at, roles, nome')
+            .select('id, email, created_at, roles, nome, telefone')
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -56,32 +56,37 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
-        const { email, password, roles, nome } = await req.json();
+        const { email, roles, nome, telefone } = await req.json();
 
-        if (!email || !password) {
-            return NextResponse.json({ error: 'Email e senha obrigatórios' }, { status: 400 });
+        if (!email) {
+            return NextResponse.json({ error: 'Email obrigatório' }, { status: 400 });
         }
 
+        let authUser = null;
+
+        // Auto-generate a random secure password for Auth, since users will log in via Google
+        const generatedPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10) + '!A1';
+
         // 1. Create User in Supabase Auth
-        const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        const { data: auth, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email,
-            password,
+            password: generatedPassword,
             email_confirm: true
         });
 
         if (authError) {
-            // Se o usuário já existe no Auth, ignoramos o erro e prosseguimos para adicionar ao DB (admin_users)
             if (authError.message?.includes('already been registered')) {
                 console.log('User already exists in Auth, adding to whitelist only.');
             } else {
                 console.error('Auth Create Error', authError);
                 return NextResponse.json({ error: authError.message }, { status: 500 });
             }
+        } else {
+            authUser = auth;
         }
 
         // 2. Create User in DB (Legacy/Profile)
-        // Hash password just for backup/legacy compatibility or remove it
-        const hash = await bcrypt.hash(password, 10);
+        const hash = await bcrypt.hash(generatedPassword, 10);
 
         const { data, error } = await supabaseAdmin
             .from('admin_users')
@@ -89,14 +94,15 @@ export async function POST(req: Request) {
                 email,
                 password_hash: hash,
                 roles: roles || ['admin'],
-                nome: nome || email.split('@')[0]
+                nome: nome || email.split('@')[0],
+                telefone: telefone || null
             }])
             .select()
             .single();
 
         if (error) {
             // Rollback Auth User if DB fails?
-            if (authUser.user) await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+            if (authUser?.user) await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
             throw error;
         }
 
@@ -160,7 +166,7 @@ export async function PUT(req: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
-        const { email, password, roles, nome } = await req.json();
+        const { email, roles, nome, telefone } = await req.json();
 
         if (!email) {
             return NextResponse.json({ error: 'Email obrigatório' }, { status: 400 });
@@ -169,32 +175,10 @@ export async function PUT(req: Request) {
         // 1. Update Roles in DB (admin_users)
         const { error: dbError } = await supabaseAdmin
             .from('admin_users')
-            .update({ roles, nome })
+            .update({ roles, nome, telefone })
             .eq('email', email);
 
         if (dbError) throw dbError;
-
-        // 2. Update Password in Auth (if provided)
-        if (password && password.length > 0) {
-            // Need to find User ID by Email first
-            // Note: listUsers is efficient enough for small user base.
-            const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-
-            if (listError) throw listError;
-
-            const userToUpdate = users.find(u => u.email === email);
-
-            if (userToUpdate) {
-                const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-                    userToUpdate.id,
-                    { password }
-                );
-                if (updateError) throw updateError;
-            } else {
-                console.warn(`User ${email} not found in Auth to update password.`);
-                // We don't fail, maybe they are just in DB whitelist but not Auth yet.
-            }
-        }
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
