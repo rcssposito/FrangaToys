@@ -22,6 +22,9 @@ interface CatalogItem {
 interface CartItem extends CatalogItem {
     quantidade: number;
     valor_final: number;
+    altura_cm?: number;
+    largura_cm?: number;
+    profundidade_cm?: number;
 }
 
 export default function NewSalePage() {
@@ -32,7 +35,7 @@ export default function NewSalePage() {
     const [search, setSearch] = useState('');
     const [estoqueResina, setEstoqueResina] = useState(0);
 
-    const [vendedores, setVendedores] = useState<{ email: string; nome?: string }[]>([]);
+    const [vendedores, setVendedores] = useState<{ email: string; nome?: string; roles?: string[] }[]>([]);
     const [vendedorSelecionado, setVendedorSelecionado] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
@@ -42,7 +45,15 @@ export default function NewSalePage() {
     const [dataVenda, setDataVenda] = useState(new Date().toISOString().split('T')[0]);
     const [canal, setCanal] = useState('Whatsapp');
     const [pinturaFreelancer, setPinturaFreelancer] = useState(false);
+    const [pintorNome, setPintorNome] = useState('');
     const [observacao, setObservacao] = useState('');
+
+    // Entrega/Frete
+    const [metodoEntrega, setMetodoEntrega] = useState<'retirada' | 'envio'>('retirada');
+    const [valorFrete, setValorFrete] = useState<string>('');
+    const [cepDestino, setCepDestino] = useState('');
+    const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+    const [shippingQuotes, setShippingQuotes] = useState<any[]>([]);
 
     const [showPaymentOptions, setShowPaymentOptions] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit'>('pix');
@@ -131,11 +142,13 @@ export default function NewSalePage() {
             setCart([...cart, { ...item, quantidade: 1, valor_final: Number(((item['Básico (R$)'] || 0) * 1.10).toFixed(2)) }]);
         }
         setSearch('');
+        setShippingQuotes([]); // Limpa as as cotações se o peso mudou
         toast.success(`${item.Figura} adicionado ao carrinho`);
     };
 
     const removeFromCart = (id: number) => {
         setCart(cart.filter(i => i.id !== id));
+        setShippingQuotes([]);
     };
 
     const updateItemQuantity = (id: number, qty: number) => {
@@ -147,6 +160,7 @@ export default function NewSalePage() {
             }
             return i;
         }));
+        setShippingQuotes([]);
     };
 
     const updateItemPrice = (id: number, price: number) => {
@@ -155,7 +169,9 @@ export default function NewSalePage() {
 
     const totalVendaCartao = cart.reduce((acc, i) => acc + (i.valor_final || 0), 0);
     const totalVendaBase = totalVendaCartao / 1.10;
-    const totalVenda = paymentMethod === 'credit' ? totalVendaCartao : totalVendaBase;
+    const freteSomar = metodoEntrega === 'envio' ? (Number(valorFrete.replace(',', '.')) || 0) : 0;
+    const totalVenda = (paymentMethod === 'credit' ? totalVendaCartao : totalVendaBase) + freteSomar;
+
     const totalResinaNecessaria = cart.reduce((acc, i) => acc + (i.resina_kg * i.quantidade), 0);
     const temEstoqueSuficiente = totalResinaNecessaria <= estoqueResina;
 
@@ -166,7 +182,49 @@ export default function NewSalePage() {
     const emailComissao = vendedorSelecionado || user?.email;
     const nomeVendedorComissao = vendedores.find(v => v.email === emailComissao)?.nome || emailComissao;
     const totalComissao = (emailComissao && emailComissao.toLowerCase() !== OWNER_EMAIL.toLowerCase()) ? Math.round(totalVendaBase * 0.15) : 0;
-    const lucroEstimado = totalVenda - totalCustoProducao - totalFreelancer - totalComissao;
+    const lucroEstimado = (paymentMethod === 'credit' ? totalVendaCartao : totalVendaBase) - totalCustoProducao - totalFreelancer - totalComissao;
+
+    const fetchShippingQuotes = async () => {
+        if (!cepDestino || cepDestino.replace(/\D/g, '').length !== 8) {
+            toast.error('Informe um CEP válido');
+            return;
+        }
+        if (cart.length === 0) {
+            toast.error('Carrinho vazio');
+            return;
+        }
+
+        setIsCalculatingShipping(true);
+        try {
+            // Volume Simples (Somando cubagem simulada)
+            const nVlPeso = cart.reduce((acc, i) => acc + ((i.resina_kg || 0.1) * i.quantidade), 0);
+            const nVlComprimento = Math.max(...cart.map(i => i.profundidade_cm || 15));
+            const nVlAltura = cart.reduce((acc, i) => acc + ((i.altura_cm || 2) * i.quantidade), 0);
+            const nVlLargura = Math.max(...cart.map(i => i.largura_cm || 10));
+
+            const res = await fetch('/api/admin/shipping/quote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sCepDestino: cepDestino,
+                    nVlPeso,
+                    nVlComprimento,
+                    nVlAltura,
+                    nVlLargura
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Falha ao cotar');
+
+            setShippingQuotes(data);
+            toast.success('Cotações recebidas!');
+        } catch (error: any) {
+            toast.error(error.message);
+        } finally {
+            setIsCalculatingShipping(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -216,6 +274,9 @@ export default function NewSalePage() {
                     canal_venda: canal,
                     data_venda: dataVenda,
                     pintura_freelancer: pinturaFreelancer,
+                    pintor_nome: pintorNome || null,
+                    metodo_entrega: metodoEntrega,
+                    valor_frete: freteSomar,
                     vendedor: vendedorSelecionado || user?.email || '',
                     observacao,
                     link_pagamento: mpLink
@@ -239,7 +300,8 @@ export default function NewSalePage() {
             msg += `*Cliente:* ${cliente}\n`;
             msg += `*Data:* ${dataVenda.split('-').reverse().join('/')}\n`;
             msg += `*Canal:* ${canal}\n`;
-            msg += `*Pintura:* ${pinturaFreelancer ? 'Terceirizada' : 'Interna'}\n`;
+            msg += `*Pintura:* ${pinturaFreelancer && pintorNome ? `Terceirizada (${pintorNome.split(' ')[0]})` : 'Interna'}\n`;
+            msg += `*Entrega:* ${metodoEntrega === 'retirada' ? 'Retirada na Loja/Ateliê' : `Envio (Frete: R$ ${freteSomar.toFixed(2)})`}\n`;
             if (observacao) msg += `*Obs:* ${observacao}\n`;
             msg += `\n*📦 ITENS VENDIDOS:*\n`;
 
@@ -496,9 +558,15 @@ export default function NewSalePage() {
                                             <span>Valor Bruto (Subtotal):</span>
                                             {paymentMethod === 'pix' && <span className="text-[10px] text-emerald-400">- 10% de Desconto (PIX)</span>}
                                         </div>
-                                        <span>R$ {totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                        <span>R$ {(paymentMethod === 'credit' ? totalVendaCartao : totalVendaBase).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-red-400/90 font-mono text-xs">
+                                    {metodoEntrega === 'envio' && freteSomar > 0 && (
+                                        <div className="flex justify-between items-center text-cyan-400 font-medium text-xs border-b border-zinc-800/50 pb-2 mb-1">
+                                            <span title="Custo de Envio (Correios/Transportadora)">(+) Valor do Frete (Envio):</span>
+                                            <span>+ R$ {freteSomar.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center text-red-400/90 font-mono text-xs pt-1">
                                         <span title="Resina gasta + Horas rodando a impressora">(-) Custo Produção (Material):</span>
                                         <span>- R$ {totalCustoProducao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                     </div>
@@ -545,12 +613,14 @@ export default function NewSalePage() {
                                         </select>
                                     </div>
                                 </div>
-                            ) : user?.email && (
-                                <div className="flex items-center gap-2 mb-4 p-3 bg-zinc-950/50 border border-zinc-800/50 rounded-lg text-sm text-zinc-400">
-                                    <User size={16} className="text-zinc-500" />
-                                    <span>Vendedor Atual:</span>
-                                    <span className="font-semibold text-zinc-200">{user.email}</span>
-                                </div>
+                            ) : (
+                                user?.email && (
+                                    <div className="flex items-center gap-2 mb-4 p-3 bg-zinc-950/50 border border-zinc-800/50 rounded-lg text-sm text-zinc-400">
+                                        <User size={16} className="text-zinc-500" />
+                                        <span>Vendedor Atual:</span>
+                                        <span className="font-semibold text-zinc-200">{user.email}</span>
+                                    </div>
+                                )
                             )}
                             <div className="grid md:grid-cols-2 gap-4">
                                 <div>
@@ -589,17 +659,111 @@ export default function NewSalePage() {
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 p-3 rounded-lg">
-                                <input
-                                    type="checkbox"
-                                    id="freelancer"
-                                    checked={pinturaFreelancer}
-                                    onChange={(e) => setPinturaFreelancer(e.target.checked)}
-                                    className="w-4 h-4 rounded border-zinc-700 text-orange-500 focus:ring-orange-500 bg-zinc-900"
-                                />
-                                <label htmlFor="freelancer" className="text-sm font-medium text-zinc-300 cursor-pointer select-none flex-1">
-                                    Pintura será feita por Freelancer? (-R$ 50/h)
+                            <div className="flex flex-col gap-1 bg-zinc-950 border border-zinc-800 p-3 rounded-lg">
+                                <label className="text-xs font-bold text-zinc-500 uppercase flex items-center gap-2">
+                                    Mão de Obra de Pintura (Opcional)
                                 </label>
+                                <select
+                                    className="w-full bg-transparent outline-none text-sm font-semibold text-zinc-200 py-1 cursor-pointer"
+                                    value={pintorNome}
+                                    onChange={(e) => {
+                                        const valor = e.target.value;
+                                        setPintorNome(valor);
+                                        setPinturaFreelancer(valor !== '');
+                                    }}
+                                >
+                                    <option value="" className="bg-zinc-900 text-zinc-400">Pintura Interna (Própria da Loja)</option>
+                                    <optgroup label="Freelancers Disponíveis" className="bg-zinc-900">
+                                        {vendedores.filter(v => v.roles?.includes('painter')).map(pintor => (
+                                            <option key={pintor.email} value={pintor.nome || pintor.email} className="text-orange-400 font-bold">
+                                                {pintor.nome || pintor.email} (-R$ 50/h)
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                </select>
+                            </div>
+
+                            <div className="flex flex-col gap-3 bg-zinc-950 border border-zinc-800 p-3 rounded-lg mt-2">
+                                <label className="text-xs font-bold text-zinc-500 uppercase flex items-center gap-2">
+                                    MÉTODO DE ENTREGA
+                                </label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setMetodoEntrega('retirada'); setValorFrete(''); }}
+                                        className={`py-2 px-3 items-center justify-center text-xs font-bold rounded-lg transition-all border ${metodoEntrega === 'retirada' ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
+                                    >
+                                        📍 Retirada na Loja
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setMetodoEntrega('envio')}
+                                        className={`py-2 px-3 items-center justify-center text-xs font-bold rounded-lg transition-all border ${metodoEntrega === 'envio' ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
+                                    >
+                                        📦 Envio (Correios)
+                                    </button>
+                                </div>
+                                <div className="mt-2 animate-in fade-in slide-in-from-top-2 border-t border-zinc-900 pt-3">
+                                    <div className="flex items-end gap-2 mb-3">
+                                        <div className="flex-1">
+                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 ml-1">CEP de Destino:</label>
+                                            <input
+                                                type="text"
+                                                value={cepDestino}
+                                                onChange={(e) => setCepDestino(e.target.value.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2').slice(0, 9))}
+                                                placeholder="00000-000"
+                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 outline-none focus:border-cyan-500 text-sm transition-all"
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={fetchShippingQuotes}
+                                            disabled={isCalculatingShipping || cepDestino.length < 8}
+                                            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 p-2.5 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+                                        >
+                                            {isCalculatingShipping ? <Loader2 size={18} className="animate-spin" /> : 'Cotar'}
+                                        </button>
+                                    </div>
+
+                                    {shippingQuotes.length > 0 && (
+                                        <div className="grid grid-cols-2 gap-2 mb-3">
+                                            {shippingQuotes.map((quote: any, idx: number) => {
+                                                const isSedex = quote.Codigo === '04014';
+                                                const isPac = quote.Codigo === '04510';
+                                                const displayName = quote.Nome || (isSedex ? 'SEDEX' : isPac ? 'PAC' : `Serviço ${quote.Codigo}`);
+                                                const displayCompany = quote.Empresa || 'Correios';
+                                                const color = isSedex ? 'text-amber-500' : isPac ? 'text-blue-500' : 'text-cyan-500';
+
+                                                return (
+                                                    <button
+                                                        key={idx}
+                                                        type="button"
+                                                        onClick={() => setValorFrete(String(quote.Valor).replace('.', ','))}
+                                                        className="flex flex-col items-center justify-center p-2 rounded bg-zinc-900 border border-zinc-800 hover:border-cyan-500 transition-colors gap-1 text-center"
+                                                    >
+                                                        <span className={`text-[9px] uppercase font-black tracking-wide ${color}`}>
+                                                            {displayCompany} {displayName}
+                                                        </span>
+                                                        <span className="text-[10px] text-zinc-500 font-medium">({quote.PrazoEntrega} dias)</span>
+                                                        <span className="text-sm font-bold text-zinc-200">R$ {quote.Valor}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    <label className="block text-[10px] text-cyan-500 uppercase font-black mb-1.5 ml-1">Valor Final do Frete (R$):</label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-600 font-black text-sm">R$</span>
+                                        <input
+                                            type="text"
+                                            value={valorFrete}
+                                            onChange={(e) => setValorFrete(e.target.value.replace(/[^0-9,.]/g, ''))}
+                                            placeholder="0,00"
+                                            className="w-full bg-zinc-950/50 border border-cyan-500/30 rounded-lg p-2.5 pl-9 outline-none focus:border-cyan-500 text-sm font-bold transition-all text-cyan-400"
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             <div>
@@ -647,7 +811,6 @@ export default function NewSalePage() {
                                                 Cartão (3x S/ Juros)
                                             </button>
                                         </div>
-
                                         {paymentMethod === 'pix' && (
                                             <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex flex-col justify-center items-center gap-2 text-center">
                                                 <p className="text-sm font-semibold text-emerald-400">Gere o cartão de cobrança</p>
@@ -674,7 +837,6 @@ export default function NewSalePage() {
                             </div>
                         </form>
                     </div>
-
                 </div>
             </div>
         </div>

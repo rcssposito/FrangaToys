@@ -29,7 +29,10 @@ export async function GET(req: Request) {
                     figuras_meta (
                         resina_kg,
                         horas_impressao,
-                        horas_pintura
+                        horas_pintura,
+                        altura_cm,
+                        largura_cm,
+                        profundidade_cm
                     )
                 `)
                 .or(`nome.ilike.%${search}%,codigo.ilike.%${search}%`)
@@ -59,6 +62,9 @@ export async function GET(req: Request) {
                     studio: item.studios?.nome || 'N/A',
                     resina_kg: meta.resina_kg || 0, // Adicionado para cálculo de estoque no PDV
                     horas_pintura: meta.horas_pintura || 0,
+                    altura_cm: meta.altura_cm || 0,
+                    largura_cm: meta.largura_cm || 0,
+                    profundidade_cm: meta.profundidade_cm || 0,
                     custo_producao: custoProducao,
                     "Básico (R$)": roundTo5(custoBase * settings.margem_basica),
                     "Premium (R$)": roundTo5(custoBase * settings.margem_premium)
@@ -78,7 +84,10 @@ export async function GET(req: Request) {
                 figuras_meta (
                     resina_kg,
                     horas_impressao,
-                    horas_pintura
+                    horas_pintura,
+                    altura_cm,
+                    largura_cm,
+                    profundidade_cm
                 )
             `)
             .order('nome', { ascending: true })
@@ -107,6 +116,9 @@ export async function GET(req: Request) {
                 studio: item.studios?.nome || 'N/A',
                 resina_kg: meta.resina_kg || 0,
                 horas_pintura: meta.horas_pintura || 0,
+                altura_cm: meta.altura_cm || 0,
+                largura_cm: meta.largura_cm || 0,
+                profundidade_cm: meta.profundidade_cm || 0,
                 custo_producao: custoProducao,
                 "Básico (R$)": roundTo5(custoBase * settings.margem_basica),
                 "Premium (R$)": roundTo5(custoBase * settings.margem_premium)

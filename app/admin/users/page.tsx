@@ -22,6 +22,7 @@ const AVAILABLE_ROLES = [
     { id: 'finance', label: 'Financeiro' },
     { id: 'orcamento', label: 'Orçamento' },
     { id: 'production', label: 'Produção' },
+    { id: 'painter', label: 'Pintor (Freelancer)' },
 ];
 
 export default function UsersPage() {

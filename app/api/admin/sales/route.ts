@@ -49,9 +49,11 @@ export async function POST(req: Request) {
             cliente_nome,
             canal_venda,
             vendedor, // Email do usuário na sessão
-            pintura_freelancer, // Booleano do checkbox
+            pintura_freelancer, // Booleano
+            pintor_nome, // Nome ou email recebido do novo Select no Frontend
             data_venda,
-            observacao
+            observacao,
+            valor_frete
         } = body;
 
         if (!carrinho || !Array.isArray(carrinho) || carrinho.length === 0) {
@@ -123,7 +125,9 @@ export async function POST(req: Request) {
                 vendedor,
                 comissao_vendedor,
                 pintura_freelancer,
+                pintor_nome: pintor_nome || null,
                 valor_venda_final: item.valor_final,
+                valor_frete: salesToInsert.length === 0 ? (Number(valor_frete) || 0) : 0, // Apenas no primeiro item para não duplicar no dashboard
                 custo_producao_snapshot: custo_total_real,
                 lucro_real,
                 status: 'Aguardando Pagamento', // Atualizado para nova coluna no Kanban

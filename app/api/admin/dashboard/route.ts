@@ -59,7 +59,7 @@ export async function GET(req: Request) {
         // 2. Fetch Previous Period Sales
         let prevQuery = supabase
             .from('vendas')
-            .select('valor_venda_final, lucro_real, quantidade')
+            .select('valor_venda_final, lucro_real, quantidade, valor_frete')
             .gte('data_venda', previousStart.toISOString())
             .lte('data_venda', previousEnd.toISOString());
 
@@ -125,7 +125,7 @@ export async function GET(req: Request) {
         const calculateKPIs = (data: any[]) => {
             const paidSales = data.filter(s => (s.valor_venda_final || 0) > 0);
             return {
-                revenue: data.reduce((acc, s) => acc + (s.valor_venda_final || 0), 0),
+                revenue: data.reduce((acc, s) => acc + (s.valor_venda_final || 0) + (s.valor_frete || 0), 0),
                 profit: data.reduce((acc, s) => acc + (s.lucro_real || 0), 0),
                 paidSalesCount: paidSales.length,
                 totalItems: data.reduce((acc, s) => acc + (s.quantidade || 1), 0),
