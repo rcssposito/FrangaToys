@@ -51,7 +51,7 @@ export async function POST(req: Request) {
                     excluded_payment_types: [
                         { id: 'ticket' } // Excluímos Boleto para não segurar reserva
                     ],
-                    installments: 12 // Permite até 12x (Juros Padrão do Comprador)
+                    installments: 12 // Permite até 12x (O sem juros em 3x é configurado via painel do MP pelo Lojista)
                 },
                 back_urls: {
                     success: process.env.NEXT_PUBLIC_SITE_URL ? `${process.env.NEXT_PUBLIC_SITE_URL}/admin/kanban` : 'https://frangatoys.com/admin',

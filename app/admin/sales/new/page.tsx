@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2, Plus, Minus, AlertTriangle, CheckCircle2, User } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2, Plus, Minus, AlertTriangle, CheckCircle2, User, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 
@@ -46,7 +46,24 @@ export default function NewSalePage() {
 
     const [showPaymentOptions, setShowPaymentOptions] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit'>('pix');
-    const [completedSaleId, setCompletedSaleId] = useState<number | null>(null);
+    const [completedSaleData, setCompletedSaleData] = useState<{ id: number, link_pagamento: string | null, total: number, method: 'pix' | 'credit' } | null>(null);
+
+    // PIX Payload Generator for Client-Side Copy
+    const generatePixPayload = (key: string, name: string, amount: number) => {
+        name = name.substring(0, 25).normalize('NFD').replace(/[\u0300-\u036f]/g, "").toUpperCase();
+        const city = "SAO PAULO";
+        const amountStr = amount.toFixed(2);
+        let payload = "00020126330014br.gov.bcb.pix" + `01${key.length.toString().padStart(2, '0')}${key}` + "520400005303986" + `54${amountStr.length.toString().padStart(2, '0')}${amountStr}` + "5802BR" + `59${name.length.toString().padStart(2, '0')}${name}` + `60${city.length.toString().padStart(2, '0')}${city}` + "62070503***6304";
+        let crc = 0xFFFF;
+        for (let i = 0; i < payload.length; i++) {
+            crc ^= payload.charCodeAt(i) << 8;
+            for (let j = 0; j < 8; j++) {
+                if ((crc & 0x8000) !== 0) crc = (crc << 1) ^ 0x1021;
+                else crc = crc << 1;
+            }
+        }
+        return payload + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+    };
 
     const isFinanceOrAdmin = user?.roles?.some(r => r === 'admin' || r === 'finance');
 
@@ -243,8 +260,13 @@ export default function NewSalePage() {
             // Tenta abrir numa nova aba
             window.open(waLink, '_blank');
 
-            // Exibe a UI de sucesso localmente com botão do recibo em vez de forçar redirect:
-            setCompletedSaleId(firstSaleId);
+            // Exibe a UI de sucesso localmente com botão do recibo:
+            setCompletedSaleData({
+                id: firstSaleId,
+                link_pagamento: mpLink || null,
+                total: totalVenda,
+                method: paymentMethod
+            });
 
         } catch (err: any) {
             toast.error(err.message || 'Erro ao salvar venda');
@@ -253,7 +275,14 @@ export default function NewSalePage() {
         }
     };
 
-    if (completedSaleId) {
+    if (completedSaleData) {
+        const pixCode = completedSaleData.method === 'pix' ? generatePixPayload("43687871886", "Renan C S Sposito", completedSaleData.total) : null;
+
+        const handleCopy = (text: string, type: 'PIX' | 'Link') => {
+            navigator.clipboard.writeText(text);
+            toast.success(`${type} copiado para a área de transferência!`);
+        };
+
         return (
             <div className="min-h-screen bg-black text-white p-4 md:p-8 flex items-center justify-center">
                 <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl max-w-md w-full text-center space-y-6">
@@ -263,24 +292,64 @@ export default function NewSalePage() {
                     <h2 className="text-2xl font-bold">Venda Registrada!</h2>
                     <p className="text-zinc-400 text-sm">O pedido foi enviado para o Kanban (Aguardando Pagamento).</p>
 
+                    {completedSaleData.method === 'pix' && pixCode && (
+                        <div className="bg-black/50 border border-emerald-500/20 p-4 rounded-xl text-left space-y-2">
+                            <label className="text-xs font-bold text-emerald-500 tracking-wider">PIX COPIA E COLA</label>
+                            <div className="flex gap-2">
+                                <input
+                                    readOnly
+                                    value={pixCode}
+                                    className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-300 outline-none"
+                                />
+                                <button
+                                    onClick={() => handleCopy(pixCode, 'PIX')}
+                                    className="bg-emerald-600 hover:bg-emerald-500 p-2 rounded text-white transition-colors flex-shrink-0"
+                                    title="Copiar PIX"
+                                >
+                                    <Copy size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {completedSaleData.method === 'credit' && completedSaleData.link_pagamento && (
+                        <div className="bg-black/50 border border-blue-500/20 p-4 rounded-xl text-left space-y-2">
+                            <label className="text-xs font-bold text-blue-400 tracking-wider">LINK MERCADO PAGO</label>
+                            <div className="flex gap-2">
+                                <input
+                                    readOnly
+                                    value={completedSaleData.link_pagamento}
+                                    className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-300 outline-none"
+                                />
+                                <button
+                                    onClick={() => handleCopy(completedSaleData.link_pagamento as string, 'Link')}
+                                    className="bg-blue-600 hover:bg-blue-500 p-2 rounded text-white transition-colors flex-shrink-0"
+                                    title="Copiar Link"
+                                >
+                                    <Copy size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="pt-4 flex flex-col gap-3">
                         <a
-                            href={`/api/admin/receipt/${completedSaleId}`}
+                            href={`/api/admin/receipt/${completedSaleData.id}`}
                             target="_blank"
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors uppercase tracking-tight"
                         >
                             <DollarSign size={20} />
-                            Ver Cartão de Cobrança
+                            Ver Imagem do Cartão
                         </a>
                         <Link
                             href="/admin/kanban"
-                            className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 rounded-xl flex items-center justify-center transition-colors"
+                            className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 rounded-xl flex items-center justify-center transition-colors uppercase tracking-tight"
                         >
                             Ir para o Kanban
                         </Link>
                         <button
                             onClick={() => {
-                                setCompletedSaleId(null);
+                                setCompletedSaleData(null);
                                 setCart([]);
                                 setCliente('');
                                 setObservacao('');
@@ -575,7 +644,7 @@ export default function NewSalePage() {
                                                 className={`p-3 rounded-lg border font-bold text-xs flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'credit' ? 'bg-blue-500/10 border-blue-500 text-blue-400' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600'}`}
                                             >
                                                 <svg viewBox="0 0 24 24" className="w-6 h-6 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
-                                                Cartão / MP
+                                                Cartão (3x S/ Juros)
                                             </button>
                                         </div>
 
@@ -588,8 +657,8 @@ export default function NewSalePage() {
 
                                         {paymentMethod === 'credit' && (
                                             <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl flex flex-col justify-center items-center gap-2 text-center">
-                                                <p className="text-sm font-semibold text-blue-400">Pagamento pelo Mercado Pago</p>
-                                                <p className="text-xs text-zinc-500 mb-2">Gere um link de cobrança no seu app do M.P ou passe na maquininha.</p>
+                                                <p className="text-sm font-semibold text-blue-400">Checkout Mercado Pago</p>
+                                                <p className="text-xs text-zinc-500 mb-2">O cliente poderá pagar em até 3x sem juros (absorvido pela loja) ou em até 12x com juros a partir da 4ª parcela.</p>
                                             </div>
                                         )}
 
