@@ -30,13 +30,21 @@ export async function GET(
             return new Response('Receipt not found', { status: 404 });
         }
 
-        // 2. Fetch all items in the same "Transaction Pool" (Same client, same second)
-        // This ensures multi-item sales show the correct combined total + shipping
-        const { data: alliedSales } = await supabase
+        // 2. Fetch all items in the same checkout session
+        // Priority: checkout_id (New sales have it), Fallback: cliente_nome + data_venda (Old sales)
+        let alliedQuery = supabase
             .from('vendas')
-            .select('valor_venda_final, valor_frete')
-            .eq('cliente_nome', sale.cliente_nome)
-            .eq('created_at', sale.created_at);
+            .select('valor_venda_final, valor_frete');
+
+        if (sale.checkout_id) {
+            alliedQuery = alliedQuery.eq('checkout_id', sale.checkout_id);
+        } else {
+            alliedQuery = alliedQuery
+                .eq('cliente_nome', sale.cliente_nome)
+                .eq('data_venda', sale.data_venda);
+        }
+
+        const { data: alliedSales } = await alliedQuery;
 
         const totalItemsPrice = (alliedSales || []).reduce((acc, s) => acc + (Number(s.valor_venda_final) || 0), 0);
         const totalFreight = (alliedSales || []).reduce((acc, s) => acc + (Number(s.valor_frete) || 0), 0);

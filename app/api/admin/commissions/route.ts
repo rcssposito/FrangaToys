@@ -27,7 +27,8 @@ export async function GET(req: Request) {
         // Grouping variables
         type SellerData = { vendas_realizadas: number; valor_total_vendido: number; comissao_a_receber: number };
         const commissoesPorVendedor: Record<string, SellerData> = {};
-        let custoPinturaFreelancer = 0;
+        const costPerPainter: Record<string, number> = {};
+        let custoPinturaFreelancerTotal = 0;
 
         for (const sale of sales || []) {
             // Aggregate Seller Data
@@ -39,18 +40,6 @@ export async function GET(req: Request) {
                 commissoesPorVendedor[seller].vendas_realizadas += 1;
                 commissoesPorVendedor[seller].valor_total_vendido += sale.valor_venda_final || 0;
                 commissoesPorVendedor[seller].comissao_a_receber += sale.comissao_vendedor || 0;
-            }
-
-            // Aggregate Freelancer Painting Cost
-            // Since cost isn't explicitly saved as a distinct column, we calculate it back from the metadata if possible,
-            // OR we can make an approximation (or we could have just saved it directly, but since sales might be historical:
-            // For now, let's query the cost from metadata or we can calculate it dynamically if needed.
-            if (sale.pintura_freelancer) {
-                // Here we would ideally join and check the horas_pintura from figuras_meta
-                // For performance, we could fetch all metas or do a distinct query.
-                // Alternatively, since lucro_real was calculated by subtracting it, 
-                // we can do a secondary lookup or we can adjust our metrics.
-                // Let's do a bulk distinct lookup.
             }
         }
 
@@ -64,8 +53,14 @@ export async function GET(req: Request) {
                 const metaMap = new Map((metas || []).map(m => [m.figura_id, m.horas_pintura || 0]));
                 for (const sale of freelancerSales) {
                     const horas = metaMap.get(sale.figura_id) || 0;
+                    const painter = sale.pintor_nome || 'Pintor Desconhecido';
+
                     // Custo painting = horas * 50 * quantidade
-                    custoPinturaFreelancer += (Math.ceil(horas * 50) * (sale.quantidade || 1));
+                    const cost = (Math.ceil(horas * 50) * (sale.quantidade || 1));
+
+                    if (!costPerPainter[painter]) costPerPainter[painter] = 0;
+                    costPerPainter[painter] += cost;
+                    custoPinturaFreelancerTotal += cost;
                 }
             }
         }
@@ -76,9 +71,15 @@ export async function GET(req: Request) {
             ...stats
         })).sort((a, b) => b.comissao_a_receber - a.comissao_a_receber);
 
+        const paintersArray = Object.entries(costPerPainter).map(([nome, valor]) => ({
+            nome,
+            valor
+        })).sort((a, b) => b.valor - a.valor);
+
         return NextResponse.json({
             vendedores: vendedoresArray,
-            freelancer_total: custoPinturaFreelancer
+            painters: paintersArray,
+            freelancer_total: custoPinturaFreelancerTotal
         });
     } catch (error: any) {
         console.error('Commissions GET API Crash:', error);

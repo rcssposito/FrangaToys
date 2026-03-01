@@ -134,6 +134,7 @@ export async function POST(req: Request) {
                 quantidade: item.quantidade,
                 observacao: observacao || '',
                 link_pagamento: body.link_pagamento || null,
+                checkout_id: body.checkout_id || null,
                 data_venda: data_venda || new Date().toISOString()
             });
         }

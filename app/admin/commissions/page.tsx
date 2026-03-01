@@ -16,6 +16,7 @@ interface SellerCommission {
 
 interface CommissionsData {
     vendedores: SellerCommission[];
+    painters: { nome: string; valor: number }[];
     freelancer_total: number;
 }
 
@@ -168,9 +169,23 @@ export default function CommissionsPage() {
                                     <span className="text-lg text-orange-500 mr-2 font-bold tracking-normal">R$</span>
                                     {data?.freelancer_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </div>
-                                <p className="text-xs text-[var(--text-muted)] mt-4 relative z-10 font-medium leading-relaxed">
+                                <p className="text-xs text-[var(--text-muted)] mt-4 relative z-10 font-medium leading-relaxed mb-6">
                                     Gasto total com horas de pintura (Freelancer) no período selecionado.
                                 </p>
+
+                                {data?.painters?.length > 0 && (
+                                    <div className="relative z-10 space-y-3 pt-6 border-t border-orange-500/10">
+                                        <p className="text-[10px] font-bold text-orange-500/60 uppercase tracking-widest">A pagar por profissional:</p>
+                                        <div className="space-y-2">
+                                            {data?.painters?.map((p, i) => (
+                                                <div key={i} className="flex justify-between items-center bg-black/20 p-3 rounded-xl border border-white/5">
+                                                    <span className="text-xs font-bold text-[var(--text-muted)] truncate mr-2">{p.nome}</span>
+                                                    <span className="text-sm font-black text-orange-400 whitespace-nowrap">R$ {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

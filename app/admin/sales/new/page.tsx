@@ -240,6 +240,7 @@ export default function NewSalePage() {
 
         setSubmitting(true);
         try {
+            const checkoutId = crypto.randomUUID();
             let mpLink = '';
 
             // Se for crédito, primeiro criamos a Sessão no Mercado Pago
@@ -253,6 +254,7 @@ export default function NewSalePage() {
                             valor_final: i.valor_final
                         })),
                         cliente_nome: cliente,
+                        reference_id: checkoutId,
                         valor_frete: freteSomar
                     })
                 });
@@ -285,7 +287,8 @@ export default function NewSalePage() {
                     valor_frete: freteSomar,
                     vendedor: vendedorSelecionado || user?.email || '',
                     observacao,
-                    link_pagamento: mpLink
+                    link_pagamento: mpLink,
+                    checkout_id: checkoutId
                 }),
             });
 
