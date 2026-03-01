@@ -54,31 +54,36 @@ export async function POST(req: Request) {
             body: {
                 items: items,
                 payer: {
-                    name: String(cliente_nome || 'Cliente Franga Toys').substring(0, 250), //MP has limit length
+                    name: String(cliente_nome || 'Cliente Franga Toys').substring(0, 250),
+                    email: 'vendas@frangatoys.com.br' // Email fictício do vendedor se não houver do cliente para ajudar o MP a identificar o contexto
                 },
-                external_reference: reference_id, // ID interno temporal se tivermos
+                external_reference: reference_id,
+                statement_descriptor: 'Franga Toys',
                 payment_methods: {
                     excluded_payment_methods: [],
                     excluded_payment_types: [
                         { id: 'ticket' } // Excluímos Boleto para não segurar reserva
-                    ],
+                    ]
                 },
                 back_urls: {
                     success: process.env.NEXT_PUBLIC_SITE_URL ? `${process.env.NEXT_PUBLIC_SITE_URL}/admin/kanban` : 'https://frangatoys.com/admin',
                     failure: process.env.NEXT_PUBLIC_SITE_URL ? `${process.env.NEXT_PUBLIC_SITE_URL}/admin/kanban` : 'https://frangatoys.com/admin',
                     pending: process.env.NEXT_PUBLIC_SITE_URL ? `${process.env.NEXT_PUBLIC_SITE_URL}/admin/kanban` : 'https://frangatoys.com/admin',
                 },
-                auto_return: 'approved', // Redireciona o cara na hora se der bom
-                expires: false // Sem timestamp de expiry para permitir repasse de links no whatsapp
+                auto_return: 'approved',
+                expires: false
             }
         });
 
         console.log("URL GERADA COM SUCESSO!", response.init_point);
+        // @ts-ignore - response might have more data than defined in basic types for debug
+        console.log("COLLECTOR ID DA CONTA:", response.collector_id || response.body?.collector_id);
 
-        // Retorna a URL segura "init_point" do Mercado Pago que o checkout.js irá usar ou nós usaremos visualmente
         return NextResponse.json({
             init_point: response.init_point,
-            id: response.id
+            id: response.id,
+            // @ts-ignore
+            collector_id: response.collector_id || response.body?.collector_id
         });
 
     } catch (error: any) {

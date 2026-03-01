@@ -173,7 +173,7 @@ export default function CommissionsPage() {
                                     Gasto total com horas de pintura (Freelancer) no período selecionado.
                                 </p>
 
-                                {data?.painters?.length > 0 && (
+                                {(data?.painters?.length ?? 0) > 0 && (
                                     <div className="relative z-10 space-y-3 pt-6 border-t border-orange-500/10">
                                         <p className="text-[10px] font-bold text-orange-500/60 uppercase tracking-widest">A pagar por profissional:</p>
                                         <div className="space-y-2">
