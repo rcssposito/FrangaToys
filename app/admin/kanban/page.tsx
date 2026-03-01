@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText } from 'lucide-react';
+import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
@@ -25,6 +25,7 @@ interface Sale {
 }
 
 const COLUMNS = [
+    { id: 'Aguardando Pagamento', title: 'Pagamento', icon: DollarSign, color: 'border-yellow-500/30 bg-yellow-500/10', text: 'text-yellow-500' },
     { id: 'Fila de Impressão', title: 'Fila de Impressão', icon: Layers, color: 'border-[var(--card-border)] bg-[var(--card-bg)]/50', text: 'text-[var(--text-muted)]' },
     { id: 'Imprimindo', title: 'Imprimindo', icon: Factory, color: 'border-orange-500/30 bg-orange-500/10', text: 'text-orange-500' },
     { id: 'Lavagem e Cura', title: 'Cura e Limpeza', icon: Clock, color: 'border-blue-500/30 bg-blue-500/10', text: 'text-blue-500' },
@@ -134,7 +135,7 @@ export default function KanbanPage() {
             ) : (
                 <div className="flex-1 flex gap-5 overflow-x-auto pb-6 custom-scrollbar pr-4">
                     {COLUMNS.map((col) => {
-                        const columnTasks = sales.filter(s => s.status === col.id || (!s.status && col.id === 'Fila de Impressão'));
+                        const columnTasks = sales.filter(s => s.status === col.id || (!s.status && col.id === 'Aguardando Pagamento'));
 
                         return (
                             <div

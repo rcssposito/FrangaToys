@@ -49,6 +49,26 @@ export async function GET(
         const quoteIndex = Number(id) % quotes.length;
         const selectedQuote = quotes[quoteIndex];
 
+        // Generate Pix Payload
+        function generatePixPayload(key: string, name: string, amount: number) {
+            name = name.substring(0, 25).normalize('NFD').replace(/[\u0300-\u036f]/g, "").toUpperCase();
+            const city = "SAO PAULO";
+            const amountStr = amount.toFixed(2);
+            let payload = "00020126330014br.gov.bcb.pix" + `01${key.length.toString().padStart(2, '0')}${key}` + "520400005303986" + `54${amountStr.length.toString().padStart(2, '0')}${amountStr}` + "5802BR" + `59${name.length.toString().padStart(2, '0')}${name}` + `60${city.length.toString().padStart(2, '0')}${city}` + "62070503***6304";
+            let crc = 0xFFFF;
+            for (let i = 0; i < payload.length; i++) {
+                crc ^= payload.charCodeAt(i) << 8;
+                for (let j = 0; j < 8; j++) {
+                    if ((crc & 0x8000) !== 0) crc = (crc << 1) ^ 0x1021;
+                    else crc = crc << 1;
+                }
+            }
+            return payload + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+        }
+
+        const pixPayload = generatePixPayload("43687871886", "Renan C S Sposito", sale.valor_venda_final);
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(pixPayload)}`;
+
         return new ImageResponse(
             (
                 <div
@@ -143,21 +163,31 @@ export async function GET(
                             {/* Fill space */}
                             <div style={{ display: 'flex', flex: 1 }} />
 
-                            {/* Total Block */}
+                            {/* Total Block with QR Code */}
                             <div style={{
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
                                 backgroundColor: '#18181b',
-                                padding: '24px 30px',
+                                padding: '20px 30px',
                                 borderRadius: '16px',
                                 border: '2px solid #27272a',
                                 marginBottom: 16
                             }}>
-                                <span style={{ fontSize: 28, color: '#a1a1aa', fontWeight: 600 }}>Total Pago:</span>
-                                <span style={{ fontSize: 48, fontWeight: 900, color: '#10b981', letterSpacing: '-0.02em' }}>
-                                    R$ {formatMoney(sale.valor_venda_final)}
-                                </span>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <span style={{ fontSize: 28, color: '#a1a1aa', fontWeight: 600 }}>Total a Pagar (PIX):</span>
+                                    <span style={{ fontSize: 52, fontWeight: 900, color: '#10b981', letterSpacing: '-0.02em' }}>
+                                        R$ {formatMoney(sale.valor_venda_final)}
+                                    </span>
+                                </div>
+                                <div style={{
+                                    display: 'flex',
+                                    padding: '10px',
+                                    backgroundColor: 'white',
+                                    borderRadius: '12px'
+                                }}>
+                                    <img src={qrCodeUrl} style={{ width: 100, height: 100 }} />
+                                </div>
                             </div>
                         </div>
 
