@@ -9,7 +9,7 @@ export async function POST(req: Request) {
         const { carrinho, cliente_nome, reference_id } = body;
 
         // Instância e Configuração MP -> Inicializada localmente para evitar cache de Startup do NodeJS/Vercel
-        const accessToken = process.env.MP_ACCESS_TOKEN || 'APP_USR-2359833370392789-030114-82acba484889ea609eb268e0106d930e-3236843016';
+        const accessToken = process.env.MP_ACCESS_TOKEN;
         console.log("TEM ACCESS TOKEN:", !!accessToken);
 
         if (!accessToken) {
