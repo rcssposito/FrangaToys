@@ -31,7 +31,7 @@ export async function POST(req: Request) {
             id: String(item.id || '1'),
             title: item.nome || item.Figura || 'Action Figure Sob Encomenda',
             quantity: Number(item.quantidade) || 1,
-            unit_price: Number(item.valor_final || 0) / (Number(item.quantidade) || 1), // Transforma o preço total do carrinho no unitario MP
+            unit_price: Number((Number(item.valor_final || 0) / (Number(item.quantidade) || 1)).toFixed(2)), // Transforma o preço total do carrinho no unitario MP e trava 2 casas
             currency_id: 'BRL',
         }));
         console.log("ITEMS MAPEADOS:", JSON.stringify(items));

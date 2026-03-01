@@ -111,7 +111,7 @@ export default function NewSalePage() {
         if (existing) {
             updateItemQuantity(item.id, existing.quantidade + 1);
         } else {
-            setCart([...cart, { ...item, quantidade: 1, valor_final: item['Básico (R$)'] || 0 }]);
+            setCart([...cart, { ...item, quantidade: 1, valor_final: Number(((item['Básico (R$)'] || 0) * 1.10).toFixed(2)) }]);
         }
         setSearch('');
         toast.success(`${item.Figura} adicionado ao carrinho`);
@@ -125,8 +125,8 @@ export default function NewSalePage() {
         if (qty < 1) return;
         setCart(cart.map(i => {
             if (i.id === id) {
-                const unitPrice = i['Básico (R$)'] || 0;
-                return { ...i, quantidade: qty, valor_final: unitPrice * qty };
+                const unitPriceCard = Number(((i['Básico (R$)'] || 0) * 1.10).toFixed(2));
+                return { ...i, quantidade: qty, valor_final: unitPriceCard * qty };
             }
             return i;
         }));
@@ -136,8 +136,9 @@ export default function NewSalePage() {
         setCart(cart.map(i => i.id === id ? { ...i, valor_final: price } : i));
     };
 
-    const totalVendaBase = cart.reduce((acc, i) => acc + (i.valor_final || 0), 0);
-    const totalVenda = paymentMethod === 'credit' ? totalVendaBase * 1.10 : totalVendaBase;
+    const totalVendaCartao = cart.reduce((acc, i) => acc + (i.valor_final || 0), 0);
+    const totalVendaBase = totalVendaCartao / 1.10;
+    const totalVenda = paymentMethod === 'credit' ? totalVendaCartao : totalVendaBase;
     const totalResinaNecessaria = cart.reduce((acc, i) => acc + (i.resina_kg * i.quantidade), 0);
     const temEstoqueSuficiente = totalResinaNecessaria <= estoqueResina;
 
@@ -167,7 +168,10 @@ export default function NewSalePage() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        carrinho: cart,
+                        carrinho: cart.map(i => ({
+                            ...i,
+                            valor_final: i.valor_final
+                        })),
                         cliente_nome: cliente,
                     })
                 });
@@ -188,7 +192,7 @@ export default function NewSalePage() {
                         id: i.id,
                         nome: i.Figura,
                         quantidade: i.quantidade,
-                        valor_final: paymentMethod === 'credit' ? i.valor_final * 1.10 : i.valor_final,
+                        valor_final: paymentMethod === 'credit' ? i.valor_final : i.valor_final / 1.10,
                         resina_kg: i.resina_kg
                     })),
                     cliente_nome: cliente,
@@ -223,7 +227,7 @@ export default function NewSalePage() {
             msg += `\n*📦 ITENS VENDIDOS:*\n`;
 
             cart.forEach(item => {
-                const precoItem = paymentMethod === 'credit' ? item.valor_final * 1.10 : item.valor_final;
+                const precoItem = paymentMethod === 'credit' ? item.valor_final : item.valor_final / 1.10;
                 msg += `👉 ${item.quantidade}x ${item.Figura} - R$ ${precoItem.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
             });
 
@@ -398,14 +402,17 @@ export default function NewSalePage() {
                                                     <span className="w-8 text-center font-bold text-sm">{item.quantidade}</span>
                                                     <button onClick={() => updateItemQuantity(item.id, item.quantidade + 1)} className="p-1 hover:text-orange-500"><Plus size={14} /></button>
                                                 </div>
-                                                <div className="relative">
-                                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-emerald-600 text-[10px] font-bold">R$</span>
-                                                    <input
-                                                        type="text"
-                                                        value={item.valor_final}
-                                                        onChange={(e) => updateItemPrice(item.id, parseFloat(e.target.value) || 0)}
-                                                        className="w-full bg-zinc-950 border border-zinc-800 rounded py-1 pl-7 pr-2 text-right text-sm font-bold text-emerald-400 outline-none focus:border-emerald-500"
-                                                    />
+                                                <div className="flex flex-col gap-1 items-end w-full">
+                                                    <div className="relative w-full">
+                                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-blue-500/80 text-[10px] font-black tracking-wider w-[50px]">CARTÃO</span>
+                                                        <input
+                                                            type="text"
+                                                            value={item.valor_final}
+                                                            onChange={(e) => updateItemPrice(item.id, parseFloat(e.target.value) || 0)}
+                                                            className="w-full bg-zinc-950 border border-zinc-800 rounded py-1 pl-16 pr-2 text-right text-sm font-bold text-blue-400 outline-none focus:border-blue-500"
+                                                        />
+                                                    </div>
+                                                    <span className="text-[10px] text-emerald-500 font-medium tracking-tight">PIX: R$ {(item.valor_final / 1.10).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -418,7 +425,7 @@ export default function NewSalePage() {
                                     <div className="flex justify-between items-center text-zinc-400 font-medium">
                                         <div className="flex flex-col">
                                             <span>Valor Bruto (Subtotal):</span>
-                                            {paymentMethod === 'credit' && <span className="text-[10px] text-blue-400">+ 10% de Cartão Aplicado</span>}
+                                            {paymentMethod === 'pix' && <span className="text-[10px] text-emerald-400">- 10% de Desconto (PIX)</span>}
                                         </div>
                                         <span>R$ {totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                     </div>

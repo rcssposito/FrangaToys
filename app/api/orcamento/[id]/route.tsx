@@ -64,6 +64,12 @@ export async function GET(
         const larguraStr = formatDim(meta.largura_cm, meta.largura_original);
         const profundidadeStr = formatDim(meta.profundidade_cm, meta.profundidade_original);
 
+        const roundTo5 = (val: number) => Math.ceil(val / 5) * 5;
+        const basicoPix = figure['Básico (R$)'] || 0;
+        const basicoCartao = roundTo5(basicoPix * 1.10);
+        const premiumPix = figure['Premium (R$)'] || 0;
+        const premiumCartao = roundTo5(premiumPix * 1.10);
+
         return new ImageResponse(
             (
                 <div
@@ -171,11 +177,11 @@ export async function GET(
                             >
                                 <span style={{ flex: 0.6, textAlign: 'right', color: '#a1a1aa', fontSize: 24, paddingRight: 15 }}>Básico:</span>
                                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1.4, gap: 8 }}>
-                                    <span style={{ color: '#10B981', fontSize: 32, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        R$ {(figure['Básico (R$)'] || 0).toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#10B981', fontWeight: 600 }}>(PIX)</span>
+                                    <span style={{ color: '#60a5fa', fontSize: 32, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        R$ {basicoCartao.toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#60a5fa', fontWeight: 600 }}>(Cartão)</span>
                                     </span>
-                                    <span style={{ color: '#60a5fa', fontSize: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        R$ {((figure['Básico (R$)'] || 0) * 1.10).toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#60a5fa', fontWeight: 400 }}>(Cartão)</span>
+                                    <span style={{ color: '#10B981', fontSize: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        R$ {basicoPix.toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#10B981', fontWeight: 400 }}>(PIX -10%)</span>
                                     </span>
                                 </div>
                             </div>
@@ -192,11 +198,11 @@ export async function GET(
                             >
                                 <span style={{ flex: 0.6, textAlign: 'right', color: '#ffedd5', fontSize: 24, paddingRight: 15, fontWeight: 600 }}>Premium:</span>
                                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1.4, gap: 8 }}>
-                                    <span style={{ color: '#ffffff', fontSize: 32, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        R$ {(figure['Premium (R$)'] || 0).toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#ffffff', fontWeight: 600 }}>(PIX)</span>
+                                    <span style={{ color: '#fed7aa', fontSize: 32, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        R$ {premiumCartao.toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#fed7aa', fontWeight: 600 }}>(Cartão)</span>
                                     </span>
-                                    <span style={{ color: '#fed7aa', fontSize: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        R$ {((figure['Premium (R$)'] || 0) * 1.10).toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#fed7aa', fontWeight: 400 }}>(Cartão)</span>
+                                    <span style={{ color: '#ffffff', fontSize: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        R$ {premiumPix.toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#ffffff', fontWeight: 400 }}>(PIX -10%)</span>
                                     </span>
                                 </div>
                             </div>

@@ -291,8 +291,8 @@ export default function DataGridPage() {
                                 <th className="px-2 py-4 text-center text-[10px]">H. Pintura</th>
                                 <th className="px-3 py-4 text-center">Medidas (cm)</th>
                                 <th className="px-3 py-4 text-center uppercase">Extras</th>
-                                <th className="px-4 py-4 text-center text-[var(--accent-emerald)]"><div className="flex flex-col"><span>Básico (PIX)</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5">Cartão (+10%)</span></div></th>
-                                <th className="px-4 py-4 text-center text-[var(--accent-fuchsia)]"><div className="flex flex-col"><span>Premium (PIX)</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5">Cartão (+10%)</span></div></th>
+                                <th className="px-4 py-4 text-center text-[var(--accent-emerald)]"><div className="flex flex-col"><span>Básico (Cartão)</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5">PIX (-10%)</span></div></th>
+                                <th className="px-4 py-4 text-center text-[var(--accent-fuchsia)]"><div className="flex flex-col"><span>Premium (Cartão)</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5">PIX (-10%)</span></div></th>
                                 <th className="px-4 py-4 text-right">AÇÕES</th>
                             </tr>
                         </thead>
@@ -415,15 +415,15 @@ export default function DataGridPage() {
 
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex flex-col items-center justify-center">
-                                                <div className="text-[15px] font-black text-[var(--accent-emerald)] whitespace-nowrap drop-shadow-sm">R$ {prices.basic}</div>
-                                                <div className="text-[10px] font-bold text-[var(--text-muted)] line-through opacity-60">R$ {prices.basicCredito}</div>
+                                                <div className="text-[15px] font-black text-blue-400 whitespace-nowrap drop-shadow-sm">R$ {prices.basicCredito}</div>
+                                                <div className="text-[10px] font-bold text-[var(--accent-emerald)] opacity-90">PIX: R$ {prices.basic}</div>
                                             </div>
                                         </td>
 
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex flex-col items-center justify-center">
-                                                <div className="text-[15px] font-black text-[var(--accent-fuchsia)] whitespace-nowrap drop-shadow-sm">R$ {prices.premium}</div>
-                                                <div className="text-[10px] font-bold text-[var(--text-muted)] line-through opacity-60">R$ {prices.premiumCredito}</div>
+                                                <div className="text-[15px] font-black text-blue-400 whitespace-nowrap drop-shadow-sm">R$ {prices.premiumCredito}</div>
+                                                <div className="text-[10px] font-bold text-[var(--accent-fuchsia)] opacity-90">PIX: R$ {prices.premium}</div>
                                             </div>
                                         </td>
 
