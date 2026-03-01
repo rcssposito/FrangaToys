@@ -1,6 +1,23 @@
 
 import { NextResponse, NextRequest } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/server';
+
+const checkAuth = async () => {
+    const supabaseClient = await createClient();
+    const { data: { user }, error } = await supabaseClient.auth.getUser();
+    if (error || !user || !user.email) return null;
+
+    const { data: adminUser } = await supabase
+        .from('admin_users')
+        .select('id, email, roles')
+        .eq('email', user.email)
+        .single();
+
+    if (!adminUser) return null;
+    return adminUser;
+};
+
 
 // LISTAR FIGURAS + METADADOS
 export async function GET(req: NextRequest) {
@@ -112,6 +129,11 @@ export async function GET(req: NextRequest) {
 // ATUALIZAR FIGURA (METADATA)
 export async function PUT(req: Request) {
     try {
+        const session = await checkAuth();
+        if (!session || !session.roles || (!session.roles.includes('admin') && !session.roles.includes('pricing'))) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        }
+
         const body = await req.json();
         const { id, nome, serie, imagem_url, tem_extras, ...rawMeta } = body;
 
@@ -219,6 +241,11 @@ export async function PUT(req: Request) {
 // DELETAR FIGURA
 export async function DELETE(req: Request) {
     try {
+        const session = await checkAuth();
+        if (!session || !session.roles || (!session.roles.includes('admin') && !session.roles.includes('pricing'))) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        }
+
         const { id } = await req.json();
         if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 });
 

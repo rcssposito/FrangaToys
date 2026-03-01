@@ -7,6 +7,7 @@ import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as Ima
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import ThemeToggle from '@/components/common/ThemeToggle';
+import Tooltip from '@/components/ui/Tooltip';
 
 interface Figure {
     id: number;
@@ -371,30 +372,33 @@ export default function DataGridPage() {
 
                                         <td className="px-3 py-4 text-center">
                                             <div className="flex gap-1 justify-center">
-                                                <input
-                                                    type="number" step="0.1"
-                                                    value={f.altura_cm ?? ''}
-                                                    placeholder="0"
-                                                    onChange={e => handleChange(f.id, 'altura_cm', e.target.value)}
-                                                    className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
-                                                    title="Altura"
-                                                />
-                                                <input
-                                                    type="number" step="0.1"
-                                                    value={f.largura_cm ?? ''}
-                                                    placeholder="0"
-                                                    onChange={e => handleChange(f.id, 'largura_cm', e.target.value)}
-                                                    className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
-                                                    title="Largura"
-                                                />
-                                                <input
-                                                    type="number" step="0.1"
-                                                    value={f.profundidade_cm ?? ''}
-                                                    placeholder="0"
-                                                    onChange={e => handleChange(f.id, 'profundidade_cm', e.target.value)}
-                                                    className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
-                                                    title="Profundidade"
-                                                />
+                                                <Tooltip content="Altura" position="top">
+                                                    <input
+                                                        type="number" step="0.1"
+                                                        value={f.altura_cm ?? ''}
+                                                        placeholder="0"
+                                                        onChange={e => handleChange(f.id, 'altura_cm', e.target.value)}
+                                                        className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
+                                                    />
+                                                </Tooltip>
+                                                <Tooltip content="Largura" position="top">
+                                                    <input
+                                                        type="number" step="0.1"
+                                                        value={f.largura_cm ?? ''}
+                                                        placeholder="0"
+                                                        onChange={e => handleChange(f.id, 'largura_cm', e.target.value)}
+                                                        className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
+                                                    />
+                                                </Tooltip>
+                                                <Tooltip content="Profundidade" position="top">
+                                                    <input
+                                                        type="number" step="0.1"
+                                                        value={f.profundidade_cm ?? ''}
+                                                        placeholder="0"
+                                                        onChange={e => handleChange(f.id, 'profundidade_cm', e.target.value)}
+                                                        className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
+                                                    />
+                                                </Tooltip>
                                             </div>
                                         </td>
 
@@ -417,31 +421,34 @@ export default function DataGridPage() {
 
                                         <td className="px-4 py-4 text-right">
                                             <div className="flex gap-2 justify-end">
-                                                <button
-                                                    onClick={() => handleSave(f)}
-                                                    disabled={savingId === f.id}
-                                                    className="p-2.5 bg-orange-500/10 text-orange-500 rounded-md hover:bg-orange-500 hover:text-white transition-all disabled:opacity-50 border border-orange-500/20 shadow-[var(--shadow-sm)]"
-                                                    title="Salvar"
-                                                >
-                                                    {savingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                                </button>
-                                                {hasRole('admin') && (
+                                                <Tooltip content={canEdit ? "Salvar Alterações" : "Sem permissão para salvar"} position="top">
                                                     <button
-                                                        onClick={() => handleDelete(f.id, f.nome)}
-                                                        disabled={deletingId === f.id}
-                                                        className="p-2.5 bg-red-500/10 text-red-500 rounded-md hover:bg-red-500 hover:text-white transition-all disabled:opacity-50 border border-red-500/20 shadow-[var(--shadow-sm)]"
-                                                        title="Excluir"
+                                                        onClick={() => handleSave(f)}
+                                                        disabled={savingId === f.id || !canEdit}
+                                                        className="p-2.5 bg-orange-500/10 text-orange-500 rounded-md hover:bg-orange-500 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-orange-500/20 shadow-[var(--shadow-sm)]"
                                                     >
-                                                        {deletingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                                        {savingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                                                     </button>
+                                                </Tooltip>
+                                                {hasRole('admin') && (
+                                                    <Tooltip content="Excluir Figura" position="top">
+                                                        <button
+                                                            onClick={() => handleDelete(f.id, f.nome)}
+                                                            disabled={deletingId === f.id}
+                                                            className="p-2.5 bg-red-500/10 text-red-500 rounded-md hover:bg-red-500 hover:text-white transition-all disabled:opacity-50 border border-red-500/20 shadow-[var(--shadow-sm)]"
+                                                        >
+                                                            {deletingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                                        </button>
+                                                    </Tooltip>
                                                 )}
-                                                <button
-                                                    onClick={() => handleDownloadImage(f.id, f.nome)}
-                                                    className="p-2.5 bg-blue-500/10 text-blue-500 rounded-md hover:bg-blue-500 hover:text-white transition-all border border-blue-500/20 shadow-[var(--shadow-sm)]"
-                                                    title="Baixar Cartão"
-                                                >
-                                                    <ImageIcon size={16} />
-                                                </button>
+                                                <Tooltip content="Baixar Cartão de Orçamento" position="top">
+                                                    <button
+                                                        onClick={() => handleDownloadImage(f.id, f.nome)}
+                                                        className="p-2.5 bg-blue-500/10 text-blue-500 rounded-md hover:bg-blue-500 hover:text-white transition-all border border-blue-500/20 shadow-[var(--shadow-sm)]"
+                                                    >
+                                                        <ImageIcon size={16} />
+                                                    </button>
+                                                </Tooltip>
                                             </div>
                                         </td>
                                     </tr>

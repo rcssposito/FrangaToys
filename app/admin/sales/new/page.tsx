@@ -182,7 +182,7 @@ export default function NewSalePage() {
             toast.success('Venda registrada com sucesso!');
 
             // Gerar Link do WhatsApp para notificar a nova venda
-            const numeroDestino = '5511959757551'; // O número da loja/dono
+            const numeroDestino = '5511959737551'; // O número da loja/dono
             let msg = `*🚀 NOVA VENDA REGISTRADA E ENVIADA PARA A FILA (KANBAN) 🚀*\n\n`;
             msg += `*Vendedor:* ${vendedorSelecionado || user?.email}\n`;
             msg += `*Cliente:* ${cliente}\n`;
