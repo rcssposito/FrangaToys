@@ -46,7 +46,7 @@ export default function StudiosPage() {
     const fetchStudios = async () => {
         try {
             // Note: Ensure /api/estudios returns "figuras(count)"
-            const res = await fetch('/api/estudios');
+            const res = await fetch('/api/estudios', { cache: 'no-store' });
             const data = await res.json();
             if (res.ok) setStudios(data);
         } catch (error) {
