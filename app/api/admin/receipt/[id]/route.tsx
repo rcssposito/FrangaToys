@@ -30,9 +30,23 @@ export async function GET(
             return new Response('Receipt not found', { status: 404 });
         }
 
+        // 2. Fetch all items in the same "Transaction Pool" (Same client, same second)
+        // This ensures multi-item sales show the correct combined total + shipping
+        const { data: alliedSales } = await supabase
+            .from('vendas')
+            .select('valor_venda_final, valor_frete')
+            .eq('cliente_nome', sale.cliente_nome)
+            .eq('created_at', sale.created_at);
+
+        const totalItemsPrice = (alliedSales || []).reduce((acc, s) => acc + (Number(s.valor_venda_final) || 0), 0);
+        const totalFreight = (alliedSales || []).reduce((acc, s) => acc + (Number(s.valor_frete) || 0), 0);
+        const valorTotalReal = totalItemsPrice + totalFreight;
+
         const imageUrl = sale.figuras?.imagem_url || '';
         const studioName = (sale.figuras?.studios as any)?.nome || 'FrangaToys';
-        const figureName = sale.figuras?.nome || 'Item Desconhecido';
+        const figureName = (alliedSales && alliedSales.length > 1)
+            ? `${sale.figuras?.nome || 'Item'} (+ ${alliedSales.length - 1} itens)`
+            : (sale.figuras?.nome || 'Item Desconhecido');
 
         // Manual formatting to prevent Edge Runtime Intl crashes
         const d = new Date(sale.data_venda);
@@ -66,7 +80,7 @@ export async function GET(
             return payload + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
         }
 
-        const pixPayload = generatePixPayload("43687871886", "Renan C S Sposito", sale.valor_venda_final);
+        const pixPayload = generatePixPayload("43687871886", "Renan C S Sposito", valorTotalReal);
 
         // Se tiver Link Pagamento (Mercado Pago), gera QRCode da URL. Se não, gera Payload do PIX.
         const originUrl = sale.link_pagamento ? sale.link_pagamento : pixPayload;
@@ -182,7 +196,7 @@ export async function GET(
                                         {sale.link_pagamento ? 'Total a Pagar (Cartão/MP):' : 'Total a Pagar (PIX):'}
                                     </span>
                                     <span style={{ fontSize: 52, fontWeight: 900, color: sale.link_pagamento ? '#3b82f6' : '#10b981', letterSpacing: '-0.02em' }}>
-                                        R$ {formatMoney(sale.valor_venda_final)}
+                                        R$ {formatMoney(valorTotalReal)}
                                     </span>
                                 </div>
                                 <div style={{

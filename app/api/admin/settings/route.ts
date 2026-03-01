@@ -27,7 +27,8 @@ export async function GET() {
                     custo_resina_kg: 250.00,
                     estoque_resina_kg: 0,
                     margem_basica: 1.40,
-                    margem_premium: 1.70
+                    margem_premium: 1.70,
+                    taxa_cartao: 1.15
                 }])
                 .select()
                 .single();
@@ -61,7 +62,8 @@ export async function PUT(req: Request) {
                 custo_resina_kg: body.custo_resina_kg,
                 estoque_resina_kg: body.estoque_resina_kg,
                 margem_basica: body.margem_basica,
-                margem_premium: body.margem_premium
+                margem_premium: body.margem_premium,
+                taxa_cartao: body.taxa_cartao
             })
             .eq('id', 1)
             .select()

@@ -15,7 +15,8 @@ export default function SettingsPage() {
         custo_resina_kg: 0,
         estoque_resina_kg: 0,
         margem_basica: 0,
-        margem_premium: 0
+        margem_premium: 0,
+        taxa_cartao: 1.15
     });
 
     useEffect(() => {
@@ -152,6 +153,16 @@ export default function SettingsPage() {
                                     className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
                                 />
                                 <p className="text-[10px] text-[var(--text-muted)] font-medium ml-1">Ex: 1.8 = 80% de lucro final</p>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-black uppercase tracking-widest text-orange-500 ml-1">Taxa Acréscimo Cartão (Multiplicador)</label>
+                                <input
+                                    type="number" step="0.01"
+                                    value={formData.taxa_cartao}
+                                    onChange={e => handleChange('taxa_cartao', e.target.value)}
+                                    className="w-full bg-[var(--input-bg)] border border-orange-500/30 rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
+                                />
+                                <p className="text-[10px] text-[var(--text-muted)] font-medium ml-1">Ex: 1.15 = 15% de acréscimo no cartão</p>
                             </div>
                         </div>
                     </div>

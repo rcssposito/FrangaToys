@@ -34,6 +34,7 @@ export default function NewSalePage() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [estoqueResina, setEstoqueResina] = useState(0);
+    const [settings, setSettings] = useState<any>(null);
 
     const [vendedores, setVendedores] = useState<{ email: string; nome?: string; roles?: string[] }[]>([]);
     const [vendedorSelecionado, setVendedorSelecionado] = useState('');
@@ -102,7 +103,10 @@ export default function NewSalePage() {
         try {
             const res = await fetch('/api/admin/settings');
             const data = await res.json();
-            if (res.ok) setEstoqueResina(data.estoque_resina_kg || 0);
+            if (res.ok) {
+                setSettings(data);
+                setEstoqueResina(data.estoque_resina_kg || 0);
+            }
         } catch (err) {
             console.error('Erro ao buscar estoque:', err);
         }
@@ -139,7 +143,7 @@ export default function NewSalePage() {
         if (existing) {
             updateItemQuantity(item.id, existing.quantidade + 1);
         } else {
-            setCart([...cart, { ...item, quantidade: 1, valor_final: Number(((item['Básico (R$)'] || 0) * 1.10).toFixed(2)) }]);
+            setCart([...cart, { ...item, quantidade: 1, valor_final: Number(((item['Básico (R$)'] || 0) * (settings?.taxa_cartao || 1.15)).toFixed(2)) }]);
         }
         setSearch('');
         setShippingQuotes([]); // Limpa as as cotações se o peso mudou
@@ -155,8 +159,8 @@ export default function NewSalePage() {
         if (qty < 1) return;
         setCart(cart.map(i => {
             if (i.id === id) {
-                const unitPriceCard = Number(((i['Básico (R$)'] || 0) * 1.10).toFixed(2));
-                return { ...i, quantidade: qty, valor_final: unitPriceCard * qty };
+                const unitPriceCard = Number(((i['Básico (R$)'] || 0) * (settings?.taxa_cartao || 1.15)).toFixed(2));
+                return { ...i, quantidade: qty, valor_final: Number((unitPriceCard * qty).toFixed(2)) };
             }
             return i;
         }));
@@ -168,7 +172,8 @@ export default function NewSalePage() {
     };
 
     const totalVendaCartao = cart.reduce((acc, i) => acc + (i.valor_final || 0), 0);
-    const totalVendaBase = totalVendaCartao / 1.10;
+    const taxaMarkup = settings?.taxa_cartao || 1.15;
+    const totalVendaBase = totalVendaCartao / taxaMarkup;
     const freteSomar = metodoEntrega === 'envio' ? (Number(valorFrete.replace(',', '.')) || 0) : 0;
     const totalVenda = (paymentMethod === 'credit' ? totalVendaCartao : totalVendaBase) + freteSomar;
 
@@ -248,6 +253,7 @@ export default function NewSalePage() {
                             valor_final: i.valor_final
                         })),
                         cliente_nome: cliente,
+                        valor_frete: freteSomar
                     })
                 });
 
@@ -267,7 +273,7 @@ export default function NewSalePage() {
                         id: i.id,
                         nome: i.Figura,
                         quantidade: i.quantidade,
-                        valor_final: paymentMethod === 'credit' ? i.valor_final : i.valor_final / 1.10,
+                        valor_final: paymentMethod === 'credit' ? i.valor_final : i.valor_final / taxaMarkup,
                         resina_kg: i.resina_kg
                     })),
                     cliente_nome: cliente,
@@ -301,7 +307,7 @@ export default function NewSalePage() {
             msg += `*Data:* ${dataVenda.split('-').reverse().join('/')}\n`;
             msg += `*Canal:* ${canal}\n`;
             msg += `*Pintura:* ${pinturaFreelancer && pintorNome ? `Terceirizada (${pintorNome.split(' ')[0]})` : 'Interna'}\n`;
-            msg += `*Entrega:* ${metodoEntrega === 'retirada' ? 'Retirada na Loja/Ateliê' : `Envio (Frete: R$ ${freteSomar.toFixed(2)})`}\n`;
+            msg += `*Entrega:* ${metodoEntrega === 'retirada' ? 'Retirada na Loja/Ateliê' : `Frete (Valor: R$ ${freteSomar.toFixed(2)})`}\n`;
             if (observacao) msg += `*Obs:* ${observacao}\n`;
             msg += `\n*📦 ITENS VENDIDOS:*\n`;
 
@@ -356,7 +362,10 @@ export default function NewSalePage() {
 
                     {completedSaleData.method === 'pix' && pixCode && (
                         <div className="bg-black/50 border border-emerald-500/20 p-4 rounded-xl text-left space-y-2">
-                            <label className="text-xs font-bold text-emerald-500 tracking-wider">PIX COPIA E COLA</label>
+                            <div className="flex justify-between items-center">
+                                <label className="text-xs font-bold text-emerald-500 tracking-wider">PIX COPIA E COLA</label>
+                                <span className="text-sm font-black text-white">R$ {completedSaleData.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            </div>
                             <div className="flex gap-2">
                                 <input
                                     readOnly
@@ -543,7 +552,7 @@ export default function NewSalePage() {
                                                             className="w-full bg-zinc-950 border border-zinc-800 rounded py-1 pl-16 pr-2 text-right text-sm font-bold text-blue-400 outline-none focus:border-blue-500"
                                                         />
                                                     </div>
-                                                    <span className="text-[10px] text-emerald-500 font-medium tracking-tight">PIX: R$ {(item.valor_final / 1.10).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                    <span className="text-[10px] text-emerald-500 font-medium tracking-tight">PIX: R$ {(item.valor_final / taxaMarkup).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -556,9 +565,9 @@ export default function NewSalePage() {
                                     <div className="flex justify-between items-center text-zinc-400 font-medium">
                                         <div className="flex flex-col">
                                             <span>Valor Bruto (Subtotal):</span>
-                                            {paymentMethod === 'pix' && <span className="text-[10px] text-emerald-400">- 10% de Desconto (PIX)</span>}
+                                            {paymentMethod === 'pix' && <span className="text-[10px] text-emerald-400">- {Math.round((1 - (1 / taxaMarkup)) * 100)}% de Desconto (PIX)</span>}
                                         </div>
-                                        <span>R$ {(paymentMethod === 'credit' ? totalVendaCartao : totalVendaBase).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                        <span>R$ {Number((paymentMethod === 'credit' ? totalVendaCartao : totalVendaBase).toFixed(2)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                     {metodoEntrega === 'envio' && freteSomar > 0 && (
                                         <div className="flex justify-between items-center text-cyan-400 font-medium text-xs border-b border-zinc-800/50 pb-2 mb-1">
@@ -582,9 +591,9 @@ export default function NewSalePage() {
                                             <span>- R$ {totalComissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     )}
-                                    <div className="flex justify-between items-center pt-3 border-t border-zinc-800/50 mt-1">
-                                        <span className="text-zinc-300 font-bold uppercase tracking-wide text-xs">Lucro Líquido Real:</span>
-                                        <span className="font-black text-emerald-500 tracking-tight text-xl">R$ {lucroEstimado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                    <div className="flex justify-between items-center pt-2 border-t border-zinc-900 mt-2 pb-3">
+                                        <span className="text-zinc-500 font-bold uppercase tracking-wide text-[10px]">Lucro Líquido Real:</span>
+                                        <span className="font-black text-emerald-500 tracking-tight text-sm">R$ {Number(lucroEstimado.toFixed(2)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
                             )}
@@ -700,70 +709,72 @@ export default function NewSalePage() {
                                         onClick={() => setMetodoEntrega('envio')}
                                         className={`py-2 px-3 items-center justify-center text-xs font-bold rounded-lg transition-all border ${metodoEntrega === 'envio' ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
                                     >
-                                        📦 Envio (Correios)
+                                        📦 Frete (Melhor Envio)
                                     </button>
                                 </div>
-                                <div className="mt-2 animate-in fade-in slide-in-from-top-2 border-t border-zinc-900 pt-3">
-                                    <div className="flex items-end gap-2 mb-3">
-                                        <div className="flex-1">
-                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 ml-1">CEP de Destino:</label>
+                                {metodoEntrega === 'envio' && (
+                                    <div className="mt-2 animate-in fade-in slide-in-from-top-2 border-t border-zinc-900 pt-3">
+                                        <div className="flex items-end gap-2 mb-3">
+                                            <div className="flex-1">
+                                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 ml-1">CEP de Destino:</label>
+                                                <input
+                                                    type="text"
+                                                    value={cepDestino}
+                                                    onChange={(e) => setCepDestino(e.target.value.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2').slice(0, 9))}
+                                                    placeholder="00000-000"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 outline-none focus:border-cyan-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={fetchShippingQuotes}
+                                                disabled={isCalculatingShipping || cepDestino.length < 8}
+                                                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 p-2.5 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+                                            >
+                                                {isCalculatingShipping ? <Loader2 size={18} className="animate-spin" /> : 'Cotar'}
+                                            </button>
+                                        </div>
+
+                                        {shippingQuotes.length > 0 && (
+                                            <div className="grid grid-cols-2 gap-2 mb-3">
+                                                {shippingQuotes.map((quote: any, idx: number) => {
+                                                    const isSedex = quote.Codigo === '04014';
+                                                    const isPac = quote.Codigo === '04510';
+                                                    const displayName = quote.Nome || (isSedex ? 'SEDEX' : isPac ? 'PAC' : `Serviço ${quote.Codigo}`);
+                                                    const displayCompany = quote.Empresa || 'Correios';
+                                                    const color = isSedex ? 'text-amber-500' : isPac ? 'text-blue-500' : 'text-cyan-500';
+
+                                                    return (
+                                                        <button
+                                                            key={idx}
+                                                            type="button"
+                                                            onClick={() => setValorFrete(String(quote.Valor).replace('.', ','))}
+                                                            className="flex flex-col items-center justify-center p-2 rounded bg-zinc-900 border border-zinc-800 hover:border-cyan-500 transition-colors gap-1 text-center"
+                                                        >
+                                                            <span className={`text-[9px] uppercase font-black tracking-wide ${color}`}>
+                                                                {displayCompany} {displayName}
+                                                            </span>
+                                                            <span className="text-[10px] text-zinc-500 font-medium">({quote.PrazoEntrega} dias)</span>
+                                                            <span className="text-sm font-bold text-zinc-200">R$ {quote.Valor}</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+
+                                        <label className="block text-[10px] text-cyan-500 uppercase font-black mb-1.5 ml-1">Valor Final do Frete (R$):</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-600 font-black text-sm">R$</span>
                                             <input
                                                 type="text"
-                                                value={cepDestino}
-                                                onChange={(e) => setCepDestino(e.target.value.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2').slice(0, 9))}
-                                                placeholder="00000-000"
-                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 outline-none focus:border-cyan-500 text-sm transition-all"
+                                                value={valorFrete}
+                                                onChange={(e) => setValorFrete(e.target.value.replace(/[^0-9,.]/g, ''))}
+                                                placeholder="0,00"
+                                                className="w-full bg-zinc-950/50 border border-cyan-500/30 rounded-lg p-2.5 pl-9 outline-none focus:border-cyan-500 text-sm font-bold transition-all text-cyan-400"
                                             />
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={fetchShippingQuotes}
-                                            disabled={isCalculatingShipping || cepDestino.length < 8}
-                                            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 p-2.5 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
-                                        >
-                                            {isCalculatingShipping ? <Loader2 size={18} className="animate-spin" /> : 'Cotar'}
-                                        </button>
                                     </div>
-
-                                    {shippingQuotes.length > 0 && (
-                                        <div className="grid grid-cols-2 gap-2 mb-3">
-                                            {shippingQuotes.map((quote: any, idx: number) => {
-                                                const isSedex = quote.Codigo === '04014';
-                                                const isPac = quote.Codigo === '04510';
-                                                const displayName = quote.Nome || (isSedex ? 'SEDEX' : isPac ? 'PAC' : `Serviço ${quote.Codigo}`);
-                                                const displayCompany = quote.Empresa || 'Correios';
-                                                const color = isSedex ? 'text-amber-500' : isPac ? 'text-blue-500' : 'text-cyan-500';
-
-                                                return (
-                                                    <button
-                                                        key={idx}
-                                                        type="button"
-                                                        onClick={() => setValorFrete(String(quote.Valor).replace('.', ','))}
-                                                        className="flex flex-col items-center justify-center p-2 rounded bg-zinc-900 border border-zinc-800 hover:border-cyan-500 transition-colors gap-1 text-center"
-                                                    >
-                                                        <span className={`text-[9px] uppercase font-black tracking-wide ${color}`}>
-                                                            {displayCompany} {displayName}
-                                                        </span>
-                                                        <span className="text-[10px] text-zinc-500 font-medium">({quote.PrazoEntrega} dias)</span>
-                                                        <span className="text-sm font-bold text-zinc-200">R$ {quote.Valor}</span>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-
-                                    <label className="block text-[10px] text-cyan-500 uppercase font-black mb-1.5 ml-1">Valor Final do Frete (R$):</label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-600 font-black text-sm">R$</span>
-                                        <input
-                                            type="text"
-                                            value={valorFrete}
-                                            onChange={(e) => setValorFrete(e.target.value.replace(/[^0-9,.]/g, ''))}
-                                            placeholder="0,00"
-                                            className="w-full bg-zinc-950/50 border border-cyan-500/30 rounded-lg p-2.5 pl-9 outline-none focus:border-cyan-500 text-sm font-bold transition-all text-cyan-400"
-                                        />
-                                    </div>
-                                </div>
+                                )}
                             </div>
 
                             <div>
@@ -778,64 +789,86 @@ export default function NewSalePage() {
 
                             <div className="pt-4 flex flex-col gap-3">
                                 {!showPaymentOptions ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPaymentOptions(true)}
-                                        disabled={submitting || cart.length === 0}
-                                        className="w-full font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg active:scale-[0.98] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed"
-                                    >
-                                        GERAR COBRANÇA
-                                    </button>
-                                ) : (
-                                    <div className="bg-zinc-950 border border-emerald-500/30 p-4 rounded-xl space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="font-bold text-sm text-zinc-300 flex items-center gap-2"><DollarSign size={16} className="text-emerald-500" /> Formas de Pagamento</span>
-                                            <button type="button" onClick={() => setShowPaymentOptions(false)} className="text-xs text-zinc-500 hover:text-white">Cancelar</button>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <button
-                                                type="button"
-                                                onClick={() => setPaymentMethod('pix')}
-                                                className={`p-3 rounded-lg border font-bold text-xs flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'pix' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600'}`}
-                                            >
-                                                <svg viewBox="0 0 512 512" className="w-6 h-6 fill-current"><path d="M119.2 386.5L34.6 302c-15.6-15.6-15.6-40.9 0-56.6l84.6-84.5c15.6-15.6 40.9-15.6 56.6 0l212.1 212.1c15.6 15.6 15.6 40.9 0 56.6l-84.6 84.5c-15.6 15.6-40.9 15.6-56.6 0L119.2 386.5zm358.2-141.1l-84.6-84.5c-15.6-15.6-40.9-15.6-56.6 0L124.1 373c-15.6 15.6-15.6 40.9 0 56.6l84.6 84.5c15.6 15.6 40.9 15.6 56.6 0l212.1-212.1c15.6-15.6 15.6-40.8 0-56.6zM256 312c-30.9 0-56-25.1-56-56s25.1-56 56-56 56 25.1 56 56-25.1 56-56 56z" /></svg>
-                                                PIX (QR Code)
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setPaymentMethod('credit')}
-                                                className={`p-3 rounded-lg border font-bold text-xs flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'credit' ? 'bg-blue-500/10 border-blue-500 text-blue-400' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600'}`}
-                                            >
-                                                <svg viewBox="0 0 24 24" className="w-6 h-6 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
-                                                Cartão (3x S/ Juros)
-                                            </button>
-                                        </div>
-                                        {paymentMethod === 'pix' && (
-                                            <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex flex-col justify-center items-center gap-2 text-center">
-                                                <p className="text-sm font-semibold text-emerald-400">Gere o cartão de cobrança</p>
-                                                <p className="text-xs text-zinc-500 mb-2">(que é a imagem de recibo que geramos no painel Kanban da venda)</p>
-                                            </div>
-                                        )}
-
-                                        {paymentMethod === 'credit' && (
-                                            <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl flex flex-col justify-center items-center gap-2 text-center">
-                                                <p className="text-sm font-semibold text-blue-400">Checkout Mercado Pago</p>
-                                                <p className="text-xs text-zinc-500 mb-2">O cliente poderá pagar em até 3x sem juros (absorvido pela loja) ou em até 12x com juros a partir da 4ª parcela.</p>
-                                            </div>
-                                        )}
-
+                                    <>
                                         <button
-                                            type="submit"
-                                            disabled={submitting}
-                                            className="w-full font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 bg-zinc-100 hover:bg-white text-black shadow-lg shadow-white/10 active:scale-[0.98] mt-2"
+                                            type="button"
+                                            onClick={() => setShowPaymentOptions(true)}
+                                            disabled={submitting || cart.length === 0}
+                                            className="w-full font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg active:scale-[0.98] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed"
                                         >
-                                            {submitting ? <Loader2 className="animate-spin" /> : 'CONFIRMAR VENDA'}
+                                            GERAR COBRANÇA
                                         </button>
-                                    </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="bg-zinc-950 border border-emerald-500/30 p-4 rounded-xl space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <span className="font-bold text-sm text-zinc-300 flex items-center gap-2"><DollarSign size={16} className="text-emerald-500" /> Formas de Pagamento</span>
+                                                <button type="button" onClick={() => setShowPaymentOptions(false)} className="text-xs text-zinc-500 hover:text-white">Cancelar</button>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPaymentMethod('pix')}
+                                                    className={`p-3 rounded-lg border font-bold text-xs flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'pix' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600'}`}
+                                                >
+                                                    <svg viewBox="0 0 512 512" className="w-6 h-6 fill-current"><path d="M119.2 386.5L34.6 302c-15.6-15.6-15.6-40.9 0-56.6l84.6-84.5c15.6-15.6 40.9-15.6 56.6 0l212.1 212.1c15.6 15.6 15.6 40.9 0 56.6l-84.6 84.5c-15.6 15.6-40.9 15.6-56.6 0L119.2 386.5zm358.2-141.1l-84.6-84.5c-15.6-15.6-40.9-15.6-56.6 0L124.1 373c-15.6 15.6-15.6 40.9 0 56.6l84.6 84.5c15.6 15.6 40.9 15.6 56.6 0l212.1-212.1c15.6-15.6 15.6-40.8 0-56.6zM256 312c-30.9 0-56-25.1-56-56s25.1-56 56-56 56 25.1 56 56-25.1 56-56 56z" /></svg>
+                                                    PIX (QR Code)
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPaymentMethod('credit')}
+                                                    className={`p-3 rounded-lg border font-bold text-xs flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'credit' ? 'bg-blue-500/10 border-blue-500 text-blue-400' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600'}`}
+                                                >
+                                                    <svg viewBox="0 0 24 24" className="w-6 h-6 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                                                    Cartão (3x S/ Juros)
+                                                </button>
+                                            </div>
+                                            {paymentMethod === 'pix' && (
+                                                <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex flex-col justify-center items-center gap-2 text-center">
+                                                    <p className="text-sm font-semibold text-emerald-400">Gere o cartão de cobrança</p>
+                                                    <p className="text-xs text-zinc-500 mb-2">(que é a imagem de recibo que geramos no painel Kanban da venda)</p>
+                                                </div>
+                                            )}
+
+                                            {paymentMethod === 'credit' && (
+                                                <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl flex flex-col justify-center items-center gap-2 text-center">
+                                                    <p className="text-sm font-semibold text-blue-400">Checkout Mercado Pago</p>
+                                                    <p className="text-xs text-zinc-500 mb-2">O cliente poderá pagar em até 3x sem juros (absorvido pela loja) ou em até 12x com juros a partir da 4ª parcela.</p>
+                                                </div>
+                                            )}
+
+                                            <button
+                                                type="submit"
+                                                disabled={submitting}
+                                                className="w-full font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 bg-zinc-100 hover:bg-white text-black shadow-lg shadow-white/10 active:scale-[0.98] mt-2"
+                                            >
+                                                {submitting ? <Loader2 className="animate-spin" /> : 'CONFIRMAR VENDA'}
+                                            </button>
+                                        </div>
+                                    </>
                                 )}
                             </div>
                         </form>
+
+                        {/* Total a Pagar em Destaque (Sempre Visível no Final, Grande) */}
+                        {cart.length > 0 && (
+                            <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl shadow-lg border-t-cyan-500/30">
+                                <div className="flex justify-between items-center">
+                                    <div className="flex flex-col">
+                                        <span className="text-zinc-300 font-black uppercase tracking-tight text-xs">Total a Pagar</span>
+                                        <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">{paymentMethod === 'credit' ? 'Cartão (s/ juros)' : 'PIX (c/ desconto)'}</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-1 text-cyan-400">
+                                        <span className="text-sm font-bold opacity-50">R$</span>
+                                        <span className="text-3xl font-black tracking-tighter drop-shadow-[0_0_12px_rgba(34,211,238,0.4)]">
+                                            {Number(totalVenda.toFixed(2)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

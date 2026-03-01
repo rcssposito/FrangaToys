@@ -6,7 +6,7 @@ export async function POST(req: Request) {
         const body = await req.json();
         console.log("PAYLOAD RECEBIDO MP:", JSON.stringify(body, null, 2));
 
-        const { carrinho, cliente_nome, reference_id } = body;
+        const { carrinho, cliente_nome, reference_id, valor_frete } = body;
 
         // Instância e Configuração MP -> Inicializada localmente para evitar cache de Startup do NodeJS/Vercel
         const accessToken = process.env.MP_ACCESS_TOKEN;
@@ -34,6 +34,17 @@ export async function POST(req: Request) {
             unit_price: Number((Number(item.valor_final || 0) / (Number(item.quantidade) || 1)).toFixed(2)), // Transforma o preço total do carrinho no unitario MP e trava 2 casas
             currency_id: 'BRL',
         }));
+
+        // Adicionar Frete como um item se existir
+        if (Number(valor_frete) > 0) {
+            items.push({
+                id: 'shipping',
+                title: 'Frete / Envio',
+                quantity: 1,
+                unit_price: Number(Number(valor_frete).toFixed(2)),
+                currency_id: 'BRL',
+            });
+        }
         console.log("ITEMS MAPEADOS:", JSON.stringify(items));
 
         const preference = new Preference(client);
@@ -51,7 +62,7 @@ export async function POST(req: Request) {
                     excluded_payment_types: [
                         { id: 'ticket' } // Excluímos Boleto para não segurar reserva
                     ],
-                    installments: 12 // Permite até 12x (O sem juros em 3x é configurado via painel do MP pelo Lojista)
+                    installments: 12 // Permite até 12x (O sem juros em 3x é controlado pelo seu painel do MP)
                 },
                 back_urls: {
                     success: process.env.NEXT_PUBLIC_SITE_URL ? `${process.env.NEXT_PUBLIC_SITE_URL}/admin/kanban` : 'https://frangatoys.com/admin',
