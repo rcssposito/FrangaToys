@@ -51,8 +51,13 @@ export async function GET(req: NextRequest) {
         }
 
         // 3. Sorting
-        // "No botão todos a busca é por ordem alfabética"
-        query = query.order('nome', { ascending: true });
+        const isNovidades = searchParams.get('novidades') === 'true';
+        if (isNovidades) {
+            query = query.order('id', { ascending: false });
+        } else {
+            // "No botão todos a busca é por ordem alfabética"
+            query = query.order('nome', { ascending: true });
+        }
 
         // Remove arbitrary limits (or set a very high one if pagination is not strictly implemented in frontend yet)
         query = query.range(0, 4999);

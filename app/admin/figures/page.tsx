@@ -41,7 +41,7 @@ export default function DataGridPage() {
     const [search, setSearch] = useState('');
     const [savingId, setSavingId] = useState<number | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
-    const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+    const [selectedCategoryId, setSelectedCategoryId] = useState<number | string | null>(null);
 
     const { hasRole } = usePermission();
     // Check if user has permission to edit (admin or pricing)
@@ -66,11 +66,15 @@ export default function DataGridPage() {
     }, []);
 
     // Fetch figures based on filters
-    const fetchFigures = useCallback(async (catId: number | null = selectedCategoryId, searchTerm: string = search) => {
+    const fetchFigures = useCallback(async (catId: number | string | null = selectedCategoryId, searchTerm: string = search) => {
         try {
             setLoading(true);
             const params = new URLSearchParams();
-            if (catId) params.append('categoria_id', catId.toString());
+            if (catId === 'novidades') {
+                params.append('novidades', 'true');
+            } else if (catId) {
+                params.append('categoria_id', catId.toString());
+            }
             if (searchTerm) params.append('search', searchTerm);
 
             const res = await fetch(`/api/admin/figures?${params.toString()}`);
@@ -212,6 +216,7 @@ export default function DataGridPage() {
     if (loading && figures.length === 0) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" /></div>;
 
     const CATEGORY_FILTERS = [
+        { id: 'novidades', label: 'Novidades' },
         { id: 1, label: 'Anime' },
         { id: 2, label: 'Games' },
         { id: 3, label: 'Marvel' },

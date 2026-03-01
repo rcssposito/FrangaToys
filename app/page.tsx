@@ -18,7 +18,7 @@ import ThemeToggle from '@/components/common/ThemeToggle';
 
 type FilterState = z.infer<typeof FiltersSchema>;
 
-const CATEGORIES = ['Anime', 'Games', 'Marvel', 'DC'];
+const CATEGORIES = ['Anime', 'Games', 'Marvel', 'DC', 'Random'];
 
 export default function Home() {
   const [filters, setFilters] = useState<FilterState>({});
