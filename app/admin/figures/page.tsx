@@ -210,7 +210,9 @@ export default function DataGridPage() {
 
         return {
             basic: roundTo5(custoBase * settings.margem_basica),
-            premium: roundTo5(custoBase * settings.margem_premium)
+            premium: roundTo5(custoBase * settings.margem_premium),
+            basicCredito: roundTo5(custoBase * settings.margem_basica * 1.10),
+            premiumCredito: roundTo5(custoBase * settings.margem_premium * 1.10)
         };
     };
 
@@ -289,8 +291,8 @@ export default function DataGridPage() {
                                 <th className="px-2 py-4 text-center text-[10px]">H. Pintura</th>
                                 <th className="px-3 py-4 text-center">Medidas (cm)</th>
                                 <th className="px-3 py-4 text-center uppercase">Extras</th>
-                                <th className="px-4 py-4 text-center text-[var(--accent-emerald)]">Básico (R$)</th>
-                                <th className="px-4 py-4 text-center text-[var(--accent-fuchsia)]">Premium (R$)</th>
+                                <th className="px-4 py-4 text-center text-[var(--accent-emerald)]"><div className="flex flex-col"><span>Básico (PIX)</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5">Cartão (+10%)</span></div></th>
+                                <th className="px-4 py-4 text-center text-[var(--accent-fuchsia)]"><div className="flex flex-col"><span>Premium (PIX)</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5">Cartão (+10%)</span></div></th>
                                 <th className="px-4 py-4 text-right">AÇÕES</th>
                             </tr>
                         </thead>
@@ -412,11 +414,17 @@ export default function DataGridPage() {
                                         </td>
 
                                         <td className="px-4 py-4 text-center">
-                                            <div className="text-[15px] font-black text-[var(--accent-emerald)] whitespace-nowrap drop-shadow-sm">R$ {prices.basic}</div>
+                                            <div className="flex flex-col items-center justify-center">
+                                                <div className="text-[15px] font-black text-[var(--accent-emerald)] whitespace-nowrap drop-shadow-sm">R$ {prices.basic}</div>
+                                                <div className="text-[10px] font-bold text-[var(--text-muted)] line-through opacity-60">R$ {prices.basicCredito}</div>
+                                            </div>
                                         </td>
 
                                         <td className="px-4 py-4 text-center">
-                                            <div className="text-[15px] font-black text-[var(--accent-fuchsia)] whitespace-nowrap drop-shadow-sm">R$ {prices.premium}</div>
+                                            <div className="flex flex-col items-center justify-center">
+                                                <div className="text-[15px] font-black text-[var(--accent-fuchsia)] whitespace-nowrap drop-shadow-sm">R$ {prices.premium}</div>
+                                                <div className="text-[10px] font-bold text-[var(--text-muted)] line-through opacity-60">R$ {prices.premiumCredito}</div>
+                                            </div>
                                         </td>
 
                                         <td className="px-4 py-4 text-right">

@@ -129,6 +129,7 @@ export async function POST(req: Request) {
                 status: 'Aguardando Pagamento', // Atualizado para nova coluna no Kanban
                 quantidade: item.quantidade,
                 observacao: observacao || '',
+                link_pagamento: body.link_pagamento || null,
                 data_venda: data_venda || new Date().toISOString()
             });
         }

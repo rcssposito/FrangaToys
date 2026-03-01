@@ -67,7 +67,10 @@ export async function GET(
         }
 
         const pixPayload = generatePixPayload("43687871886", "Renan C S Sposito", sale.valor_venda_final);
-        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(pixPayload)}`;
+
+        // Se tiver Link Pagamento (Mercado Pago), gera QRCode da URL. Se não, gera Payload do PIX.
+        const originUrl = sale.link_pagamento ? sale.link_pagamento : pixPayload;
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(originUrl)}`;
 
         return new ImageResponse(
             (
@@ -171,12 +174,14 @@ export async function GET(
                                 backgroundColor: '#18181b',
                                 padding: '20px 30px',
                                 borderRadius: '16px',
-                                border: '2px solid #27272a',
+                                border: sale.link_pagamento ? '2px solid #3b82f6' : '2px solid #27272a', // Borda Azul no MP
                                 marginBottom: 16
                             }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    <span style={{ fontSize: 28, color: '#a1a1aa', fontWeight: 600 }}>Total a Pagar (PIX):</span>
-                                    <span style={{ fontSize: 52, fontWeight: 900, color: '#10b981', letterSpacing: '-0.02em' }}>
+                                    <span style={{ fontSize: 28, color: sale.link_pagamento ? '#60a5fa' : '#a1a1aa', fontWeight: 600 }}>
+                                        {sale.link_pagamento ? 'Total a Pagar (Cartão/MP):' : 'Total a Pagar (PIX):'}
+                                    </span>
+                                    <span style={{ fontSize: 52, fontWeight: 900, color: sale.link_pagamento ? '#3b82f6' : '#10b981', letterSpacing: '-0.02em' }}>
                                         R$ {formatMoney(sale.valor_venda_final)}
                                     </span>
                                 </div>

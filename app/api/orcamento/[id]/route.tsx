@@ -163,15 +163,21 @@ export async function GET(
                                     display: 'flex',
                                     alignItems: 'center',
                                     backgroundColor: '#1E1E1E',
-                                    borderRadius: 8,
-                                    width: 380,
-                                    height: 60,
-                                    padding: '0 20px',
+                                    borderRadius: 12,
+                                    width: 440,
+                                    padding: '16px 20px',
                                     border: '1px solid #333',
                                 }}
                             >
-                                <span style={{ flex: 1, textAlign: 'right', color: 'white', fontSize: 24, paddingRight: 10 }}>Básico:</span>
-                                <span style={{ flex: 1, textAlign: 'left', color: 'white', fontSize: 26, fontWeight: 'bold' }}>R$ {(figure['Básico (R$)'] || 0).toFixed(2).replace('.', ',')}</span>
+                                <span style={{ flex: 0.6, textAlign: 'right', color: '#a1a1aa', fontSize: 24, paddingRight: 15 }}>Básico:</span>
+                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1.4, gap: 8 }}>
+                                    <span style={{ color: '#10B981', fontSize: 32, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        R$ {(figure['Básico (R$)'] || 0).toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#10B981', fontWeight: 600 }}>(PIX)</span>
+                                    </span>
+                                    <span style={{ color: '#60a5fa', fontSize: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        R$ {((figure['Básico (R$)'] || 0) * 1.10).toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#60a5fa', fontWeight: 400 }}>(Cartão)</span>
+                                    </span>
+                                </div>
                             </div>
                             {/* Premium Bar */}
                             <div
@@ -179,14 +185,20 @@ export async function GET(
                                     display: 'flex',
                                     alignItems: 'center',
                                     backgroundColor: '#EA580C',
-                                    borderRadius: 8,
-                                    width: 380,
-                                    height: 60,
-                                    padding: '0 20px',
+                                    borderRadius: 12,
+                                    width: 440,
+                                    padding: '16px 20px',
                                 }}
                             >
-                                <span style={{ flex: 1, textAlign: 'right', color: 'white', fontSize: 24, paddingRight: 10, fontWeight: 600 }}>Premium:</span>
-                                <span style={{ flex: 1, textAlign: 'left', color: 'white', fontSize: 26, fontWeight: 'bold' }}>R$ {(figure['Premium (R$)'] || 0).toFixed(2).replace('.', ',')}</span>
+                                <span style={{ flex: 0.6, textAlign: 'right', color: '#ffedd5', fontSize: 24, paddingRight: 15, fontWeight: 600 }}>Premium:</span>
+                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1.4, gap: 8 }}>
+                                    <span style={{ color: '#ffffff', fontSize: 32, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        R$ {(figure['Premium (R$)'] || 0).toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#ffffff', fontWeight: 600 }}>(PIX)</span>
+                                    </span>
+                                    <span style={{ color: '#fed7aa', fontSize: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        R$ {((figure['Premium (R$)'] || 0) * 1.10).toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#fed7aa', fontWeight: 400 }}>(Cartão)</span>
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>

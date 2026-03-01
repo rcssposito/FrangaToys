@@ -136,7 +136,8 @@ export default function NewSalePage() {
         setCart(cart.map(i => i.id === id ? { ...i, valor_final: price } : i));
     };
 
-    const totalVenda = cart.reduce((acc, i) => acc + (i.valor_final || 0), 0);
+    const totalVendaBase = cart.reduce((acc, i) => acc + (i.valor_final || 0), 0);
+    const totalVenda = paymentMethod === 'credit' ? totalVendaBase * 1.10 : totalVendaBase;
     const totalResinaNecessaria = cart.reduce((acc, i) => acc + (i.resina_kg * i.quantidade), 0);
     const temEstoqueSuficiente = totalResinaNecessaria <= estoqueResina;
 
@@ -146,7 +147,7 @@ export default function NewSalePage() {
     const OWNER_EMAIL = 'rcssposito@gmail.com';
     const emailComissao = vendedorSelecionado || user?.email;
     const nomeVendedorComissao = vendedores.find(v => v.email === emailComissao)?.nome || emailComissao;
-    const totalComissao = (emailComissao && emailComissao.toLowerCase() !== OWNER_EMAIL.toLowerCase()) ? Math.round(totalVenda * 0.15) : 0;
+    const totalComissao = (emailComissao && emailComissao.toLowerCase() !== OWNER_EMAIL.toLowerCase()) ? Math.round(totalVendaBase * 0.15) : 0;
     const lucroEstimado = totalVenda - totalCustoProducao - totalFreelancer - totalComissao;
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -158,6 +159,27 @@ export default function NewSalePage() {
 
         setSubmitting(true);
         try {
+            let mpLink = '';
+
+            // Se for crédito, primeiro criamos a Sessão no Mercado Pago
+            if (paymentMethod === 'credit') {
+                const mpRes = await fetch('/api/admin/checkout/mp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        carrinho: cart,
+                        cliente_nome: cliente,
+                    })
+                });
+
+                if (mpRes.ok) {
+                    const mpData = await mpRes.json();
+                    mpLink = mpData.init_point || '';
+                } else {
+                    toast.error('Não foi possível gerar o link de cartão no MP, mas a venda será registrada.');
+                }
+            }
+
             const res = await fetch('/api/admin/sales', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -166,7 +188,7 @@ export default function NewSalePage() {
                         id: i.id,
                         nome: i.Figura,
                         quantidade: i.quantidade,
-                        valor_final: i.valor_final,
+                        valor_final: paymentMethod === 'credit' ? i.valor_final * 1.10 : i.valor_final,
                         resina_kg: i.resina_kg
                     })),
                     cliente_nome: cliente,
@@ -174,7 +196,8 @@ export default function NewSalePage() {
                     data_venda: dataVenda,
                     pintura_freelancer: pinturaFreelancer,
                     vendedor: vendedorSelecionado || user?.email || '',
-                    observacao
+                    observacao,
+                    link_pagamento: mpLink
                 }),
             });
 
@@ -200,11 +223,12 @@ export default function NewSalePage() {
             msg += `\n*📦 ITENS VENDIDOS:*\n`;
 
             cart.forEach(item => {
-                msg += `👉 ${item.quantidade}x ${item.Figura} - R$ ${item.valor_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+                const precoItem = paymentMethod === 'credit' ? item.valor_final * 1.10 : item.valor_final;
+                msg += `👉 ${item.quantidade}x ${item.Figura} - R$ ${precoItem.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
             });
 
             msg += `\n*💰 RESUMO FINANCEIRO:*\n`;
-            msg += `Bruto: R$ ${totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+            msg += `Bruto (${paymentMethod === 'credit' ? 'Cartão' : 'PIX'}): R$ ${totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
             msg += `Custo Estimado: R$ ${totalCustoProducao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
             if (totalFreelancer > 0) msg += `Pintor: R$ ${totalFreelancer.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
             if (totalComissao > 0) msg += `Comissão: R$ ${totalComissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
@@ -392,7 +416,10 @@ export default function NewSalePage() {
                             {cart.length > 0 && (
                                 <div className="p-4 bg-zinc-950/80 border-t border-zinc-800 flex flex-col gap-2 text-sm shadow-inner">
                                     <div className="flex justify-between items-center text-zinc-400 font-medium">
-                                        <span>Valor Bruto (Subtotal):</span>
+                                        <div className="flex flex-col">
+                                            <span>Valor Bruto (Subtotal):</span>
+                                            {paymentMethod === 'credit' && <span className="text-[10px] text-blue-400">+ 10% de Cartão Aplicado</span>}
+                                        </div>
                                         <span>R$ {totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-red-400/90 font-mono text-xs">
