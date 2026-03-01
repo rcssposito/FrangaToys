@@ -22,10 +22,10 @@ export default function Tooltip({ content, children, position = 'top' }: Tooltip
     };
 
     return (
-        <div className="relative group inline-block">
+        <div className="relative group/tooltip inline-block">
             {children}
             <div
-                className={`absolute z-50 whitespace-nowrap px-3 py-1.5 text-xs font-medium text-white bg-zinc-800/95 backdrop-blur-sm rounded-md border border-zinc-700 shadow-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-in-out ${positionClasses[position]}`}
+                className={`absolute z-50 whitespace-nowrap px-3 py-1.5 text-xs font-medium text-white bg-zinc-800/95 backdrop-blur-sm rounded-md border border-zinc-700 shadow-xl pointer-events-none opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 ease-in-out ${positionClasses[position]}`}
             >
                 {content}
                 <div

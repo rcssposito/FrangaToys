@@ -91,18 +91,10 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
         msg += `------------------------\n`;
         msg += `*Total de itens:* ${totalItems}`;
 
-        let targetPhone = '5511959737551'; // Fallback
+        const targetPhone = selectedVendedor ? selectedVendedor.telefone : '5511959737551';
 
-        if (selectedVendedor) {
-            targetPhone = selectedVendedor.telefone;
-        } else if (vendedores.length > 0) {
-            // Balanceador Round-Robin / Aleatório Frontend (gratuito)
-            const randomIndex = Math.floor(Math.random() * vendedores.length);
-            const sorteado = vendedores[randomIndex];
-            targetPhone = sorteado.telefone;
-            msg += `*Atendimento (Roteamento Automático):* ${sorteado.nome}\n`;
-        } else {
-            msg += `*Atendimento:* Direto (Loja)\n`;
+        if (!selectedVendedor) {
+            msg += `*Atendimento:* Loja / Sem preferência\n`;
         }
 
         const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
