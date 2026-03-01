@@ -4,10 +4,14 @@ import { MercadoPagoConfig, Preference } from 'mercadopago';
 export async function POST(req: Request) {
     try {
         const body = await req.json();
+        console.log("PAYLOAD RECEBIDO MP:", JSON.stringify(body, null, 2));
+
         const { carrinho, cliente_nome, reference_id } = body;
 
         // Instância e Configuração MP -> Inicializada localmente para evitar cache de Startup do NodeJS/Vercel
-        const accessToken = process.env.MP_ACCESS_TOKEN;
+        const accessToken = process.env.MP_ACCESS_TOKEN || 'APP_USR-2359833370392789-030114-82acba484889ea609eb268e0106d930e-3236843016';
+        console.log("TEM ACCESS TOKEN:", !!accessToken);
+
         if (!accessToken) {
             throw new Error('Token MP não configurado no servidor');
         }
@@ -22,21 +26,24 @@ export async function POST(req: Request) {
         }
 
         // Criar Itens formatados para o Padrão do MP (Checkout Pro)
+        console.log("Mapeando items...");
         const items = carrinho.map((item: any) => ({
-            id: String(item.id),
-            title: item.nome || 'Action Figure Sob Encomenda',
-            quantity: item.quantidade || 1,
-            unit_price: Number(item.valor_final) / (item.quantidade || 1), // Transforma o preço total do carrinho no unitario MP
+            id: String(item.id || '1'),
+            title: item.nome || item.Figura || 'Action Figure Sob Encomenda',
+            quantity: Number(item.quantidade) || 1,
+            unit_price: Number(item.valor_final || 0) / (Number(item.quantidade) || 1), // Transforma o preço total do carrinho no unitario MP
             currency_id: 'BRL',
         }));
+        console.log("ITEMS MAPEADOS:", JSON.stringify(items));
 
         const preference = new Preference(client);
 
+        console.log("CHAMANDO PREFERENCE CREATE...");
         const response = await preference.create({
             body: {
                 items: items,
                 payer: {
-                    name: cliente_nome || 'Cliente Franga Toys',
+                    name: String(cliente_nome || 'Cliente Franga Toys').substring(0, 250), //MP has limit length
                 },
                 external_reference: reference_id, // ID interno temporal se tivermos
                 payment_methods: {
@@ -56,6 +63,8 @@ export async function POST(req: Request) {
             }
         });
 
+        console.log("URL GERADA COM SUCESSO!", response.init_point);
+
         // Retorna a URL segura "init_point" do Mercado Pago que o checkout.js irá usar ou nós usaremos visualmente
         return NextResponse.json({
             init_point: response.init_point,
@@ -63,7 +72,9 @@ export async function POST(req: Request) {
         });
 
     } catch (error: any) {
-        console.error('Mercado Pago Pref Error:', error);
+        console.error('------- MERCADO PAGO SDK ERROR -------');
+        console.error(error.message);
+        if (error.cause) console.error("CAUSE:", error.cause);
         return NextResponse.json({ error: error.message || 'Erro SDK MP' }, { status: 500 });
     }
 }
