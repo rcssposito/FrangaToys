@@ -281,10 +281,10 @@ export default function DataGridPage() {
                 {/* Tabela */}
                 <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl shadow-[var(--shadow-md)] backdrop-blur-sm max-h-[75vh] flex flex-col">
                     <div className="overflow-auto flex-1 custom-scrollbar">
-                        <table className="w-full text-left border-collapse whitespace-nowrap relative">
+                        <table className="w-full min-w-full text-left border-collapse whitespace-nowrap relative">
                             <thead className="bg-[var(--background)] sticky top-0 z-10">
                                 <tr className="text-[var(--text-muted)] text-[10px] uppercase font-bold tracking-widest border-b border-[var(--card-border)]">
-                                    <th className="pl-4 pr-2 py-4 w-[350px]">Figura</th>
+                                    <th className="pl-4 pr-2 py-4 w-full min-w-[350px]">Figura</th>
                                     <th className="px-3 py-4 text-center">SKU</th>
                                     <th className="px-3 py-4 text-center">Escala (%)</th>
                                     <th className="px-3 py-4 text-center">KG Resina</th>
@@ -294,7 +294,7 @@ export default function DataGridPage() {
                                     <th className="px-3 py-4 text-center uppercase">Extras</th>
                                     <th className="px-4 py-4 text-center text-[var(--accent-emerald)]"><div className="flex flex-col"><span>BÁSICO (CARTÃO)</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
                                     <th className="px-4 py-4 text-center text-[var(--accent-fuchsia)]"><div className="flex flex-col"><span>PREMIUM (CARTÃO)</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
-                                    <th className="px-4 py-4 text-right">AÇÕES</th>
+                                    <th className="px-4 py-4 w-[120px] text-right">AÇÕES</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--card-border)] text-sm">
@@ -302,7 +302,7 @@ export default function DataGridPage() {
                                     const prices = calculatePrices(f);
                                     return (
                                         <tr key={f.id} className="hover:bg-orange-500/[0.02] transition-colors group">
-                                            <td className="pl-4 pr-2 py-4 w-[350px]">
+                                            <td className="pl-4 pr-2 py-4 w-full min-w-[350px]">
                                                 <div
                                                     onClick={() => f.imagem_url && setPreviewImage({ url: f.imagem_url, nome: f.nome })}
                                                     className="cursor-pointer text-left group/name"

@@ -186,11 +186,11 @@ export default function SalesPage() {
 
                                 {/* Table */}
                                 <div className="overflow-x-auto">
-                                    <table className="w-full text-left whitespace-nowrap">
+                                    <table className="w-full min-w-full text-left whitespace-nowrap">
                                         <thead className="bg-[var(--background)]/30 text-[var(--text-muted)] text-[10px] uppercase font-bold tracking-widest border-b border-[var(--card-border)]">
                                             <tr>
                                                 <th className="p-4 pl-6">Data</th>
-                                                <th className="p-4">Figura / Estúdio</th>
+                                                <th className="p-4 w-full">Figura / Estúdio</th>
                                                 <th className="p-4 text-center">Qtd</th>
                                                 <th className="p-4">Cliente</th>
                                                 <th className="p-4">Vendedor / Opcionais</th>
@@ -210,7 +210,7 @@ export default function SalesPage() {
                                                     <td className="p-4 pl-6 text-[var(--text-muted)] font-mono text-xs">
                                                         {new Date(sale.data_venda).toLocaleDateString('pt-BR')}
                                                     </td>
-                                                    <td className="p-4">
+                                                    <td className="p-4 w-full">
                                                         <div className="font-black text-[var(--foreground)] flex items-center gap-2 text-base tracking-tight">
                                                             {sale.figuras?.nome || 'Desconhecida'}
                                                             {sale.pintura_freelancer && (
