@@ -136,8 +136,8 @@ export default function SalesPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] p-8 transition-colors duration-300">
-            <div className="max-w-6xl mx-auto">
+        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] p-4 md:p-8 transition-colors duration-300">
+            <div className="w-full mx-auto">
 
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">

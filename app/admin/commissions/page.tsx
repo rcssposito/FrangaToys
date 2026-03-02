@@ -65,9 +65,9 @@ export default function CommissionsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] p-8 transition-colors duration-300">
-            <div className="max-w-6xl mx-auto">
-                <div className="flex justify-between items-center mb-8">
+        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] p-4 md:p-8 transition-colors duration-300">
+            <div className="w-full mx-auto">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
                     <div className="flex items-center gap-4">
                         <Link href="/admin" className="p-2 bg-[var(--card-bg)] border border-[var(--card-border)] hover:bg-[var(--input-bg)] rounded-xl transition-all shadow-sm text-[var(--text-muted)] hover:text-orange-500">
                             <ArrowLeft size={20} />
