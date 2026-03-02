@@ -211,8 +211,8 @@ export default function DataGridPage() {
         return {
             basic: roundTo5(custoBase * settings.margem_basica),
             premium: roundTo5(custoBase * settings.margem_premium),
-            basicCredito: roundTo5(custoBase * settings.margem_basica * 1.10),
-            premiumCredito: roundTo5(custoBase * settings.margem_premium * 1.10)
+            basicCredito: roundTo5(custoBase * settings.margem_basica * 1.15),
+            premiumCredito: roundTo5(custoBase * settings.margem_premium * 1.15)
         };
     };
 
@@ -291,8 +291,8 @@ export default function DataGridPage() {
                                 <th className="px-2 py-4 text-center text-[10px]">H. Pintura</th>
                                 <th className="px-3 py-4 text-center">Medidas (cm)</th>
                                 <th className="px-3 py-4 text-center uppercase">Extras</th>
-                                <th className="px-4 py-4 text-center text-[var(--accent-emerald)]"><div className="flex flex-col"><span>Básico (Cartão)</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5">PIX (-10%)</span></div></th>
-                                <th className="px-4 py-4 text-center text-[var(--accent-fuchsia)]"><div className="flex flex-col"><span>Premium (Cartão)</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5">PIX (-10%)</span></div></th>
+                                <th className="px-4 py-4 text-center text-[var(--accent-emerald)]"><div className="flex flex-col"><span>BÁSICO (CARTÃO)</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
+                                <th className="px-4 py-4 text-center text-[var(--accent-fuchsia)]"><div className="flex flex-col"><span>PREMIUM (CARTÃO)</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
                                 <th className="px-4 py-4 text-right">AÇÕES</th>
                             </tr>
                         </thead>
