@@ -169,6 +169,7 @@ export async function GET(req: Request) {
         const productSalesMap: { [key: string]: { id: number, name: string, studio: string, revenue: number, qty: number } } = {};
         const categorySalesMap: { [key: string]: number } = {};
         const seriesSalesMap: { [key: string]: { value: number, category: string, studios: { [key: string]: number } } } = {};
+        const sellerSalesMap: { [key: string]: { revenue: number, qty: number, figures: any[] } } = {};
 
         sales.forEach(sale => {
             // @ts-ignore
@@ -177,6 +178,15 @@ export async function GET(req: Request) {
             let studioName = figure?.studios?.nome || 'Outros';
             // @ts-ignore
             if (Array.isArray(figure?.studios)) studioName = figure?.studios[0]?.nome || 'Outros';
+
+            // --- Seller Aggregation ---
+            // @ts-ignore
+            const sellerName = sale.vendedor || 'Site / Desconhecido';
+            if (!sellerSalesMap[sellerName]) {
+                sellerSalesMap[sellerName] = { revenue: 0, qty: 0, figures: [] };
+            }
+            sellerSalesMap[sellerName].revenue += (sale.valor_venda_final || 0);
+            sellerSalesMap[sellerName].qty += (sale.quantidade || 1);
 
             if (!studioSalesMap[studioName]) {
                 studioSalesMap[studioName] = { revenue: 0, profit: 0, itemsSold: 0 };
@@ -187,6 +197,15 @@ export async function GET(req: Request) {
 
             if (figure) {
                 const key = figure.id;
+
+                sellerSalesMap[sellerName].figures.push({
+                    id: figure.id,
+                    name: figure.nome,
+                    price: sale.valor_venda_final || 0,
+                    qty: sale.quantidade || 1,
+                    date: sale.data_venda
+                });
+
                 if (!productSalesMap[key]) {
                     productSalesMap[key] = {
                         id: figure.id,
@@ -484,6 +503,21 @@ export async function GET(req: Request) {
             };
         }).filter(s => s.value > 0).sort((a, b) => b.value - a.value);
 
+        // --- Seller Chart ---
+        const salesBySeller = Object.entries(sellerSalesMap).map(([name, data]) => {
+            const enrichedFigures = data.figures.map(f => ({
+                ...f,
+                image_url: imageMap.get(f.id) || ''
+            })).sort((a, b) => b.price - a.price);
+
+            return {
+                name,
+                value: data.revenue,
+                qty: data.qty,
+                figures: enrichedFigures
+            };
+        }).sort((a, b) => b.value - a.value);
+
 
 
         return NextResponse.json({
@@ -517,6 +551,7 @@ export async function GET(req: Request) {
                 priceDistribution,
                 totalPortfolioValue,
                 totalPortfolioBasic,
+                salesBySeller,
             },
             lists: {
                 topProducts,

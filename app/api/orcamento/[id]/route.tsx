@@ -66,9 +66,9 @@ export async function GET(
 
         const roundTo5 = (val: number) => Math.ceil(val / 5) * 5;
         const basicoPix = figure['Básico (R$)'] || 0;
-        const basicoCartao = roundTo5(basicoPix * 1.10);
+        const basicoCartao = roundTo5(basicoPix * 1.15);
         const premiumPix = figure['Premium (R$)'] || 0;
-        const premiumCartao = roundTo5(premiumPix * 1.10);
+        const premiumCartao = roundTo5(premiumPix * 1.15);
 
         return new ImageResponse(
             (
@@ -181,7 +181,7 @@ export async function GET(
                                         R$ {basicoCartao.toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#60a5fa', fontWeight: 600 }}>(Cartão)</span>
                                     </span>
                                     <span style={{ color: '#10B981', fontSize: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        R$ {basicoPix.toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#10B981', fontWeight: 400 }}>(PIX -10%)</span>
+                                        R$ {basicoPix.toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#10B981', fontWeight: 400 }}>(PIX -15%)</span>
                                     </span>
                                 </div>
                             </div>
@@ -202,7 +202,7 @@ export async function GET(
                                         R$ {premiumCartao.toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#fed7aa', fontWeight: 600 }}>(Cartão)</span>
                                     </span>
                                     <span style={{ color: '#ffffff', fontSize: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        R$ {premiumPix.toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#ffffff', fontWeight: 400 }}>(PIX -10%)</span>
+                                        R$ {premiumPix.toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#ffffff', fontWeight: 400 }}>(PIX -15%)</span>
                                     </span>
                                 </div>
                             </div>

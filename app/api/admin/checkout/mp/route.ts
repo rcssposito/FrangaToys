@@ -63,7 +63,8 @@ export async function POST(req: Request) {
                     excluded_payment_methods: [],
                     excluded_payment_types: [
                         { id: 'ticket' } // Excluímos Boleto para não segurar reserva
-                    ]
+                    ],
+                    installments: 12
                 },
                 back_urls: {
                     success: process.env.NEXT_PUBLIC_SITE_URL ? `${process.env.NEXT_PUBLIC_SITE_URL}/admin/kanban` : 'https://frangatoys.com/admin',

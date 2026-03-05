@@ -18,6 +18,7 @@ export default function AdminDashboard() {
     const [drillDownStudio, setDrillDownStudio] = useState<string | null>(null);
     const [drillDownSeries, setDrillDownSeries] = useState<string | null>(null);
     const [drillDownPriceBucket, setDrillDownPriceBucket] = useState<string | null>(null);
+    const [drillDownSeller, setDrillDownSeller] = useState<string | null>(null);
     const [seriesFilter, setSeriesFilter] = useState<string>('all');
     const [previewImage, setPreviewImage] = useState<{ url: string, nome: string } | null>(null);
 
@@ -683,11 +684,95 @@ export default function AdminDashboard() {
                     );
                 }
                 break;
+            case 'salesBySeller':
+                if (drillDownSeller) {
+                    title = "Vendas de: " + drillDownSeller;
+                    const sellerData = (data.charts.salesBySeller || []).find((s: any) => s.name === drillDownSeller);
+
+                    if (!sellerData || !sellerData.figures || sellerData.figures.length === 0) {
+                        ChartComponent = (
+                            <div className="h-full flex flex-col items-center justify-center text-[var(--text-muted)] animate-in fade-in duration-500">
+                                <Box size={64} className="mb-6 opacity-20" />
+                                <p className="font-black uppercase tracking-widest text-xs">Nenhum modelo vendido por este vendedor.</p>
+                            </div>
+                        );
+                    } else {
+                        ChartComponent = (
+                            <div className="w-full h-full overflow-auto pr-2 custom-scrollbar">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="text-[10px] font-black uppercase tracking-widest bg-[var(--input-bg)] text-[var(--text-muted)] sticky top-0 backdrop-blur-md border-b border-[var(--card-border)]">
+                                        <tr>
+                                            <th className="px-6 py-4">ID</th>
+                                            <th className="px-6 py-4">Modelo (Clique p/ ver)</th>
+                                            <th className="px-6 py-4">Data Venda</th>
+                                            <th className="px-6 py-4 text-right">Preço</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[var(--card-border)]">
+                                        {sellerData.figures.map((f: any, idx: number) => (
+                                            <tr key={idx} className="hover:bg-[var(--input-bg)] transition-colors group">
+                                                <td className="px-6 py-4 text-[var(--text-muted)] font-black text-xs">#{f.id}</td>
+                                                <td className="px-6 py-4">
+                                                    <button
+                                                        onClick={() => {
+                                                            if (f.image_url) {
+                                                                setPreviewImage({ url: f.image_url, nome: f.name });
+                                                            } else {
+                                                                toast.info('Sem imagem cadastrada');
+                                                            }
+                                                        }}
+                                                        className={`flex items-center gap-3 font-black text-[var(--foreground)] tracking-tight hover:text-orange-500 transition-colors text-left ${!f.image_url ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        {f.name}
+                                                        {f.image_url && <ExternalLink size={14} className="text-[var(--text-muted)] group-hover:text-orange-500 transition-colors" />}
+                                                    </button>
+                                                </td>
+                                                <td className="px-6 py-4 text-[var(--text-muted)] font-medium">
+                                                    {new Date(f.date).toLocaleDateString('pt-BR')}
+                                                </td>
+                                                <td className="px-6 py-4 text-right text-emerald-500 font-black text-base tracking-tighter">
+                                                    R$ {f.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        );
+                    }
+                } else {
+                    chartData = data.charts.salesBySeller || [];
+                    title = "Vendas por Vendedor";
+                    ChartComponent = (
+                        <div className="w-full h-full flex flex-col pt-4">
+                            <p className="text-[var(--text-muted)] text-[10px] font-black uppercase tracking-widest mb-6 text-center bg-[var(--input-bg)] py-2 rounded-full w-fit mx-auto px-6 border border-[var(--card-border)]">Clique na barra para ver os detalhes da venda</p>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData} margin={{ left: 0, bottom: 40 }} layout="vertical">
+                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" horizontal={false} />
+                                    <XAxis type="number" hide />
+                                    <YAxis dataKey="name" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 700 }} width={140} axisLine={false} tickLine={false} />
+                                    <Tooltip content={<CategoryTooltip suffix="vendas (qtd)" formatter={(v: number, name: string, payload: any) => `R$ ${(payload?.payload?.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | ${(v || 0)}`} />} cursor={{ fill: 'var(--input-bg)' }} />
+                                    <Bar dataKey="qty" radius={[0, 6, 6, 0]} onClick={(data) => setDrillDownSeller(data?.name || null)} className="cursor-pointer">
+                                        {chartData.map((_e: any, index: number) => (
+                                            <Cell
+                                                key={`cell-${index}`}
+                                                fill="#10b981"
+                                                className="hover:opacity-80 transition-all cursor-pointer"
+                                                onClick={() => setDrillDownSeller(_e.name || null)}
+                                            />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    );
+                }
+                break;
         }
 
         const itemHeight = 40;
         const itemWidth = 60;
-        const isVertical = expandedChart === 'revenueByStudio' || expandedChart === 'soldByStudio' || expandedChart === 'salesBySeries' || (expandedChart === 'salesByCategory' && drillDownCategory) || (expandedChart === 'revenueByStudio' && drillDownStudio) || (expandedChart === 'inventoryByStudio' && drillDownStudio) || (expandedChart === 'inventoryBySeries');
+        const isVertical = expandedChart === 'revenueByStudio' || expandedChart === 'soldByStudio' || expandedChart === 'salesBySeries' || (expandedChart === 'salesByCategory' && drillDownCategory) || (expandedChart === 'revenueByStudio' && drillDownStudio) || (expandedChart === 'inventoryByStudio' && drillDownStudio) || (expandedChart === 'inventoryBySeries') || expandedChart === 'salesBySeller';
         const dynamicStyle = isVertical
             ? { height: `${Math.max(500, chartData.length * itemHeight)}px`, width: '100%' }
             : { width: `${Math.max(1000, chartData.length * itemWidth)}px`, height: '100%' };
@@ -700,7 +785,7 @@ export default function AdminDashboard() {
 
 
         return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--background)]/90 backdrop-blur-xl animate-in fade-in duration-300" onClick={() => { setExpandedChart(null); setDrillDownCategory(null); setDrillDownStudio(null); setDrillDownSeries(null); setDrillDownPriceBucket(null); }}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--background)]/90 backdrop-blur-xl animate-in fade-in duration-300" onClick={() => { setExpandedChart(null); setDrillDownCategory(null); setDrillDownStudio(null); setDrillDownSeries(null); setDrillDownPriceBucket(null); setDrillDownSeller(null); }}>
                 <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-3xl w-full max-w-6xl h-[85vh] flex flex-col shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] overflow-hidden" onClick={e => e.stopPropagation()}>
                     <div className="px-8 py-5 border-b border-[var(--card-border)] flex justify-between items-center bg-[var(--card-bg)]">
                         <div className="flex items-center gap-6">
@@ -711,6 +796,7 @@ export default function AdminDashboard() {
                                         if (drillDownStudio) setDrillDownStudio(null);
                                         if (drillDownSeries) setDrillDownSeries(null);
                                         if (drillDownPriceBucket) setDrillDownPriceBucket(null);
+                                        if (drillDownSeller) setDrillDownSeller(null);
                                     }}
                                     className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] hover:text-orange-500 bg-[var(--input-bg)] hover:border-orange-500 px-4 py-2 rounded-xl transition-all border border-[var(--card-border)] shadow-sm active:scale-95"
                                 >
@@ -722,7 +808,7 @@ export default function AdminDashboard() {
                                 {title}
                             </h2>
                         </div>
-                        <button onClick={() => { setExpandedChart(null); setDrillDownCategory(null); setDrillDownStudio(null); setDrillDownSeries(null); setDrillDownPriceBucket(null); }} className="p-3 bg-[var(--input-bg)] border border-[var(--card-border)] hover:border-orange-500 rounded-full transition-all text-[var(--text-muted)] hover:text-orange-500 shadow-sm active:scale-90">
+                        <button onClick={() => { setExpandedChart(null); setDrillDownCategory(null); setDrillDownStudio(null); setDrillDownSeries(null); setDrillDownPriceBucket(null); setDrillDownSeller(null); }} className="p-3 bg-[var(--input-bg)] border border-[var(--card-border)] hover:border-orange-500 rounded-full transition-all text-[var(--text-muted)] hover:text-orange-500 shadow-sm active:scale-90">
                             <X size={24} />
                         </button>
                     </div>
@@ -897,6 +983,32 @@ export default function AdminDashboard() {
                                 )}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                {/* --- Vendas por Vendedor --- */}
+                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl relative group shadow-sm hover:shadow-md transition-all xl:col-span-2">
+                    <div className="flex justify-between items-start mb-8">
+                        <h2 className="text-xl font-black flex items-center gap-3 text-[var(--foreground)] tracking-tight">
+                            <Users size={22} className="text-emerald-500" />
+                            Vendas por Vendedor
+                        </h2>
+                        <button onClick={() => setExpandedChart('salesBySeller')} className="p-2.5 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-orange-500 text-[var(--text-muted)] hover:text-orange-500 shadow-sm" title="Expandir">
+                            <Maximize2 size={18} />
+                        </button>
+                    </div>
+                    <div className="h-[320px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={data?.charts?.salesBySeller?.slice(0, 10) || []} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" horizontal={false} />
+                                <XAxis type="number" hide />
+                                <YAxis dataKey="name" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 700 }} width={120} axisLine={false} tickLine={false} />
+                                <Tooltip content={<CategoryTooltip suffix="vendas" formatter={(v: number, name: string, payload: any) => `${v} unid.`} />} cursor={{ fill: 'var(--input-bg)' }} />
+                                <Bar dataKey="qty" radius={[0, 4, 4, 0]}>
+                                    {(data?.charts?.salesBySeller?.slice(0, 10) || []).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#10b981" />)}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
 
