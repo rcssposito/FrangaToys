@@ -56,7 +56,7 @@ export default function AdminSidebar() {
             name: 'Comissões',
             href: '/admin/commissions',
             icon: DollarSign,
-            roles: ['admin', 'finance']
+            roles: ['admin', 'finance', 'sales']
         },
         {
             name: 'Estoque',
