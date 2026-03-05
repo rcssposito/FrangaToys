@@ -751,8 +751,8 @@ export default function AdminDashboard() {
                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" horizontal={false} />
                                     <XAxis type="number" hide />
                                     <YAxis dataKey="name" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 700 }} width={140} axisLine={false} tickLine={false} />
-                                    <Tooltip content={<CategoryTooltip suffix="vendas (qtd)" formatter={(v: number, name: string, payload: any) => `R$ ${(payload?.payload?.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | ${(v || 0)}`} />} cursor={{ fill: 'var(--input-bg)' }} />
-                                    <Bar dataKey="qty" radius={[0, 6, 6, 0]} onClick={(data) => setDrillDownSeller(data?.name || null)} className="cursor-pointer">
+                                    <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number, name: string, payload: any) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | ${(payload?.payload?.qty || 0)} unid.`} />} cursor={{ fill: 'var(--input-bg)' }} />
+                                    <Bar dataKey="value" radius={[0, 6, 6, 0]} onClick={(data) => setDrillDownSeller(data?.name || null)} className="cursor-pointer">
                                         {chartData.map((_e: any, index: number) => (
                                             <Cell
                                                 key={`cell-${index}`}
@@ -1003,8 +1003,8 @@ export default function AdminDashboard() {
                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" horizontal={false} />
                                 <XAxis type="number" hide />
                                 <YAxis dataKey="name" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 700 }} width={120} axisLine={false} tickLine={false} />
-                                <Tooltip content={<CategoryTooltip suffix="vendas" formatter={(v: number, name: string, payload: any) => `${v} unid.`} />} cursor={{ fill: 'var(--input-bg)' }} />
-                                <Bar dataKey="qty" radius={[0, 4, 4, 0]}>
+                                <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number, name: string, payload: any) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | ${(payload?.payload?.qty || 0)} unid.`} />} cursor={{ fill: 'var(--input-bg)' }} />
+                                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                                     {(data?.charts?.salesBySeller?.slice(0, 10) || []).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#10b981" />)}
                                 </Bar>
                             </BarChart>
