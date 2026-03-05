@@ -19,10 +19,11 @@ interface Sale {
     vendedor?: string;
     vendedor_nome?: string;
     comissao_vendedor?: number;
-    pintura_freelancer?: boolean;
     observacao?: string;
     status?: string;
     canal_venda?: string;
+    pintura_freelancer?: boolean;
+    pintor_nome?: string;
     figuras: {
         nome: string;
         studios: { nome: string } | { nome: string }[];
@@ -425,6 +426,43 @@ export default function SalesPage() {
                                         placeholder="Ex: WhatsApp, Instagram"
                                     />
                                 </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-orange-500/5 rounded-2xl border border-orange-500/10">
+                                <div className="flex items-center gap-3 h-full">
+                                    <input
+                                        type="checkbox"
+                                        id="edit_pintura_freelancer"
+                                        checked={editingSale.pintura_freelancer || false}
+                                        onChange={e => setEditingSale({ ...editingSale, pintura_freelancer: e.target.checked })}
+                                        className="w-5 h-5 rounded border-[var(--card-border)] bg-[var(--input-bg)] text-orange-500 focus:ring-orange-500"
+                                    />
+                                    <label htmlFor="edit_pintura_freelancer" className="text-sm font-black text-[var(--foreground)] cursor-pointer flex items-center gap-2">
+                                        <Paintbrush size={16} className="text-orange-500" />
+                                        Pintura Freelancer
+                                    </label>
+                                </div>
+                                {editingSale.pintura_freelancer && (
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] uppercase font-black text-[var(--text-muted)] tracking-widest ml-1">Pintor Responsável</label>
+                                        <select
+                                            value={editingSale.pintor_nome || ''}
+                                            onChange={e => setEditingSale({ ...editingSale, pintor_nome: e.target.value })}
+                                            className="w-full bg-[var(--input-bg)] border border-orange-500/30 rounded-xl px-4 py-3 text-sm outline-none transition-all font-black appearance-none cursor-pointer"
+                                        >
+                                            <option value="">Selecione um Pintor</option>
+                                            {vendedores
+                                                .filter(v =>
+                                                    (v.roles && v.roles.includes('painter')) ||
+                                                    v.nome === editingSale.pintor_nome ||
+                                                    v.email === editingSale.pintor_nome
+                                                )
+                                                .map(v => (
+                                                    <option key={v.email} value={v.nome || v.email}>{v.nome || v.email}</option>
+                                                ))}
+                                        </select>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="space-y-2">
