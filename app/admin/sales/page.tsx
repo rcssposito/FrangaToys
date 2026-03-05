@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Plus, Loader2, ArrowLeft, TrendingUp, Calendar, Trash2, Package, Paintbrush, DollarSign, RotateCcw, Receipt } from 'lucide-react';
+import { Plus, Loader2, ArrowLeft, TrendingUp, Calendar, Trash2, Package, Paintbrush, DollarSign, RotateCcw, Receipt, Edit3, X, Save } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import { format } from 'date-fns';
@@ -22,6 +22,7 @@ interface Sale {
     pintura_freelancer?: boolean;
     observacao?: string;
     status?: string;
+    canal_venda?: string;
     figuras: {
         nome: string;
         studios: { nome: string } | { nome: string }[];
@@ -38,11 +39,24 @@ interface MonthGroup {
 export default function SalesPage() {
     const [loading, setLoading] = useState(true);
     const [groups, setGroups] = useState<MonthGroup[]>([]);
+    const [editingSale, setEditingSale] = useState<Sale | null>(null);
+    const [vendedores, setVendedores] = useState<any[]>([]);
+    const [isUpdating, setIsUpdating] = useState(false);
     const { hasRole } = usePermission();
 
     useEffect(() => {
         fetchSales();
+        fetchVendedores();
     }, []);
+
+    const fetchVendedores = async () => {
+        try {
+            const res = await fetch('/api/admin/users');
+            if (res.ok) setVendedores(await res.json());
+        } catch (err) {
+            console.error('Erro ao buscar vendedores');
+        }
+    };
 
     const fetchSales = async () => {
         try {
@@ -125,6 +139,30 @@ export default function SalesPage() {
             fetchSales();
         } catch (err) {
             toast.error('Erro ao reenviar para o Kanban');
+        }
+    };
+
+    const handleUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingSale) return;
+
+        setIsUpdating(true);
+        try {
+            const res = await fetch('/api/admin/sales', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editingSale)
+            });
+
+            if (!res.ok) throw new Error('Erro ao atualizar');
+
+            toast.success('Venda atualizada com sucesso!');
+            setEditingSale(null);
+            fetchSales();
+        } catch (err) {
+            toast.error('Erro ao salvar alterações');
+        } finally {
+            setIsUpdating(false);
         }
     };
 
@@ -290,13 +328,22 @@ export default function SalesPage() {
                                                                 <Receipt size={16} />
                                                             </Link>
                                                             {hasRole('admin') && (
-                                                                <button
-                                                                    onClick={() => handleDelete(sale.id)}
-                                                                    className="p-2.5 bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--card-border)] rounded-lg hover:text-red-500 hover:border-red-500/30 transition-all shadow-sm"
-                                                                    title="Excluir Venda"
-                                                                >
-                                                                    <Trash2 size={16} />
-                                                                </button>
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => setEditingSale(sale)}
+                                                                        className="p-2.5 bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--card-border)] rounded-lg hover:text-orange-500 hover:border-orange-500/30 transition-all shadow-sm"
+                                                                        title="Editar Dados da Venda"
+                                                                    >
+                                                                        <Edit3 size={16} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDelete(sale.id)}
+                                                                        className="p-2.5 bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--card-border)] rounded-lg hover:text-red-500 hover:border-red-500/30 transition-all shadow-sm"
+                                                                        title="Excluir Venda"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </>
                                                             )}
                                                         </div>
                                                     </td>
@@ -310,6 +357,108 @@ export default function SalesPage() {
                     </div>
                 )}
             </div>
-        </div>
+
+            {/* Modal de Edição */}
+            {editingSale && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-[var(--card-bg)] border border-[var(--card-border)] w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-[var(--card-border)] flex justify-between items-center bg-[var(--background)]/50">
+                            <h2 className="text-xl font-black flex items-center gap-3 italic">
+                                <Edit3 size={24} className="text-orange-500" />
+                                Editar Venda #{editingSale.id}
+                            </h2>
+                            <button onClick={() => setEditingSale(null)} className="p-2 hover:bg-[var(--input-bg)] rounded-xl transition-colors text-[var(--text-muted)]">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleUpdate} className="p-8 space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] uppercase font-black text-[var(--text-muted)] tracking-widest ml-1">Cliente</label>
+                                    <input
+                                        type="text"
+                                        value={editingSale.cliente_nome || ''}
+                                        onChange={e => setEditingSale({ ...editingSale, cliente_nome: e.target.value })}
+                                        className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-4 py-3 text-sm focus:border-orange-500/50 outline-none transition-all font-bold"
+                                        placeholder="Nome do Cliente"
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] uppercase font-black text-[var(--text-muted)] tracking-widest ml-1">Vendedor</label>
+                                    <select
+                                        value={editingSale.vendedor || ''}
+                                        onChange={e => setEditingSale({ ...editingSale, vendedor: e.target.value })}
+                                        className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-4 py-3 text-sm focus:border-orange-500/50 outline-none transition-all font-black appearance-none cursor-pointer"
+                                    >
+                                        <option value="">Loja Direta</option>
+                                        {vendedores.map(v => (
+                                            <option key={v.email} value={v.email}>{v.nome || v.email}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] uppercase font-black text-[var(--text-muted)] tracking-widest ml-1">Status Logístico</label>
+                                    <select
+                                        value={editingSale.status || 'Aguardando Pagamento'}
+                                        onChange={e => setEditingSale({ ...editingSale, status: e.target.value })}
+                                        className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-4 py-3 text-sm focus:border-orange-500/50 outline-none transition-all font-black appearance-none cursor-pointer"
+                                    >
+                                        <option value="Aguardando Pagamento">Aguardando Pagamento (PDV)</option>
+                                        <option value="Fila de Impressão">Fila de Impressão</option>
+                                        <option value="Imprimindo">Imprimindo</option>
+                                        <option value="Lavagem e Cura">Cura e Limpeza</option>
+                                        <option value="Pintura Secagem">Pintura</option>
+                                        <option value="Pronto p/ Entrega">Pronto p/ Entrega</option>
+                                        <option value="Concluída">Pedido Concluído</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] uppercase font-black text-[var(--text-muted)] tracking-widest ml-1">Canal</label>
+                                    <input
+                                        type="text"
+                                        value={editingSale.canal_venda || ''}
+                                        // @ts-ignore
+                                        onChange={e => setEditingSale({ ...editingSale, canal_venda: e.target.value })}
+                                        className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-4 py-3 text-sm focus:border-orange-500/50 outline-none transition-all font-bold"
+                                        placeholder="Ex: WhatsApp, Instagram"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] uppercase font-black text-[var(--text-muted)] tracking-widest ml-1">Observações</label>
+                                <textarea
+                                    value={editingSale.observacao || ''}
+                                    onChange={e => setEditingSale({ ...editingSale, observacao: e.target.value })}
+                                    className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-4 py-3 text-sm focus:border-orange-500/50 outline-none transition-all font-medium min-h-[100px] resize-none"
+                                    placeholder="Observações internas..."
+                                />
+                            </div>
+
+                            <div className="pt-4 flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingSale(null)}
+                                    className="flex-1 bg-[var(--background)] border border-[var(--card-border)] hover:bg-[var(--input-bg)] text-[var(--foreground)] font-bold py-4 rounded-2xl transition-all active:scale-95"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isUpdating}
+                                    className="flex-[2] bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-lg shadow-orange-500/20 active:scale- scale-100 disabled:opacity-50 disabled:active:scale-100"
+                                >
+                                    {isUpdating ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
+                                    SALVAR ALTERAÇÕES
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )
+            }
+        </div >
     );
 }

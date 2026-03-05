@@ -88,47 +88,60 @@ export default function CommissionsPage() {
         { value: '11', label: 'Dezembro' },
     ];
 
-    // Agrupar por Vendedor
+    // Agrupar por Vendedor e Pintor (Um vendedor pode ter comissão e um pintor pode ter pagamento)
     const commissionsBySeller = sales.reduce((acc: any, sale: any) => {
-        const vendorKey = sale.vendedor || 'Desconhecido';
-        if (!acc[vendorKey]) {
-            acc[vendorKey] = {
-                nome: sale.vendedor_nome || vendorKey,
-                totalVendas: 0,
-                totalBruto: 0,
-                totalComissao: 0,
-                totalPintura: 0,
-                vendas: []
-            };
+        const processAllocation = (userName: string, displayName: string, amount: number, type: 'venda' | 'pintura') => {
+            if (amount <= 0) return;
+
+            const key = userName.toLowerCase();
+            if (!acc[key]) {
+                acc[key] = {
+                    nome: displayName || userName,
+                    totalVendas: 0,
+                    totalBruto: 0,
+                    totalComissao: 0,
+                    totalPintura: 0,
+                    vendas: []
+                };
+            }
+
+            if (type === 'venda') {
+                acc[key].totalVendas += 1;
+                acc[key].totalBruto += (sale.valor_venda_final || 0);
+                acc[key].totalComissao += amount;
+            } else {
+                acc[key].totalPintura += amount;
+            }
+
+            acc[key].vendas.push({
+                id: sale.id,
+                data: sale.data_venda,
+                cliente: sale.cliente_nome || 'Não informado',
+                produto: sale.figuras?.nome || `Item ID: ${sale.figura_id}`,
+                valor: sale.valor_venda_final || 0,
+                ganho: amount,
+                tipo: type,
+                status: sale.status_pagamento || sale.status
+            });
+        };
+
+        // 1. Comissão de Vendedor (15%)
+        processAllocation(
+            sale.vendedor || 'Desconhecido',
+            sale.vendedor_nome || sale.vendedor?.split('@')[0] || 'Desconhecido',
+            sale.comissao_vendedor || 0,
+            'venda'
+        );
+
+        // 2. Pagamento de Pintura (Freelancer)
+        if (sale.pintura_freelancer && (sale.valor_pago_pintor || 0) > 0 && sale.pintor_nome) {
+            processAllocation(
+                sale.pintor_nome,
+                sale.pintor_nome.split('@')[0],
+                sale.valor_pago_pintor || 0,
+                'pintura'
+            );
         }
-
-        const valorRealVenda = (sale.valor_venda_final || 0);
-
-        acc[vendorKey].totalVendas += 1;
-        acc[vendorKey].totalBruto += valorRealVenda;
-        acc[vendorKey].totalComissao += (sale.comissao_vendedor || 0);
-
-        // Se este vendador foi o pintor freelancer nesta venda, ele recebe o valor da pintura
-        // (Isso assume que o nome ou email do pintor bate com o vendedor_nome ou email atual)
-        if (sale.pintura_freelancer && sale.pintor_nome &&
-            (sale.pintor_nome === vendorKey || sale.pintor_nome === sale.vendedor_nome)) {
-            // Em tese precisaríamos da matemática do freelancer, 
-            // no momento vamos inferir que o lucro tem uma dedução, 
-            // mas o ideal é a API salvar 'valor_pago_pintor' na venda.
-            // Para simplificar agora, se a venda marcou pintura_freelancer e o pintor é ele,
-            // poderíamos somar um valor_pintura se existisse.
-            // Para o MVP vou criar a UI focada na comissao_vendedor que já existe.
-        }
-
-        acc[vendorKey].vendas.push({
-            id: sale.id,
-            data: sale.data_venda,
-            cliente: sale.cliente_nome || 'Não informado',
-            produto: sale.figuras?.nome || `Item ID: ${sale.figura_id}`,
-            valor: valorRealVenda,
-            comissao: sale.comissao_vendedor || 0,
-            status: sale.status_pagamento || sale.status
-        });
 
         return acc;
     }, {});
@@ -224,21 +237,22 @@ export default function CommissionsPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-wrap items-center gap-6">
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider">Vendido Bruto</span>
-                                            <span className="text-sm font-semibold text-[var(--foreground)]">R$ {data.totalBruto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                    <div className="flex items-center gap-8">
+                                        <div className="text-right">
+                                            <p className="text-[10px] text-[var(--text-muted)] uppercase font-black tracking-widest">Ganhos Venda</p>
+                                            <p className="text-xl font-black text-emerald-500">R$ {data.totalComissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                         </div>
-                                        <div className="w-px h-8 bg-[var(--card-border)] hidden md:block"></div>
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-[10px] uppercase font-bold text-emerald-500 tracking-wider">Comissão a Pagar</span>
-                                            <span className="text-2xl font-black text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
-                                                R$ {data.totalComissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                            </span>
+                                        {data.totalPintura > 0 && (
+                                            <div className="text-right border-l border-[var(--card-border)] pl-8">
+                                                <p className="text-[10px] text-[var(--text-muted)] uppercase font-black tracking-widest">Ganhos Pintura</p>
+                                                <p className="text-xl font-black text-fuchsia-400">R$ {data.totalPintura.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                            </div>
+                                        )}
+                                        <div className="text-right border-l border-[var(--card-border)] pl-8">
+                                            <p className="text-[10px] text-[var(--text-muted)] uppercase font-black tracking-widest">Total a Pagar</p>
+                                            <p className="text-2xl font-black text-white">R$ {(data.totalComissao + data.totalPintura).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                         </div>
-                                        <div className="text-[var(--text-muted)] ml-2">
-                                            {expandedVendedor === email ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                        </div>
+                                        {expandedVendedor === email ? <ChevronUp size={24} className="text-[var(--text-muted)]" /> : <ChevronDown size={24} className="text-[var(--text-muted)]" />}
                                     </div>
                                 </div>
 
@@ -253,8 +267,9 @@ export default function CommissionsPage() {
                                                         <th className="pb-3 px-4">Cliente</th>
                                                         <th className="pb-3 px-4">Produto</th>
                                                         <th className="pb-3 px-4">Status Pag.</th>
+                                                        <th className="pb-3 px-4 text-center">Tipo</th>
                                                         <th className="pb-3 px-4 text-right">Valor Venda</th>
-                                                        <th className="pb-3 px-4 text-right text-emerald-500">Comissão</th>
+                                                        <th className="pb-3 px-4 text-right">Comissão / Ganho</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-[var(--card-border)]">
@@ -264,15 +279,27 @@ export default function CommissionsPage() {
                                                             <td className="py-3 px-4 font-bold text-[var(--foreground)]">{venda.cliente}</td>
                                                             <td className="py-3 px-4 font-medium text-[var(--foreground)]">{venda.produto}</td>
                                                             <td className="py-3 px-4">
-                                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${venda.status === 'Pago' ? 'bg-emerald-500/10 text-emerald-500' :
-                                                                        venda.status === 'Pendente/Incompleto' ? 'bg-amber-500/10 text-amber-500' :
-                                                                            'bg-zinc-500/10 text-zinc-400'
+                                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${venda.status === 'Concluída' || venda.status === 'Pago'
+                                                                        ? 'bg-emerald-500/10 text-emerald-500'
+                                                                        : 'bg-orange-500/10 text-orange-500'
                                                                     }`}>
                                                                     {venda.status}
                                                                 </span>
                                                             </td>
-                                                            <td className="py-3 px-4 text-right font-semibold text-[var(--foreground)]">R$ {venda.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                                                            <td className="py-3 px-4 text-right font-black text-emerald-400">R$ {venda.comissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                                            <td className="py-3 px-4 text-center">
+                                                                <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md ring-1 ring-inset ${venda.tipo === 'venda'
+                                                                    ? 'bg-emerald-500/10 text-emerald-500 ring-emerald-500/20'
+                                                                    : 'bg-fuchsia-500/10 text-fuchsia-500 ring-fuchsia-500/20'
+                                                                    }`}>
+                                                                    {venda.tipo}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-3 px-4 text-right font-medium text-[var(--text-muted)]">
+                                                                R$ {venda.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                            </td>
+                                                            <td className={`py-3 px-4 text-right font-black ${venda.tipo === 'venda' ? 'text-emerald-500' : 'text-fuchsia-400'}`}>
+                                                                R$ {venda.ganho.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                            </td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
