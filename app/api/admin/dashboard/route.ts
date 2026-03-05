@@ -78,6 +78,13 @@ export async function GET(req: Request) {
 
         if (studiosError) throw studiosError;
 
+        // Fetch Users for Display Names
+        const { data: users } = await supabase.from('admin_users').select('email, nome');
+        const userMap = (users || []).reduce((acc: any, u) => {
+            if (u.email) acc[u.email.toLowerCase()] = u.nome || u.email.split('@')[0];
+            return acc;
+        }, {});
+
         // 4. Fetch Pricing View (Budget) - WITH PAGINATION
         // Supabase API might limit rows even if we request more.
         const allPricingData: any[] = [];
@@ -181,7 +188,9 @@ export async function GET(req: Request) {
 
             // --- Seller Aggregation ---
             // @ts-ignore
-            const sellerName = sale.vendedor || 'Site / Desconhecido';
+            const rawVendedor = (sale.vendedor || '').toLowerCase();
+            const sellerName = rawVendedor ? (userMap[rawVendedor] || rawVendedor) : 'Site / Desconhecido';
+
             if (!sellerSalesMap[sellerName]) {
                 sellerSalesMap[sellerName] = { revenue: 0, qty: 0, figures: [] };
             }
