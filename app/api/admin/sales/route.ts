@@ -47,6 +47,7 @@ export async function POST(req: Request) {
         const {
             carrinho, // Array de { id, nome, quantidade, valor_final, resina_kg }
             cliente_nome,
+            cliente_contato,
             canal_venda,
             vendedor, // Email do usuário na sessão
             pintura_freelancer, // Booleano
@@ -121,6 +122,7 @@ export async function POST(req: Request) {
             salesToInsert.push({
                 figura_id: item.id,
                 cliente_nome,
+                cliente_contato,
                 canal_venda,
                 vendedor,
                 comissao_vendedor,

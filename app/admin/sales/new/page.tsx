@@ -43,6 +43,7 @@ export default function NewSalePage() {
     // Cart and Form
     const [cart, setCart] = useState<CartItem[]>([]);
     const [cliente, setCliente] = useState('');
+    const [clienteContato, setClienteContato] = useState('');
     const [dataVenda, setDataVenda] = useState(new Date().toISOString().split('T')[0]);
     const [canal, setCanal] = useState('Whatsapp');
     const [pinturaFreelancer, setPinturaFreelancer] = useState(false);
@@ -279,6 +280,7 @@ export default function NewSalePage() {
                         resina_kg: i.resina_kg
                     })),
                     cliente_nome: cliente,
+                    cliente_contato: clienteContato,
                     canal_venda: canal,
                     data_venda: dataVenda,
                     pintura_freelancer: pinturaFreelancer,
@@ -306,7 +308,7 @@ export default function NewSalePage() {
             const numeroDestino = '5511959737551'; // O número da loja/dono
             let msg = `*🚀 NOVA VENDA REGISTRADA E ENVIADA PARA A FILA (KANBAN) 🚀*\n\n`;
             msg += `*Vendedor:* ${vendedorSelecionado || user?.email}\n`;
-            msg += `*Cliente:* ${cliente}\n`;
+            msg += `*Cliente:* ${cliente} ${clienteContato ? `(${clienteContato})` : ''}\n`;
             msg += `*Data:* ${dataVenda.split('-').reverse().join('/')}\n`;
             msg += `*Canal:* ${canal}\n`;
             msg += `*Pintura:* ${pinturaFreelancer && pintorNome ? `Terceirizada (${pintorNome.split(' ')[0]})` : 'Interna'}\n`;
@@ -426,6 +428,7 @@ export default function NewSalePage() {
                                 setCompletedSaleData(null);
                                 setCart([]);
                                 setCliente('');
+                                setClienteContato('');
                                 setObservacao('');
                                 setShowPaymentOptions(false);
                             }}
@@ -635,15 +638,26 @@ export default function NewSalePage() {
                                 )
                             )}
                             <div className="grid md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs text-zinc-500 uppercase font-bold mb-1">Cliente</label>
-                                    <input
-                                        required
-                                        value={cliente}
-                                        onChange={e => setCliente(e.target.value)}
-                                        className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 outline-none focus:border-orange-500 text-sm"
-                                        placeholder="Nome do Cliente"
-                                    />
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="col-span-1">
+                                        <label className="block text-xs text-zinc-500 uppercase font-bold mb-1">Cliente</label>
+                                        <input
+                                            required
+                                            value={cliente}
+                                            onChange={e => setCliente(e.target.value)}
+                                            className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 outline-none focus:border-orange-500 text-sm"
+                                            placeholder="Nome do Cliente"
+                                        />
+                                    </div>
+                                    <div className="col-span-1">
+                                        <label className="block text-xs text-zinc-500 uppercase font-bold mb-1">Telefone (Opcional)</label>
+                                        <input
+                                            value={clienteContato}
+                                            onChange={e => setClienteContato(e.target.value)}
+                                            className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 outline-none focus:border-orange-500 text-sm"
+                                            placeholder="(11) 99999-9999"
+                                        />
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
