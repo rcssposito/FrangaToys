@@ -24,24 +24,23 @@ export default function StudiosPage() {
     const [isAdding, setIsAdding] = useState(false);
     const [newStudioName, setNewStudioName] = useState('');
     const { hasRole, user } = usePermission();
+    const canEdit = hasRole('admin') || hasRole('pricing');
     const router = useRouter();
 
     // Protect Route
     useEffect(() => {
-        const canAccess = hasRole('admin') || hasRole('pricing');
-        if (!loading && user && !canAccess) {
+        if (!loading && user && !canEdit) {
             toast.error('Acesso negado');
             router.push('/admin');
         }
-    }, [user, loading, hasRole, router]);
+    }, [user, loading, canEdit, router]);
 
     // Fetch studios
     useEffect(() => {
-        const canAccess = hasRole('admin') || hasRole('pricing');
-        if (canAccess) {
+        if (canEdit) {
             fetchStudios();
         }
-    }, [hasRole]);
+    }, [canEdit]);
 
     const fetchStudios = async () => {
         try {
@@ -244,28 +243,30 @@ export default function StudiosPage() {
                                     ))}
 
                                     {/* Add New Studio Row */}
-                                    <tr className="bg-[var(--background)]/50">
-                                        <td className="p-4" colSpan={5}>
-                                            <form onSubmit={handleAddStudio} className="flex items-center gap-3">
-                                                <input
-                                                    type="text"
-                                                    value={newStudioName}
-                                                    onChange={(e) => setNewStudioName(e.target.value)}
-                                                    placeholder="Novo Estúdio..."
-                                                    className="w-full max-w-sm bg-[var(--card-bg)] border border-[var(--input-border)] rounded-lg p-3 focus:border-orange-500 outline-none text-[var(--foreground)] placeholder:text-[var(--text-muted)] transition-all font-bold shadow-sm"
-                                                />
-                                                <button
-                                                    type="submit"
-                                                    disabled={isAdding || !newStudioName.trim()}
-                                                    className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold px-6 py-3 rounded-lg transition-all shadow-lg shadow-orange-500/20"
-                                                >
-                                                    {isAdding ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                                                    <span>Adicionar</span>
-                                                </button>
-                                            </form>
-                                        </td>
-                                        <td className="p-4"></td>
-                                    </tr>
+                                    {canEdit && (
+                                        <tr className="bg-[var(--background)]/50">
+                                            <td className="p-4" colSpan={5}>
+                                                <form onSubmit={handleAddStudio} className="flex items-center gap-3">
+                                                    <input
+                                                        type="text"
+                                                        value={newStudioName}
+                                                        onChange={(e) => setNewStudioName(e.target.value)}
+                                                        placeholder="Novo Estúdio..."
+                                                        className="w-full max-w-sm bg-[var(--card-bg)] border border-[var(--input-border)] rounded-lg p-3 focus:border-orange-500 outline-none text-[var(--foreground)] placeholder:text-[var(--text-muted)] transition-all font-bold shadow-sm"
+                                                    />
+                                                    <button
+                                                        type="submit"
+                                                        disabled={isAdding || !newStudioName.trim()}
+                                                        className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold px-6 py-3 rounded-lg transition-all shadow-lg shadow-orange-500/20"
+                                                    >
+                                                        {isAdding ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                                                        <span>Adicionar</span>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                            <td className="p-4"></td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>

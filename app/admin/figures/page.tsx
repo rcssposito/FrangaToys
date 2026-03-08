@@ -25,6 +25,7 @@ interface Figure {
     horas_pintura: number | string;
     escala: number | string;
     tem_extras?: boolean;
+    sinonimos?: string;
 }
 
 interface PricingSettings {
@@ -133,6 +134,7 @@ export default function DataGridPage() {
             profundidade_cm: toNumberOrNull(figure.profundidade_cm),
             escala: toNumberOrNull(figure.escala) || 100,
             tem_extras: !!figure.tem_extras,
+            sinonimos: figure.sinonimos || '',
         };
 
         try {
@@ -285,6 +287,7 @@ export default function DataGridPage() {
                             <thead className="bg-[var(--background)] sticky top-0 z-10">
                                 <tr className="text-[var(--text-muted)] text-[10px] uppercase font-bold tracking-widest border-b border-[var(--card-border)]">
                                     <th className="pl-4 pr-2 py-4 w-full min-w-[350px]">Figura</th>
+                                    <th className="px-3 py-4 text-center">Sinônimos / Tags</th>
                                     <th className="px-3 py-4 text-center">SKU</th>
                                     <th className="px-3 py-4 text-center">Escala (%)</th>
                                     <th className="px-3 py-4 text-center">KG Resina</th>
@@ -315,6 +318,17 @@ export default function DataGridPage() {
                                             </td>
 
                                             <td className="px-3 py-4 text-center">
+                                                <input
+                                                    type="text"
+                                                    value={f.sinonimos || ''}
+                                                    placeholder="Nomes PT-BR, tags..."
+                                                    disabled={!canEdit}
+                                                    onChange={e => handleChange(f.id, 'sinonimos', e.target.value)}
+                                                    className="w-48 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-left text-xs font-medium text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all shadow-[var(--shadow-sm)] disabled:opacity-50"
+                                                />
+                                            </td>
+
+                                            <td className="px-3 py-4 text-center">
                                                 <span className="font-mono text-[10px] bg-[var(--input-bg)] text-[var(--text-muted)] px-2 py-1 rounded-sm border border-[var(--input-border)]">
                                                     {f.codigo || '--'}
                                                 </span>
@@ -324,19 +338,22 @@ export default function DataGridPage() {
                                                 <div className="flex items-center justify-center gap-2 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm p-1.5 w-fit mx-auto transition-all shadow-[var(--shadow-sm)] group-hover:border-orange-500/30">
                                                     <button
                                                         onClick={() => handleChange(f.id, 'escala', Math.max(1, (Number(f.escala) || 0) - 10).toString())}
-                                                        className="p-1 hover:text-orange-500 text-[var(--text-muted)] transition-colors"
+                                                        disabled={!canEdit}
+                                                        className="p-1 hover:text-orange-500 text-[var(--text-muted)] transition-colors disabled:opacity-30"
                                                     >
                                                         <Minus size={14} />
                                                     </button>
                                                     <input
                                                         type="number"
                                                         value={f.escala}
+                                                        disabled={!canEdit}
                                                         onChange={e => handleChange(f.id, 'escala', e.target.value)}
-                                                        className="w-10 bg-transparent text-center text-sm font-black text-orange-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                        className="w-10 bg-transparent text-center text-sm font-black text-orange-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
                                                     />
                                                     <button
                                                         onClick={() => handleChange(f.id, 'escala', ((Number(f.escala) || 0) + 10).toString())}
-                                                        className="p-1 hover:text-orange-500 text-[var(--text-muted)] transition-colors"
+                                                        disabled={!canEdit}
+                                                        className="p-1 hover:text-orange-500 text-[var(--text-muted)] transition-colors disabled:opacity-30"
                                                     >
                                                         <Plus size={14} />
                                                     </button>
@@ -348,8 +365,9 @@ export default function DataGridPage() {
                                                     type="number" step="0.001"
                                                     value={f.resina_kg ?? ''}
                                                     placeholder="0"
+                                                    disabled={!canEdit}
                                                     onChange={e => handleChange(f.id, 'resina_kg', e.target.value)}
-                                                    className="w-24 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-center text-sm font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
+                                                    className="w-24 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-center text-sm font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)] disabled:opacity-50"
                                                 />
                                             </td>
 
@@ -358,8 +376,9 @@ export default function DataGridPage() {
                                                     type="number"
                                                     value={f.horas_impressao ?? ''}
                                                     placeholder="0"
+                                                    disabled={!canEdit}
                                                     onChange={e => handleChange(f.id, 'horas_impressao', e.target.value)}
-                                                    className="w-16 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-center text-sm font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
+                                                    className="w-16 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-center text-sm font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)] disabled:opacity-50"
                                                 />
                                             </td>
 
@@ -368,8 +387,9 @@ export default function DataGridPage() {
                                                     type="number"
                                                     value={f.horas_pintura ?? ''}
                                                     placeholder="0"
+                                                    disabled={!canEdit}
                                                     onChange={e => handleChange(f.id, 'horas_pintura', e.target.value)}
-                                                    className="w-16 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-center text-sm font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
+                                                    className="w-16 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-center text-sm font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)] disabled:opacity-50"
                                                 />
                                             </td>
 
@@ -380,8 +400,9 @@ export default function DataGridPage() {
                                                             type="number" step="0.1"
                                                             value={f.altura_cm ?? ''}
                                                             placeholder="0"
+                                                            disabled={!canEdit}
                                                             onChange={e => handleChange(f.id, 'altura_cm', e.target.value)}
-                                                            className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
+                                                            className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)] disabled:opacity-50"
                                                         />
                                                     </Tooltip>
                                                     <Tooltip content="Largura" position="top">
@@ -389,8 +410,9 @@ export default function DataGridPage() {
                                                             type="number" step="0.1"
                                                             value={f.largura_cm ?? ''}
                                                             placeholder="0"
+                                                            disabled={!canEdit}
                                                             onChange={e => handleChange(f.id, 'largura_cm', e.target.value)}
-                                                            className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
+                                                            className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)] disabled:opacity-50"
                                                         />
                                                     </Tooltip>
                                                     <Tooltip content="Profundidade" position="top">
@@ -398,8 +420,9 @@ export default function DataGridPage() {
                                                             type="number" step="0.1"
                                                             value={f.profundidade_cm ?? ''}
                                                             placeholder="0"
+                                                            disabled={!canEdit}
                                                             onChange={e => handleChange(f.id, 'profundidade_cm', e.target.value)}
-                                                            className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)]"
+                                                            className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)] disabled:opacity-50"
                                                         />
                                                     </Tooltip>
                                                 </div>
@@ -409,8 +432,9 @@ export default function DataGridPage() {
                                                 <input
                                                     type="checkbox"
                                                     checked={f.tem_extras}
+                                                    disabled={!canEdit}
                                                     onChange={e => handleChange(f.id, 'tem_extras', e.target.checked)}
-                                                    className="w-5 h-5 rounded-sm border-[var(--input-border)] text-orange-500 bg-[var(--input-bg)] focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all"
+                                                    className="w-5 h-5 rounded-sm border-[var(--input-border)] text-orange-500 bg-[var(--input-bg)] focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                                 />
                                             </td>
 

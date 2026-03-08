@@ -21,6 +21,7 @@ export default function InventoryPage() {
     const [items, setItems] = useState<InventoryItem[]>([]);
     const [loading, setLoading] = useState(true);
     const { hasRole } = usePermission();
+    const canEdit = hasRole('admin') || hasRole('pricing');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterCategory, setFilterCategory] = useState<string>('Todas');
@@ -191,13 +192,15 @@ export default function InventoryPage() {
                             <p className="text-[var(--text-muted)] mt-1 font-medium">Gerencie o estoque do ateliê (Tintas, primers, embalagens)</p>
                         </div>
                     </div>
-                    <button
-                        onClick={openModalForNew}
-                        className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-95"
-                    >
-                        <Plus size={20} />
-                        Novo Insumo
-                    </button>
+                    {canEdit && (
+                        <button
+                            onClick={openModalForNew}
+                            className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-95"
+                        >
+                            <Plus size={20} />
+                            Novo Insumo
+                        </button>
+                    )}
                 </div>
 
                 {/* KPIs */}
@@ -308,8 +311,8 @@ export default function InventoryPage() {
                                                     <div className="flex items-center justify-center gap-4">
                                                         <button
                                                             onClick={() => handleQuickStockUpdate(item.id, item.quantidade, -1)}
+                                                            disabled={item.quantidade <= 0 || !canEdit}
                                                             className="w-8 h-8 rounded-lg bg-[var(--input-bg)] border border-[var(--card-border)] hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 flex items-center justify-center transition-all disabled:opacity-30 shadow-sm active:scale-90"
-                                                            disabled={item.quantidade <= 0}
                                                         >
                                                             <Minus size={14} />
                                                         </button>
@@ -319,7 +322,8 @@ export default function InventoryPage() {
                                                         </div>
                                                         <button
                                                             onClick={() => handleQuickStockUpdate(item.id, item.quantidade, 1)}
-                                                            className="w-8 h-8 rounded-lg bg-[var(--input-bg)] border border-[var(--card-border)] hover:bg-green-500/10 hover:text-green-500 hover:border-green-500/20 flex items-center justify-center transition-all shadow-sm active:scale-90"
+                                                            disabled={!canEdit}
+                                                            className="w-8 h-8 rounded-lg bg-[var(--input-bg)] border border-[var(--card-border)] hover:bg-green-500/10 hover:text-green-500 hover:border-green-500/20 flex items-center justify-center transition-all disabled:opacity-30 shadow-sm active:scale-90"
                                                         >
                                                             <Plus size={14} />
                                                         </button>
@@ -327,13 +331,15 @@ export default function InventoryPage() {
                                                 </td>
                                                 <td className="p-4 pr-6">
                                                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                                        <button
-                                                            onClick={() => openModalForEdit(item)}
-                                                            className="p-2 text-[var(--text-muted)] hover:text-orange-500 hover:bg-orange-500/5 rounded-lg transition-all"
-                                                            title="Editar Detalhes"
-                                                        >
-                                                            <Edit2 size={16} />
-                                                        </button>
+                                                        {canEdit && (
+                                                            <button
+                                                                onClick={() => openModalForEdit(item)}
+                                                                className="p-2 text-[var(--text-muted)] hover:text-orange-500 hover:bg-orange-500/5 rounded-lg transition-all"
+                                                                title="Editar Detalhes"
+                                                            >
+                                                                <Edit2 size={16} />
+                                                            </button>
+                                                        )}
                                                         {hasRole('admin') && (
                                                             <button
                                                                 onClick={() => handleDelete(item.id, item.nome)}

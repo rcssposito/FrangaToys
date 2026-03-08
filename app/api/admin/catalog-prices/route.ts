@@ -35,7 +35,7 @@ export async function GET(req: Request) {
                         profundidade_cm
                     )
                 `)
-                .or(`nome.ilike.%${search}%,codigo.ilike.%${search}%`)
+                .or(`nome.ilike.%${search}%,codigo.ilike.%${search}%,sinonimos.ilike.%${search}%`)
                 .limit(50);
 
             if (error) throw error;

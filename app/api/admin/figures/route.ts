@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
 
         // 2. Filter by Search Term (Name)
         if (search) {
-            query = query.ilike('nome', `%${search}%`);
+            query = query.or(`nome.ilike.%${search}%,sinonimos.ilike.%${search}%`);
         }
 
         // 3. Sorting
@@ -135,12 +135,17 @@ export async function PUT(req: Request) {
         }
 
         const body = await req.json();
-        const { id, nome, serie, imagem_url, tem_extras, ...rawMeta } = body;
+        const { id, nome, serie, imagem_url, tem_extras, sinonimos, ...rawMeta } = body;
 
-        if (tem_extras !== undefined) {
+        const updateFields: any = {};
+        if (nome !== undefined) updateFields.nome = nome;
+        if (tem_extras !== undefined) updateFields.tem_extras = tem_extras;
+        if (sinonimos !== undefined) updateFields.sinonimos = sinonimos;
+
+        if (Object.keys(updateFields).length > 0) {
             const { error: figError } = await supabase
                 .from('figuras')
-                .update({ tem_extras })
+                .update(updateFields)
                 .eq('id', id);
 
             if (figError) {
