@@ -225,7 +225,7 @@ export default function SalesPage() {
 
                                 {/* Table */}
                                 <div className="overflow-x-auto">
-                                    <table className="w-full min-w-full text-left whitespace-nowrap">
+                                    <table className="hidden md:table w-full min-w-full text-left whitespace-nowrap">
                                         <thead className="bg-[var(--background)]/30 text-[var(--text-muted)] text-[10px] uppercase font-bold tracking-widest border-b border-[var(--card-border)]">
                                             <tr>
                                                 <th className="p-4 pl-6">Data</th>
@@ -352,6 +352,91 @@ export default function SalesPage() {
                                             ))}
                                         </tbody>
                                     </table>
+                                </div>
+
+                                {/* Mobile Cards (Visível apenas em telas pequenas) */}
+                                <div className="md:hidden flex flex-col divide-y divide-[var(--card-border)]">
+                                    {group.sales.map(sale => (
+                                        <div key={`mobile-${sale.id}`} className="p-4 flex flex-col gap-3 hover:bg-[var(--input-bg)] transition-colors relative">
+                                            {/* Header do Cartão: Modelo e Status Canto */}
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex flex-col flex-1 pr-2">
+                                                    <div className="font-black text-[var(--foreground)] text-sm flex gap-2 tracking-tight leading-tight">
+                                                        <span>{sale.figuras?.nome || 'Desconhecida'}</span>
+                                                        {sale.pintura_freelancer && (
+                                                            <span title="Pintura Terceirizada (Freelancer)" className="text-orange-500 shrinks-0">
+                                                                <Paintbrush size={14} />
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-[10px] text-[var(--text-muted)] uppercase font-bold tracking-widest mt-0.5">
+                                                        {getStudioName(sale.figuras)}
+                                                    </div>
+                                                </div>
+                                                {sale.quantidade > 1 && (
+                                                    <span className="bg-orange-500/10 text-orange-500 px-2 py-1 rounded-md text-[10px] font-black uppercase ring-1 ring-orange-500/20 shrink-0">
+                                                        {sale.quantidade}x
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Detalhes de Cliente e Vendedor */}
+                                            <div className="flex justify-between items-end gap-2 text-xs">
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="text-[var(--text-muted)] flex items-center gap-1.5">
+                                                        <span className="font-bold">Em:</span> {new Date(sale.data_venda).toLocaleDateString('pt-BR')}
+                                                    </div>
+                                                    <div className="text-[var(--foreground)] font-medium flex items-center gap-1.5">
+                                                        <span className="font-bold text-[var(--text-muted)]">Cli:</span> {sale.cliente_nome}
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <div className="text-[var(--foreground)] font-medium flex items-center gap-1.5 truncate max-w-[150px]">
+                                                            <span className="font-bold text-[var(--text-muted)]">Ven:</span> {sale.vendedor ? (sale.vendedor_nome || sale.vendedor?.split('@')[0]) : 'Loja Direta'}
+                                                        </div>
+                                                        {sale.vendedor && (sale.comissao_vendedor ?? 0) > 0 && (
+                                                            <span className="text-[10px] text-[var(--accent-fuchsia)] font-black mt-0.5 ml-6 flex items-center gap-0.5">
+                                                                (+ R$ {(sale.comissao_vendedor ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Preço e Lucro */}
+                                                <div className="flex flex-col items-end justify-end text-right">
+                                                    <div className="font-black text-[var(--foreground)] text-base tracking-tighter">
+                                                        R$ {sale.valor_venda_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </div>
+                                                    {(hasRole('admin') || hasRole('finance')) && (
+                                                        <div className="text-[var(--accent-emerald)] font-black text-[11px] mt-0.5" title="Lucro Líquido">
+                                                            L: R$ {sale.lucro_real?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Ações Mobile */}
+                                            <div className="flex items-center justify-end gap-2 pt-3 mt-1 border-t border-[var(--card-border)]/50">
+                                                {sale.status === 'Concluída' && (
+                                                    <button onClick={() => handleSendToKanban(sale.id)} className="p-2 bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--card-border)] rounded-lg hover:text-orange-500 shadow-sm">
+                                                        <RotateCcw size={16} />
+                                                    </button>
+                                                )}
+                                                <Link href={`/api/admin/receipt/${sale.id}`} target="_blank" className="p-2 bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--card-border)] rounded-lg hover:text-blue-500 shadow-sm">
+                                                    <Receipt size={16} />
+                                                </Link>
+                                                {hasRole('admin') && (
+                                                    <>
+                                                        <button onClick={() => setEditingSale(sale)} className="p-2 bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--card-border)] rounded-lg hover:text-orange-500 shadow-sm">
+                                                            <Edit3 size={16} />
+                                                        </button>
+                                                        <button onClick={() => handleDelete(sale.id)} className="p-2 bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--card-border)] rounded-lg hover:text-red-500 shadow-sm">
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         ))}

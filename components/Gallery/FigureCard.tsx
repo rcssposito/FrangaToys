@@ -26,92 +26,75 @@ export const FigureCard = ({ figure, onOpenModal }: FigureCardProps) => {
 
     return (
         <div
-            className={clsx("group relative w-full aspect-[4/5] perspective-1000 cursor-pointer")}
+            className={clsx("group flip-card w-full aspect-[4/5] cursor-pointer", isFlipped && "is-flipped")}
             onClick={() => isFlipped && setIsFlipped(false)}
         >
-            <div className={clsx(
-                "relative w-full h-full transition-transform duration-500 transform-style-3d",
-                isFlipped && "rotate-y-180"
-            )}>
+            <div className="flip-card-inner">
 
                 {/* === FRONT FACE === */}
-                <div className="absolute inset-0 backface-hidden" onClick={(e) => {
-                    // If clicking the "Detalhes" badge logic handling or generic click
-                    // Wait, usually clicking the Card Opens the Modal
-                    // But we have a Flip now.
-                    // Let's say: Clicking "Detalhes" -> Flip. Clicking Image -> Open Modal.
-                    // Or Clicking Card -> Flip? 
-                    // The user said "Toque fora para voltar" on the back.
-                    // Previously `onOpenModal` was the main action. 
-                    // Let's make: Card Click -> Open Modal. "Detalhes" Click -> Flip.
-                    // BUT, the user wants the "Flip" back.
-                    // Let's assume Card Click -> Open Modal is standard. 
-                    // "Detalhes" Pill -> Trigger Flip.
-                    // OR Hover -> Flip? No, user mentioned "Touch".
-                    // Let's make the "Detalhes" button trigger the flip.
+                <div className="flip-card-front bg-[#121214] border border-zinc-800 hover:border-zinc-600 transition-all shadow-lg hover:shadow-xl" onClick={(e) => {
+                    // Empty comment block previously here
                 }}>
-                    <div className="relative w-full h-full bg-[#121214] rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-600 transition-all shadow-lg hover:shadow-xl">
-                        <Image
-                            src={figure.imagem_url || '/placeholder.png'}
-                            alt={figure.nome}
-                            fill
-                            className="object-cover transition-transform duration-500 group-hover:scale-105"
-                            sizes="(max-width: 768px) 50vw, 25vw"
-                            onClick={() => onOpenModal(figure)}
-                        />
+                    <Image
+                        src={figure.imagem_url || '/placeholder.png'}
+                        alt={figure.nome}
+                        fill
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        sizes="(max-width: 768px) 50vw, 25vw"
+                        onClick={() => onOpenModal(figure)}
+                    />
 
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 pointer-events-none" />
 
-                        {/* Detalhes Button (Triggers Flip) */}
-                        <div
-                            className="absolute top-3 right-3 z-20 cursor-pointer"
-                            onClick={handleFlip}
-                        >
-                            <span className="bg-black/60 backdrop-blur-md text-white/90 text-[10px] sm:text-xs px-2.5 py-1 rounded-full border border-white/10 font-medium hover:bg-black/80 transition-colors">
-                                Detalhes
-                            </span>
-                        </div>
+                    {/* Detalhes Button (Triggers Flip) */}
+                    <div
+                        className="absolute top-3 right-3 z-20 cursor-pointer"
+                        onClick={handleFlip}
+                    >
+                        <span className="bg-black/60 backdrop-blur-md text-white/90 text-[10px] sm:text-xs px-2.5 py-1 rounded-full border border-white/10 font-medium hover:bg-black/80 transition-colors">
+                            Detalhes
+                        </span>
+                    </div>
 
-                        {/* Badge */}
-                        <div className="absolute top-3 left-3 z-10 pointer-events-none flex flex-col gap-1 items-start">
-                            {figure.disponivel && (
-                                <div className="relative flex items-center bg-green-500/90 text-white text-[10px] font-bold pl-2 pr-3 py-0.5 shadow-md self-start"
-                                    style={{
-                                        clipPath: 'polygon(0 0, 85% 0, 100% 50%, 85% 100%, 0 100%)',
-                                        borderTopLeftRadius: '0.25rem',
-                                        borderBottomLeftRadius: '0.25rem'
-                                    }}>
-                                    <span className="uppercase tracking-wider">Disponível</span>
-                                    {/* The Hole */}
-                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-1 bg-black/40 rounded-full" />
-                                </div>
-                            )}
-                            {figure.tem_extras && (
-                                <div className="relative flex items-center gap-1 bg-gradient-to-r from-purple-600/90 to-fuchsia-600/90 text-white text-[10px] font-bold pl-2 pr-3 py-0.5 shadow-md self-start"
-                                    style={{
-                                        clipPath: 'polygon(0 0, 85% 0, 100% 50%, 85% 100%, 0 100%)',
-                                        borderTopLeftRadius: '0.25rem',
-                                        borderBottomLeftRadius: '0.25rem'
-                                    }}>
-                                    <Sparkles className="w-3 h-3 text-purple-200" />
-                                    <span className="uppercase tracking-wider">Com Extras</span>
-                                    {/* The Hole */}
-                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-1 bg-black/40 rounded-full" />
-                                </div>
-                            )}
-                        </div>
+                    {/* Badge */}
+                    <div className="absolute top-3 left-3 z-10 pointer-events-none flex flex-col gap-1 items-start">
+                        {figure.disponivel && (
+                            <div className="relative flex items-center bg-green-500/90 text-white text-[10px] font-bold pl-2 pr-3 py-0.5 shadow-md self-start"
+                                style={{
+                                    clipPath: 'polygon(0 0, 85% 0, 100% 50%, 85% 100%, 0 100%)',
+                                    borderTopLeftRadius: '0.25rem',
+                                    borderBottomLeftRadius: '0.25rem'
+                                }}>
+                                <span className="uppercase tracking-wider">Disponível</span>
+                                {/* The Hole */}
+                                <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-1 bg-black/40 rounded-full" />
+                            </div>
+                        )}
+                        {figure.tem_extras && (
+                            <div className="relative flex items-center gap-1 bg-gradient-to-r from-purple-600/90 to-fuchsia-600/90 text-white text-[10px] font-bold pl-2 pr-3 py-0.5 shadow-md self-start"
+                                style={{
+                                    clipPath: 'polygon(0 0, 85% 0, 100% 50%, 85% 100%, 0 100%)',
+                                    borderTopLeftRadius: '0.25rem',
+                                    borderBottomLeftRadius: '0.25rem'
+                                }}>
+                                <Sparkles className="w-3 h-3 text-purple-200" />
+                                <span className="uppercase tracking-wider">Com Extras</span>
+                                {/* The Hole */}
+                                <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-1 bg-black/40 rounded-full" />
+                            </div>
+                        )}
+                    </div>
 
-                        {/* Footer */}
-                        <div className="absolute bottom-0 inset-x-0 p-3 bg-zinc-900/95 border-t border-white/5 backdrop-blur-sm pointer-events-none">
-                            <h3 className="text-sm font-medium text-gray-200 line-clamp-1 text-center truncate">
-                                {figure.nome}
-                            </h3>
-                        </div>
+                    {/* Footer */}
+                    <div className="absolute bottom-0 inset-x-0 p-3 bg-zinc-900/95 border-t border-white/5 backdrop-blur-sm pointer-events-none">
+                        <h3 className="text-sm font-medium text-gray-200 line-clamp-1 text-center truncate">
+                            {figure.nome}
+                        </h3>
                     </div>
                 </div>
 
                 {/* === BACK FACE === */}
-                <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-lg overflow-hidden border border-zinc-700 bg-black">
+                <div className="flip-card-back border border-zinc-700 bg-black">
                     {/* Background Image (Blurred/Darkened) */}
                     <div className="absolute inset-0 opacity-30">
                         <Image

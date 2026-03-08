@@ -32,18 +32,15 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
 
     return (
         <div
-            className={clsx("group relative w-full aspect-[4/5] perspective-1000 cursor-pointer")}
+            className={clsx("group flip-card w-full aspect-[4/5] cursor-pointer", isFlipped && "is-flipped")}
             onClick={() => isFlipped && setIsFlipped(false)}
         >
-            <div className={clsx(
-                "relative w-full h-full transition-transform duration-500 transform-style-3d",
-                isFlipped && "rotate-y-180"
-            )}>
+            <div className="flip-card-inner">
 
                 {/* === FRONT FACE === */}
-                <div className="absolute inset-0 backface-hidden">
-                    <div className="relative w-full h-full bg-[var(--card-bg)] rounded-lg overflow-hidden border border-[var(--card-border)] hover:border-orange-500/50 transition-all shadow-[var(--shadow-md)] hover:shadow-[var(--shadow-lg)] group-hover:-translate-y-1">
-                        <Link href={`/figura/${figure.id}`} scroll={false}>
+                <div className="flip-card-front">
+                    <div className="relative w-full h-full bg-[var(--card-bg)] rounded-lg overflow-hidden border border-[var(--card-border)] hover:border-orange-500/50 transition-all shadow-[var(--shadow-md)] hover:shadow-[var(--shadow-lg)]">
+                        <Link href={`/figura/${figure.id}`} scroll={false} className="absolute inset-0 z-10 block">
                             <Image
                                 loader={imageKitLoader}
                                 src={imageUrl}
@@ -105,7 +102,7 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                 </div>
 
                 {/* === BACK FACE === */}
-                <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-lg overflow-hidden border border-[var(--card-border)] bg-[var(--card-bg)] shadow-[var(--shadow-lg)]">
+                <div className="flip-card-back rounded-lg overflow-hidden border border-zinc-700 bg-black shadow-[var(--shadow-lg)]">
                     {/* Background Image (Blurred/Darkened) */}
                     <div className="absolute inset-0 opacity-30">
                         <Image
@@ -117,18 +114,14 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                         />
                     </div>
 
-                    {/* Content Overlay */}
-                    <div className="relative z-10 flex flex-col h-full bg-[var(--card-bg)]/80 backdrop-blur-sm p-4 text-[var(--foreground)]">
+                    {/* Full Card Link Wrapper */}
+                    <Link href={`/figura/${figure.id}`} scroll={false} className="absolute inset-0 z-0 block cursor-pointer" />
 
-                        {/* Header Hint */}
-                        <div className="flex justify-center mb-4">
-                            <span className="text-[10px] text-zinc-400 bg-black/50 px-2 py-0.5 rounded cursor-pointer" onClick={() => setIsFlipped(false)}>
-                                Toque fora para voltar
-                            </span>
-                        </div>
+                    {/* Content Overlay */}
+                    <div className="relative z-10 flex flex-col h-full bg-black/60 p-4 text-white pointer-events-none">
 
                         {/* Main Content */}
-                        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
+                        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 mt-4">
 
                             <h3 className="font-bold text-lg leading-tight drop-shadow-md">
                                 {figure.nome}
@@ -140,32 +133,33 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                             )}
 
                             <div className="w-full text-sm font-medium space-y-2 px-2">
-                                <div className="flex justify-between border-b border-[var(--card-border)] pb-1">
-                                    <span className="text-[var(--text-muted)] font-medium">Altura</span>
+                                <div className="flex justify-between border-b border-white/10 pb-1">
+                                    <span className="text-zinc-300">Altura</span>
                                     <span>{figure.altura_cm ? `${figure.altura_cm} cm` : '-'}</span>
                                 </div>
-                                <div className="flex justify-between border-b border-[var(--card-border)] pb-1">
-                                    <span className="text-[var(--text-muted)] font-medium">Largura</span>
+                                <div className="flex justify-between border-b border-white/10 pb-1">
+                                    <span className="text-zinc-300">Largura</span>
                                     <span>{figure.largura_cm ? `${figure.largura_cm} cm` : '-'}</span>
                                 </div>
-                                <div className="flex justify-between border-b border-[var(--card-border)] pb-1">
-                                    <span className="text-[var(--text-muted)] font-medium">Profund.</span>
+                                <div className="flex justify-between border-b border-white/10 pb-1">
+                                    <span className="text-zinc-300">Profund.</span>
                                     <span>{figure.profundidade_cm ? `${figure.profundidade_cm} cm` : '-'}</span>
                                 </div>
-                                <div className="flex justify-between border-b border-[var(--card-border)] pb-1">
-                                    <span className="text-[var(--text-muted)] font-medium">Estúdio</span>
+                                <div className="flex justify-between border-b border-white/10 pb-1">
+                                    <span className="text-zinc-300">Estúdio</span>
                                     <span className="text-orange-400">{figure.studio || '-'}</span>
                                 </div>
                             </div>
 
                             <button
                                 className={clsx(
-                                    "w-full font-bold py-3 rounded-md transition-colors shadow-lg active:scale-95",
+                                    "w-full font-bold py-3 rounded-md transition-colors shadow-lg active:scale-95 pointer-events-auto",
                                     isInCart(figure.id)
                                         ? "bg-green-600 hover:bg-green-700 text-white"
-                                        : "bg-orange-600 hover:bg-orange-700 text-white"
+                                        : "bg-[#ea580c] hover:bg-[#c2410c] text-white"
                                 )}
                                 onClick={(e) => {
+                                    e.preventDefault();
                                     e.stopPropagation();
                                     isInCart(figure.id) ? removeFromCart(figure.id) : addToCart(figure);
                                 }}
@@ -176,7 +170,7 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                         </div>
 
                         {/* Reflection/Footer Effect (Visual filler) */}
-                        <div className="mt-auto opacity-30 text-center transform scale-y-[-1] blur-[1px] select-none pointer-events-none text-zinc-500 text-xs overflow-hidden h-6">
+                        <div className="mt-auto opacity-30 text-center transform scale-y-[-1] blur-[1px] select-none text-zinc-500 text-xs overflow-hidden h-6">
                             {figure.nome}
                         </div>
                     </div>

@@ -203,7 +203,42 @@ export default function AdminDashboard() {
         return null;
     }
 
-    if (loading) return <div className="p-12 text-center text-zinc-500">Carregando painel analítico...</div>;
+    if (loading) return (
+        <div className="text-[var(--foreground)] min-h-screen bg-[var(--background)] pb-12 transition-colors duration-300 px-4 sm:px-8 mt-8">
+            {/* Header Skeleton */}
+            <div className="flex justify-between items-center mb-10 border-b border-[var(--card-border)] pb-8">
+                <div className="flex items-center gap-5">
+                    <div className="w-12 h-12 bg-[var(--input-bg)] rounded-xl animate-pulse"></div>
+                    <div>
+                        <div className="w-48 h-8 bg-[var(--input-bg)] rounded-md animate-pulse mb-2"></div>
+                        <div className="w-32 h-4 bg-[var(--input-bg)]/50 rounded-md animate-pulse"></div>
+                    </div>
+                </div>
+                <div className="w-48 h-10 bg-[var(--input-bg)] rounded-xl animate-pulse hidden md:block"></div>
+            </div>
+
+            {/* KPIs Skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-10">
+                {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="bg-[var(--card-bg)] border border-[var(--card-border)] p-6 rounded-2xl h-32 animate-pulse flex flex-col justify-between">
+                        <div className="flex justify-between">
+                            <div className="w-10 h-10 bg-[var(--input-bg)] rounded-xl"></div>
+                            <div className="w-16 h-5 bg-[var(--input-bg)] rounded-md"></div>
+                        </div>
+                        <div className="w-24 h-8 bg-[var(--input-bg)] rounded-md"></div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Charts Skeleton Masonry */}
+            <div className="columns-1 xl:columns-2 gap-8">
+                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl h-80 animate-pulse mb-8 break-inside-avoid"></div>
+                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl h-96 animate-pulse mb-8 break-inside-avoid"></div>
+                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl h-[400px] animate-pulse mb-8 break-inside-avoid"></div>
+                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl h-72 animate-pulse mb-8 break-inside-avoid"></div>
+            </div>
+        </div>
+    );
 
     // Expandable Chart Renderer
     const renderExpandedChart = () => {
@@ -855,9 +890,9 @@ export default function AdminDashboard() {
                             onChange={(e) => setMonth(e.target.value)}
                             className="bg-transparent text-sm font-bold outline-none text-[var(--foreground)] hover:text-orange-500 cursor-pointer px-3 rounded-md transition-colors"
                         >
-                            <option value="" className="bg-[var(--card-bg)] text-[var(--foreground)] font-medium">Todo o ano</option>
+                            <option value="" className="bg-[var(--card-bg)] text-[var(--foreground)] font-bold">Todo o ano</option>
                             {months.map(m => (
-                                <option key={m.value} value={m.value} className="bg-[var(--card-bg)] text-[var(--foreground)] font-medium">{m.label}</option>
+                                <option key={m.value} value={m.value} className="bg-[var(--card-bg)] text-[var(--foreground)] font-bold">{m.label}</option>
                             ))}
                         </select>
                     </div>
@@ -892,102 +927,105 @@ export default function AdminDashboard() {
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
-                    <div className="p-5 border-b border-[var(--card-border)] flex justify-between items-center bg-[var(--input-bg)]/30 backdrop-blur-sm">
-                        <h3 className="font-black flex items-center gap-2 text-[var(--foreground)] uppercase tracking-tight text-sm">
-                            <Package size={18} className="text-yellow-500" />
-                            Top Modelos (Receita)
-                        </h3>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="text-[10px] uppercase bg-[var(--input-bg)]/50 text-[var(--text-muted)] font-black tracking-widest">
-                                <tr>
-                                    <th className="px-6 py-4">Modelo</th>
-                                    <th className="px-6 py-4">Estúdio</th>
-                                    <th className="px-6 py-4 text-right">Qtd</th>
-                                    {canViewFinance && <th className="px-6 py-4 text-right">Receita</th>}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[var(--card-border)]">
-                                {data?.lists?.topProducts?.length > 0 ? (
-                                    data.lists.topProducts.map((p: any, i: number) => (
-                                        <tr key={i} className="hover:bg-[var(--input-bg)]/40 transition-colors group">
-                                            <td className="px-6 py-4 font-bold text-[var(--foreground)] group-hover:text-orange-500 transition-colors">{p.name}</td>
-                                            <td className="px-6 py-4 text-[var(--text-muted)] font-medium">{p.studio}</td>
-                                            <td className="px-6 py-4 text-right text-[var(--foreground)] font-black">{p.qty}</td>
-                                            {canViewFinance && (
-                                                <td className="px-6 py-4 text-right font-black text-emerald-500">
-                                                    R$ {p.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                </td>
-                                            )}
-                                        </tr>
-                                    ))
-                                ) : (
+                {/* Left Column: Lists */}
+                <div className="flex flex-col gap-8">
+                    <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
+                        <div className="p-5 border-b border-[var(--card-border)] flex justify-between items-center bg-[var(--input-bg)]/30 backdrop-blur-sm">
+                            <h3 className="font-black flex items-center gap-2 text-[var(--foreground)] uppercase tracking-tight text-sm">
+                                <Package size={18} className="text-yellow-500" />
+                                Top Modelos (Receita)
+                            </h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="text-[10px] uppercase bg-[var(--input-bg)]/50 text-[var(--text-muted)] font-black tracking-widest">
                                     <tr>
-                                        <td colSpan={canViewFinance ? 4 : 3} className="px-6 py-10 text-center text-[var(--text-muted)] font-medium">
-                                            Nenhum dado encontrado no período.
-                                        </td>
+                                        <th className="px-6 py-4">Modelo</th>
+                                        <th className="px-6 py-4">Estúdio</th>
+                                        <th className="px-6 py-4 text-right">Qtd</th>
+                                        {canViewFinance && <th className="px-6 py-4 text-right">Receita</th>}
                                     </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
-                    <div className="p-5 border-b border-[var(--card-border)] flex justify-between items-center bg-[var(--input-bg)]/30 backdrop-blur-sm">
-                        <h3 className="font-black flex items-center gap-2 text-[var(--foreground)] uppercase tracking-tight text-sm">
-                            <Clock size={18} className="text-blue-500" />
-                            Vendas Recentes
-                        </h3>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="text-[10px] uppercase bg-[var(--input-bg)]/50 text-[var(--text-muted)] font-black tracking-widest">
-                                <tr>
-                                    <th className="px-6 py-4">Data</th>
-                                    <th className="px-6 py-4">Modelo</th>
-                                    {canViewFinance && <th className="px-6 py-4 text-right">Valor</th>}
-                                    <th className="px-6 py-4 text-right">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[var(--card-border)]">
-                                {data?.lists?.recentActivity?.length > 0 ? (
-                                    data.lists.recentActivity.map((a: any, i: number) => (
-                                        <tr key={i} className="hover:bg-[var(--input-bg)]/40 transition-colors group">
-                                            <td className="px-6 py-4 text-[var(--text-muted)] whitespace-nowrap font-medium">
-                                                {new Date(a.date).toLocaleDateString('pt-BR')} <span className="text-[var(--text-muted)] opacity-50 text-[10px] ml-1">{new Date(a.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                                            </td>
-                                            <td className="px-6 py-4 font-bold text-[var(--foreground)] truncate max-w-[200px] group-hover:text-blue-500 transition-colors">{a.product}</td>
-                                            {canViewFinance && (
-                                                <td className="px-6 py-4 text-right font-black text-emerald-500">
-                                                    R$ {a.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                </td>
-                                            )}
-                                            <td className="px-6 py-4 text-right">
-                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${a.status === 'Concluída' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
-                                                    a.status === 'Cancelada' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
-                                                    }`}>
-                                                    {a.status}
-                                                </span>
+                                </thead>
+                                <tbody className="divide-y divide-[var(--card-border)]">
+                                    {data?.lists?.topProducts?.length > 0 ? (
+                                        data.lists.topProducts.map((p: any, i: number) => (
+                                            <tr key={i} className="hover:bg-[var(--input-bg)]/40 transition-colors group">
+                                                <td className="px-6 py-4 font-bold text-[var(--foreground)] group-hover:text-orange-500 transition-colors">{p.name}</td>
+                                                <td className="px-6 py-4 text-[var(--text-muted)] font-bold">{p.studio}</td>
+                                                <td className="px-6 py-4 text-right text-[var(--foreground)] font-black">{p.qty}</td>
+                                                {canViewFinance && (
+                                                    <td className="px-6 py-4 text-right font-black text-emerald-500">
+                                                        R$ {p.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={canViewFinance ? 4 : 3} className="px-6 py-10 text-center text-[var(--text-muted)] font-bold">
+                                                Nenhum dado encontrado no período.
                                             </td>
                                         </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={canViewFinance ? 4 : 3} className="px-6 py-10 text-center text-[var(--text-muted)] font-medium">
-                                            Nenhuma atividade recente.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
 
-                {/* --- Vendas por Vendedor --- */}
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl relative group shadow-sm hover:shadow-md transition-all xl:col-span-2">
+                    <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
+                        <div className="p-5 border-b border-[var(--card-border)] flex justify-between items-center bg-[var(--input-bg)]/30 backdrop-blur-sm">
+                            <h3 className="font-black flex items-center gap-2 text-[var(--foreground)] uppercase tracking-tight text-sm">
+                                <Clock size={18} className="text-blue-500" />
+                                Vendas Recentes
+                            </h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="text-[10px] uppercase bg-[var(--input-bg)]/50 text-[var(--text-muted)] font-black tracking-widest">
+                                    <tr>
+                                        <th className="px-6 py-4">Data</th>
+                                        <th className="px-6 py-4">Modelo</th>
+                                        {canViewFinance && <th className="px-6 py-4 text-right">Valor</th>}
+                                        <th className="px-6 py-4 text-right">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-[var(--card-border)]">
+                                    {data?.lists?.recentActivity?.length > 0 ? (
+                                        data.lists.recentActivity.map((a: any, i: number) => (
+                                            <tr key={i} className="hover:bg-[var(--input-bg)]/40 transition-colors group">
+                                                <td className="px-6 py-4 text-[var(--text-muted)] whitespace-nowrap font-bold">
+                                                    {new Date(a.date).toLocaleDateString('pt-BR')} <span className="text-[var(--text-muted)] opacity-50 text-[10px] ml-1">{new Date(a.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                </td>
+                                                <td className="px-6 py-4 font-bold text-[var(--foreground)] truncate max-w-[200px] group-hover:text-blue-500 transition-colors">{a.product}</td>
+                                                {canViewFinance && (
+                                                    <td className="px-6 py-4 text-right font-black text-emerald-500">
+                                                        R$ {a.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </td>
+                                                )}
+                                                <td className="px-6 py-4 text-right">
+                                                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${a.status === 'Concluída' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
+                                                        a.status === 'Cancelada' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
+                                                        }`}>
+                                                        {a.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={canViewFinance ? 4 : 3} className="px-6 py-10 text-center text-[var(--text-muted)] font-bold">
+                                                Nenhuma atividade recente.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div> {/* End Left Column */}
+
+                {/* --- Vendas por Vendedor (Right Column) --- */}
+                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl relative group shadow-sm hover:shadow-md transition-all h-full flex flex-col">
                     <div className="flex justify-between items-start mb-8">
                         <h2 className="text-xl font-black flex items-center gap-3 text-[var(--foreground)] tracking-tight">
                             <Users size={22} className="text-emerald-500" />
@@ -997,7 +1035,7 @@ export default function AdminDashboard() {
                             <Maximize2 size={18} />
                         </button>
                     </div>
-                    <div className="h-[320px] w-full">
+                    <div className="flex-1 w-full min-h-[400px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={data?.charts?.salesBySeller?.slice(0, 10) || []} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" horizontal={false} />

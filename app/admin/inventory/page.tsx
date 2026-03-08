@@ -260,9 +260,9 @@ export default function InventoryPage() {
                 </div>
 
                 {/* Data Table */}
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl overflow-hidden shadow-[var(--shadow-md)] transition-all">
+                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] md:rounded-xl overflow-hidden shadow-[var(--shadow-md)] transition-all -mx-4 md:mx-0 border-x-0 md:border-x">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                        <table className="hidden md:table w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-[var(--card-border)] bg-[var(--muted-bg)]/30 text-[var(--text-muted)] text-[10px] font-black uppercase tracking-widest">
                                     <th className="p-4 text-[var(--text-muted)] text-[10px] uppercase font-black tracking-widest w-12 pl-6"></th>
@@ -357,6 +357,90 @@ export default function InventoryPage() {
                                 )}
                             </tbody>
                         </table>
+                    </div>
+
+                    {/* Mobile Cards View */}
+                    <div className="md:hidden flex flex-col divide-y divide-[var(--card-border)]">
+                        {filteredItems.length === 0 ? (
+                            <div className="p-12 text-center text-[var(--text-muted)] flex flex-col items-center gap-3 opacity-40">
+                                <PackageOpen size={48} />
+                                <p className="font-medium">Nenhum item encontrado.</p>
+                            </div>
+                        ) : (
+                            filteredItems.map((item) => {
+                                const isCritical = item.quantidade <= item.estoque_minimo;
+
+                                return (
+                                    <div key={`mobile-${item.id}`} className={`p-4 flex flex-col gap-4 relative transition-all ${isCritical ? 'bg-red-500/5' : 'hover:bg-[var(--input-bg)]'}`}>
+                                        {isCritical && <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500 animate-pulse" />}
+
+                                        {/* Header do Item */}
+                                        <div className="flex gap-3 items-start">
+                                            <div className="w-10 h-10 shrink-0 rounded-lg bg-[var(--input-bg)] border border-[var(--card-border)] flex items-center justify-center text-orange-500 shadow-sm">
+                                                {getCategoryIcon(item.categoria)}
+                                            </div>
+                                            <div className="flex flex-col flex-1 min-w-0">
+                                                <div className="font-bold text-[var(--foreground)] text-base tracking-tight truncate">{item.nome}</div>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-[var(--text-muted)] bg-[var(--background)] border border-[var(--card-border)] px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight">{item.marca || 'Genérico'}</span>
+                                                    <span className="text-[var(--text-muted)] text-[10px] font-medium uppercase tracking-tight truncate">{item.categoria}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Row de Quantidade e Ações */}
+                                        <div className="flex items-center justify-between bg-[var(--background)] p-3 rounded-xl border border-[var(--card-border)]/50">
+                                            <div className="flex flex-col">
+                                                {isCritical ? (
+                                                    <div className="text-[10px] text-red-500 uppercase font-black tracking-widest flex items-center gap-1.5 mb-1">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                                        Alerta (Min: {item.estoque_minimo})
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-[10px] text-[var(--text-muted)] uppercase font-bold tracking-widest mb-1">
+                                                        Estoque Atual
+                                                    </div>
+                                                )}
+                                                <div className="flex items-center gap-3">
+                                                    <button
+                                                        onClick={() => handleQuickStockUpdate(item.id, item.quantidade, -1)}
+                                                        disabled={item.quantidade <= 0 || !canEdit}
+                                                        className="w-8 h-8 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 flex items-center justify-center transition-all disabled:opacity-30 shadow-sm active:scale-95"
+                                                    >
+                                                        <Minus size={14} />
+                                                    </button>
+                                                    <div className={`text-center font-black ${isCritical ? 'text-red-500' : 'text-[var(--foreground)]'}`}>
+                                                        <span className="text-xl leading-none">{item.quantidade}</span>
+                                                        <span className="text-xs text-[var(--text-muted)] ml-1 uppercase tracking-tight font-bold">{item.unidade_medida}</span>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleQuickStockUpdate(item.id, item.quantidade, 1)}
+                                                        disabled={!canEdit}
+                                                        className="w-8 h-8 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] hover:bg-green-500/10 hover:text-green-500 hover:border-green-500/30 flex items-center justify-center transition-all disabled:opacity-30 shadow-sm active:scale-95"
+                                                    >
+                                                        <Plus size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Admin Actions */}
+                                            {canEdit && (
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => openModalForEdit(item)} className="p-2.5 bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] hover:text-orange-500 rounded-lg transition-all shadow-sm">
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    {hasRole('admin') && (
+                                                        <button onClick={() => handleDelete(item.id, item.nome)} className="p-2.5 bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] hover:text-red-500 rounded-lg transition-all shadow-sm">
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
                     </div>
                 </div>
             </div>
