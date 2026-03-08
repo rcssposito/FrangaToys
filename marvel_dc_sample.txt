@@ -1,0 +1,163 @@
+1621|Avengers - Chibi Hulk v1|Marvel
+1003|Avengers - Blade v1|Marvel
+1013|Avengers - Hulkbuster v1|Marvel
+1016|Avengers - Thanos v1|Marvel
+1000|Avengers - Black Panther v1|Marvel
+1001|Avengers - Black Widow v1|Marvel
+1012|Avengers - Hulk v2|Marvel
+1014|Avengers - Killmonger v1|Marvel
+1008|Avengers - Doctor Stranger v1|Marvel
+1015|Avengers - She-Hulk v1|Marvel
+1004|Avengers - Blade v2|Marvel
+1006|Avengers - Chibi Black Panther v1|Marvel
+1007|Avengers - Chibi She-Hulk v1|Marvel
+1009|Avengers - Ghost Rider v1|Marvel
+1011|Avengers - Hulk v1|Marvel
+1005|Avengers - Captain America v1|Marvel
+1010|Avengers - Gladiator Hulk v1|Marvel
+1018|Daredevil - Elektra v1|Marvel
+1019|Daredevil - Elektra v2|Marvel
+1020|Daredevil - Kingpin v1|Marvel
+1017|Daredevil - Daredevil v1|Marvel
+1025|Deadpool - Deadpool v1|Marvel
+1026|Deadpool - Lady Deadpool v1|Marvel
+1021|Deadpool - Chibi Deadpool v1|Marvel
+1027|Defenders - Clea Strange v1|Marvel
+1622|Fantastic 4 - The Thing v1|Marvel
+1029|Fantastic 4 - Galactus v1|Marvel
+1028|Fantastic 4 - Dr Doom v1|Marvel
+1030|Guardians of the Galaxy - Groot & Rocket v1|Marvel
+1559|Guardians of the Galaxy - Starlord v1|Marvel
+1031|Guardians of the Galaxy - Rocket v1|Marvel
+1032|Savage Land - Shanna v1|Marvel
+1033|Savage Land - Rogue v1|Marvel
+1623|Spider man - Carnage v1|Marvel
+1058|Spider man - Spider vs Venom v1|Marvel
+1060|Spider man - Venom v1|Marvel
+1059|Spider man - Venom Diorama v1|Marvel
+1561|Spider man - Electro v1|Marvel
+1562|Spider man - Scarlet Spider v1|Marvel
+1560|Spider man - Doctor Octopus v1|Marvel
+1057|Spider man - Spider vs Octopus v1|Marvel
+1056|Spider man - Spider vs Hulk v1|Marvel
+1051|Spider man - Spider Gwenom v1|Marvel
+1034|Spider man - Black Cat v1|Marvel
+1040|Spider man - Green Goblin v2|Marvel
+1041|Spider man - Knull v1|Marvel
+1035|Spider man - Black Cat v2|Marvel
+1036|Spider man - Black Cat v3|Marvel
+1037|Spider man - Diorama v1|Marvel
+1042|Spider man - Lizard v1|Marvel
+1043|Spider man - Mary Jane v1|Marvel
+1044|Spider man - Rhino v1|Marvel
+1045|Spider man - Sandman v1|Marvel
+1046|Spider man - Silk v1|Marvel
+1039|Spider man - Green Goblin v1|Marvel
+1055|Spider man - Spider Punk v2|Marvel
+1053|Spider man - Spider Punk v1|Marvel
+1049|Spider man - Spider Gwen v1|Marvel
+1063|Thor - Lady Loki v1|Marvel
+1065|Thor - Rei Thor v1|Marvel
+1062|Thor - Beta Ray Bill v1|Marvel
+1064|Thor - Lady Thor v1|Marvel
+1563|Thor - Lady Thor v2|Marvel
+1564|Thor - Thor v1|Marvel
+1068|Thunderbolts - Punisher v1|Marvel
+1069|Thunderbolts - Red Hulk v1|Marvel
+1066|Thunderbolts - Chibi Punisher v1|Marvel
+1070|Thunderbolts - Satana v1|Marvel
+1616|X-men - Colossus v2|Marvel
+1624|X-men - Cyclops v3|Marvel
+1663|X-men - Nightcrawler v3|Marvel
+1081|X-men - Domino v1|Marvel
+1090|X-men - Madelyne Pryor v1|Marvel
+1097|X-men - Psylocke v1|Marvel
+1111|X-men - X-23 v2|Marvel
+1108|X-men - Wolverine v3|Marvel
+1565|X-men - Beast v1|Marvel
+1567|X-men - Mystique v2|Marvel
+1568|X-men - Scarlet Witch v3|Marvel
+1597|X-men - Storm v1|Marvel
+1600|X-men - Rogue v3|Marvel
+1566|X-men - Chibi Colossus v1|Marvel
+1084|X-men - Gambit v1|Marvel
+1106|X-men - Wolverine v1|Marvel
+1107|X-men - Wolverine v2|Marvel
+1109|X-men - Wolverine v4|Marvel
+1110|X-men - X-23 v1|Marvel
+1098|X-men - Psylocke v2|Marvel
+1099|X-men - Rogue Evolution v1|Marvel
+1100|X-men - Rogue v1|Marvel
+1071|X-men - Apocalypse diorama v1|Marvel
+1080|X-men - Dark Phoenix v1|Marvel
+1079|X-men - Cyclops v2|Marvel
+1074|X-men - Cable v2|Marvel
+1075|X-men - Chibi Wolverine v1|Marvel
+1078|X-men - Cyclops v1|Marvel
+1093|X-men - Mystique v1|Marvel
+1096|X-men - Omega Red v1|Marvel
+1094|X-men - Nightcrawler v1|Marvel
+1077|X-men - Colossus v1|Marvel
+1073|X-men - Cable v1|Marvel
+1085|X-men - Jubilee v1|Marvel
+1086|X-men - Juggernaut v1|Marvel
+1088|X-men - Logan v1|Marvel
+1089|X-men - Logan v2|Marvel
+1092|X-men - Magneto v1|Marvel
+1095|X-men - Nightcrawler v2|Marvel
+1102|X-men - Scarlet Witch v2|Marvel
+1101|X-men - Scarlet Witch v1|Marvel
+1517|X-men - Rogue v2|Marvel
+1516|X-men - Dark Phoenix v2|Marvel
+1625|Batman - Chibi Catwoman v1|DC
+1129|Batman - Penguin v1|DC
+1131|Batman - Poison Ivy v2|DC
+1133|Batman - Thomas Wayne v1|DC
+1127|Batman - Killer Croc v1|DC
+1128|Batman - Nightwing v1|DC
+1132|Batman - Scarecrow v1|DC
+1569|Batman - Catwoman v2|DC
+1130|Batman - Poison Ivy V1|DC
+1123|Batman - Harley Quinn Classic v1|DC
+1112|Batman - Bane v1|DC
+1118|Batman - Batman Who Laughs v2|DC
+1120|Batman - Catwoman v1|DC
+1121|Batman - Chibi Batman v1|DC
+1122|Batman - Chibi Harley v1|DC
+1126|Batman - Joker v2|DC
+1124|Batman - Harley Quinn Classic v2|DC
+1115|Batman - Batman v1|DC
+1117|Batman - Batman Who Laughs v1|DC
+1125|Batman - Joker v1|DC
+1626|Justice League - Zatana v2|DC
+1137|Justice League - Batman Absolute v2|DC
+1144|Justice League - Green Lantern v2|DC
+1146|Justice League - Jessica Cruz v1|DC
+1147|Justice League - Lady flash v1|DC
+1151|Justice League - Supergirl v1|DC
+1157|Justice League - Superman v1|DC
+1156|Justice League - Superman v2|DC
+1160|Justice League - Wonder Woman v2|DC
+1145|Justice League - Hawkgirl v1|DC
+1150|Justice League - Static Shock v1|DC
+1161|Justice League - Zatanna v1|DC
+1153|Justice League - Superman Absolute v1|DC
+1158|Justice League - Wonder Woman Absolute v1|DC
+1571|Justice League - Static Shock v2|DC
+1140|Justice League - Chibi Wonder Woman v1|DC
+1141|Justice League - Darkseid v1|DC
+1142|Justice League - Doomsday v1|DC
+1143|Justice League - Green Lantern v1|DC
+1159|Justice League - Wonder Woman v1|DC
+1570|Justice League - Chibi Lobo v1|DC
+1136|Justice League - Batman Absolute v1|DC
+1138|Justice League - Chibi Darkseid v1|DC
+1139|Justice League - Chibi Superman v1|DC
+1134|Justice League - Aquaman v1|DC
+1148|Justice League - Lobo v1|DC
+1154|Justice League - Superman and Krypto v1|DC
+1164|Teen Titans - Raven v3|DC
+1165|Teen Titans - Raven v4|DC
+1166|Teen Titans - Starfire v1|DC
+1162|Teen Titans - Raven v1|DC
+1163|Teen Titans - Raven v2|DC

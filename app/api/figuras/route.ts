@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
         // 4. Search (q)
         if (filters.q) {
             const term = filters.q;
-            query = query.ilike('nome', `%${term}%`);
+            query = query.or(`nome.ilike.%${term}%,sinonimos.ilike.%${term}%`);
         }
 
         // 5. Sorting

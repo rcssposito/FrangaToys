@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
         codigo,
         imagem_url,
         tem_extras,
+        sinonimos,
         serie_id,
         ${seriesJoin} ( 
             nome, 
@@ -108,6 +109,7 @@ export async function GET(req: NextRequest) {
                 categoria_id: cat.id || 0,
                 imagem_url: item.imagem_url,
                 tem_extras: item.tem_extras || false,
+                sinonimos: item.sinonimos || '',
                 altura_cm: meta.altura_cm ?? 0,
                 largura_cm: meta.largura_cm ?? 0,
                 profundidade_cm: meta.profundidade_cm ?? 0,
