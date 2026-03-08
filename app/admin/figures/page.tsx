@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus, ChevronDown, ChevronUp, LayoutGrid, List } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import ThemeToggle from '@/components/common/ThemeToggle';
@@ -247,6 +247,7 @@ export default function DataGridPage() {
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [search, setSearch] = useState('');
+    const [viewMode, setViewMode] = useState<'table' | 'grid'>('grid');
     const [nextCursor, setNextCursor] = useState<number | undefined>(undefined);
     const [savingId, setSavingId] = useState<number | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -463,7 +464,7 @@ export default function DataGridPage() {
         <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] p-4 md:p-8 relative transition-colors duration-300">
             <div className="w-full mx-auto">
                 {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                     <div className="flex items-center gap-4">
                         <Link href="/admin" className="p-2 hover:bg-[var(--input-bg)] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg transition-all shadow-sm text-[var(--text-muted)] hover:text-orange-500">
                             <ArrowLeft size={20} />
@@ -473,16 +474,35 @@ export default function DataGridPage() {
                             <p className="text-[var(--text-muted)] text-sm font-medium">Clique no nome para ver a foto. Edite custos abaixo.</p>
                         </div>
                     </div>
-                    {/* Search Bar */}
-                    <div className="relative w-full md:w-96">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Buscar figura..."
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            className="w-full bg-[var(--card-bg)] border border-[var(--input-border)] rounded-lg pl-10 pr-4 py-3 outline-none focus:border-orange-500 transition-all shadow-[var(--shadow-sm)] text-[var(--foreground)] placeholder:text-[var(--text-muted)]"
-                        />
+                    {/* View Controls & Search Bar */}
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <div className="hidden md:flex bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-1 shadow-sm">
+                            <button
+                                onClick={() => setViewMode('table')}
+                                className={`p-2 rounded-md transition-all ${viewMode === 'table' ? 'bg-[var(--input-bg)] text-orange-500 shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'}`}
+                                title="Ver como Tabela"
+                            >
+                                <List size={18} />
+                            </button>
+                            <button
+                                onClick={() => setViewMode('grid')}
+                                className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-[var(--input-bg)] text-orange-500 shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'}`}
+                                title="Ver como Grade"
+                            >
+                                <LayoutGrid size={18} />
+                            </button>
+                        </div>
+
+                        <div className="relative w-full md:w-80">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Buscar figura..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                className="w-full bg-[var(--card-bg)] border border-[var(--input-border)] rounded-lg pl-10 pr-4 py-3 outline-none focus:border-orange-500 transition-all shadow-[var(--shadow-sm)] text-[var(--foreground)] placeholder:text-[var(--text-muted)]"
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -507,10 +527,10 @@ export default function DataGridPage() {
                 </div>
 
                 {/* Container Principal */}
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] md:rounded-xl shadow-[var(--shadow-md)] backdrop-blur-sm flex flex-col -mx-4 md:mx-0 border-x-0 md:border-x">
+                <div className={`bg-[var(--card-bg)] border border-[var(--card-border)] md:rounded-xl shadow-[var(--shadow-md)] backdrop-blur-sm flex flex-col -mx-4 md:mx-0 border-x-0 md:border-x ${viewMode === 'grid' ? 'bg-transparent border-none shadow-none md:p-0' : ''}`}>
 
                     {/* View Desktop (Tabela) */}
-                    <div className="hidden md:block overflow-auto flex-1 custom-scrollbar pb-10 md:pb-0 max-h-[75vh]">
+                    <div className={`hidden ${viewMode === 'table' ? 'md:block' : ''} overflow-auto flex-1 custom-scrollbar pb-10 md:pb-0 max-h-[75vh]`}>
                         <table className="w-full min-w-full text-left border-collapse whitespace-nowrap relative">
                             <thead className="bg-[var(--background)] sticky top-0 z-10">
                                 <tr className="text-[var(--text-muted)] text-[10px] uppercase font-bold tracking-widest border-b border-[var(--card-border)]">
@@ -719,8 +739,8 @@ export default function DataGridPage() {
                         </table >
                     </div>
 
-                    {/* View Mobile (Cartões) */}
-                    <div className="md:hidden flex flex-col gap-4 p-4 text-[var(--foreground)] bg-[var(--background)]">
+                    {/* View Mobile (Sempre Grade) E Desktop (Se selecionou Grade) */}
+                    <div className={`${viewMode === 'table' ? 'md:hidden' : ''} grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 md:p-0 text-[var(--foreground)] bg-transparent w-full`}>
                         {figures.map(f => {
                             const prices = calculatePrices(f);
                             return (
@@ -743,7 +763,7 @@ export default function DataGridPage() {
                     </div>
                     {/* Botão Carregar Mais - Compartilhado */}
                     {nextCursor !== undefined && (
-                        <div className="flex justify-center p-6 border-t border-[var(--card-border)] bg-[var(--background)] w-full">
+                        <div className={`flex justify-center p-6 w-full ${viewMode === 'table' ? 'border-t border-[var(--card-border)] bg-[var(--background)]' : 'mt-4'}`}>
                             <button
                                 onClick={() => fetchFigures(selectedCategoryId, search, false)}
                                 disabled={loadingMore}
