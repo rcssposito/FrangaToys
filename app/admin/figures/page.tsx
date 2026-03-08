@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import ThemeToggle from '@/components/common/ThemeToggle';
@@ -36,11 +36,218 @@ interface PricingSettings {
     margem_premium: number;
 }
 
+const FigureMobileCard = ({
+    f, prices, canEdit, savingId, deletingId, hasRole,
+    handleChange, handleSave, handleDelete, handleDownloadImage, setPreviewImage
+}: any) => {
+    const [expanded, setExpanded] = useState(false);
+
+    return (
+        <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl p-4 shadow-sm flex flex-col gap-3">
+            {/* Cabecalho */}
+            <div className="flex gap-3">
+                <div className="flex-1">
+                    <h3 onClick={() => f.imagem_url && setPreviewImage({ url: f.imagem_url, nome: f.nome })} className="text-sm font-bold text-orange-500 cursor-pointer">{f.nome}</h3>
+                    <div className="text-xs text-[var(--text-muted)] mt-0.5">{f.categoria} - {f.serie}</div>
+                    <span className="font-mono text-[10px] bg-[var(--input-bg)] text-[var(--text-muted)] px-2 py-0.5 rounded-sm border border-[var(--input-border)] mt-2 inline-block">
+                        SKU: {f.codigo || '--'}
+                    </span>
+                </div>
+            </div>
+
+            {/* Precos Principais */}
+            <div className="flex justify-between items-center bg-[var(--input-bg)] rounded-lg p-3 border border-[var(--card-border)]">
+                <div className="flex flex-col">
+                    <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-tighter">Básico (Cartão)</span>
+                    <span className="text-sm font-black text-blue-400">R$ {prices.basicCredito}</span>
+                    <span className="text-[10px] font-bold text-[var(--accent-emerald)]">PIX: R$ {prices.basic}</span>
+                </div>
+                <div className="flex flex-col text-right">
+                    <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-tighter">Premium (Cartão)</span>
+                    <span className="text-sm font-black text-blue-400">R$ {prices.premiumCredito}</span>
+                    <span className="text-[10px] font-bold text-[var(--accent-fuchsia)]">PIX: R$ {prices.premium}</span>
+                </div>
+            </div>
+
+            {/* Ações Rápidas & Expandir */}
+            <div className="flex justify-between items-center pt-2 border-t border-[var(--card-border)] mt-1">
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => handleDownloadImage(f.id, f.nome)}
+                        className="p-2 bg-blue-500/10 text-blue-500 rounded-md hover:bg-blue-500 hover:text-white transition-all border border-blue-500/20"
+                    >
+                        <ImageIcon size={14} />
+                    </button>
+                    {hasRole('admin') && (
+                        <button
+                            onClick={() => handleDelete(f.id, f.nome)}
+                            disabled={deletingId === f.id}
+                            className="p-2 bg-red-500/10 text-red-500 rounded-md hover:bg-red-500 hover:text-white transition-all disabled:opacity-50 border border-red-500/20"
+                        >
+                            {deletingId === f.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                        </button>
+                    )}
+                </div>
+
+                <button
+                    onClick={() => setExpanded(!expanded)}
+                    className="text-xs font-semibold flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--foreground)]"
+                >
+                    {expanded ? 'Ocultar Edição' : 'Editar Dados'}
+                    {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </button>
+            </div>
+
+            {/* Expansão de Edição */}
+            {expanded && (
+                <div className="flex flex-col gap-3 mt-3 pt-3 border-t border-[var(--card-border)] animate-in slide-in-from-top-2 duration-200">
+                    <div className="grid grid-cols-2 gap-3">
+                        {/* Escala */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Escala (%)</label>
+                            <div className="flex items-center justify-between bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm p-1.5 shadow-sm">
+                                <button
+                                    onClick={() => handleChange(f.id, 'escala', Math.max(1, (Number(f.escala) || 0) - 10).toString())}
+                                    disabled={!canEdit}
+                                    className="p-1 text-[var(--text-muted)]"
+                                >
+                                    <Minus size={12} />
+                                </button>
+                                <input
+                                    type="number"
+                                    value={f.escala}
+                                    disabled={!canEdit}
+                                    onChange={e => handleChange(f.id, 'escala', e.target.value)}
+                                    className="w-full bg-transparent text-center text-xs font-black text-orange-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+                                />
+                                <button
+                                    onClick={() => handleChange(f.id, 'escala', ((Number(f.escala) || 0) + 10).toString())}
+                                    disabled={!canEdit}
+                                    className="p-1 text-[var(--text-muted)]"
+                                >
+                                    <Plus size={12} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* KG Resina */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] uppercase font-bold text-[var(--text-muted)]">KG Resina</label>
+                            <input
+                                type="number" step="0.001"
+                                value={f.resina_kg ?? ''}
+                                placeholder="0"
+                                disabled={!canEdit}
+                                onChange={e => handleChange(f.id, 'resina_kg', e.target.value)}
+                                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-1.5 text-center text-xs font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+                            />
+                        </div>
+
+                        {/* Horas Impressao */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] uppercase font-bold text-[var(--text-muted)]">H. Impres.</label>
+                            <input
+                                type="number"
+                                value={f.horas_impressao ?? ''}
+                                placeholder="0"
+                                disabled={!canEdit}
+                                onChange={e => handleChange(f.id, 'horas_impressao', e.target.value)}
+                                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-1.5 text-center text-xs font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+                            />
+                        </div>
+
+                        {/* Horas Pintura */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] uppercase font-bold text-[var(--text-muted)]">H. Pintura</label>
+                            <input
+                                type="number"
+                                value={f.horas_pintura ?? ''}
+                                placeholder="0"
+                                disabled={!canEdit}
+                                onChange={e => handleChange(f.id, 'horas_pintura', e.target.value)}
+                                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-1.5 text-center text-xs font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Medidas */}
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Medidas (CM) - Altura, Largura, Prof.</label>
+                        <div className="flex gap-2">
+                            <input
+                                type="number" step="0.1"
+                                value={f.altura_cm ?? ''}
+                                placeholder="Alt"
+                                disabled={!canEdit}
+                                onChange={e => handleChange(f.id, 'altura_cm', e.target.value)}
+                                className="w-1/3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-xs font-black text-[var(--foreground)] outline-none disabled:opacity-50"
+                            />
+                            <input
+                                type="number" step="0.1"
+                                value={f.largura_cm ?? ''}
+                                placeholder="Larg"
+                                disabled={!canEdit}
+                                onChange={e => handleChange(f.id, 'largura_cm', e.target.value)}
+                                className="w-1/3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-xs font-black text-[var(--foreground)] outline-none disabled:opacity-50"
+                            />
+                            <input
+                                type="number" step="0.1"
+                                value={f.profundidade_cm ?? ''}
+                                placeholder="Prof"
+                                disabled={!canEdit}
+                                onChange={e => handleChange(f.id, 'profundidade_cm', e.target.value)}
+                                className="w-1/3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-xs font-black text-[var(--foreground)] outline-none disabled:opacity-50"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Tags e Extras */}
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Sinônimos / Tags</label>
+                        <input
+                            type="text"
+                            value={f.sinonimos || ''}
+                            placeholder="Nomes PT-BR, tags..."
+                            disabled={!canEdit}
+                            onChange={e => handleChange(f.id, 'sinonimos', e.target.value)}
+                            className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-1.5 text-left text-xs font-medium text-[var(--foreground)] outline-none focus:border-orange-500/50 disabled:opacity-50"
+                        />
+                    </div>
+
+                    <div className="flex items-center justify-between mt-2 py-2 border-t border-[var(--card-border)]">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={f.tem_extras}
+                                disabled={!canEdit}
+                                onChange={e => handleChange(f.id, 'tem_extras', e.target.checked)}
+                                className="w-5 h-5 rounded-sm border-[var(--input-border)] text-orange-500 bg-[var(--input-bg)] focus:ring-0"
+                            />
+                            <span className="text-xs font-medium text-[var(--text-muted)]">Tem Extras?</span>
+                        </label>
+
+                        <button
+                            onClick={() => handleSave(f)}
+                            disabled={savingId === f.id || !canEdit}
+                            className="px-4 py-2 bg-orange-500/10 text-orange-500 rounded-md hover:bg-orange-500 hover:text-[var(--background)] transition-all disabled:opacity-50 font-medium text-xs flex items-center gap-2 shadow-sm"
+                        >
+                            {savingId === f.id ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                            Salvar Alterações
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 export default function DataGridPage() {
     const [figures, setFigures] = useState<Figure[]>([]);
     const [settings, setSettings] = useState<PricingSettings | null>(null);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [search, setSearch] = useState('');
+    const [nextCursor, setNextCursor] = useState<number | undefined>(undefined);
     const [savingId, setSavingId] = useState<number | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | string | null>(null);
@@ -68,9 +275,18 @@ export default function DataGridPage() {
     }, []);
 
     // Fetch figures based on filters
-    const fetchFigures = useCallback(async (catId: number | string | null = selectedCategoryId, searchTerm: string = search) => {
+    const fetchFigures = useCallback(async (
+        catId: number | string | null = selectedCategoryId,
+        searchTerm: string = search,
+        pageZero: boolean = true
+    ) => {
         try {
-            setLoading(true);
+            if (pageZero) {
+                setLoading(true);
+            } else {
+                setLoadingMore(true);
+            }
+
             const params = new URLSearchParams();
             if (catId === 'novidades') {
                 params.append('novidades', 'true');
@@ -78,13 +294,16 @@ export default function DataGridPage() {
                 params.append('categoria_id', catId.toString());
             }
             if (searchTerm) params.append('search', searchTerm);
+            if (!pageZero && nextCursor) {
+                params.append('page', nextCursor.toString());
+            }
 
             const res = await fetch(`/api/admin/figures?${params.toString()}`);
             if (!res.ok) throw new Error('Falha ao carregar');
             const data = await res.json();
 
             // Format 0s and nulls as empty strings for placeholders
-            const formattedData = data.map((f: Figure) => ({
+            const formattedData = (data.items || []).map((f: Figure) => ({
                 ...f,
                 resina_kg: Number(f.resina_kg) === 0 ? '' : f.resina_kg,
                 horas_impressao: Number(f.horas_impressao) === 0 ? '' : f.horas_impressao,
@@ -94,21 +313,28 @@ export default function DataGridPage() {
                 profundidade_cm: Number(f.profundidade_cm) === 0 ? '' : f.profundidade_cm,
             }));
 
-            setFigures(formattedData);
+            if (pageZero) {
+                setFigures(formattedData);
+            } else {
+                setFigures(prev => [...prev, ...formattedData]);
+            }
+            setNextCursor(data.nextCursor);
+
         } catch (error) {
             toast.error('Erro ao carregar figuras');
         } finally {
             setLoading(false);
+            setLoadingMore(false);
         }
-    }, [selectedCategoryId, search]); // Dependencies for useCallback
+    }, [selectedCategoryId, search, nextCursor]); // Dependencies for useCallback
 
     // Initial Load & Filter Changes with debounce
     useEffect(() => {
         const timer = setTimeout(() => {
-            fetchFigures();
+            fetchFigures(selectedCategoryId, search, true);
         }, 300); // 300ms debounce
         return () => clearTimeout(timer);
-    }, [fetchFigures]); // fetchFigures depends on selectedCategoryId and search
+    }, [selectedCategoryId, search]); // run when filters change
 
     const handleChange = (id: number, field: keyof Figure, value: string | boolean) => {
         setFigures(prev => prev.map(f => f.id === id ? { ...f, [field]: value } : f));
@@ -280,9 +506,11 @@ export default function DataGridPage() {
                     </div>
                 </div>
 
-                {/* Tabela */}
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl shadow-[var(--shadow-md)] backdrop-blur-sm max-h-[75vh] flex flex-col">
-                    <div className="overflow-auto flex-1 custom-scrollbar">
+                {/* Container Principal */}
+                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] md:rounded-xl shadow-[var(--shadow-md)] backdrop-blur-sm flex flex-col -mx-4 md:mx-0 border-x-0 md:border-x">
+
+                    {/* View Desktop (Tabela) */}
+                    <div className="hidden md:block overflow-auto flex-1 custom-scrollbar pb-10 md:pb-0 max-h-[75vh]">
                         <table className="w-full min-w-full text-left border-collapse whitespace-nowrap relative">
                             <thead className="bg-[var(--background)] sticky top-0 z-10">
                                 <tr className="text-[var(--text-muted)] text-[10px] uppercase font-bold tracking-widest border-b border-[var(--card-border)]">
@@ -489,7 +717,44 @@ export default function DataGridPage() {
                                 })}
                             </tbody >
                         </table >
-                    </div >
+                    </div>
+
+                    {/* View Mobile (Cartões) */}
+                    <div className="md:hidden flex flex-col gap-4 p-4 text-[var(--foreground)] bg-[var(--background)]">
+                        {figures.map(f => {
+                            const prices = calculatePrices(f);
+                            return (
+                                <FigureMobileCard
+                                    key={f.id}
+                                    f={f}
+                                    prices={prices}
+                                    canEdit={canEdit}
+                                    savingId={savingId}
+                                    deletingId={deletingId}
+                                    hasRole={hasRole}
+                                    handleChange={handleChange}
+                                    handleSave={handleSave}
+                                    handleDelete={handleDelete}
+                                    handleDownloadImage={handleDownloadImage}
+                                    setPreviewImage={setPreviewImage}
+                                />
+                            );
+                        })}
+                    </div>
+                    {/* Botão Carregar Mais - Compartilhado */}
+                    {nextCursor !== undefined && (
+                        <div className="flex justify-center p-6 border-t border-[var(--card-border)] bg-[var(--background)] w-full">
+                            <button
+                                onClick={() => fetchFigures(selectedCategoryId, search, false)}
+                                disabled={loadingMore}
+                                className="px-6 py-2 bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--foreground)] rounded-full text-sm font-medium hover:bg-[var(--input-bg)] hover:text-orange-500 transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                            >
+                                {loadingMore ? <Loader2 size={16} className="animate-spin" /> : null}
+                                {loadingMore ? 'Carregando...' : 'Carregar Mais Figuras'}
+                            </button>
+                        </div>
+                    )}
+                    {/* Fim do Container Principal */}
                 </div >
             </div >
 

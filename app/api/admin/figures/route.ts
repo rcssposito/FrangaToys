@@ -25,6 +25,8 @@ export async function GET(req: NextRequest) {
         const { searchParams } = new URL(req.url);
         const search = searchParams.get('search') || '';
         const categoria_id = searchParams.get('categoria_id');
+        const page = parseInt(searchParams.get('page') || '0');
+        const limit = parseInt(searchParams.get('limit') || '50');
 
         // Dynamically select join type based on filtering
         const shouldFilterCategory = categoria_id && categoria_id !== '0';
@@ -77,8 +79,9 @@ export async function GET(req: NextRequest) {
             query = query.order('nome', { ascending: true });
         }
 
-        // Remove arbitrary limits (or set a very high one if pagination is not strictly implemented in frontend yet)
-        query = query.range(0, 4999);
+        const from = page * limit;
+        const to = from + limit - 1;
+        query = query.range(from, to);
 
         const { data, error } = await query;
 
@@ -120,7 +123,9 @@ export async function GET(req: NextRequest) {
             };
         });
 
-        return NextResponse.json(formatted);
+        const nextCursor = formatted.length === limit ? page + 1 : undefined;
+
+        return NextResponse.json({ items: formatted, nextCursor });
 
     } catch (error: any) {
         console.error('Error fetching figures:', error);
