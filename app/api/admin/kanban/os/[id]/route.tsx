@@ -29,6 +29,10 @@ export async function GET(
                 pintura_freelancer,
                 figura_id,
                 vendedor,
+                valor_venda_final,
+                valor_frete,
+                checkout_id,
+                link_pagamento,
                 figuras (
                     nome,
                     codigo,
@@ -63,6 +67,47 @@ export async function GET(
             .single();
 
         const vendedorNome = userData?.nome || sale.vendedor?.split('@')[0].toUpperCase() || 'FRANGUINHA';
+
+        // --- PAYMENT LOGIC ---
+        // Fetch all items in the same checkout session for total calculation
+        let alliedQuery = supabase
+            .from('vendas')
+            .select('valor_venda_final, valor_frete');
+
+        if (sale.checkout_id) {
+            alliedQuery = alliedQuery.eq('checkout_id', sale.checkout_id);
+        } else {
+            alliedQuery = alliedQuery
+                .eq('cliente_nome', sale.cliente_nome)
+                .eq('data_venda', sale.data_venda);
+        }
+
+        const { data: alliedSales } = await alliedQuery;
+        const totalItemsPrice = (alliedSales || []).reduce((acc, s) => acc + (Number(s.valor_venda_final) || 0), 0);
+        const totalFreight = (alliedSales || []).reduce((acc, s) => acc + (Number(s.valor_frete) || 0), 0);
+        const valorTotalReal = totalItemsPrice + totalFreight;
+
+        // Generate Pix Payload
+        function generatePixPayload(key: string, name: string, amount: number) {
+            name = name.substring(0, 25).normalize('NFD').replace(/[\u0300-\u036f]/g, "").toUpperCase();
+            const city = "SAO PAULO";
+            const amountStr = amount.toFixed(2);
+            let payload = "00020126330014br.gov.bcb.pix" + `01${key.length.toString().padStart(2, '0')}${key}` + "520400005303986" + `54${amountStr.length.toString().padStart(2, '0')}${amountStr}` + "5802BR" + `59${name.length.toString().padStart(2, '0')}${name}` + `60${city.length.toString().padStart(2, '0')}${city}` + "62070503***6304";
+            let crc = 0xFFFF;
+            for (let i = 0; i < payload.length; i++) {
+                crc ^= payload.charCodeAt(i) << 8;
+                for (let j = 0; j < 8; j++) {
+                    if ((crc & 0x8000) !== 0) crc = (crc << 1) ^ 0x1021;
+                    else crc = crc << 1;
+                }
+            }
+            return payload + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+        }
+
+        const pixPayload = generatePixPayload("43687871886", "Renan C S Sposito", valorTotalReal);
+        const originUrl = sale.link_pagamento ? sale.link_pagamento : pixPayload;
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(originUrl)}`;
+        const formatMoney = (val: number) => val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         return new ImageResponse(
             (
@@ -177,33 +222,76 @@ export async function GET(
                             </div>
                         )}
 
-                        {/* Production Checklist */}
-                        <div style={{ display: 'flex', borderTop: '2px solid #f1f5f9', paddingTop: 25, justifyContent: 'space-between', alignItems: 'center', marginTop: sale.observacao ? 0 : 40 }}>
-                            <div style={{ display: 'flex', gap: 30 }}>
+                        {/* Compact Horizontal Section */}
+                        <div style={{ 
+                            display: 'flex', 
+                            borderTop: '2px solid #f1f5f9', 
+                            paddingTop: 30, 
+                            marginTop: sale.observacao ? 20 : 40,
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            {/* Checkboxes */}
+                            <div style={{ display: 'flex', gap: 20 }}>
                                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                                    <div style={{ width: 22, height: 22, border: '3px solid #ea580c', borderRadius: 5, marginRight: 8 }}></div>
-                                    <span style={{ fontSize: 14, fontWeight: '800' }}>IMPRESSÃO</span>
+                                    <div style={{ width: 18, height: 18, border: '2px solid #ea580c', borderRadius: 4, marginRight: 6 }}></div>
+                                    <span style={{ fontSize: 13, fontWeight: '800' }}>IMPRESSÃO</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                                    <div style={{ width: 22, height: 22, border: '3px solid #ea580c', borderRadius: 5, marginRight: 8 }}></div>
-                                    <span style={{ fontSize: 14, fontWeight: '800' }}>LIMPEZA</span>
+                                    <div style={{ width: 18, height: 18, border: '2px solid #ea580c', borderRadius: 4, marginRight: 6 }}></div>
+                                    <span style={{ fontSize: 13, fontWeight: '800' }}>LIMPEZA</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                                    <div style={{ width: 22, height: 22, border: '3px solid #ea580c', borderRadius: 5, marginRight: 8 }}></div>
-                                    <span style={{ fontSize: 14, fontWeight: '800' }}>PINTURA</span>
+                                    <div style={{ width: 18, height: 18, border: '2px solid #ea580c', borderRadius: 4, marginRight: 6 }}></div>
+                                    <span style={{ fontSize: 13, fontWeight: '800' }}>PINTURA</span>
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 'bold' }}>CONTROLE DE QUALIDADE</span>
-                                <span style={{ fontSize: 9, color: '#cbd5e1' }}>FRANGATOYS PRODUCTION v2.0</span>
+
+                            {/* Payment */}
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 12,
+                                backgroundColor: '#f8fafc',
+                                padding: '10px 15px',
+                                borderRadius: 12,
+                                border: '1px solid #e2e8f0'
+                            }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                    <span style={{ fontSize: 9, color: '#64748b', fontWeight: '900', textTransform: 'uppercase' }}>Total {sale.link_pagamento ? 'MP' : 'PIX'}</span>
+                                    <span style={{ fontSize: 22, fontWeight: '900', color: '#000' }}>R$ {formatMoney(valorTotalReal)}</span>
+                                </div>
+                                <img src={qrCodeUrl} style={{ width: 70, height: 70 }} />
                             </div>
+
+                            {/* Stamp */}
+                            <div style={{
+                                width: 150,
+                                height: 150,
+                                border: '2px dashed #cbd5e1',
+                                borderRadius: 12,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backgroundColor: '#f8fafc'
+                            }}>
+                                <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: '900' }}>CARIMBO</span>
+                                <span style={{ fontSize: 8, color: '#94a3b8', fontWeight: '900' }}>6x6</span>
+                            </div>
+                        </div>
+
+                        {/* Quality Control labels */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', opacity: 0.5, marginTop: 15 }}>
+                            <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 'bold', letterSpacing: '1px' }}>CONTROLE DE QUALIDADE / CONFERÊNCIA FINAL</span>
+                            <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 'black' }}>FRANGATOYS PRODUCTION v2.3 (COMPACT LAYOUT)</span>
                         </div>
                     </div>
                 </div>
             ),
             {
                 width: 800,
-                height: 800,
+                height: 1100,
             }
         );
     } catch (e) {

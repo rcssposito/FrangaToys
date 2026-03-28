@@ -196,12 +196,12 @@ export default function KanbanPage() {
                                                     </div>
                                                 </div>
                                                 <Link
-                                                    href={`/api/admin/kanban/os/${task.id}`}
+                                                    href={`/api/admin/kanban/certificate/${task.id}`}
                                                     target="_blank"
-                                                    title="Imprimir Ordem de Serviço (OS)"
+                                                    title="Imprimir Certificado de Autenticidade"
                                                     className="p-2 h-fit bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-orange-500 border border-[var(--card-border)] hover:border-orange-500/30 rounded-lg transition-all shadow-sm"
                                                 >
-                                                    <FileText size={18} />
+                                                    <CheckCircle2 size={18} />
                                                 </Link>
                                             </div>
 

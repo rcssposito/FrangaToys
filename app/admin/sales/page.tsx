@@ -320,11 +320,11 @@ export default function SalesPage() {
                                                                 </button>
                                                             )}
                                                             <Link
-                                                                href={`/api/admin/receipt/${sale.id}`}
+                                                                href={`/api/admin/kanban/os/${sale.id}`}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 className="p-2.5 bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--card-border)] rounded-lg hover:text-blue-500 hover:border-blue-500/30 transition-all shadow-sm"
-                                                                title="Gerar Recibo de Venda"
+                                                                title="Gerar OS & Comprovante de Pagamento"
                                                             >
                                                                 <Receipt size={16} />
                                                             </Link>
@@ -421,7 +421,7 @@ export default function SalesPage() {
                                                         <RotateCcw size={16} />
                                                     </button>
                                                 )}
-                                                <Link href={`/api/admin/receipt/${sale.id}`} target="_blank" className="p-2 bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--card-border)] rounded-lg hover:text-blue-500 shadow-sm">
+                                                <Link href={`/api/admin/kanban/os/${sale.id}`} target="_blank" className="p-2 bg-[var(--input-bg)] text-[var(--text-muted)] border border-[var(--card-border)] rounded-lg hover:text-blue-500 shadow-sm" title="Gerar OS & Comprovante de Pagamento">
                                                     <Receipt size={16} />
                                                 </Link>
                                                 {hasRole('admin') && (
