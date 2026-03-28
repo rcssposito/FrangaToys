@@ -41,7 +41,7 @@ export async function GET(
         const meta = (Array.isArray(fig?.figuras_meta) ? fig.figuras_meta[0] : fig?.figuras_meta) || {};
         const studio = (Array.isArray(fig?.studios) ? fig.studios[0] : fig?.studios) || {};
 
-        const d = new Date(sale.data_venda);
+        const d = new Date();
         const dataVenda = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 
         return new ImageResponse(
