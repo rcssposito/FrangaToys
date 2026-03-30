@@ -28,6 +28,8 @@ interface Sale {
         nome: string;
         studios: { nome: string } | { nome: string }[];
     };
+    link_pagamento?: string;
+    checkout_id?: string;
 }
 
 interface MonthGroup {
@@ -295,8 +297,15 @@ export default function SalesPage() {
                                                             <span className="text-[10px] text-[var(--text-muted)] italic font-bold uppercase tracking-widest">Loja Direta</span>
                                                         )}
                                                     </td>
-                                                    <td className="p-4 text-right font-black text-[var(--foreground)] text-base tracking-tighter">
-                                                        R$ {sale.valor_venda_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    <td className="p-4 text-right">
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="font-black text-[var(--foreground)] text-base tracking-tighter">
+                                                                R$ {sale.valor_venda_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                            </span>
+                                                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider mt-1 ${sale.link_pagamento ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`}>
+                                                                {sale.link_pagamento ? 'Cartão' : 'PIX'}
+                                                            </span>
+                                                        </div>
                                                     </td>
                                                     {hasRole('admin') || hasRole('finance') ? (
                                                         <>
@@ -406,11 +415,16 @@ export default function SalesPage() {
                                                     <div className="font-black text-[var(--foreground)] text-base tracking-tighter">
                                                         R$ {sale.valor_venda_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                     </div>
-                                                    {(hasRole('admin') || hasRole('finance')) && (
-                                                        <div className="text-[var(--accent-emerald)] font-black text-[11px] mt-0.5" title="Lucro Líquido">
-                                                            L: R$ {sale.lucro_real?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                        </div>
-                                                    )}
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider ${sale.link_pagamento ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`}>
+                                                            {sale.link_pagamento ? 'Cartão' : 'PIX'}
+                                                        </span>
+                                                        {(hasRole('admin') || hasRole('finance')) && (
+                                                            <div className="text-[var(--accent-emerald)] font-black text-[11px]" title="Lucro Líquido">
+                                                                L: R$ {sale.lucro_real?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
 

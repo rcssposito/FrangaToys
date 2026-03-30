@@ -174,7 +174,14 @@ export default function NewSalePage() {
 
     const totalVendaCartao = cart.reduce((acc, i) => acc + (i.valor_final || 0), 0);
     const taxaMarkup = settings?.taxa_cartao || 1.15;
-    const totalVendaBase = totalVendaCartao / taxaMarkup;
+    
+    // Cálculo dinâmico: 'Outros' não tem desconto de PIX (markup)
+    const totalVendaBase = cart.reduce((acc, i) => {
+        const isOutros = i.studio === 'Outros';
+        const itemPixPrice = isOutros ? i.valor_final : i.valor_final / taxaMarkup;
+        return acc + itemPixPrice;
+    }, 0);
+
     const freteSomar = metodoEntrega === 'envio' ? (Number(valorFrete.replace(',', '.')) || 0) : 0;
     const totalVenda = (paymentMethod === 'credit' ? totalVendaCartao : totalVendaBase) + freteSomar;
 
@@ -272,13 +279,18 @@ export default function NewSalePage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    carrinho: cart.map(i => ({
-                        id: i.id,
-                        nome: i.Figura,
-                        quantidade: i.quantidade,
-                        valor_final: paymentMethod === 'credit' ? i.valor_final : i.valor_final / taxaMarkup,
-                        resina_kg: i.resina_kg
-                    })),
+                    carrinho: cart.map(i => {
+                        const isOutros = i.studio === 'Outros';
+                        const valorFinalItem = paymentMethod === 'credit' ? i.valor_final : (isOutros ? i.valor_final : i.valor_final / taxaMarkup);
+                        
+                        return {
+                            id: i.id,
+                            nome: i.Figura,
+                            quantidade: i.quantidade,
+                            valor_final: valorFinalItem,
+                            resina_kg: i.resina_kg
+                        };
+                    }),
                     cliente_nome: cliente,
                     cliente_contato: clienteContato,
                     canal_venda: canal,
@@ -317,7 +329,8 @@ export default function NewSalePage() {
             msg += `\n*📦 ITENS VENDIDOS:*\n`;
 
             cart.forEach(item => {
-                const precoItem = paymentMethod === 'credit' ? item.valor_final : item.valor_final / 1.10;
+                const isOutros = item.studio === 'Outros';
+                const precoItem = paymentMethod === 'credit' ? item.valor_final : (isOutros ? item.valor_final : item.valor_final / taxaMarkup);
                 msg += `👉 ${item.quantidade}x ${item.Figura} - R$ ${precoItem.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
             });
 
@@ -558,7 +571,10 @@ export default function NewSalePage() {
                                                             className="w-full bg-zinc-950 border border-zinc-800 rounded py-1 pl-16 pr-2 text-right text-sm font-bold text-blue-400 outline-none focus:border-blue-500"
                                                         />
                                                     </div>
-                                                    <span className="text-[10px] text-emerald-500 font-medium tracking-tight">PIX: R$ {(item.valor_final / taxaMarkup).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                    <span className="text-[10px] text-emerald-500 font-medium tracking-tight">
+                                                        PIX: R$ {(item.studio === 'Outros' ? item.valor_final : item.valor_final / taxaMarkup).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        {item.studio === 'Outros' && <span className="ml-1 text-[8px] opacity-70">(S/ DESCONTO)</span>}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -606,7 +622,30 @@ export default function NewSalePage() {
                         </div>
 
                         {/* Dados da Venda */}
-                        <form onSubmit={handleSubmit} className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4 shadow-lg">
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4 shadow-lg">
+                            <div className="mb-4">
+                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-3">Método de Pagamento</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('pix')}
+                                        className={`p-3 rounded-lg border font-bold text-xs flex items-center justify-center gap-2 transition-all ${paymentMethod === 'pix' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-zinc-950 border-zinc-900 text-zinc-600 hover:border-zinc-800'}`}
+                                    >
+                                        <svg viewBox="0 0 512 512" className="w-4 h-4 fill-current"><path d="M119.2 386.5L34.6 302c-15.6-15.6-15.6-40.9 0-56.6l84.6-84.5c15.6-15.6 40.9-15.6 56.6 0l212.1 212.1c15.6 15.6 15.6 40.9 0 56.6l-84.6 84.5c-15.6 15.6-40.9 15.6-56.6 0L119.2 386.5zm358.2-141.1l-84.6-84.5c-15.6-15.6-40.9-15.6-56.6 0L124.1 373c-15.6 15.6-15.6 40.9 0 56.6l84.6 84.5c15.6 15.6 40.9 15.6 56.6 0l212.1-212.1c15.6-15.6 15.6-40.8 0-56.6zM256 312c-30.9 0-56-25.1-56-56s25.1-56 56-56 56 25.1 56 56-25.1 56-56 56z" /></svg>
+                                        PIX
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentMethod('credit')}
+                                        className={`p-3 rounded-lg border font-bold text-xs flex items-center justify-center gap-2 transition-all ${paymentMethod === 'credit' ? 'bg-blue-500/10 border-blue-500 text-blue-400' : 'bg-zinc-950 border-zinc-900 text-zinc-600 hover:border-zinc-800'}`}
+                                    >
+                                        <svg viewBox="0 0 24 24" className="w-4 h-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                                        CARTÃO
+                                    </button>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleSubmit} className="space-y-4">
                             {isFinanceOrAdmin && vendedores.length > 0 ? (
                                 <div className="space-y-1 mb-4">
                                     <label className="block text-[10px] text-zinc-500 uppercase font-black ml-1">Selecionar Vendedor</label>
@@ -811,55 +850,35 @@ export default function NewSalePage() {
                                             type="button"
                                             onClick={() => setShowPaymentOptions(true)}
                                             disabled={submitting || cart.length === 0}
-                                            className="w-full font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg active:scale-[0.98] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed"
+                                            className="w-full font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg active:scale-[0.98] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed uppercase tracking-tighter"
                                         >
-                                            GERAR COBRANÇA
+                                            {paymentMethod === 'pix' ? 'Gerar PIX e Confirmar' : 'Confirmar e Gerar Link MP'}
                                         </button>
                                     </>
                                 ) : (
                                     <>
-                                        <div className="bg-zinc-950 border border-emerald-500/30 p-4 rounded-xl space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                        <div className="bg-zinc-950 border border-emerald-500/30 p-5 rounded-xl space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                             <div className="flex justify-between items-center mb-2">
-                                                <span className="font-bold text-sm text-zinc-300 flex items-center gap-2"><DollarSign size={16} className="text-emerald-500" /> Formas de Pagamento</span>
-                                                <button type="button" onClick={() => setShowPaymentOptions(false)} className="text-xs text-zinc-500 hover:text-white">Cancelar</button>
+                                                <span className="font-bold text-sm text-zinc-300 flex items-center gap-2 underline underline-offset-4 decoration-emerald-500/50 uppercase tracking-tighter">Resumo de Pagamento</span>
+                                                <button type="button" onClick={() => setShowPaymentOptions(false)} className="text-xs text-zinc-500 hover:text-white">Voltar</button>
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setPaymentMethod('pix')}
-                                                    className={`p-3 rounded-lg border font-bold text-xs flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'pix' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600'}`}
-                                                >
-                                                    <svg viewBox="0 0 512 512" className="w-6 h-6 fill-current"><path d="M119.2 386.5L34.6 302c-15.6-15.6-15.6-40.9 0-56.6l84.6-84.5c15.6-15.6 40.9-15.6 56.6 0l212.1 212.1c15.6 15.6 15.6 40.9 0 56.6l-84.6 84.5c-15.6 15.6-40.9 15.6-56.6 0L119.2 386.5zm358.2-141.1l-84.6-84.5c-15.6-15.6-40.9-15.6-56.6 0L124.1 373c-15.6 15.6-15.6 40.9 0 56.6l84.6 84.5c15.6 15.6 40.9 15.6 56.6 0l212.1-212.1c15.6-15.6 15.6-40.8 0-56.6zM256 312c-30.9 0-56-25.1-56-56s25.1-56 56-56 56 25.1 56 56-25.1 56-56 56z" /></svg>
-                                                    PIX (QR Code)
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setPaymentMethod('credit')}
-                                                    className={`p-3 rounded-lg border font-bold text-xs flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'credit' ? 'bg-blue-500/10 border-blue-500 text-blue-400' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600'}`}
-                                                >
-                                                    <svg viewBox="0 0 24 24" className="w-6 h-6 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
-                                                    Cartão (3x S/ Juros)
-                                                </button>
-                                            </div>
-                                            {paymentMethod === 'pix' && (
+                                            {paymentMethod === 'pix' ? (
                                                 <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex flex-col justify-center items-center gap-2 text-center">
-                                                    <p className="text-sm font-semibold text-emerald-400">Gere o cartão de cobrança</p>
-                                                    <p className="text-xs text-zinc-500 mb-2">(que é a imagem de recibo que geramos no painel Kanban da venda)</p>
+                                                    <p className="text-sm font-semibold text-emerald-400">PAGAMENTO VIA PIX</p>
+                                                    <p className="text-xs text-zinc-500 mb-2">Gere o cartão de cobrança para enviar ao cliente.</p>
                                                 </div>
-                                            )}
-
-                                            {paymentMethod === 'credit' && (
+                                            ) : (
                                                 <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl flex flex-col justify-center items-center gap-2 text-center">
-                                                    <p className="text-sm font-semibold text-blue-400">Checkout Mercado Pago</p>
-                                                    <p className="text-xs text-zinc-500 mb-2">O cliente poderá pagar em até 3x sem juros (absorvido pela loja) ou em até 12x com juros a partir da 4ª parcela.</p>
+                                                    <p className="text-sm font-semibold text-blue-400">PAGAMENTO VIA CARTÃO</p>
+                                                    <p className="text-xs text-zinc-500 mb-2">O cliente poderá pagar em até 3x sem juros (absorvido pela loja).</p>
                                                 </div>
                                             )}
 
                                             <button
                                                 type="submit"
                                                 disabled={submitting}
-                                                className="w-full font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 bg-zinc-100 hover:bg-white text-black shadow-lg shadow-white/10 active:scale-[0.98] mt-2"
+                                                className="w-full font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black shadow-lg shadow-emerald-500/10 active:scale-[0.98] mt-2 uppercase"
                                             >
                                                 {submitting ? <Loader2 className="animate-spin" /> : 'CONFIRMAR VENDA'}
                                             </button>
@@ -868,6 +887,7 @@ export default function NewSalePage() {
                                 )}
                             </div>
                         </form>
+                    </div>
 
                         {/* Total a Pagar em Destaque (Sempre Visível no Final, Grande) */}
                         {cart.length > 0 && (

@@ -195,14 +195,24 @@ export default function KanbanPage() {
                                                         Vendedor: <span className="text-orange-500/70">{task.vendedor_nome || task.vendedor?.split('@')[0] || 'Franguinha'}</span>
                                                     </div>
                                                 </div>
-                                                <Link
-                                                    href={`/api/admin/kanban/certificate/${task.id}`}
-                                                    target="_blank"
-                                                    title="Imprimir Certificado de Autenticidade"
-                                                    className="p-2 h-fit bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-orange-500 border border-[var(--card-border)] hover:border-orange-500/30 rounded-lg transition-all shadow-sm"
-                                                >
-                                                    <CheckCircle2 size={18} />
-                                                </Link>
+                                                <div className="flex flex-col gap-2">
+                                                    <Link
+                                                        href={`/api/admin/kanban/os/${task.id}`}
+                                                        target="_blank"
+                                                        title="Imprimir Ordem de Serviço (OS)"
+                                                        className="p-2 bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white border border-orange-500/20 rounded-lg transition-all shadow-sm"
+                                                    >
+                                                        <FileText size={18} />
+                                                    </Link>
+                                                    <Link
+                                                        href={`/api/admin/kanban/certificate/${task.id}`}
+                                                        target="_blank"
+                                                        title="Imprimir Certificado de Autenticidade"
+                                                        className="p-2 bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-emerald-500 border border-[var(--card-border)] hover:border-emerald-500/30 rounded-lg transition-all shadow-sm"
+                                                    >
+                                                        <CheckCircle2 size={18} />
+                                                    </Link>
+                                                </div>
                                             </div>
 
                                             <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-[var(--card-border)]/50">
