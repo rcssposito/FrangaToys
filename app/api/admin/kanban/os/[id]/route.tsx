@@ -195,10 +195,24 @@ export async function GET(
                         {/* Image Column */}
                         <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                             {fig?.imagem_url && (
-                                <div style={{ display: 'flex', position: 'relative' }}>
+                                <div style={{ 
+                                    display: 'flex', 
+                                    position: 'relative',
+                                    height: 380,
+                                    width: '100%',
+                                    backgroundColor: '#ffffff',
+                                    borderRadius: 16,
+                                    border: '1px solid #f1f5f9',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                                    overflow: 'hidden',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    padding: '20px',
+                                    marginBottom: 12
+                                }}>
                                     <img
                                         src={fig.imagem_url}
-                                        style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 16, border: '4px solid #f8fafc', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}
+                                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                                     />
                                     {sale.pintura_freelancer && (
                                         <div style={{ position: 'absolute', top: 12, right: 12, backgroundColor: '#d946ef', color: '#fff', padding: '4px 10px', fontSize: 11, fontWeight: '900', borderRadius: 6, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
