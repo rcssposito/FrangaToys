@@ -370,69 +370,75 @@ export default function NewSalePage() {
         };
 
         return (
-            <div className="min-h-screen bg-black text-white p-4 md:p-8 flex items-center justify-center">
-                <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl max-w-md w-full text-center space-y-6">
-                    <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <CheckCircle2 size={32} />
+            <div className="min-h-screen bg-black text-white p-4 md:p-8 flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 pointer-events-none opacity-20 z-0">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-emerald-600 rounded-full blur-[200px] mix-blend-screen" />
+                </div>
+                
+                <div className="relative z-10 bg-zinc-950/80 backdrop-blur-2xl border border-emerald-500/30 p-8 rounded-3xl max-w-md w-full text-center space-y-6 shadow-[0_0_50px_rgba(16,185,129,0.15)]">
+                    <div className="w-20 h-20 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                        <CheckCircle2 size={40} />
                     </div>
-                    <h2 className="text-2xl font-bold">Venda Registrada!</h2>
-                    <p className="text-zinc-400 text-sm">O pedido foi enviado para o Kanban (Aguardando Pagamento).</p>
+                    <div className="space-y-1">
+                        <h2 className="text-3xl font-black tracking-tight drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]">Venda Registrada!</h2>
+                        <p className="text-emerald-500/70 text-sm font-medium">Enviada ao Kanban (Aguardando Pagamento).</p>
+                    </div>
 
-                    {completedSaleData.method === 'pix' && pixCode && (
-                        <div className="bg-black/50 border border-emerald-500/20 p-4 rounded-xl text-left space-y-2">
+                    {completedSaleData?.method === 'pix' && pixCode && (
+                        <div className="bg-black/60 border border-emerald-500/30 p-5 rounded-2xl text-left space-y-3 shadow-inner">
                             <div className="flex justify-between items-center">
-                                <label className="text-xs font-bold text-emerald-500 tracking-wider">PIX COPIA E COLA</label>
-                                <span className="text-sm font-black text-white">R$ {completedSaleData.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                <label className="text-[11px] font-black text-emerald-500 tracking-widest uppercase">PIX COPIA E COLA</label>
+                                <span className="text-base font-black text-white tracking-tight drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">R$ {(completedSaleData?.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                             </div>
                             <div className="flex gap-2">
                                 <input
                                     readOnly
                                     value={pixCode}
-                                    className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-300 outline-none"
+                                    className="w-full bg-zinc-950 border border-emerald-500/20 rounded-xl px-4 py-3 text-xs text-emerald-400 font-mono outline-none shadow-inner cursor-text"
                                 />
                                 <button
                                     onClick={() => handleCopy(pixCode, 'PIX')}
-                                    className="bg-emerald-600 hover:bg-emerald-500 p-2 rounded text-white transition-colors flex-shrink-0"
+                                    className="bg-emerald-500 hover:bg-emerald-400 p-3 rounded-xl text-black transition-colors flex-shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.3)] active:scale-95"
                                     title="Copiar PIX"
                                 >
-                                    <Copy size={16} />
+                                    <Copy size={20} />
                                 </button>
                             </div>
                         </div>
                     )}
 
-                    {completedSaleData.method === 'credit' && completedSaleData.link_pagamento && (
-                        <div className="bg-black/50 border border-blue-500/20 p-4 rounded-xl text-left space-y-2">
-                            <label className="text-xs font-bold text-blue-400 tracking-wider">LINK MERCADO PAGO</label>
+                    {completedSaleData?.method === 'credit' && completedSaleData?.link_pagamento && (
+                        <div className="bg-black/60 border border-blue-500/30 p-5 rounded-2xl text-left space-y-3 shadow-inner">
+                            <label className="text-[11px] font-black text-blue-400 tracking-widest uppercase">LINK MERCADO PAGO</label>
                             <div className="flex gap-2">
                                 <input
                                     readOnly
-                                    value={completedSaleData.link_pagamento}
-                                    className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-xs text-zinc-300 outline-none"
+                                    value={completedSaleData?.link_pagamento}
+                                    className="w-full bg-zinc-950 border border-blue-500/20 rounded-xl px-4 py-3 text-xs text-blue-400 font-mono outline-none shadow-inner"
                                 />
                                 <button
-                                    onClick={() => handleCopy(completedSaleData.link_pagamento as string, 'Link')}
-                                    className="bg-blue-600 hover:bg-blue-500 p-2 rounded text-white transition-colors flex-shrink-0"
+                                    onClick={() => handleCopy(completedSaleData?.link_pagamento as string, 'Link')}
+                                    className="bg-blue-500 hover:bg-blue-400 p-3 rounded-xl text-black transition-colors flex-shrink-0 shadow-[0_0_15px_rgba(59,130,246,0.3)] active:scale-95"
                                     title="Copiar Link"
                                 >
-                                    <Copy size={16} />
+                                    <Copy size={20} />
                                 </button>
                             </div>
                         </div>
                     )}
 
-                    <div className="pt-4 flex flex-col gap-3">
+                    <div className="pt-6 flex flex-col gap-3">
                         <a
-                            href={`/api/admin/receipt/${completedSaleData.id}`}
+                            href={`/api/admin/receipt/${completedSaleData?.id}`}
                             target="_blank"
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors uppercase tracking-tight"
+                            className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black py-4 rounded-full flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] uppercase tracking-widest active:scale-95"
                         >
-                            <DollarSign size={20} />
-                            Ver Imagem do Cartão
+                            <DollarSign size={22} className="opacity-80" />
+                            Ver Imagem (Cartão)
                         </a>
                         <Link
                             href="/admin/kanban"
-                            className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 rounded-xl flex items-center justify-center transition-colors uppercase tracking-tight"
+                            className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 font-bold py-4 rounded-full flex items-center justify-center transition-all uppercase tracking-widest active:scale-95"
                         >
                             Ir para o Kanban
                         </Link>
@@ -445,9 +451,9 @@ export default function NewSalePage() {
                                 setObservacao('');
                                 setShowPaymentOptions(false);
                             }}
-                            className="w-full bg-transparent hover:bg-zinc-800 text-zinc-400 font-bold py-3 rounded-xl flex items-center justify-center transition-colors mt-2"
+                            className="w-full bg-transparent hover:text-white text-zinc-500 font-bold py-3 mt-2 flex items-center justify-center transition-colors uppercase text-xs"
                         >
-                            Nova Venda
+                            <ArrowLeft size={14} className="mr-2" /> Vender Novamente
                         </button>
                     </div>
                 </div>
@@ -456,55 +462,64 @@ export default function NewSalePage() {
     }
 
     return (
-        <div className="min-h-screen bg-black text-white p-4 md:p-8">
-            <div className="max-w-5xl mx-auto">
-                <div className="flex items-center gap-4 mb-8">
-                    <Link href="/admin/sales" className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
-                        <ArrowLeft size={20} />
+        <div className="min-h-screen bg-black text-white p-4 md:p-10 relative overflow-hidden">
+            {/* Background UV/Money Blobs for Scifi Theme */}
+            <div className="absolute inset-0 pointer-events-none opacity-20 z-0">
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-cyan-600 rounded-full blur-[200px] mix-blend-screen" />
+                <div className="absolute top-[40%] right-[-10%] w-[40%] h-[40%] bg-emerald-600 rounded-full blur-[200px] mix-blend-screen" />
+            </div>
+
+            <div className="max-w-6xl mx-auto relative z-10">
+                <div className="flex items-center gap-5 mb-10">
+                    <Link href="/admin/sales" className="p-3 bg-zinc-900 border border-zinc-800 hover:border-cyan-500/50 hover:bg-zinc-800 rounded-2xl transition-all shadow-sm">
+                        <ArrowLeft size={20} className="text-cyan-500" />
                     </Link>
-                    <h1 className="text-3xl font-bold">PDV / Nova Venda</h1>
+                    <div>
+                        <h1 className="text-3xl font-black tracking-tight text-zinc-100 flex items-center gap-3">
+                            Check-Out
+                            <span className="text-[10px] font-black uppercase tracking-widest bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-3 py-1 rounded-full">Terminal A</span>
+                        </h1>
+                        <p className="text-zinc-500 text-sm font-medium mt-1">Gere novos orçamentos, calcule cubagem de caixas e feche as vendas do Ateliê.</p>
+                    </div>
                 </div>
 
-                <div className="grid lg:grid-cols-3 gap-8">
+                <div className="grid lg:grid-cols-3 gap-6">
 
                     {/* COLUNA 1: Seleção de Produtos */}
                     <div className="lg:col-span-1 space-y-6">
-                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-lg">
-                            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-zinc-300">
-                                <Search size={20} className="text-orange-500" /> 1. Buscar Modelos
+                        <div className="bg-zinc-950/60 backdrop-blur-2xl border border-zinc-800/50 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+                            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent"></div>
+                            <h2 className="text-[13px] font-black uppercase tracking-widest mb-5 flex items-center gap-3 text-cyan-400">
+                                <Search size={18} /> 1. Buscar Modelos
                             </h2>
-                            <div className="relative mb-4">
+                            <div className="relative mb-6">
                                 <input
                                     type="text"
                                     placeholder="Nome da figura..."
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
-                                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 pl-4 outline-none focus:border-orange-500 transition-all text-sm"
+                                    className="w-full bg-zinc-900/50 backdrop-blur-md border border-zinc-800 rounded-xl p-3.5 pl-4 outline-none focus:border-cyan-500 focus:shadow-[0_0_15px_rgba(34,211,238,0.15)] transition-all text-sm font-medium"
                                 />
-                                {loading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-zinc-600" size={18} />}
+                                {loading && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-cyan-500" size={18} />}
                             </div>
 
-                            <div className="max-h-[500px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                                {items.length === 0 && !loading && <div className="text-center py-8 text-zinc-600 italic">Nenhum resultado</div>}
+                            <div className="max-h-[500px] overflow-y-auto space-y-2.5 pr-1 custom-scrollbar">
+                                {items.length === 0 && !loading && <div className="text-center py-8 text-zinc-600 font-bold text-xs uppercase tracking-widest">Nenhum resultado</div>}
                                 {items.slice(0, 30).map(item => (
                                     <button
                                         key={item.id}
                                         onClick={() => addToCart(item)}
-                                        className="w-full text-left p-3 rounded-lg bg-zinc-950/40 border border-zinc-800/50 hover:bg-zinc-800 hover:border-zinc-700 flex justify-between items-center group transition-all"
+                                        className="w-full text-left p-3.5 rounded-2xl bg-zinc-900/30 border border-zinc-800/40 hover:bg-zinc-900/80 hover:border-cyan-500/40 hover:-translate-y-0.5 hover:shadow-lg flex justify-between items-center group transition-all"
                                     >
-                                        <div className="flex flex-col">
-                                            <span className="font-medium text-sm group-hover:text-white transition-colors">{item.Figura}</span>
+                                        <div className="flex flex-col gap-1">
+                                            <span className="font-bold text-sm text-zinc-300 group-hover:text-cyan-300 transition-colors leading-tight line-clamp-1">{item.Figura}</span>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[10px] text-zinc-400 font-mono bg-zinc-950 px-1.5 py-0.5 rounded border border-zinc-800">{item.codigo || '--'}</span>
-                                                <span className="text-zinc-800 text-[8px]">•</span>
-                                                <span className="text-[10px] text-orange-500/80 font-medium tracking-tight whitespace-nowrap">{item.studio}</span>
-                                                <span className="text-zinc-800 text-[8px]">•</span>
-                                                <span className="text-[10px] text-zinc-500">{(item.resina_kg || 0).toFixed(3)}kg resina</span>
+                                                <span className="text-[10px] text-zinc-500 font-mono bg-zinc-950 px-1.5 py-0.5 rounded shadow-inner">{item.codigo || '--'}</span>
+                                                <span className="text-[10px] text-cyan-500/70 font-black tracking-widest uppercase">{item.studio}</span>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-emerald-500 text-xs font-mono font-bold">R$ {item['Básico (R$)']}</span>
-                                            <Plus size={14} className="text-zinc-700 group-hover:text-orange-500" />
+                                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-zinc-950 border border-zinc-800 text-emerald-400 group-hover:border-emerald-500/40 group-hover:bg-emerald-500/10 transition-colors shadow-inner flex-shrink-0">
+                                            <Plus size={16} />
                                         </div>
                                     </button>
                                 ))}
@@ -516,62 +531,65 @@ export default function NewSalePage() {
                     <div className="lg:col-span-2 space-y-6">
 
                         {/* Status de Resina */}
-                        <div className={`p-4 rounded-xl border flex items-center justify-between transition-all ${temEstoqueSuficiente ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400 animate-pulse'}`}>
-                            <div className="flex items-center gap-3">
-                                {temEstoqueSuficiente ? <CheckCircle2 size={24} /> : <AlertTriangle size={24} />}
+                        <div className={`p-4 rounded-xl border flex items-center justify-between transition-all backdrop-blur-md ${temEstoqueSuficiente ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400 animate-pulse'}`}>
+                            <div className="flex items-center gap-4">
+                                {temEstoqueSuficiente ? <CheckCircle2 size={24} className="drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" /> : <AlertTriangle size={24} className="drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]" />}
                                 <div>
-                                    <div className="text-[10px] uppercase font-bold tracking-wider opacity-70">Status de Resina</div>
-                                    <div className="text-sm font-semibold">
-                                        Consumo: {totalResinaNecessaria.toFixed(3)}kg / Disponível: {estoqueResina.toFixed(3)}kg
+                                    <div className="text-[10px] uppercase font-black tracking-widest opacity-80 mb-0.5">Nível de Resina no Tanque</div>
+                                    <div className="text-sm font-bold flex gap-2">
+                                        <span>Consumo: {totalResinaNecessaria.toFixed(3)}kg</span>
+                                        <span className="opacity-50">/</span>
+                                        <span>Disponível: {estoqueResina.toFixed(3)}kg</span>
                                     </div>
                                 </div>
                             </div>
                             {!temEstoqueSuficiente && (
-                                <div className="text-xs font-bold bg-red-500 text-white px-2 py-1 rounded">ESTOQUE INSUFICIENTE</div>
+                                <div className="text-[10px] font-black tracking-widest bg-red-500 text-white px-3 py-1.5 rounded-lg shadow-[0_0_15px_rgba(239,68,68,0.5)]">ESTOQUE INSUFICIENTE</div>
                             )}
                         </div>
 
                         {/* Carrinho */}
-                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-lg">
-                            <div className="p-4 border-b border-zinc-800 bg-zinc-950/30 flex justify-between items-center">
-                                <h3 className="font-bold flex items-center gap-2">
-                                    <Package size={18} className="text-emerald-500" /> Carrinho ({cart.length})
+                        <div className="bg-zinc-950/60 backdrop-blur-2xl border border-zinc-800/50 rounded-3xl overflow-hidden shadow-xl relative">
+                            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent"></div>
+                            <div className="p-5 border-b border-zinc-800/50 bg-zinc-950/50 flex justify-between items-center">
+                                <h3 className="font-black flex items-center gap-3 tracking-wide text-zinc-100 uppercase text-xs">
+                                    <Package size={18} className="text-cyan-500" /> Carrinho ({cart.length})
                                 </h3>
-                                {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs text-zinc-500 hover:text-red-400 transition-colors">Limpar Tudo</button>}
+                                {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs font-bold text-zinc-500 hover:text-red-400 transition-colors uppercase tracking-widest bg-zinc-900/50 px-3 py-1 rounded-lg">Limpar</button>}
                             </div>
 
-                            <div className="min-h-[200px] max-h-[400px] overflow-auto divide-y divide-zinc-800">
+                            <div className="min-h-[200px] max-h-[400px] overflow-auto divide-y divide-zinc-800/50 custom-scrollbar">
                                 {cart.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center p-12 text-zinc-600 grayscale opacity-50">
-                                        <Package size={40} className="mb-2" />
-                                        <p className="text-sm">Carrinho vazio</p>
+                                    <div className="flex flex-col items-center justify-center p-12 text-zinc-700">
+                                        <Package size={48} className="mb-4 opacity-50 text-cyan-500/20 drop-shadow-[0_0_15px_rgba(34,211,238,0.1)]" />
+                                        <p className="text-xs uppercase font-black tracking-widest">Aguardando Produtos</p>
                                     </div>
                                 ) : (
                                     cart.map((item) => (
-                                        <div key={item.id} className="p-4 hover:bg-zinc-950/30 transition-colors">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <div className="font-bold text-zinc-100">{item.Figura}</div>
-                                                <button onClick={() => removeFromCart(item.id)} className="text-zinc-600 hover:text-red-500 p-1">
-                                                    <Trash2 size={16} />
+                                        <div key={item.id} className="p-5 hover:bg-zinc-900/40 transition-colors group">
+                                            <div className="flex justify-between items-start mb-3">
+                                                <div className="font-black text-sm text-zinc-200 group-hover:text-cyan-400 transition-colors">{item.Figura}</div>
+                                                <button onClick={() => removeFromCart(item.id)} className="text-zinc-600 hover:text-red-500 p-1.5 bg-zinc-900 rounded border border-zinc-800 transition-colors shadow-sm">
+                                                    <Trash2 size={14} />
                                                 </button>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="flex items-center gap-2 bg-zinc-950 p-1 rounded border border-zinc-800 w-fit">
-                                                    <button onClick={() => updateItemQuantity(item.id, item.quantidade - 1)} className="p-1 hover:text-orange-500"><Minus size={14} /></button>
-                                                    <span className="w-8 text-center font-bold text-sm">{item.quantidade}</span>
-                                                    <button onClick={() => updateItemQuantity(item.id, item.quantidade + 1)} className="p-1 hover:text-orange-500"><Plus size={14} /></button>
+                                            <div className="grid grid-cols-2 gap-4 items-center">
+                                                <div className="flex items-center gap-1 bg-zinc-950 p-1.5 rounded-lg border border-zinc-800 w-fit shadow-inner">
+                                                    <button onClick={() => updateItemQuantity(item.id, item.quantidade - 1)} className="p-1.5 rounded bg-zinc-900 text-zinc-400 hover:text-cyan-400 transition-colors"><Minus size={14} /></button>
+                                                    <span className="w-10 text-center font-black text-sm text-zinc-200">{item.quantidade}</span>
+                                                    <button onClick={() => updateItemQuantity(item.id, item.quantidade + 1)} className="p-1.5 rounded bg-zinc-900 text-zinc-400 hover:text-cyan-400 transition-colors"><Plus size={14} /></button>
                                                 </div>
-                                                <div className="flex flex-col gap-1 items-end w-full">
+                                                <div className="flex flex-col gap-1.5 items-end w-full">
                                                     <div className="relative w-full">
-                                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-blue-500/80 text-[10px] font-black tracking-wider w-[50px]">CARTÃO</span>
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-600 font-black tracking-widest text-[10px]">VAREJO</span>
                                                         <input
                                                             type="text"
                                                             value={item.valor_final}
                                                             onChange={(e) => updateItemPrice(item.id, parseFloat(e.target.value) || 0)}
-                                                            className="w-full bg-zinc-950 border border-zinc-800 rounded py-1 pl-16 pr-2 text-right text-sm font-bold text-blue-400 outline-none focus:border-blue-500"
+                                                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 pl-16 pr-3 text-right text-sm font-bold text-cyan-400 outline-none focus:border-cyan-500 focus:shadow-[0_0_15px_rgba(34,211,238,0.2)]"
                                                         />
                                                     </div>
-                                                    <span className="text-[10px] text-emerald-500 font-medium tracking-tight">
+                                                    <span className="text-[10px] text-emerald-400 font-bold tracking-widest uppercase">
                                                         PIX: R$ {(item.studio === 'Outros' ? item.valor_final : item.valor_final / taxaMarkup).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         {item.studio === 'Outros' && <span className="ml-1 text-[8px] opacity-70">(S/ DESCONTO)</span>}
                                                     </span>
@@ -583,53 +601,55 @@ export default function NewSalePage() {
                             </div>
 
                             {cart.length > 0 && (
-                                <div className="p-4 bg-zinc-950/80 border-t border-zinc-800 flex flex-col gap-2 text-sm shadow-inner">
-                                    <div className="flex justify-between items-center text-zinc-400 font-medium">
+                                <div className="p-5 bg-zinc-950/80 border-t border-zinc-800/80 flex flex-col gap-2.5 text-sm shadow-inner relative">
+                                    <div className="flex justify-between items-center text-zinc-400 font-bold">
                                         <div className="flex flex-col">
                                             <span>Valor Bruto (Subtotal):</span>
-                                            {paymentMethod === 'pix' && <span className="text-[10px] text-emerald-400">- {Math.round((1 - (1 / taxaMarkup)) * 100)}% de Desconto (PIX)</span>}
+                                            {paymentMethod === 'pix' && <span className="text-[10px] text-emerald-500 font-black tracking-widest uppercase mt-0.5 animate-pulse">- {Math.round((1 - (1 / taxaMarkup)) * 100)}% Desconto (PIX)</span>}
                                         </div>
-                                        <span>R$ {Number((paymentMethod === 'credit' ? totalVendaCartao : totalVendaBase).toFixed(2)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        <span className="text-zinc-200">R$ {Number((paymentMethod === 'credit' ? totalVendaCartao : totalVendaBase).toFixed(2)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                     {metodoEntrega === 'envio' && freteSomar > 0 && (
-                                        <div className="flex justify-between items-center text-cyan-400 font-medium text-xs border-b border-zinc-800/50 pb-2 mb-1">
+                                        <div className="flex justify-between items-center text-cyan-400 font-bold text-xs border-b border-zinc-800/50 pb-2 mb-1">
                                             <span title="Custo de Envio (Correios/Transportadora)">(+) Valor do Frete (Envio):</span>
                                             <span>+ R$ {freteSomar.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     )}
-                                    <div className="flex justify-between items-center text-red-400/90 font-mono text-xs pt-1">
+                                    <div className="flex justify-between items-center text-red-500/90 font-mono text-xs pt-1">
                                         <span title="Resina gasta + Horas rodando a impressora">(-) Custo Produção (Material):</span>
                                         <span>- R$ {totalCustoProducao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     {pinturaFreelancer && totalFreelancer > 0 && (
-                                        <div className="flex justify-between items-center text-orange-400/90 font-mono text-xs">
+                                        <div className="flex justify-between items-center text-orange-500/90 font-mono text-xs">
                                             <span title="Pagamento de terceiros">(-) Pintura Freelancer:</span>
                                             <span>- R$ {totalFreelancer.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     )}
                                     {totalComissao > 0 && (
-                                        <div className="flex justify-between items-center text-fuchsia-400/90 font-mono text-xs">
+                                        <div className="flex justify-between items-center text-purple-400/90 font-mono text-xs">
                                             <span title="Comissão do vendedor">(-) Comissão {nomeVendedorComissao} (15%):</span>
                                             <span>- R$ {totalComissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     )}
-                                    <div className="flex justify-between items-center pt-2 border-t border-zinc-900 mt-2 pb-3">
-                                        <span className="text-zinc-500 font-bold uppercase tracking-wide text-[10px]">Lucro Líquido Real:</span>
-                                        <span className="font-black text-emerald-500 tracking-tight text-sm">R$ {Number(lucroEstimado.toFixed(2)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    <div className="flex justify-between items-center pt-3 border-t border-zinc-800/80 mt-2 pb-1 relative">
+                                        <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent"></div>
+                                        <span className="text-zinc-500 font-black uppercase tracking-widest text-[10px]">Lucro Líquido Real</span>
+                                        <span className="font-black text-emerald-400 tracking-tight text-sm drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]">R$ {Number(lucroEstimado.toFixed(2)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
                             )}
                         </div>
 
                         {/* Dados da Venda */}
-                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4 shadow-lg">
-                            <div className="mb-4">
-                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-3">Método de Pagamento</label>
-                                <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-zinc-950/60 backdrop-blur-2xl border border-zinc-800/50 rounded-3xl p-8 space-y-5 shadow-xl relative overflow-hidden">
+                            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent"></div>
+                            <div className="mb-5">
+                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-3 tracking-widest">Método de Pagamento</label>
+                                <div className="grid grid-cols-2 gap-4">
                                     <button
                                         type="button"
                                         onClick={() => setPaymentMethod('pix')}
-                                        className={`p-3 rounded-lg border font-bold text-xs flex items-center justify-center gap-2 transition-all ${paymentMethod === 'pix' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-zinc-950 border-zinc-900 text-zinc-600 hover:border-zinc-800'}`}
+                                        className={`p-4 rounded-2xl border font-black text-xs flex items-center justify-center gap-3 transition-all ${paymentMethod === 'pix' ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/50' : 'bg-zinc-900/50 border-zinc-800/50 text-zinc-500 hover:border-zinc-700 hover:bg-zinc-900'}`}
                                     >
                                         <svg viewBox="0 0 512 512" className="w-4 h-4 fill-current"><path d="M119.2 386.5L34.6 302c-15.6-15.6-15.6-40.9 0-56.6l84.6-84.5c15.6-15.6 40.9-15.6 56.6 0l212.1 212.1c15.6 15.6 15.6 40.9 0 56.6l-84.6 84.5c-15.6 15.6-40.9 15.6-56.6 0L119.2 386.5zm358.2-141.1l-84.6-84.5c-15.6-15.6-40.9-15.6-56.6 0L124.1 373c-15.6 15.6-15.6 40.9 0 56.6l84.6 84.5c15.6 15.6 40.9 15.6 56.6 0l212.1-212.1c15.6-15.6 15.6-40.8 0-56.6zM256 312c-30.9 0-56-25.1-56-56s25.1-56 56-56 56 25.1 56 56-25.1 56-56 56z" /></svg>
                                         PIX
@@ -637,9 +657,9 @@ export default function NewSalePage() {
                                     <button
                                         type="button"
                                         onClick={() => setPaymentMethod('credit')}
-                                        className={`p-3 rounded-lg border font-bold text-xs flex items-center justify-center gap-2 transition-all ${paymentMethod === 'credit' ? 'bg-blue-500/10 border-blue-500 text-blue-400' : 'bg-zinc-950 border-zinc-900 text-zinc-600 hover:border-zinc-800'}`}
+                                        className={`p-4 rounded-2xl border font-black text-xs flex items-center justify-center gap-3 transition-all ${paymentMethod === 'credit' ? 'bg-blue-500/10 border-blue-500/50 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)] ring-1 ring-blue-500/50' : 'bg-zinc-900/50 border-zinc-800/50 text-zinc-500 hover:border-zinc-700 hover:bg-zinc-900'}`}
                                     >
-                                        <svg viewBox="0 0 24 24" className="w-4 h-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                                        <svg viewBox="0 0 24 24" className="w-5 h-5 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
                                         CARTÃO
                                     </button>
                                 </div>
@@ -676,45 +696,45 @@ export default function NewSalePage() {
                                     </div>
                                 )
                             )}
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div className="grid grid-cols-2 gap-3">
+                            <div className="grid md:grid-cols-2 gap-5">
+                                <div className="grid grid-cols-2 gap-4">
                                     <div className="col-span-1">
-                                        <label className="block text-xs text-zinc-500 uppercase font-bold mb-1">Cliente</label>
+                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Cliente</label>
                                         <input
                                             required
                                             value={cliente}
                                             onChange={e => setCliente(e.target.value)}
-                                            className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 outline-none focus:border-orange-500 text-sm"
+                                            className="w-full bg-zinc-900/50 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-3.5 outline-none focus:border-cyan-500 focus:shadow-[0_0_15px_rgba(34,211,238,0.15)] text-sm transition-all"
                                             placeholder="Nome do Cliente"
                                         />
                                     </div>
                                     <div className="col-span-1">
-                                        <label className="block text-xs text-zinc-500 uppercase font-bold mb-1">Telefone (Opcional)</label>
+                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Telefone / Whats</label>
                                         <input
                                             value={clienteContato}
                                             onChange={e => setClienteContato(e.target.value)}
-                                            className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 outline-none focus:border-orange-500 text-sm"
+                                            className="w-full bg-zinc-900/50 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-3.5 outline-none focus:border-cyan-500 focus:shadow-[0_0_15px_rgba(34,211,238,0.15)] text-sm transition-all text-zinc-300"
                                             placeholder="(11) 99999-9999"
                                         />
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-xs text-zinc-500 uppercase font-bold mb-1">Data</label>
+                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Data</label>
                                         <input
                                             type="date"
                                             required
                                             value={dataVenda}
                                             onChange={e => setDataVenda(e.target.value)}
-                                            className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 outline-none focus:border-orange-500 text-xs scheme-dark"
+                                            className="w-full bg-zinc-900/50 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-3.5 outline-none focus:border-cyan-500 focus:shadow-[0_0_15px_rgba(34,211,238,0.15)] text-xs transition-all scheme-dark font-mono text-zinc-300"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs text-zinc-500 uppercase font-bold mb-1">Canal</label>
+                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Canal</label>
                                         <select
                                             value={canal}
                                             onChange={e => setCanal(e.target.value)}
-                                            className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 outline-none focus:border-orange-500 text-xs"
+                                            className="w-full bg-zinc-900/50 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-3.5 outline-none focus:border-cyan-500 text-xs transition-all text-zinc-300"
                                         >
                                             <option>Whatsapp</option>
                                             <option>Instagram</option>
@@ -834,53 +854,54 @@ export default function NewSalePage() {
                             </div>
 
                             <div>
-                                <label className="block text-xs text-zinc-500 uppercase font-bold mb-1">Observações (Opcional)</label>
+                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Anotações / Notas / Endereço</label>
                                 <textarea
                                     value={observacao}
                                     onChange={e => setObservacao(e.target.value)}
-                                    className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 outline-none focus:border-orange-500 h-16 resize-none text-sm"
-                                    placeholder="Ex: Pagamento via Pix..."
+                                    className="w-full bg-zinc-900/50 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-3.5 outline-none focus:border-cyan-500 focus:shadow-[0_0_15px_rgba(34,211,238,0.15)] h-20 resize-none text-sm transition-all"
+                                    placeholder="Ex: Pagamento via Pix. O cliente pediu pra envernizar extra forte."
                                 />
                             </div>
 
-                            <div className="pt-4 flex flex-col gap-3">
+                            <div className="pt-6 flex flex-col gap-4">
                                 {!showPaymentOptions ? (
                                     <>
                                         <button
                                             type="button"
                                             onClick={() => setShowPaymentOptions(true)}
                                             disabled={submitting || cart.length === 0}
-                                            className="w-full font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg active:scale-[0.98] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed uppercase tracking-tighter"
+                                            className="w-full font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.2)] active:scale-[0.98] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:shadow-none disabled:cursor-not-allowed uppercase tracking-widest border border-emerald-400/50 hover:border-emerald-300"
                                         >
-                                            {paymentMethod === 'pix' ? 'Gerar PIX e Confirmar' : 'Confirmar e Gerar Link MP'}
+                                            {paymentMethod === 'pix' ? 'Confirmar e Gerar PIX' : 'Confirmar e Gerar Link MP'}
                                         </button>
                                     </>
                                 ) : (
                                     <>
-                                        <div className="bg-zinc-950 border border-emerald-500/30 p-5 rounded-xl space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                        <div className="bg-zinc-950/80 backdrop-blur-md border border-emerald-500/50 p-6 rounded-3xl space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300 shadow-[0_0_30px_rgba(16,185,129,0.1)] relative">
+                                            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent"></div>
                                             <div className="flex justify-between items-center mb-2">
-                                                <span className="font-bold text-sm text-zinc-300 flex items-center gap-2 underline underline-offset-4 decoration-emerald-500/50 uppercase tracking-tighter">Resumo de Pagamento</span>
-                                                <button type="button" onClick={() => setShowPaymentOptions(false)} className="text-xs text-zinc-500 hover:text-white">Voltar</button>
+                                                <span className="font-black text-sm text-emerald-400 flex items-center gap-2 uppercase tracking-widest">Atenção</span>
+                                                <button type="button" onClick={() => setShowPaymentOptions(false)} className="text-[10px] font-bold text-zinc-500 hover:text-white uppercase tracking-widest bg-zinc-900 px-3 py-1.5 rounded-lg">Voltar</button>
                                             </div>
 
                                             {paymentMethod === 'pix' ? (
-                                                <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex flex-col justify-center items-center gap-2 text-center">
-                                                    <p className="text-sm font-semibold text-emerald-400">PAGAMENTO VIA PIX</p>
-                                                    <p className="text-xs text-zinc-500 mb-2">Gere o cartão de cobrança para enviar ao cliente.</p>
+                                                <div className="bg-emerald-500/10 border border-emerald-500/30 p-5 rounded-2xl flex flex-col justify-center items-center gap-2 text-center">
+                                                    <p className="text-sm font-black text-emerald-400 tracking-widest">PAGAMENTO VIA PIX</p>
+                                                    <p className="text-xs text-zinc-400 font-medium">Você irá visualizar o QRCode/Cartão na próxima tela.</p>
                                                 </div>
                                             ) : (
-                                                <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl flex flex-col justify-center items-center gap-2 text-center">
-                                                    <p className="text-sm font-semibold text-blue-400">PAGAMENTO VIA CARTÃO</p>
-                                                    <p className="text-xs text-zinc-500 mb-2">O cliente poderá pagar em até 3x sem juros (absorvido pela loja).</p>
+                                                <div className="bg-blue-500/10 border border-blue-500/30 p-5 rounded-2xl flex flex-col justify-center items-center gap-2 text-center">
+                                                    <p className="text-sm font-black text-blue-400 tracking-widest">MERCADO PAGO CARTÃO</p>
+                                                    <p className="text-xs text-zinc-400 font-medium">Link será gerado na próxima tela (3x s/ Juros).</p>
                                                 </div>
                                             )}
 
                                             <button
                                                 type="submit"
                                                 disabled={submitting}
-                                                className="w-full font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black shadow-lg shadow-emerald-500/10 active:scale-[0.98] mt-2 uppercase"
+                                                className="w-full font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.3)] active:scale-[0.98] mt-2 uppercase tracking-widest"
                                             >
-                                                {submitting ? <Loader2 className="animate-spin" /> : 'CONFIRMAR VENDA'}
+                                                {submitting ? <Loader2 className="animate-spin" /> : 'CONFIRMAR VENDA OFICIAL'}
                                             </button>
                                         </div>
                                     </>
@@ -891,15 +912,20 @@ export default function NewSalePage() {
 
                         {/* Total a Pagar em Destaque (Sempre Visível no Final, Grande) */}
                         {cart.length > 0 && (
-                            <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl shadow-lg border-t-cyan-500/30">
-                                <div className="flex justify-between items-center">
+                            <div className="p-6 bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl relative overflow-hidden group">
+                                <div className={`absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r ${paymentMethod === 'credit' ? 'from-transparent via-blue-500 to-transparent' : 'from-transparent via-emerald-500 to-transparent'}`}></div>
+                                <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-0 group-hover:opacity-10 transition-opacity duration-700 blur-[80px] pointer-events-none ${paymentMethod === 'credit' ? 'bg-blue-500' : 'bg-emerald-500'}`}></div>
+                                
+                                <div className="flex justify-between items-center relative z-10">
                                     <div className="flex flex-col">
-                                        <span className="text-zinc-300 font-black uppercase tracking-tight text-xs">Total a Pagar</span>
-                                        <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">{paymentMethod === 'credit' ? 'Cartão (s/ juros)' : 'PIX (c/ desconto)'}</span>
+                                        <span className="text-zinc-400 font-black uppercase tracking-widest text-[11px] mb-1">Fechar Total do Pedido</span>
+                                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${paymentMethod === 'credit' ? 'bg-blue-500/20 text-blue-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                                            {paymentMethod === 'credit' ? 'Mercado Pago (Cartão)' : 'PIX (-17% Taxa)'}
+                                        </span>
                                     </div>
-                                    <div className="flex items-baseline gap-1 text-cyan-400">
-                                        <span className="text-sm font-bold opacity-50">R$</span>
-                                        <span className="text-3xl font-black tracking-tighter drop-shadow-[0_0_12px_rgba(34,211,238,0.4)]">
+                                    <div className={`flex items-baseline gap-1.5 ${paymentMethod === 'credit' ? 'text-blue-400' : 'text-emerald-400'}`}>
+                                        <span className="text-sm font-black opacity-60">R$</span>
+                                        <span className={`text-4xl lg:text-5xl font-black tracking-tighter ${paymentMethod === 'credit' ? 'drop-shadow-[0_0_20px_rgba(59,130,246,0.4)]' : 'drop-shadow-[0_0_20px_rgba(52,211,153,0.4)]'}`}>
                                             {Number(totalVenda.toFixed(2)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </span>
                                     </div>
