@@ -173,9 +173,9 @@ export default function AdminDashboard() {
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             return (
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-4 rounded-xl shadow-[var(--shadow-lg)] backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
-                    <p className="text-[var(--text-muted)] text-[10px] font-black uppercase tracking-widest mb-1.5">{label}</p>
-                    <p className="text-[var(--foreground)] font-black text-sm tracking-tight">
+                <div className="bg-black/90 border border-zinc-800 p-4 rounded-xl shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
+                    <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-1.5">{label}</p>
+                    <p className="text-zinc-100 font-black text-sm tracking-tight">
                         {payload[0].value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </p>
                 </div>
@@ -191,9 +191,9 @@ export default function AdminDashboard() {
             const safeValue = Array.isArray(value) ? value[0] : value;
 
             return (
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-4 rounded-xl shadow-[var(--shadow-lg)] backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
-                    <p className="text-[var(--text-muted)] text-[10px] font-black uppercase tracking-widest mb-1.5">{data.name || label}</p>
-                    <p className="text-[var(--foreground)] font-black text-sm tracking-tight flex items-center gap-2">
+                <div className="bg-black/90 border border-zinc-800 p-4 rounded-xl shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
+                    <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-1.5">{data.name || label}</p>
+                    <p className="text-zinc-100 font-black text-sm tracking-tight flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.4)]"></span>
                         {formatter ? formatter(safeValue) : safeValue} {suffix}
                     </p>
@@ -204,38 +204,44 @@ export default function AdminDashboard() {
     }
 
     if (loading) return (
-        <div className="text-[var(--foreground)] min-h-screen bg-[var(--background)] pb-12 transition-colors duration-300 px-4 sm:px-8 mt-8">
+        <div className="min-h-screen bg-black text-white pb-12 transition-colors duration-300 px-4 sm:px-8 mt-8 relative overflow-hidden">
+            {/* Background Blobs for SciFi loading */}
+            <div className="absolute inset-0 pointer-events-none opacity-20 z-0">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-500 rounded-full blur-[150px] mix-blend-screen" />
+                <div className="absolute top-[40%] right-[-10%] w-[30%] h-[30%] bg-orange-500 rounded-full blur-[150px] mix-blend-screen" />
+            </div>
+
             {/* Header Skeleton */}
-            <div className="flex justify-between items-center mb-10 border-b border-[var(--card-border)] pb-8">
+            <div className="relative z-10 flex justify-between items-center mb-10 border-b border-zinc-800 pb-8">
                 <div className="flex items-center gap-5">
-                    <div className="w-12 h-12 bg-[var(--input-bg)] rounded-xl animate-pulse"></div>
+                    <div className="w-12 h-12 bg-zinc-900 rounded-xl animate-pulse"></div>
                     <div>
-                        <div className="w-48 h-8 bg-[var(--input-bg)] rounded-md animate-pulse mb-2"></div>
-                        <div className="w-32 h-4 bg-[var(--input-bg)]/50 rounded-md animate-pulse"></div>
+                        <div className="w-48 h-8 bg-zinc-900 rounded-md animate-pulse mb-2"></div>
+                        <div className="w-32 h-4 bg-zinc-900/50 rounded-md animate-pulse"></div>
                     </div>
                 </div>
-                <div className="w-48 h-10 bg-[var(--input-bg)] rounded-xl animate-pulse hidden md:block"></div>
+                <div className="w-48 h-10 bg-zinc-900 rounded-full animate-pulse hidden md:block border border-zinc-800"></div>
             </div>
 
             {/* KPIs Skeleton */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-10">
+            <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-10">
                 {[1, 2, 3, 4, 5].map(i => (
-                    <div key={i} className="bg-[var(--card-bg)] border border-[var(--card-border)] p-6 rounded-2xl h-32 animate-pulse flex flex-col justify-between">
+                    <div key={i} className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-6 rounded-2xl h-32 animate-pulse flex flex-col justify-between">
                         <div className="flex justify-between">
-                            <div className="w-10 h-10 bg-[var(--input-bg)] rounded-xl"></div>
-                            <div className="w-16 h-5 bg-[var(--input-bg)] rounded-md"></div>
+                            <div className="w-10 h-10 bg-zinc-900 rounded-xl"></div>
+                            <div className="w-16 h-5 bg-zinc-900 rounded-md"></div>
                         </div>
-                        <div className="w-24 h-8 bg-[var(--input-bg)] rounded-md"></div>
+                        <div className="w-24 h-8 bg-zinc-900 rounded-md"></div>
                     </div>
                 ))}
             </div>
 
             {/* Charts Skeleton Masonry */}
-            <div className="columns-1 xl:columns-2 gap-8">
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl h-80 animate-pulse mb-8 break-inside-avoid"></div>
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl h-96 animate-pulse mb-8 break-inside-avoid"></div>
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl h-[400px] animate-pulse mb-8 break-inside-avoid"></div>
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl h-72 animate-pulse mb-8 break-inside-avoid"></div>
+            <div className="relative z-10 columns-1 xl:columns-2 gap-8">
+                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl h-80 animate-pulse mb-8 break-inside-avoid"></div>
+                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl h-96 animate-pulse mb-8 break-inside-avoid"></div>
+                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl h-[400px] animate-pulse mb-8 break-inside-avoid"></div>
+                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl h-72 animate-pulse mb-8 break-inside-avoid"></div>
             </div>
         </div>
     );
@@ -818,11 +824,10 @@ export default function AdminDashboard() {
             dynamicStyle.width = '100%';
         }
 
-
         return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--background)]/90 backdrop-blur-xl animate-in fade-in duration-300" onClick={() => { setExpandedChart(null); setDrillDownCategory(null); setDrillDownStudio(null); setDrillDownSeries(null); setDrillDownPriceBucket(null); setDrillDownSeller(null); }}>
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-3xl w-full max-w-6xl h-[85vh] flex flex-col shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] overflow-hidden" onClick={e => e.stopPropagation()}>
-                    <div className="px-8 py-5 border-b border-[var(--card-border)] flex justify-between items-center bg-[var(--card-bg)]">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-500" onClick={() => { setExpandedChart(null); setDrillDownCategory(null); setDrillDownStudio(null); setDrillDownSeries(null); setDrillDownPriceBucket(null); setDrillDownSeller(null); }}>
+                <div className="bg-zinc-950/90 border border-zinc-800 rounded-3xl w-full max-w-6xl h-[85vh] flex flex-col shadow-[0_0_80px_-15px_rgba(16,185,129,0.15)] overflow-hidden" onClick={e => e.stopPropagation()}>
+                    <div className="px-8 py-5 border-b border-zinc-900 flex justify-between items-center bg-zinc-950">
                         <div className="flex items-center gap-6">
                             {(drillDownCategory || drillDownStudio || drillDownSeries || drillDownPriceBucket) && (
                                 <button
@@ -833,17 +838,17 @@ export default function AdminDashboard() {
                                         if (drillDownPriceBucket) setDrillDownPriceBucket(null);
                                         if (drillDownSeller) setDrillDownSeller(null);
                                     }}
-                                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] hover:text-orange-500 bg-[var(--input-bg)] hover:border-orange-500 px-4 py-2 rounded-xl transition-all border border-[var(--card-border)] shadow-sm active:scale-95"
+                                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-emerald-400 bg-zinc-900 hover:border-emerald-500 px-4 py-2 rounded-xl transition-all border border-zinc-800 shadow-xl active:scale-95"
                                 >
                                     ← Voltar
                                 </button>
                             )}
-                            <h2 className="text-2xl font-black flex items-center gap-4 text-[var(--foreground)] tracking-tight">
-                                <TrendingUp size={28} className="text-orange-500" />
+                            <h2 className="text-2xl font-black flex items-center gap-4 text-zinc-100 tracking-tight">
+                                <TrendingUp size={28} className="text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                                 {title}
                             </h2>
                         </div>
-                        <button onClick={() => { setExpandedChart(null); setDrillDownCategory(null); setDrillDownStudio(null); setDrillDownSeries(null); setDrillDownPriceBucket(null); setDrillDownSeller(null); }} className="p-3 bg-[var(--input-bg)] border border-[var(--card-border)] hover:border-orange-500 rounded-full transition-all text-[var(--text-muted)] hover:text-orange-500 shadow-sm active:scale-90">
+                        <button onClick={() => { setExpandedChart(null); setDrillDownCategory(null); setDrillDownStudio(null); setDrillDownSeries(null); setDrillDownPriceBucket(null); setDrillDownSeller(null); }} className="p-3 bg-zinc-900 border border-zinc-800 hover:border-emerald-500 rounded-full transition-all text-zinc-500 hover:text-emerald-400 shadow-xl active:scale-90 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
                             <X size={24} />
                         </button>
                     </div>
@@ -853,92 +858,100 @@ export default function AdminDashboard() {
                         </div>
                     </div>
                 </div>
-
             </div>
         );
-    }
+    };
 
     return (
-        <div className="text-[var(--foreground)] min-h-screen bg-[var(--background)] pb-12 transition-colors duration-300">
-            <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-10 border-b border-[var(--card-border)] pb-8 gap-6">
-                <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-5">
-                        <Link href="/" className="bg-[var(--card-bg)] border border-[var(--card-border)] hover:border-orange-500 hover:text-orange-500 p-3 rounded-xl transition-all shadow-sm group" title="Ir para Home">
-                            <Store size={22} className="text-[var(--text-muted)] group-hover:text-orange-500 transition-colors" />
-                        </Link>
-                        <div>
-                            <h1 className="text-4xl font-black tracking-tight bg-gradient-to-r from-[var(--foreground)] to-orange-500 bg-clip-text text-transparent">Painel Administrativo</h1>
-                            <p className="text-[var(--text-muted)] font-medium">Visão estratégica e operacional</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex flex-col md:flex-row gap-4 items-end md:items-center w-full xl:w-auto">
-                    <div className="flex items-center gap-2 bg-[var(--card-bg)] p-2 rounded-xl border border-[var(--card-border)] shadow-sm">
-                        <select
-                            value={year}
-                            onChange={(e) => setYear(e.target.value)}
-                            className="bg-transparent text-sm font-bold outline-none text-[var(--foreground)] hover:text-orange-500 cursor-pointer px-3 rounded-md transition-colors"
-                        >
-                            {Array.from({ length: new Date().getFullYear() - 2024 + 1 }, (_, i) => 2024 + i).map(y => (
-                                <option key={y} value={y} className="bg-[var(--card-bg)] text-[var(--foreground)]">{y}</option>
-                            ))}
-                        </select>
-                        <div className="h-4 w-[1px] bg-[var(--card-border)]"></div>
-                        <select
-                            value={month}
-                            onChange={(e) => setMonth(e.target.value)}
-                            className="bg-transparent text-sm font-bold outline-none text-[var(--foreground)] hover:text-orange-500 cursor-pointer px-3 rounded-md transition-colors"
-                        >
-                            <option value="" className="bg-[var(--card-bg)] text-[var(--foreground)] font-bold">Todo o ano</option>
-                            {months.map(m => (
-                                <option key={m.value} value={m.value} className="bg-[var(--card-bg)] text-[var(--foreground)] font-bold">{m.label}</option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
-            </header>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-10">
-                {kpis.map((kpi: any, idx) => {
-                    if (kpi.restricted && !canViewFinance) return null;
-                    return (
-                        <div key={idx} className="bg-[var(--card-bg)] border border-[var(--card-border)] p-6 rounded-2xl relative overflow-hidden group shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] transition-all">
-                            <div className={`absolute -right-4 -top-4 w-28 h-28 rounded-full opacity-10 ${kpi.bg.replace('/10', '')} blur-3xl group-hover:opacity-20 transition-opacity`}></div>
-
-                            <div className="flex justify-between items-start mb-4 relative z-10">
-                                <div className={`p-3 rounded-xl shadow-sm ${kpi.bg}`}>
-                                    <kpi.icon className={kpi.color} size={22} />
-                                </div>
-                                {renderTrend(kpi.trend, kpi.subtext, kpi.comparisonLabel)}
-                            </div>
-
-                            <div className="relative z-10">
-                                <p className="text-[var(--text-muted)] text-[10px] font-black uppercase tracking-widest mb-1.5">{kpi.title}</p>
-                                <p className="text-3xl font-black text-[var(--foreground)] tracking-tight">
-                                    {loading ? (
-                                        <span className="w-16 h-8 bg-[var(--input-bg)] animate-pulse rounded block"></span>
-                                    ) : kpi.value}
-                                </p>
-                            </div>
-                        </div>
-                    );
-                })}
+        <div className="min-h-screen bg-black text-white pb-12 transition-colors duration-300 relative overflow-hidden">
+            {/* Background SciFi Blobs */}
+            <div className="absolute inset-0 pointer-events-none opacity-20 z-0">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-500 rounded-full blur-[150px] mix-blend-screen" />
+                <div className="absolute top-[40%] right-[-10%] w-[30%] h-[30%] bg-orange-500 rounded-full blur-[150px] mix-blend-screen" />
             </div>
+
+            <div className="relative z-10 px-4 sm:px-8 mt-8 max-w-[1920px] mx-auto">
+                <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-10 border-b border-zinc-900 pb-8 gap-6">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-5">
+                            <Link href="/" className="bg-zinc-900/50 backdrop-blur-md border border-zinc-800 hover:border-emerald-500 hover:text-emerald-400 p-3 rounded-xl transition-all shadow-lg group" title="Ir para Home">
+                                <Store size={22} className="text-zinc-400 group-hover:text-emerald-400 transition-colors" />
+                            </Link>
+                            <div>
+                                <h1 className="text-4xl font-black tracking-tighter text-zinc-100 flex items-center gap-3">
+                                    Sala de Comando <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.8)] animate-pulse"></span>
+                                </h1>
+                                <p className="text-zinc-500 font-medium font-mono text-xs uppercase tracking-widest mt-1">Visão estratégica e operacional</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row gap-4 items-end md:items-center w-full xl:w-auto">
+                        <div className="flex items-center gap-2 bg-zinc-900/60 backdrop-blur-xl p-2 rounded-full border border-zinc-800 shadow-xl">
+                            <select
+                                value={year}
+                                onChange={(e) => setYear(e.target.value)}
+                                className="bg-transparent text-sm font-bold outline-none text-zinc-300 hover:text-emerald-400 cursor-pointer px-4 appearance-none rounded-full transition-colors"
+                            >
+                                {Array.from({ length: new Date().getFullYear() - 2024 + 1 }, (_, i) => 2024 + i).map(y => (
+                                    <option key={y} value={y} className="bg-zinc-900 text-zinc-100 font-bold">{y}</option>
+                                ))}
+                            </select>
+                            <div className="h-4 w-[1px] bg-zinc-700"></div>
+                            <select
+                                value={month}
+                                onChange={(e) => setMonth(e.target.value)}
+                                className="bg-transparent text-sm font-bold outline-none text-zinc-300 hover:text-emerald-400 cursor-pointer px-4 appearance-none rounded-full transition-colors"
+                            >
+                                <option value="" className="bg-zinc-900 text-zinc-100 font-bold">Ano Completo</option>
+                                {months.map(m => (
+                                    <option key={m.value} value={m.value} className="bg-zinc-900 text-zinc-100 font-bold">{m.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                </header>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-10">
+                    {kpis.map((kpi: any, idx) => {
+                        if (kpi.restricted && !canViewFinance) return null;
+                        return (
+                            <div key={idx} className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-6 rounded-2xl relative overflow-hidden group shadow-2xl hover:border-zinc-700 transition-all duration-500 hover:-translate-y-1">
+                                <div className={`absolute -right-4 -top-4 w-28 h-28 rounded-full opacity-10 ${kpi.bg.replace('/10', '')} blur-3xl group-hover:opacity-30 group-hover:scale-150 transition-all duration-700`}></div>
+
+                                <div className="flex justify-between items-start mb-4 relative z-10">
+                                    <div className={`p-3 rounded-xl shadow-lg border border-white/5 ${kpi.bg}`}>
+                                        <kpi.icon className={kpi.color} size={22} />
+                                    </div>
+                                    {renderTrend(kpi.trend, kpi.subtext, kpi.comparisonLabel)}
+                                </div>
+
+                                <div className="relative z-10">
+                                    <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-1.5">{kpi.title}</p>
+                                    <p className="text-3xl font-black text-zinc-100 tracking-tighter">
+                                        {loading ? (
+                                            <span className="w-16 h-8 bg-zinc-800 animate-pulse rounded block"></span>
+                                        ) : kpi.value}
+                                    </p>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
                 {/* Left Column: Lists */}
                 <div className="flex flex-col gap-8">
-                    <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
-                        <div className="p-5 border-b border-[var(--card-border)] flex justify-between items-center bg-[var(--input-bg)]/30 backdrop-blur-sm">
-                            <h3 className="font-black flex items-center gap-2 text-[var(--foreground)] uppercase tracking-tight text-sm">
+                    <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 rounded-2xl overflow-hidden shadow-xl hover:border-zinc-700 transition-all">
+                        <div className="p-5 border-b border-zinc-800/50 flex justify-between items-center bg-zinc-900/30">
+                            <h3 className="font-black flex items-center gap-2 text-zinc-100 uppercase tracking-widest text-sm">
                                 <Package size={18} className="text-yellow-500" />
                                 Top Modelos (Receita)
                             </h3>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left">
-                                <thead className="text-[10px] uppercase bg-[var(--input-bg)]/50 text-[var(--text-muted)] font-black tracking-widest">
+                                <thead className="text-[10px] uppercase bg-zinc-900/50 text-zinc-500 font-black tracking-widest">
                                     <tr>
                                         <th className="px-6 py-4">Modelo</th>
                                         <th className="px-6 py-4">Estúdio</th>
@@ -946,15 +959,15 @@ export default function AdminDashboard() {
                                         {canViewFinance && <th className="px-6 py-4 text-right">Receita</th>}
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-[var(--card-border)]">
+                                <tbody className="divide-y divide-zinc-800/50">
                                     {data?.lists?.topProducts?.length > 0 ? (
                                         data.lists.topProducts.map((p: any, i: number) => (
-                                            <tr key={i} className="hover:bg-[var(--input-bg)]/40 transition-colors group">
-                                                <td className="px-6 py-4 font-bold text-[var(--foreground)] group-hover:text-orange-500 transition-colors">{p.name}</td>
-                                                <td className="px-6 py-4 text-[var(--text-muted)] font-bold">{p.studio}</td>
-                                                <td className="px-6 py-4 text-right text-[var(--foreground)] font-black">{p.qty}</td>
+                                            <tr key={i} className="hover:bg-zinc-800/40 transition-colors group">
+                                                <td className="px-6 py-4 font-bold text-zinc-300 group-hover:text-emerald-400 transition-colors">{p.name}</td>
+                                                <td className="px-6 py-4 text-zinc-500 font-bold">{p.studio}</td>
+                                                <td className="px-6 py-4 text-right text-zinc-100 font-black">{p.qty}</td>
                                                 {canViewFinance && (
-                                                    <td className="px-6 py-4 text-right font-black text-emerald-500">
+                                                    <td className="px-6 py-4 text-right font-black text-emerald-500 font-mono tracking-tighter">
                                                         R$ {p.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                     </td>
                                                 )}
@@ -962,7 +975,7 @@ export default function AdminDashboard() {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={canViewFinance ? 4 : 3} className="px-6 py-10 text-center text-[var(--text-muted)] font-bold">
+                                            <td colSpan={canViewFinance ? 4 : 3} className="px-6 py-10 text-center text-zinc-600 font-bold">
                                                 Nenhum dado encontrado no período.
                                             </td>
                                         </tr>
@@ -972,16 +985,16 @@ export default function AdminDashboard() {
                         </div>
                     </div>
 
-                    <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
-                        <div className="p-5 border-b border-[var(--card-border)] flex justify-between items-center bg-[var(--input-bg)]/30 backdrop-blur-sm">
-                            <h3 className="font-black flex items-center gap-2 text-[var(--foreground)] uppercase tracking-tight text-sm">
+                    <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 rounded-2xl overflow-hidden shadow-xl hover:border-zinc-700 transition-all">
+                        <div className="p-5 border-b border-zinc-800/50 flex justify-between items-center bg-zinc-900/30">
+                            <h3 className="font-black flex items-center gap-2 text-zinc-100 uppercase tracking-widest text-sm">
                                 <Clock size={18} className="text-blue-500" />
                                 Vendas Recentes
                             </h3>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left">
-                                <thead className="text-[10px] uppercase bg-[var(--input-bg)]/50 text-[var(--text-muted)] font-black tracking-widest">
+                                <thead className="text-[10px] uppercase bg-zinc-900/50 text-zinc-500 font-black tracking-widest">
                                     <tr>
                                         <th className="px-6 py-4">Data</th>
                                         <th className="px-6 py-4">Modelo</th>
@@ -989,22 +1002,22 @@ export default function AdminDashboard() {
                                         <th className="px-6 py-4 text-right">Status</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-[var(--card-border)]">
+                                <tbody className="divide-y divide-zinc-800/50">
                                     {data?.lists?.recentActivity?.length > 0 ? (
                                         data.lists.recentActivity.map((a: any, i: number) => (
-                                            <tr key={i} className="hover:bg-[var(--input-bg)]/40 transition-colors group">
-                                                <td className="px-6 py-4 text-[var(--text-muted)] whitespace-nowrap font-bold">
-                                                    {new Date(a.date).toLocaleDateString('pt-BR')} <span className="text-[var(--text-muted)] opacity-50 text-[10px] ml-1">{new Date(a.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                            <tr key={i} className="hover:bg-zinc-800/40 transition-colors group">
+                                                <td className="px-6 py-4 text-zinc-400 whitespace-nowrap font-mono text-xs">
+                                                    {new Date(a.date).toLocaleDateString('pt-BR')} <span className="opacity-50 ml-1">{new Date(a.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                                                 </td>
-                                                <td className="px-6 py-4 font-bold text-[var(--foreground)] truncate max-w-[200px] group-hover:text-blue-500 transition-colors">{a.product}</td>
+                                                <td className="px-6 py-4 font-bold text-zinc-200 truncate max-w-[200px] group-hover:text-blue-400 transition-colors tracking-tight">{a.product}</td>
                                                 {canViewFinance && (
-                                                    <td className="px-6 py-4 text-right font-black text-emerald-500">
+                                                    <td className="px-6 py-4 text-right font-black text-emerald-500 font-mono tracking-tighter">
                                                         R$ {a.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                     </td>
                                                 )}
                                                 <td className="px-6 py-4 text-right">
-                                                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${a.status === 'Concluída' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
-                                                        a.status === 'Cancelada' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
+                                                    <span className={`px-2.5 py-1 rounded-md border text-[10px] font-black uppercase tracking-widest ${a.status === 'Concluída' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]' :
+                                                        a.status === 'Cancelada' ? 'bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20 shadow-[0_0_10px_rgba(234,179,8,0.1)]'
                                                         }`}>
                                                         {a.status}
                                                     </span>
@@ -1013,7 +1026,7 @@ export default function AdminDashboard() {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={canViewFinance ? 4 : 3} className="px-6 py-10 text-center text-[var(--text-muted)] font-bold">
+                                            <td colSpan={canViewFinance ? 4 : 3} className="px-6 py-10 text-center text-zinc-600 font-bold">
                                                 Nenhuma atividade recente.
                                             </td>
                                         </tr>
@@ -1025,23 +1038,23 @@ export default function AdminDashboard() {
                 </div> {/* End Left Column */}
 
                 {/* --- Vendas por Vendedor (Right Column) --- */}
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl relative group shadow-sm hover:shadow-md transition-all h-full flex flex-col">
+                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all h-full flex flex-col">
                     <div className="flex justify-between items-start mb-8">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-[var(--foreground)] tracking-tight">
-                            <Users size={22} className="text-emerald-500" />
+                        <h2 className="text-xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
+                            <Users size={22} className="text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                             Vendas por Vendedor
                         </h2>
-                        <button onClick={() => setExpandedChart('salesBySeller')} className="p-2.5 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-orange-500 text-[var(--text-muted)] hover:text-orange-500 shadow-sm" title="Expandir">
+                        <button onClick={() => setExpandedChart('salesBySeller')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] text-zinc-500 hover:text-emerald-400" title="Expandir">
                             <Maximize2 size={18} />
                         </button>
                     </div>
                     <div className="flex-1 w-full min-h-[400px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={data?.charts?.salesBySeller?.slice(0, 10) || []} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" horizontal={false} />
+                                <CartesianGrid strokeDasharray="1 10" stroke="var(--card-border)" strokeOpacity={0.15} horizontal={false} vertical={true} />
                                 <XAxis type="number" hide />
-                                <YAxis dataKey="name" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 700 }} width={120} axisLine={false} tickLine={false} />
-                                <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number, name: string, payload: any) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | ${(payload?.payload?.qty || 0)} unid.`} />} cursor={{ fill: 'var(--input-bg)' }} />
+                                <YAxis dataKey="name" type="category" tick={{ fill: '#71717a', fontSize: 11, fontWeight: 700 }} width={120} axisLine={false} tickLine={false} />
+                                <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number, name: string, payload: any) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | ${(payload?.payload?.qty || 0)} unid.`} />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
                                 <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                                     {(data?.charts?.salesBySeller?.slice(0, 10) || []).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#10b981" />)}
                                 </Bar>
@@ -1054,24 +1067,24 @@ export default function AdminDashboard() {
 
             {/* Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl relative group shadow-sm hover:shadow-md transition-all">
+                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all">
                     <div className="flex justify-between items-start mb-8">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-[var(--foreground)] tracking-tight">
-                            <Activity size={22} className="text-emerald-500" />
+                        <h2 className="text-xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
+                            <Activity size={22} className="text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                             Rendimento vs Custo
                         </h2>
-                        <button onClick={() => setExpandedChart('revenueVsCost')} className="p-2.5 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-orange-500 text-[var(--text-muted)] hover:text-orange-500 shadow-sm" title="Expandir">
+                        <button onClick={() => setExpandedChart('revenueVsCost')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] text-zinc-500 hover:text-emerald-400 shadow-sm" title="Expandir">
                             <Maximize2 size={18} />
                         </button>
                     </div>
                     <div className="h-[320px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={data?.charts.revenueVsCost.slice(0, 10)} margin={{ left: 0, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" vertical={false} />
-                                <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 600 }} interval={0} angle={-45} textAnchor="end" height={60} axisLine={false} tickLine={false} />
+                                <CartesianGrid strokeDasharray="1 10" stroke="rgba(255,255,255,0.05)" horizontal={true} vertical={false} />
+                                <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 10, fontWeight: 800 }} interval={0} angle={-45} textAnchor="end" height={60} axisLine={false} tickLine={false} />
                                 <YAxis hide />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)', borderRadius: '12px', color: 'var(--foreground)', boxShadow: 'var(--shadow-md)' }}
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', borderColor: '#27272a', borderRadius: '12px', color: '#f4f4f5', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(12px)' }}
                                     itemStyle={{ fontWeight: 800 }}
                                     formatter={(value: any) => `R$ ${(value || 0).toLocaleString('pt-BR')}`}
                                 />
@@ -1082,23 +1095,23 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl relative group shadow-sm hover:shadow-md transition-all">
+                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all">
                     <div className="flex justify-between items-start mb-8">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-[var(--foreground)] tracking-tight">
-                            <Activity size={22} className="text-red-500" />
+                        <h2 className="text-xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
+                            <Activity size={22} className="text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]" />
                             Custo por Estúdio
                         </h2>
-                        <button onClick={() => setExpandedChart('costByStudio')} className="p-2.5 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-orange-500 text-[var(--text-muted)] hover:text-orange-500 shadow-sm" title="Expandir">
+                        <button onClick={() => setExpandedChart('costByStudio')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-red-500 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)] text-zinc-500 hover:text-red-400 shadow-sm" title="Expandir">
                             <Maximize2 size={18} />
                         </button>
                     </div>
                     <div className="h-[320px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={data?.charts.costByStudio.slice(0, 10)} margin={{ left: 0, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" vertical={false} />
-                                <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 600 }} interval={0} angle={-45} textAnchor="end" height={60} axisLine={false} tickLine={false} />
+                                <CartesianGrid strokeDasharray="1 10" stroke="rgba(255,255,255,0.05)" horizontal={true} vertical={false} />
+                                <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 10, fontWeight: 800 }} interval={0} angle={-45} textAnchor="end" height={60} axisLine={false} tickLine={false} />
                                 <YAxis hide />
-                                <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number) => `R$ ${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />} cursor={{ fill: 'var(--input-bg)' }} />
+                                <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number) => `R$ ${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
                                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                                     {data?.charts.costByStudio.slice(0, 10).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#ef4444" />)}
                                 </Bar>
@@ -1109,13 +1122,13 @@ export default function AdminDashboard() {
 
 
                 {/* ROW 2: SALES */}
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl relative group shadow-sm hover:shadow-md transition-all">
+                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all">
                     <div className="flex justify-between items-start mb-8">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-[var(--foreground)] tracking-tight">
-                            <Tag size={22} className="text-indigo-500" />
+                        <h2 className="text-xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
+                            <Tag size={22} className="text-indigo-500 drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
                             Vendas por Categoria
                         </h2>
-                        <button onClick={() => setExpandedChart('salesByCategory')} className="p-2.5 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-orange-500 text-[var(--text-muted)] hover:text-orange-500 shadow-sm" title="Expandir">
+                        <button onClick={() => setExpandedChart('salesByCategory')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-indigo-500 hover:shadow-[0_0_15px_rgba(99,102,241,0.2)] text-zinc-500 hover:text-indigo-400 shadow-sm" title="Expandir">
                             <Maximize2 size={18} />
                         </button>
                     </div>
@@ -1131,11 +1144,11 @@ export default function AdminDashboard() {
                                     fill="#8884d8"
                                     paddingAngle={8}
                                     dataKey="value"
-                                    stroke="var(--card-bg)"
+                                    stroke="rgba(0,0,0,0.5)"
                                     strokeWidth={4}
                                 >
                                     {(data?.charts?.salesByCategory || []).map((entry: any, index: number) => (
-                                        <Cell key={`cell-${index}`} fill={['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a855f7'][index % 5]} />
+                                        <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#f43f5e', '#a855f7'][index % 5]} />
                                     ))}
                                 </Pie>
                                 <Tooltip content={<CategoryTooltip />} />
@@ -1145,23 +1158,23 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl relative group shadow-sm hover:shadow-md transition-all">
+                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all">
                     <div className="flex justify-between items-start mb-8">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-[var(--foreground)] tracking-tight">
-                            <Layers size={22} className="text-pink-500" />
+                        <h2 className="text-xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
+                            <Layers size={22} className="text-pink-500 drop-shadow-[0_0_10px_rgba(236,72,153,0.5)]" />
                             Vendas por Série
                         </h2>
-                        <button onClick={() => setExpandedChart('salesBySeries')} className="p-2.5 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-orange-500 text-[var(--text-muted)] hover:text-orange-500 shadow-sm" title="Expandir">
+                        <button onClick={() => setExpandedChart('salesBySeries')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-pink-500 hover:shadow-[0_0_15px_rgba(236,72,153,0.2)] text-zinc-500 hover:text-pink-400 shadow-sm" title="Expandir">
                             <Maximize2 size={18} />
                         </button>
                     </div>
                     <div className="h-[320px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={(data?.charts?.salesBySeries || []).slice(0, 10)} layout="vertical" margin={{ left: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" horizontal={false} />
+                                <CartesianGrid strokeDasharray="1 10" stroke="rgba(255,255,255,0.05)" horizontal={false} vertical={true} />
                                 <XAxis type="number" hide />
-                                <YAxis dataKey="name" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 600 }} width={110} axisLine={false} tickLine={false} />
-                                <Tooltip content={<CategoryTooltip suffix="vendas" />} cursor={{ fill: 'var(--input-bg)' }} />
+                                <YAxis dataKey="name" type="category" tick={{ fill: '#71717a', fontSize: 11, fontWeight: 800 }} width={110} axisLine={false} tickLine={false} />
+                                <Tooltip content={<CategoryTooltip suffix="vendas" />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
                                 <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                                     {(data?.charts?.salesBySeries || []).slice(0, 10).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#ec4899" />)}
                                 </Bar>
@@ -1172,21 +1185,21 @@ export default function AdminDashboard() {
 
 
                 {/* ROW 3: INVENTORY (PRODUCTION / DETAILS) */}
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl relative group shadow-sm hover:shadow-md transition-all">
+                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all">
                     <div className="flex justify-between items-start mb-8">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-[var(--foreground)] tracking-tight">
-                            <Box size={22} className="text-purple-500" />
+                        <h2 className="text-xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
+                            <Box size={22} className="text-purple-500 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
                             Modelos por Estúdio
                         </h2>
-                        <button onClick={() => setExpandedChart('inventoryByStudio')} className="p-2.5 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-orange-500 text-[var(--text-muted)] hover:text-orange-500 shadow-sm" title="Expandir">
+                        <button onClick={() => setExpandedChart('inventoryByStudio')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-purple-500 hover:shadow-[0_0_15px_rgba(168,85,247,0.2)] text-zinc-500 hover:text-purple-400 shadow-sm" title="Expandir">
                             <Maximize2 size={18} />
                         </button>
                     </div>
                     <div className="h-[400px] w-full flex justify-center items-center">
                         <ResponsiveContainer width="100%" height="100%">
                             <RadarChart cx="50%" cy="50%" outerRadius="65%" data={data?.charts.inventoryByStudio}>
-                                <PolarGrid stroke="var(--card-border)" />
-                                <PolarAngleAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }} />
+                                <PolarGrid stroke="rgba(255,255,255,0.05)" />
+                                <PolarAngleAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 10, fontWeight: 800 }} />
                                 <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
                                 <Radar name="Modelos" dataKey="value" stroke="#a855f7" strokeWidth={3} fill="#a855f7" fillOpacity={0.3} />
                                 <Tooltip content={<CategoryTooltip suffix="modelos" />} />
@@ -1195,13 +1208,13 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl relative group shadow-sm hover:shadow-md transition-all">
+                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all">
                     <div className="flex justify-between items-start mb-8">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-[var(--foreground)] tracking-tight">
-                            <Layers size={22} className="text-purple-500" />
+                        <h2 className="text-xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
+                            <Layers size={22} className="text-purple-400 drop-shadow-[0_0_10px_rgba(192,132,252,0.5)]" />
                             Modelos por Série
                         </h2>
-                        <button onClick={() => setExpandedChart('inventoryBySeries')} className="p-2.5 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-orange-500 text-[var(--text-muted)] hover:text-orange-500 shadow-sm" title="Expandir">
+                        <button onClick={() => setExpandedChart('inventoryBySeries')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-purple-400 hover:shadow-[0_0_15px_rgba(192,132,252,0.2)] text-zinc-500 hover:text-purple-300 shadow-sm" title="Expandir">
                             <Maximize2 size={18} />
                         </button>
                     </div>
@@ -1216,11 +1229,11 @@ export default function AdminDashboard() {
                                     outerRadius={120}
                                     paddingAngle={10}
                                     dataKey="value"
-                                    stroke="var(--card-bg)"
+                                    stroke="rgba(0,0,0,0.5)"
                                     strokeWidth={6}
                                 >
                                     {(data?.charts.inventoryBySeries || []).slice(0, 5).map((entry: any, index: number) => (
-                                        <Cell key={`cell-${index}`} fill={['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#a855f7'][index % 5]} />
+                                        <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#f43f5e', '#a855f7'][index % 5]} />
                                     ))}
                                 </Pie>
                                 <Tooltip content={<CategoryTooltip suffix="figuras" />} />
@@ -1232,23 +1245,23 @@ export default function AdminDashboard() {
 
 
                 {/* ROW 4: ANALYTICS (REVENUE + SOLD) */}
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl relative group shadow-sm hover:shadow-md transition-all">
+                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all">
                     <div className="flex justify-between items-start mb-8">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-[var(--foreground)] tracking-tight">
-                            <DollarSign size={22} className="text-blue-500" />
+                        <h2 className="text-xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
+                            <DollarSign size={22} className="text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
                             Faturamento por Estúdio
                         </h2>
-                        <button onClick={() => setExpandedChart('revenueByStudio')} className="p-2.5 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-orange-500 text-[var(--text-muted)] hover:text-orange-500 shadow-sm" title="Expandir">
+                        <button onClick={() => setExpandedChart('revenueByStudio')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-blue-500 hover:shadow-[0_0_15px_rgba(59,130,246,0.2)] text-zinc-500 hover:text-blue-400 shadow-sm" title="Expandir">
                             <Maximize2 size={18} />
                         </button>
                     </div>
                     <div className="h-[320px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={data?.charts.revenueByStudio.slice(0, 10)} margin={{ left: 0, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" vertical={false} />
-                                <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 600 }} interval={0} angle={-45} textAnchor="end" height={60} axisLine={false} tickLine={false} />
+                                <CartesianGrid strokeDasharray="1 10" stroke="rgba(255,255,255,0.05)" horizontal={true} vertical={false} />
+                                <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 10, fontWeight: 800 }} interval={0} angle={-45} textAnchor="end" height={60} axisLine={false} tickLine={false} />
                                 <YAxis hide />
-                                <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number) => `R$ ${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />} cursor={{ fill: 'var(--input-bg)' }} />
+                                <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number) => `R$ ${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
                                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                                     {data?.charts.revenueByStudio.slice(0, 10).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#3b82f6" />)}
                                 </Bar>
@@ -1257,23 +1270,23 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl relative group shadow-sm hover:shadow-md transition-all">
+                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all">
                     <div className="flex justify-between items-start mb-8">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-[var(--foreground)] tracking-tight">
-                            <ShoppingCart size={22} className="text-orange-500" />
+                        <h2 className="text-xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
+                            <ShoppingCart size={22} className="text-orange-500 drop-shadow-[0_0_10px_rgba(249,115,22,0.5)]" />
                             Unidades Vendidas
                         </h2>
-                        <button onClick={() => setExpandedChart('soldByStudio')} className="p-2.5 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-orange-500 text-[var(--text-muted)] hover:text-orange-500 shadow-sm" title="Expandir">
+                        <button onClick={() => setExpandedChart('soldByStudio')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-orange-500 hover:shadow-[0_0_15px_rgba(249,115,22,0.2)] text-zinc-500 hover:text-orange-400 shadow-sm" title="Expandir">
                             <Maximize2 size={18} />
                         </button>
                     </div>
                     <div className="h-[320px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={data?.charts.soldByStudio.slice(0, 10)} margin={{ left: 0, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" vertical={false} />
-                                <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 600 }} interval={0} angle={-45} textAnchor="end" height={60} axisLine={false} tickLine={false} />
+                                <CartesianGrid strokeDasharray="1 10" stroke="rgba(255,255,255,0.05)" horizontal={true} vertical={false} />
+                                <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 10, fontWeight: 800 }} interval={0} angle={-45} textAnchor="end" height={60} axisLine={false} tickLine={false} />
                                 <YAxis hide />
-                                <Tooltip content={<CategoryTooltip suffix="unid." />} cursor={{ fill: 'var(--input-bg)' }} />
+                                <Tooltip content={<CategoryTooltip suffix="unid." />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
                                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                                     {data?.charts.soldByStudio.slice(0, 10).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#f97316" />)}
                                 </Bar>
@@ -1284,49 +1297,49 @@ export default function AdminDashboard() {
 
             </div>
 
-            <div className="flex items-center justify-between mt-12 mb-6">
-                <h2 className="text-2xl font-black flex items-center gap-3 text-[var(--foreground)] tracking-tight">
-                    <DollarSign className="text-emerald-500" size={24} />
+            <div className="flex items-center justify-between mt-12 mb-6 border-t border-zinc-900 pt-16">
+                <h2 className="text-2xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
+                    <DollarSign className="text-emerald-500 drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" size={24} />
                     Analytics de Preço
-                    <span className="text-xs font-bold text-[var(--text-muted)] bg-[var(--input-bg)] px-3 py-1 rounded-full uppercase tracking-widest ml-2 border border-[var(--card-border)]">Base Premium</span>
+                    <span className="text-xs font-bold text-zinc-400 bg-zinc-900 px-3 py-1 rounded-full uppercase tracking-widest ml-2 border border-zinc-800">Laboratório</span>
                 </h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
                 <div className="flex flex-col gap-4">
-                    <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl flex flex-col justify-center items-center flex-1 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 opacity-50"></div>
-                        <h3 className="text-[var(--text-muted)] text-[10px] font-black uppercase tracking-widest mb-2">Potencial (Premium)</h3>
-                        <p className="text-4xl font-black text-emerald-500 tracking-tighter">
+                    <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl flex flex-col justify-center items-center flex-1 shadow-2xl hover:border-zinc-700 transition-all group overflow-hidden relative">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 opacity-50 shadow-[0_0_20px_rgba(16,185,129,0.8)]"></div>
+                        <h3 className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">Potencial (Premium)</h3>
+                        <p className="text-4xl font-black text-zinc-100 tracking-tighter">
                             {data?.charts.totalPortfolioValue?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00'}
                         </p>
                     </div>
 
-                    <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl flex flex-col justify-center items-center flex-1 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-[var(--text-muted)] opacity-20"></div>
-                        <h3 className="text-[var(--text-muted)] text-[10px] font-black uppercase tracking-widest mb-2">Potencial (Básico)</h3>
-                        <p className="text-3xl font-black text-[var(--text-muted)] tracking-tighter">
+                    <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl flex flex-col justify-center items-center flex-1 shadow-2xl hover:border-zinc-700 transition-all group overflow-hidden relative">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-zinc-700 opacity-20"></div>
+                        <h3 className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">Potencial (Básico)</h3>
+                        <p className="text-3xl font-black text-zinc-400 tracking-tighter mix-blend-plus-lighter">
                             {data?.charts.totalPortfolioBasic?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00'}
                         </p>
                     </div>
                 </div>
 
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl relative group shadow-sm hover:shadow-md transition-all">
+                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all">
                     <div className="flex justify-between items-start mb-8">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-[var(--foreground)] tracking-tight">
-                            <Tag size={22} className="text-purple-500" />
+                        <h2 className="text-xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
+                            <Tag size={22} className="text-purple-500 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
                             Ticket Médio por Estúdio
                         </h2>
-                        <button onClick={() => setExpandedChart('avgPriceByStudio')} className="p-2.5 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-orange-500 text-[var(--text-muted)] hover:text-orange-500 shadow-sm" title="Expandir">
+                        <button onClick={() => setExpandedChart('avgPriceByStudio')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-purple-500 hover:shadow-[0_0_15px_rgba(168,85,247,0.2)] text-zinc-500 hover:text-purple-400 shadow-sm" title="Expandir">
                             <Maximize2 size={18} />
                         </button>
                     </div>
                     <div className="h-[320px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={data?.charts.avgPriceByStudio?.slice(0, 10) || []} margin={{ left: 0, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" vertical={false} />
-                                <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }} interval={0} angle={-45} textAnchor="end" height={60} axisLine={false} tickLine={false} />
+                                <CartesianGrid strokeDasharray="1 10" stroke="rgba(255,255,255,0.05)" horizontal={true} vertical={false} />
+                                <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 10, fontWeight: 800 }} interval={0} angle={-45} textAnchor="end" height={60} axisLine={false} tickLine={false} />
                                 <YAxis hide />
-                                <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number) => `R$ ${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />} cursor={{ fill: 'var(--input-bg)' }} />
+                                <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number) => `R$ ${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
                                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                                     {(data?.charts.avgPriceByStudio || []).slice(0, 10).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#a855f7" />)}
                                 </Bar>
@@ -1335,29 +1348,29 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-8 rounded-2xl relative group shadow-sm hover:shadow-md transition-all">
+                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all">
                     <div className="flex justify-between items-start mb-8">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-[var(--foreground)] tracking-tight">
-                            <Layers size={22} className="text-blue-500" />
+                        <h2 className="text-xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
+                            <Layers size={22} className="text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
                             Distribuição de Preço
                         </h2>
-                        <button onClick={() => setExpandedChart('priceDistribution')} className="p-2.5 bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-orange-500 text-[var(--text-muted)] hover:text-orange-500 shadow-sm" title="Expandir">
+                        <button onClick={() => setExpandedChart('priceDistribution')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-blue-500 hover:shadow-[0_0_15px_rgba(59,130,246,0.2)] text-zinc-500 hover:text-blue-400 shadow-sm" title="Expandir">
                             <Maximize2 size={18} />
                         </button>
                     </div>
                     <div className="h-[320px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={data?.charts.priceDistribution || []} margin={{ left: 0, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" vertical={false} />
-                                <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }} interval={0} angle={-45} textAnchor="end" height={60} axisLine={false} tickLine={false} />
+                                <CartesianGrid strokeDasharray="1 10" stroke="rgba(255,255,255,0.05)" horizontal={true} vertical={false} />
+                                <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 10, fontWeight: 800 }} interval={0} angle={-45} textAnchor="end" height={60} axisLine={false} tickLine={false} />
                                 <YAxis hide />
-                                <Tooltip content={<CategoryTooltip suffix="figuras" />} cursor={{ fill: 'var(--input-bg)' }} />
+                                <Tooltip content={<CategoryTooltip suffix="figuras" />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
                                 <Bar dataKey="value" radius={[4, 4, 0, 0]} onClick={(bdata) => { setExpandedChart('priceDistribution'); setDrillDownPriceBucket(bdata?.name || null); }} className="cursor-pointer">
                                     {(data?.charts.priceDistribution || []).map((_e: any, index: number) => (
                                         <Cell
                                             key={`cell-${index}`}
                                             fill="#3b82f6"
-                                            className="hover:opacity-80 transition-opacity cursor-pointer"
+                                            className="hover:opacity-80 transition-opacity cursor-pointer shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                                             onClick={() => { setExpandedChart('priceDistribution'); setDrillDownPriceBucket(_e.name || null); }}
                                         />
                                     ))}
@@ -1367,16 +1380,18 @@ export default function AdminDashboard() {
                     </div>
                 </div>
             </div>
+            
+            </div> {/* FECHAMENTO DO WRAPPER DE CONTEÚDO (.max-w-[1920px]) */}
 
             {/* MODAL DE IMAGEM (VIEWER) */}
             {previewImage && (
                 <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--background)]/95 backdrop-blur-xl p-6"
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-2xl p-6 transition-all duration-300"
                     onClick={() => setPreviewImage(null)}
                 >
-                    <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center animate-in zoom-in-95 duration-300">
+                    <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center animate-in zoom-in-95 duration-500">
                         <button
-                            className="absolute -top-12 right-0 text-[var(--foreground)] hover:text-orange-500 z-50 transition-all bg-[var(--card-bg)] border border-[var(--card-border)] rounded-full p-3 shadow-xl active:scale-90"
+                            className="absolute -top-12 right-0 text-zinc-500 hover:text-orange-500 z-50 transition-all bg-zinc-900 border border-zinc-800 rounded-full p-3 shadow-2xl active:scale-90"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 setPreviewImage(null);
@@ -1385,7 +1400,7 @@ export default function AdminDashboard() {
                             <X size={28} />
                         </button>
 
-                        <div className="bg-[var(--card-bg)] border-4 border-[var(--card-border)] rounded-3xl p-3 shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] overflow-hidden">
+                        <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-3 shadow-[0_0_80px_-15px_rgba(16,185,129,0.15)] overflow-hidden">
                             <img
                                 src={previewImage.url}
                                 alt={previewImage.nome}
@@ -1393,8 +1408,8 @@ export default function AdminDashboard() {
                                 onClick={e => e.stopPropagation()}
                             />
                         </div>
-                        <div className="mt-8 bg-[var(--card-bg)] border border-[var(--card-border)] px-8 py-3 rounded-2xl shadow-xl">
-                            <p className="text-[var(--foreground)] font-black text-xl tracking-tight uppercase">{previewImage.nome}</p>
+                        <div className="mt-8 bg-zinc-900/50 backdrop-blur-md border border-zinc-800/50 px-8 py-3 rounded-full shadow-2xl">
+                            <p className="text-zinc-100 font-black text-xs tracking-widest uppercase">{previewImage.nome}</p>
                         </div>
                     </div>
                 </div>
