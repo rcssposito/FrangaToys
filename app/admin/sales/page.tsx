@@ -234,225 +234,82 @@ export default function SalesPage() {
                                     </div>
                                 </div>
 
-                                {/* Table */}
-                                <div className="overflow-x-auto">
-                                    <table className="hidden md:table w-full min-w-full text-left whitespace-nowrap">
-                                        <thead className="bg-zinc-950/80 border-b border-zinc-800/80">
-                                            <tr className="text-zinc-500 text-[9px] uppercase font-bold tracking-widest">
-                                                <th className="p-5 pl-6">Data</th>
-                                                <th className="p-5 w-full">Figura / Estúdio</th>
-                                                <th className="p-5 text-center">Qtd</th>
-                                                <th className="p-5">Cliente</th>
-                                                <th className="p-5">Vendedor / Opcionais</th>
-                                                <th className="p-5 text-right">Valor</th>
-                                                {hasRole('admin') || hasRole('finance') ? (
-                                                    <>
-                                                        <th className="p-5 text-right text-zinc-500" title="Custo de Resina e Tempo Máquina">Custo Base</th>
-                                                        <th className="p-5 text-right text-emerald-400/80">Lucro Líquido</th>
-                                                    </>
-                                                ) : null}
-                                                <th className="p-5 pr-6 w-10 text-right">AÇÕES</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-zinc-800/50 text-sm">
-                                            {group.sales.map(sale => (
-                                                <tr key={sale.id} className="hover:bg-zinc-900/50 transition-colors group">
-                                                    <td className="p-5 pl-6 text-zinc-500 font-mono text-xs">
-                                                        {new Date(sale.data_venda).toLocaleDateString('pt-BR')}
-                                                    </td>
-                                                    <td className="p-5 w-full">
-                                                        <div className="font-black text-zinc-200 flex items-center gap-2 text-base tracking-tight">
-                                                            {sale.figuras?.nome || 'Desconhecida'}
-                                                            {sale.pintura_freelancer && (
-                                                                <span title="Pintura Terceirizada (Freelancer)" className="bg-orange-900/30 text-orange-400 p-1.5 rounded-md border border-orange-500/20">
-                                                                    <Paintbrush size={12} strokeWidth={2.5} />
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <div className="text-[10px] text-zinc-500 uppercase font-black tracking-widest mt-0.5">
-                                                            {getStudioName(sale.figuras)}
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-5 text-center">
-                                                        {sale.quantidade > 1 ? (
-                                                            <span className="bg-cyan-950/60 text-cyan-400 px-2.5 py-1 rounded-md text-[10px] font-black uppercase ring-1 ring-cyan-500/30 shadow-none">
-                                                                {sale.quantidade}x
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-zinc-600 font-bold">1</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-5 text-zinc-300 font-bold">
-                                                        {sale.cliente_nome}
-                                                        {sale.observacao && (
-                                                            <div className="text-[10px] text-zinc-500 mt-0.5 font-medium max-w-[150px] truncate" title={sale.observacao}>
-                                                                {sale.observacao}
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-5">
-                                                        {sale.vendedor ? (
-                                                            <div className="flex flex-col">
-                                                                <span className="text-xs font-black text-zinc-300 truncate max-w-[120px]" title={sale.vendedor}>
-                                                                    {sale.vendedor_nome || sale.vendedor?.split('@')[0] || 'Franguinha'}
-                                                                </span>
-                                                                {(sale.comissao_vendedor ?? 0) > 0 && (
-                                                                    <span className="text-[10px] text-zinc-400 font-bold mt-0.5 flex items-center gap-0.5">
-                                                                        <DollarSign size={10} /> {(sale.comissao_vendedor ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-[10px] text-zinc-500 italic font-black uppercase tracking-widest">Loja Direta</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-5 text-right">
-                                                        <div className="flex flex-col items-end">
-                                                            <span className="font-black text-zinc-100 text-base tracking-tighter">
-                                                                R$ {sale.valor_venda_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                            </span>
-                                                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-wider mt-1 ${sale.link_pagamento ? 'bg-indigo-950/60 text-indigo-400 border border-indigo-500/30' : 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30'}`}>
-                                                                {sale.link_pagamento ? 'Cartão' : 'PIX'}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    {hasRole('admin') || hasRole('finance') ? (
-                                                        <>
-                                                            <td className="p-5 text-right text-zinc-500 font-mono text-xs opacity-70" title="Custo do material (Resina + Impressão)">
-                                                                - R$ {(sale.custo_producao_snapshot || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                            </td>
-                                                            <td className="p-5 text-right text-emerald-400 font-black text-sm" title="Já descontado material, extras e comissões">
-                                                                R$ {sale.lucro_real?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                            </td>
-                                                        </>
-                                                    ) : null}
-                                                    <td className="p-5 pr-6">
-                                                        <div className="flex items-center justify-end gap-1.5 opacity-30 group-hover:opacity-100 transition-opacity">
-                                                            {sale.status === 'Concluída' && (
-                                                                <button
-                                                                    onClick={() => handleSendToKanban(sale.id)}
-                                                                    className="p-2.5 bg-zinc-900 text-zinc-400 border border-zinc-800 rounded-xl hover:text-cyan-400 hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all shadow-sm"
-                                                                    title="Reativar no Kanban (Fila de Impressão)"
-                                                                >
-                                                                    <RotateCcw size={16} />
-                                                                </button>
-                                                            )}
-                                                            <Link
-                                                                href={`/api/admin/kanban/os/${sale.id}`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="p-2.5 bg-zinc-900 text-zinc-400 border border-zinc-800 rounded-xl hover:text-indigo-400 hover:border-indigo-500/50 hover:bg-indigo-500/10 transition-all shadow-sm"
-                                                                title="Gerar OS & Comprovante de Pagamento"
-                                                            >
-                                                                <Receipt size={16} />
-                                                            </Link>
-                                                            {hasRole('admin') && (
-                                                                <>
-                                                                    <button
-                                                                        onClick={() => setEditingSale(sale)}
-                                                                        className="p-2.5 bg-zinc-900 text-zinc-400 border border-zinc-800 rounded-xl hover:text-amber-400 hover:border-amber-500/50 hover:bg-amber-500/10 transition-all shadow-sm"
-                                                                        title="Editar Dados da Venda"
-                                                                    >
-                                                                        <Edit3 size={16} />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleDelete(sale.id)}
-                                                                        className="p-2.5 bg-zinc-900 text-zinc-400 border border-zinc-800 rounded-xl hover:text-red-400 hover:border-red-500/50 hover:bg-red-500/10 transition-all shadow-sm"
-                                                                        title="Excluir Venda"
-                                                                    >
-                                                                        <Trash2 size={16} />
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {/* Mobile Cards (Visível apenas em telas pequenas) */}
-                                <div className="md:hidden flex flex-col divide-y divide-zinc-800/80">
+                                {/* Grid de Vendas */}
+                                <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                     {group.sales.map(sale => (
-                                        <div key={`mobile-${sale.id}`} className="p-4 flex flex-col gap-3 hover:bg-zinc-900/50 transition-colors relative">
-                                            {/* Header do Cartão: Modelo e Status Canto */}
-                                            <div className="flex justify-between items-start">
-                                                <div className="flex flex-col flex-1 pr-2">
-                                                    <div className="font-black text-zinc-200 text-sm flex gap-2 tracking-tight leading-tight">
-                                                        <span>{sale.figuras?.nome || 'Desconhecida'}</span>
+                                        <div key={sale.id} className="bg-zinc-950/60 backdrop-blur-sm border border-zinc-800/80 rounded-2xl p-5 shadow-sm flex flex-col relative group transition-colors hover:border-cyan-500/30">
+                                            {/* Header do Card */}
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div className="flex flex-col">
+                                                    <div className="font-black text-zinc-200 text-lg flex items-center gap-2 tracking-tight leading-tight">
+                                                        {sale.figuras?.nome || 'Desconhecida'}
                                                         {sale.pintura_freelancer && (
-                                                            <span title="Pintura Terceirizada (Freelancer)" className="text-orange-400 shrink-0">
+                                                            <span title="Pintura Terceirizada" className="text-orange-400">
                                                                 <Paintbrush size={14} />
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <div className="text-[10px] text-zinc-500 uppercase font-black tracking-widest mt-0.5">
+                                                    <div className="text-[10px] text-zinc-500 uppercase font-black tracking-widest mt-1">
                                                         {getStudioName(sale.figuras)}
                                                     </div>
                                                 </div>
                                                 {sale.quantidade > 1 && (
-                                                    <span className="bg-cyan-950/60 text-cyan-400 px-2.5 py-1 rounded-md text-[10px] font-black uppercase ring-1 ring-cyan-500/30 shrink-0">
+                                                    <span className="bg-cyan-950/60 text-cyan-400 px-2 py-1 rounded-md text-[10px] font-black uppercase ring-1 ring-cyan-500/30 shrink-0 shadow-sm">
                                                         {sale.quantidade}x
                                                     </span>
                                                 )}
                                             </div>
 
-                                            {/* Detalhes de Cliente e Vendedor */}
-                                            <div className="flex justify-between items-end gap-2 text-xs">
-                                                <div className="flex flex-col gap-1">
-                                                    <div className="text-zinc-500 flex items-center gap-1.5">
-                                                        <span className="font-bold">Em:</span> {new Date(sale.data_venda).toLocaleDateString('pt-BR')}
-                                                    </div>
-                                                    <div className="text-zinc-300 font-bold flex items-center gap-1.5">
-                                                        <span className="font-bold text-zinc-500">Cli:</span> {sale.cliente_nome}
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <div className="text-zinc-300 font-bold flex items-center gap-1.5 truncate max-w-[150px]">
-                                                            <span className="font-bold text-zinc-500">Ven:</span> {sale.vendedor ? (sale.vendedor_nome || sale.vendedor?.split('@')[0]) : 'Loja Direta'}
-                                                        </div>
-                                                        {sale.vendedor && (sale.comissao_vendedor ?? 0) > 0 && (
-                                                            <span className="text-[10px] text-emerald-400/80 font-black mt-0.5 ml-6 flex items-center gap-0.5">
-                                                                (+ R$ {(sale.comissao_vendedor ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                            {/* Info de Cliente e Data */}
+                                            <div className="space-y-1 mb-5 flex-1">
+                                                <div className="text-xs text-zinc-400 font-medium">
+                                                    <span className="text-zinc-600 font-bold mr-1">Cli:</span> {sale.cliente_nome}
                                                 </div>
-
-                                                {/* Preço e Lucro */}
-                                                <div className="flex flex-col items-end justify-end text-right">
-                                                    <div className="font-black text-zinc-100 text-base tracking-tighter">
-                                                        R$ {sale.valor_venda_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                    </div>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-wider ${sale.link_pagamento ? 'bg-indigo-950/60 text-indigo-400 border border-indigo-500/30' : 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30'}`}>
-                                                            {sale.link_pagamento ? 'Cartão' : 'PIX'}
-                                                        </span>
-                                                        {(hasRole('admin') || hasRole('finance')) && (
-                                                            <div className="text-emerald-400 font-black text-[11px]" title="Lucro Líquido">
-                                                                L: R$ {sale.lucro_real?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                                <div className="text-xs text-zinc-400 font-medium flex justify-between">
+                                                    <span><span className="text-zinc-600 font-bold mr-1">Ven:</span> {sale.vendedor ? (sale.vendedor_nome || sale.vendedor.split('@')[0]) : 'Loja'}</span>
+                                                    <span className="font-mono text-[10px] bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded text-zinc-500">{new Date(sale.data_venda).toLocaleDateString('pt-BR')}</span>
                                                 </div>
                                             </div>
 
-                                            {/* Ações Mobile */}
-                                            <div className="flex items-center justify-end gap-2 pt-3 mt-1 border-t border-zinc-800/80">
+                                            {/* Financeiro */}
+                                            <div className="pt-4 border-t border-zinc-900 flex justify-between items-end">
+                                                <div className="flex flex-col">
+                                                    <span className="font-black text-zinc-100 text-xl tracking-tighter">
+                                                        R$ {sale.valor_venda_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </span>
+                                                    <span className={`w-fit text-[9px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-wider mt-1 ${sale.link_pagamento ? 'bg-indigo-950/60 text-indigo-400 border border-indigo-500/30' : 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30'}`}>
+                                                        {sale.link_pagamento ? 'Cartão' : 'PIX'}
+                                                    </span>
+                                                </div>
+                                                
+                                                {(hasRole('admin') || hasRole('finance')) && (
+                                                    <div className="text-right">
+                                                        <div className="text-[10px] text-zinc-600 line-through" title="Custo Base - Material e Impressão">
+                                                            R$ {(sale.custo_producao_snapshot || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </div>
+                                                        <div className="text-emerald-400 font-black text-sm tracking-tight" title="Lucro Líquido Real">
+                                                            R$ {sale.lucro_real?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Ações Hover */}
+                                            <div className="absolute top-4 right-4 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0 bg-zinc-950/80 p-2 rounded-2xl backdrop-blur-md border border-zinc-800/80 shadow-xl">
                                                 {sale.status === 'Concluída' && (
-                                                    <button onClick={() => handleSendToKanban(sale.id)} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-cyan-400 transition-colors shadow-sm">
+                                                    <button onClick={() => handleSendToKanban(sale.id)} className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-cyan-400 transition-colors shadow-sm" title="Reativar no Kanban">
                                                         <RotateCcw size={16} />
                                                     </button>
                                                 )}
-                                                <Link href={`/api/admin/kanban/os/${sale.id}`} target="_blank" className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-indigo-400 transition-colors shadow-sm" title="Gerar OS & Comprovante de Pagamento">
+                                                <Link href={`/api/admin/kanban/os/${sale.id}`} target="_blank" className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-indigo-400 transition-colors shadow-sm" title="Gerar OS">
                                                     <Receipt size={16} />
                                                 </Link>
                                                 {hasRole('admin') && (
                                                     <>
-                                                        <button onClick={() => setEditingSale(sale)} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-amber-400 transition-colors shadow-sm">
+                                                        <button onClick={() => setEditingSale(sale)} className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-amber-400 transition-colors shadow-sm" title="Editar Venda">
                                                             <Edit3 size={16} />
                                                         </button>
-                                                        <button onClick={() => handleDelete(sale.id)} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-red-400 transition-colors shadow-sm">
+                                                        <button onClick={() => handleDelete(sale.id)} className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-red-400 transition-colors shadow-sm" title="Excluir Venda">
                                                             <Trash2 size={16} />
                                                         </button>
                                                     </>
@@ -467,29 +324,30 @@ export default function SalesPage() {
                 )}
             </div>
 
-            {/* Modal de Edição */}
+            {/* Slide-over Modal de Edição */}
             {editingSale && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="bg-zinc-950 border border-zinc-800/80 w-full max-w-lg rounded-3xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
+                <div className="fixed inset-0 z-50 flex justify-end">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setEditingSale(null)}></div>
+                    <div className="relative w-full max-w-md bg-zinc-950 border-l border-zinc-800 h-full p-8 overflow-y-auto shadow-2xl animate-in slide-in-from-right duration-300">
+                        <div className="flex justify-between items-center mb-8 pb-5 border-b border-zinc-800/50">
                             <h2 className="text-xl font-black flex items-center gap-3 text-cyan-400">
                                 <Edit3 size={24} className="opacity-80" />
-                                Editar Venda #{editingSale.id}
+                                Edição Tática #{editingSale.id}
                             </h2>
-                            <button onClick={() => setEditingSale(null)} className="p-2 hover:bg-zinc-800 rounded-xl transition-colors text-zinc-500">
-                                <X size={20} />
+                            <button onClick={() => setEditingSale(null)} className="text-zinc-500 hover:text-white bg-zinc-900 p-2 rounded-xl transition-all">
+                                <X size={18} />
                             </button>
                         </div>
 
-                        <form onSubmit={handleUpdate} className="p-8 space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <form onSubmit={handleUpdate} className="space-y-6">
+                            <div className="space-y-4">
                                 <div className="space-y-2">
                                     <label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Cliente</label>
                                     <input
                                         type="text"
                                         value={editingSale.cliente_nome || ''}
                                         onChange={e => setEditingSale({ ...editingSale, cliente_nome: e.target.value })}
-                                        className="w-full bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-cyan-500/50 outline-none transition-all font-bold text-zinc-200"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-sm focus:border-cyan-500/50 outline-none transition-all font-bold text-zinc-200"
                                         placeholder="Nome do Cliente"
                                         required
                                     />
@@ -499,7 +357,7 @@ export default function SalesPage() {
                                     <select
                                         value={editingSale.vendedor || ''}
                                         onChange={e => setEditingSale({ ...editingSale, vendedor: e.target.value })}
-                                        className="w-full bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-cyan-500/50 outline-none transition-all font-black text-zinc-200 appearance-none cursor-pointer"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-sm focus:border-cyan-500/50 outline-none transition-all font-black text-zinc-200 appearance-none cursor-pointer"
                                     >
                                         <option value="">Loja Direta</option>
                                         {vendedores.map(v => (
@@ -512,15 +370,15 @@ export default function SalesPage() {
                                     <select
                                         value={editingSale.status || 'Aguardando Pagamento'}
                                         onChange={e => setEditingSale({ ...editingSale, status: e.target.value })}
-                                        className="w-full bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-cyan-500/50 outline-none transition-all font-black text-zinc-200 appearance-none cursor-pointer"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-sm focus:border-cyan-500/50 outline-none transition-all font-black text-zinc-200 appearance-none cursor-pointer"
                                     >
-                                        <option value="Aguardando Pagamento" className="bg-zinc-900">Aguardando Pagamento (PDV)</option>
-                                        <option value="Fila de Impressão" className="bg-zinc-900">Fila de Impressão</option>
-                                        <option value="Imprimindo" className="bg-zinc-900">Imprimindo</option>
-                                        <option value="Lavagem e Cura" className="bg-zinc-900">Cura e Limpeza</option>
-                                        <option value="Pintura Secagem" className="bg-zinc-900">Pintura</option>
-                                        <option value="Pronto p/ Entrega" className="bg-zinc-900">Pronto p/ Entrega</option>
-                                        <option value="Concluída" className="bg-zinc-900">Pedido Concluído</option>
+                                        <option value="Aguardando Pagamento">Aguardando Pagamento (PDV)</option>
+                                        <option value="Fila de Impressão">Fila de Impressão</option>
+                                        <option value="Imprimindo">Imprimindo</option>
+                                        <option value="Lavagem e Cura">Cura e Limpeza</option>
+                                        <option value="Pintura Secagem">Pintura</option>
+                                        <option value="Pronto p/ Entrega">Pronto p/ Entrega</option>
+                                        <option value="Concluída">Pedido Concluído</option>
                                     </select>
                                 </div>
                                 <div className="space-y-2">
@@ -529,70 +387,53 @@ export default function SalesPage() {
                                         type="text"
                                         value={editingSale.canal_venda || ''}
                                         onChange={e => setEditingSale({ ...editingSale, canal_venda: e.target.value })}
-                                        className="w-full bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-cyan-500/50 outline-none transition-all font-bold text-zinc-200"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-sm focus:border-cyan-500/50 outline-none transition-all font-bold text-zinc-200"
                                         placeholder="Ex: WhatsApp, Instagram"
                                     />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-zinc-900/50 rounded-2xl border border-zinc-800 relative">
-                                <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-orange-500 rounded-l-2xl opacity-50"></div>
-                                <div className="flex items-center gap-3 h-full cursor-pointer" onClick={() => setEditingSale({ ...editingSale, pintura_freelancer: !editingSale.pintura_freelancer })}>
-                                    <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${editingSale.pintura_freelancer ? 'bg-orange-500 border-orange-500 text-black' : 'bg-zinc-950 border-zinc-700'}`}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-zinc-900 border border-zinc-800 rounded-2xl">
+                                <div className="flex items-center gap-3 cursor-pointer" onClick={() => setEditingSale({ ...editingSale, pintura_freelancer: !editingSale.pintura_freelancer })}>
+                                    <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${editingSale.pintura_freelancer ? 'bg-cyan-500 border-cyan-500 text-black' : 'bg-zinc-950 border-zinc-700'}`}>
                                         {editingSale.pintura_freelancer && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
                                     </div>
-                                    <label className="text-sm font-black text-zinc-200 cursor-pointer flex items-center gap-2 pointer-events-none">
-                                        <Paintbrush size={16} className={editingSale.pintura_freelancer ? 'text-orange-400' : 'text-zinc-600'} />
-                                        Pintura Freelancer
+                                    <label className="text-sm font-black text-zinc-200 cursor-pointer pointer-events-none">
+                                        Pintura Terc.
                                     </label>
                                 </div>
                                 {editingSale.pintura_freelancer && (
                                     <div className="space-y-2">
-                                        <label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Pintor Responsável</label>
                                         <select
                                             value={editingSale.pintor_nome || ''}
                                             onChange={e => setEditingSale({ ...editingSale, pintor_nome: e.target.value })}
-                                            className="w-full bg-zinc-950 border border-orange-500/30 rounded-xl px-4 py-3 text-sm outline-none transition-all font-black appearance-none cursor-pointer text-orange-200"
+                                            className="w-full bg-zinc-950 border border-cyan-500/30 rounded-xl px-3 py-2 text-sm outline-none font-black appearance-none cursor-pointer text-cyan-200"
                                         >
-                                            <option value="" className="bg-zinc-900">Selecione um Pintor</option>
-                                            {vendedores
-                                                .filter(v =>
-                                                    (v.roles && v.roles.includes('painter')) ||
-                                                    v.nome === editingSale.pintor_nome ||
-                                                    v.email === editingSale.pintor_nome
-                                                )
-                                                .map(v => (
-                                                    <option key={v.email} value={v.nome || v.email} className="bg-zinc-900">{v.nome || v.email}</option>
-                                                ))}
+                                            <option value="">Pintor</option>
+                                            {vendedores.filter(v => (v.roles && v.roles.includes('painter')) || v.nome === editingSale.pintor_nome).map(v => (
+                                                <option key={v.email} value={v.nome || v.email}>{v.nome || v.email}</option>
+                                            ))}
                                         </select>
                                     </div>
                                 )}
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Observações</label>
+                                <label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Observações Internas</label>
                                 <textarea
                                     value={editingSale.observacao || ''}
                                     onChange={e => setEditingSale({ ...editingSale, observacao: e.target.value })}
-                                    className="w-full bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:border-cyan-500/50 outline-none transition-all font-medium min-h-[100px] resize-none text-zinc-200"
-                                    placeholder="Observações internas..."
+                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-sm focus:border-cyan-500/50 outline-none transition-all font-medium min-h-[100px] resize-none text-zinc-200"
                                 />
                             </div>
 
-                            <div className="pt-4 flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setEditingSale(null)}
-                                    className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-400 font-black py-4 rounded-2xl transition-all active:scale-[0.98] uppercase text-xs"
-                                >
-                                    Cancelar
-                                </button>
+                            <div className="pt-4 flex">
                                 <button
                                     type="submit"
                                     disabled={isUpdating}
-                                    className="flex-[2] bg-cyan-600 hover:bg-cyan-500 text-black font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50 uppercase text-xs"
+                                    className="w-full bg-zinc-200 hover:bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50 uppercase text-xs"
                                 >
-                                    {isUpdating ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                                    {isUpdating ? <Loader2 size={18} className="animate-spin text-zinc-500" /> : <Save size={18} />}
                                     SALVAR ALTERAÇÕES
                                 </button>
                             </div>

@@ -82,7 +82,7 @@ const FigureMobileCard = ({
                         <button
                             onClick={() => handleDelete(f.id, f.nome)}
                             disabled={deletingId === f.id}
-                            className="p-2 bg-red-500/10 text-red-500 rounded-md hover:bg-red-500 hover:text-white transition-all disabled:opacity-50 border border-red-500/20"
+                            className="p-2 bg-orange-400/10 text-orange-400 rounded-md hover:bg-orange-400 hover:text-white transition-all disabled:opacity-50 border border-orange-400/20"
                         >
                             {deletingId === f.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                         </button>
@@ -716,7 +716,7 @@ export default function DataGridPage() {
                                                             <button
                                                                 onClick={() => handleDelete(f.id, f.nome)}
                                                                 disabled={deletingId === f.id}
-                                                                className="p-2.5 bg-red-500/10 text-red-500 rounded-md hover:bg-red-500 hover:text-white transition-all disabled:opacity-50 border border-red-500/20 shadow-[var(--shadow-sm)]"
+                                                                className="p-2.5 bg-orange-400/10 text-orange-400 rounded-md hover:bg-orange-400 hover:text-white transition-all disabled:opacity-50 border border-orange-400/20 shadow-[var(--shadow-sm)]"
                                                             >
                                                                 {deletingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                                                             </button>
