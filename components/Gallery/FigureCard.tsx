@@ -42,7 +42,7 @@ export const FigureCard = ({ figure, className }: FigureCardProps) => {
             <div className="flip-card-inner">
 
                 {/* === FRONT FACE (Luxury Design) === */}
-                <div className="flip-card-front bg-[#09090b] border border-zinc-800/50 hover:border-blue-500/30 transition-all duration-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl group/front">
+                <div className="flip-card-front bg-[#09090b] border border-zinc-800/50 hover:border-blue-500/30 transition-all duration-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl group/front [transform:translateZ(0)]">
                     <Link href={`/figura/${figure.id}`} scroll={false} className="absolute inset-0 z-10">
                         <Image
                             loader={imageKitLoader}
@@ -106,7 +106,7 @@ export const FigureCard = ({ figure, className }: FigureCardProps) => {
                 </div>
 
                 {/* === BACK FACE (Price Table & Info) === */}
-                <div className="flip-card-back border border-zinc-800 bg-[#09090b] rounded-2xl sm:rounded-3xl overflow-hidden">
+                <div className="flip-card-back border border-zinc-800 bg-[#09090b] rounded-2xl sm:rounded-3xl overflow-hidden [transform:rotateY(180deg)_translateZ(0)]">
                     {/* Darkened Background Image */}
                     <div className="absolute inset-0 opacity-10 filter grayscale">
                         <Image
@@ -128,16 +128,16 @@ export const FigureCard = ({ figure, className }: FigureCardProps) => {
 
                         <div className="flex-1 px-4 sm:px-6 flex flex-col justify-center gap-4 sm:gap-6">
                             {/* Dimensions Table */}
-                            <div className="grid grid-cols-3 gap-1 sm:gap-2 bg-zinc-900/50 backdrop-blur-md border border-zinc-800/50 p-2 sm:p-3 rounded-xl sm:rounded-2xl">
+                            <div className="grid grid-cols-3 gap-1 sm:gap-2 bg-zinc-900/50 backdrop-blur-md border border-zinc-800/50 p-2 sm:p-3 rounded-xl sm:rounded-2xl overflow-hidden">
                                 <div className="flex flex-col items-center">
                                     <span className="text-[8px] sm:text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Altura</span>
                                     <span className="text-sm sm:text-sm font-black text-white">{figure.altura_cm || '-'}<small className="text-[10px] sm:text-[10px] text-zinc-600 ml-0.5">cm</small></span>
                                 </div>
-                                <div className="flex flex-col items-center border-x border-zinc-800">
+                                <div className="flex flex-col items-center border-l border-zinc-800/50">
                                     <span className="text-[8px] sm:text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Largura</span>
                                     <span className="text-sm sm:text-sm font-black text-white">{figure.largura_cm || '-'}<small className="text-[10px] sm:text-[10px] text-zinc-600 ml-0.5">cm</small></span>
                                 </div>
-                                <div className="flex flex-col items-center">
+                                <div className="flex flex-col items-center border-l border-zinc-800/50">
                                     <span className="text-[8px] sm:text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Profund.</span>
                                     <span className="text-sm sm:text-sm font-black text-white">{figure.profundidade_cm || '-'}<small className="text-[10px] sm:text-[10px] text-zinc-600 ml-0.5">cm</small></span>
                                 </div>
