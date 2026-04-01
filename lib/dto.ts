@@ -44,6 +44,9 @@ export const EstudioSchema = z.object({
   qualidade: z.number().nullable().optional(),
   observacao: z.string().nullable().optional(),
   logo_url: z.string().nullable().optional(),
-  ativo: z.boolean().nullable().optional(),
+  instagram_handle: z.string().nullable().optional(),
+  social_url: z.string().optional().nullable(),
+  ativo: z.boolean().optional().default(true),
+  merchant: z.boolean().optional().default(false),
   figuras: z.array(z.object({ count: z.number() })).optional(),
 });

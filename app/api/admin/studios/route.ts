@@ -6,13 +6,13 @@ import { supabaseAdmin as supabase } from '@/lib/supabase';
 export async function PUT(req: Request) {
     try {
         const body = await req.json();
-        const { id, custo_mensal, qtd_display, qualidade, observacao, logo_url, instagram_handle, social_url, ativo } = body;
+        const { id, custo_mensal, qtd_display, qualidade, observacao, logo_url, instagram_handle, social_url, ativo, merchant } = body;
 
         if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
 
         const { data, error } = await supabase
             .from('studios')
-            .update({ custo_mensal, qtd_display, qualidade, observacao, logo_url, instagram_handle, social_url, ativo })
+            .update({ custo_mensal, qtd_display, qualidade, observacao, logo_url, instagram_handle, social_url, ativo, merchant })
             .eq('id', id)
             .select()
             .single();
@@ -30,11 +30,15 @@ export async function POST(req: Request) {
     try {
         const body = await req.json();
 
-        const { nome, custo_mensal, qtd_display, qualidade, observacao, logo_url, instagram_handle, social_url, ativo } = body;
+        const { nome, custo_mensal, qtd_display, qualidade, observacao, logo_url, instagram_handle, social_url, ativo, merchant } = body;
 
         if (!nome) return NextResponse.json({ error: 'Nome required' }, { status: 400 });
 
-        const payload: any = { nome, ativo: ativo ?? true };
+        const payload: any = { 
+            nome, 
+            ativo: ativo ?? true,
+            merchant: merchant ?? false
+        };
 
         // Only include fields if they are explicitly provided in the request
         if (custo_mensal !== undefined && custo_mensal !== '') payload.custo_mensal = custo_mensal;
@@ -45,6 +49,7 @@ export async function POST(req: Request) {
         if (instagram_handle !== undefined && instagram_handle !== '') payload.instagram_handle = instagram_handle;
         if (social_url !== undefined && social_url !== '') payload.social_url = social_url;
         if (ativo !== undefined) payload.ativo = ativo;
+        if (merchant !== undefined) payload.merchant = merchant;
 
         const { data, error } = await supabase
             .from('studios')

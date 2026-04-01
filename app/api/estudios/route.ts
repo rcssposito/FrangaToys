@@ -12,7 +12,7 @@ export async function GET(req: Request) {
             .select('*, figuras(count)');
         
         if (!incluirInativos) {
-            query = query.eq('ativo', true);
+            query = query.eq('merchant', true);
         }
 
         const { data, error } = await query.order('nome', { ascending: true });

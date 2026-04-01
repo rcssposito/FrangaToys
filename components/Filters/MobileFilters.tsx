@@ -23,7 +23,7 @@ interface MobileFiltersProps {
 }
 
 export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: MobileFiltersProps) => {
-    const { data: estudios } = useEstudios();
+    const { data: estudios } = useEstudios(true);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [localSearch, setLocalSearch] = useState(filters.q || '');
     const [debouncedSearch, setDebouncedSearch] = useState(filters.q || '');

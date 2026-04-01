@@ -16,7 +16,7 @@ interface FiltersProps {
 }
 
 export const DesktopFilters = ({ filters, onChange, categories }: FiltersProps) => {
-    const { data: estudios } = useEstudios();
+    const { data: estudios } = useEstudios(true);
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [localSearch, setLocalSearch] = useState(filters.q || '');
     const [debouncedSearch, setDebouncedSearch] = useState(filters.q || '');

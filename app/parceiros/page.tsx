@@ -13,6 +13,7 @@ interface Studio {
     social_url?: string;
     qualidade?: number;
     ativo?: boolean;
+    merchant?: boolean;
 }
 
 export default function PartnersPage() {
@@ -97,18 +98,18 @@ export default function PartnersPage() {
                         {studios.map((studio) => (
                             <div key={studio.id} className={clsx(
                                 "group relative flex flex-col gap-6 transition-all duration-700",
-                                !studio.ativo && "opacity-60 saturate-50 grayscale-[0.8] hover:grayscale-0"
+                                !studio.merchant && "opacity-60 saturate-50 grayscale-[0.8] hover:grayscale-0"
                             )}>
                                 {/* The Card wrapper - links to catalog */}
                                 <Link 
                                     href={`/?studioIds=${studio.id}&incluirNaoVendaveis=true`} 
                                     className={clsx(
                                         "block relative aspect-square bg-zinc-900/30 backdrop-blur-xl border rounded-[2.5rem] overflow-hidden p-10 transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,1)] group-hover:-translate-y-2",
-                                        studio.ativo ? "border-zinc-800/80 hover:border-blue-500/40" : "border-zinc-900"
+                                        studio.merchant ? "border-zinc-800/80 hover:border-blue-500/40" : "border-zinc-900"
                                     )}
                                 >
                                     {/* Inner Gradient Glow */}
-                                    {studio.ativo && (
+                                    {studio.merchant && (
                                         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                                     )}
                                     
@@ -119,13 +120,13 @@ export default function PartnersPage() {
                                             alt={studio.nome}
                                             className={clsx(
                                                 "max-w-full max-h-full object-contain filter group-hover:grayscale-0 transition-all duration-700 scale-95 group-hover:scale-100",
-                                                studio.ativo ? "grayscale group-hover:opacity-100 opacity-60" : "grayscale opacity-30"
+                                                studio.merchant ? "grayscale group-hover:opacity-100 opacity-60" : "grayscale opacity-30"
                                             )}
                                         />
                                     </div>
 
-                                    {/* Status Badge for inactive */}
-                                    {!studio.ativo && (
+                                    {/* Status Badge for inactive merchant */}
+                                    {!studio.merchant && (
                                         <div className="absolute top-8 right-8 bg-zinc-800/80 backdrop-blur px-3 py-1 rounded-full border border-zinc-700/50">
                                             <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Inativo</span>
                                         </div>
@@ -135,7 +136,7 @@ export default function PartnersPage() {
                                     <div className="absolute inset-x-0 bottom-8 flex justify-center opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500">
                                         <div className={clsx(
                                             "text-black text-[9px] font-black tracking-widest uppercase px-5 py-2 rounded-full shadow-2xl flex items-center gap-2",
-                                            studio.ativo ? "bg-white" : "bg-zinc-400"
+                                            studio.merchant ? "bg-white" : "bg-zinc-400"
                                         )}>
                                             Ver Acervo <ExternalLink size={10} />
                                         </div>
@@ -147,7 +148,7 @@ export default function PartnersPage() {
                                     <div className="flex flex-col gap-0.5">
                                         <h3 className={clsx(
                                             "text-sm font-black tracking-widest uppercase",
-                                            studio.ativo ? "text-zinc-300" : "text-zinc-500"
+                                            studio.merchant ? "text-zinc-300" : "text-zinc-500"
                                         )}>{studio.nome}</h3>
                                         <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-tighter">Artista / Parceiro</p>
                                     </div>

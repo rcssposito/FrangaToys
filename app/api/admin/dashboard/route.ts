@@ -74,7 +74,7 @@ export async function GET(req: Request) {
         // 3. Fetch Studio Details
         const { data: studios, error: studiosError } = await supabase
             .from('studios')
-            .select('nome, custo_mensal, qtd_display, figuras(id, imagem_url, series:series(nome, categorias:categorias(nome, id)), figuras_meta(escala, resina_kg, horas_pintura))');
+            .select('nome, custo_mensal, qtd_display, ativo, figuras(id, imagem_url, series:series(nome, categorias:categorias(nome, id)), figuras_meta(escala, resina_kg, horas_pintura))');
 
         if (studiosError) throw studiosError;
 
@@ -158,7 +158,8 @@ export async function GET(req: Request) {
         };
 
         // --- Financial Ratios ---
-        const monthlyFixedCost = studios.reduce((acc, s) => acc + (s.custo_mensal || 0), 0);
+        const activeStudios = (studios || []).filter(s => s.ativo === true);
+        const monthlyFixedCost = activeStudios.reduce((acc, s) => acc + (s.custo_mensal || 0), 0);
         let costMultiplier = 1;
         if (dayDiff > 300) costMultiplier = 12;
         const totalFixedCost = monthlyFixedCost * costMultiplier;
@@ -365,11 +366,11 @@ export async function GET(req: Request) {
             .map(([name, data]) => ({ name, value: data.itemsSold }))
             .sort((a, b) => b.value - a.value);
 
-        const costByStudio = studios
+        const costByStudio = activeStudios
             .map(s => ({ name: s.nome, value: s.custo_mensal || 0 }))
-            .sort((a, b) => b.value - a.value);
+            .sort((a: any, b: any) => b.value - a.value);
 
-        const revenueVsCost = studios.map(s => {
+        const revenueVsCost = activeStudios.map(s => {
             const revenue = studioSalesMap[s.nome]?.revenue || 0;
             return {
                 name: s.nome,
@@ -378,7 +379,7 @@ export async function GET(req: Request) {
             };
         })
             .filter(i => i.revenue > 0 || i.cost > 0)
-            .sort((a, b) => b.revenue - a.revenue);
+            .sort((a: any, b: any) => b.revenue - a.revenue);
 
         // Map aggregated maps to arrays for charts
         const salesByCategory = Object.entries(categorySalesMap)

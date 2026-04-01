@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { ArrowLeft, Save, DollarSign, Star, Box, Loader2, Trash, Plus, Instagram, Globe, ExternalLink, Search, ImageIcon } from 'lucide-react';
+import { ArrowLeft, Save, DollarSign, Star, Box, Loader2, Trash, Plus, Instagram, Globe, ExternalLink, Search, ImageIcon, Sparkles, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import { useRouter } from 'next/navigation';
@@ -20,6 +20,7 @@ interface Studio {
     instagram_handle?: string;
     social_url?: string;
     ativo?: boolean;
+    merchant?: boolean;
     figuras?: { count: number }[];
 }
 
@@ -50,7 +51,7 @@ export default function StudiosPage() {
 
     const fetchStudios = async () => {
         try {
-            const res = await fetch('/api/estudios', { cache: 'no-store' });
+            const res = await fetch('/api/estudios?incluirInativos=true', { cache: 'no-store' });
             const data = await res.json();
             if (res.ok) setStudios(data);
         } catch (error) {
@@ -160,6 +161,51 @@ export default function StudiosPage() {
                     </div>
                 </div>
 
+                {/* Financial Summary */}
+                {!loading && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                        <div className="bg-zinc-900/30 border border-zinc-800/80 rounded-[2rem] p-6 flex items-center gap-6 backdrop-blur-sm relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+                                <DollarSign size={24} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Custo Mensal Ativo</p>
+                                <h3 className="text-2xl font-black text-white tracking-tighter">
+                                    R$ {studios.filter(s => s.ativo).reduce((acc, s) => acc + (Number(s.custo_mensal) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </h3>
+                            </div>
+                        </div>
+
+                        <div className="bg-zinc-900/30 border border-zinc-800/80 rounded-[2rem] p-6 flex items-center gap-6 backdrop-blur-sm relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500">
+                                <Box size={24} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Total de Parceiros</p>
+                                <h3 className="text-2xl font-black text-white tracking-tighter">
+                                    {studios.length} <span className="text-xs font-bold text-zinc-600 ml-1">({studios.filter(s => s.ativo).length} ativos | {studios.filter(s => s.merchant).length} merchants)</span>
+                                </h3>
+                            </div>
+                        </div>
+
+                        <div className="bg-zinc-900/30 border border-zinc-800/80 rounded-[2rem] p-6 flex items-center gap-6 backdrop-blur-sm relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
+                                <Sparkles size={24} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Acervo Ativo</p>
+                                <h3 className="text-2xl font-black text-white tracking-tighter">
+                                    {studios.filter(s => s.merchant).reduce((acc, s) => acc + (s.figuras?.[0]?.count || 0), 0)} 
+                                    <span className="text-sm font-bold text-zinc-600 ml-1">figuras</span>
+                                </h3>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {loading ? (
                     <div className="py-24 flex justify-center w-full"><Loader2 className="animate-spin text-blue-500 w-12 h-12" /></div>
                 ) : (
@@ -199,11 +245,10 @@ export default function StudiosPage() {
                                             {!studio.ativo && <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-[8px] font-black uppercase text-white/50 tracking-widest">OFF</div>}
                                         </div>
                                         <div className="flex flex-col">
-                                            <div className="font-black text-xl tracking-tight text-white line-clamp-1 flex items-center gap-2">
+                                            <div className="font-black text-lg tracking-tight text-white line-clamp-2 leading-tight flex items-center gap-2">
                                                 {studio.nome}
-                                                {!studio.ativo && <span className="text-[8px] px-1.5 py-0.5 bg-zinc-800 text-zinc-500 rounded-md font-black uppercase tracking-widest">Inativo</span>}
                                             </div>
-                                            <div className="flex gap-2">
+                                            <div className="flex gap-2 mt-1">
                                                 {studio.instagram_handle && (
                                                     <a href={`https://instagram.com/${studio.instagram_handle.replace('@', '')}`} target="_blank" className="text-zinc-600 hover:text-pink-500 transition-colors">
                                                         <Instagram size={14} />
@@ -217,8 +262,28 @@ export default function StudiosPage() {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex gap-3 items-center">
-                                        {/* Status Toggle */}
+                                    <div className="flex gap-2 items-center">
+                                        {/* Merchant Toggle (Venda/Vitrine) */}
+                                        <button 
+                                            onClick={() => {
+                                                const newVal = !studio.merchant;
+                                                handleChange(studio.id, 'merchant', newVal);
+                                                handleUpdate({ ...studio, merchant: newVal });
+                                            }}
+                                            className={clsx(
+                                                "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 border",
+                                                studio.merchant 
+                                                    ? "bg-purple-500/10 border-purple-500/40 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.2)]" 
+                                                    : "bg-zinc-900 border-zinc-800 text-zinc-700"
+                                            )}
+                                            title={studio.merchant ? "Merchant: Visível na Vitrine" : "Merchant: Oculto da Vitrine"}
+                                        >
+                                            <ShoppingBag size={18} />
+                                        </button>
+
+                                        <div className="h-4 w-px bg-zinc-800 mx-1" />
+
+                                        {/* Status Toggle (Custo/Operação) */}
                                         <button 
                                             onClick={() => {
                                                 const newVal = !studio.ativo;
@@ -229,6 +294,7 @@ export default function StudiosPage() {
                                                 "w-11 h-6 rounded-full p-1 transition-all duration-300 relative",
                                                 studio.ativo ? "bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.4)]" : "bg-zinc-800"
                                             )}
+                                            title={studio.ativo ? "Ativo: Gerando Custo" : "Inativo: Operação Pausada"}
                                         >
                                             <div className={clsx(
                                                 "w-4 h-4 bg-white rounded-full transition-all duration-300 shadow-md",
