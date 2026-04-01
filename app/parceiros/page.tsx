@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, ArrowLeft, ExternalLink, Instagram, Globe, Sparkles } from 'lucide-react';
+import { Loader2, ArrowLeft, ExternalLink, Instagram, Globe, Sparkles, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
+import { clsx } from 'clsx';
 
 interface Studio {
     id: number;
@@ -17,11 +18,13 @@ interface Studio {
 export default function PartnersPage() {
     const [studios, setStudios] = useState<Studio[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showInactive, setShowInactive] = useState(false);
 
     useEffect(() => {
         const fetchStudios = async () => {
+            setLoading(true);
             try {
-                const res = await fetch('/api/estudios');
+                const res = await fetch(`/api/estudios?incluirInativos=${showInactive}`);
                 const data = await res.json();
                 if (res.ok) {
                     setStudios(data);
@@ -33,9 +36,9 @@ export default function PartnersPage() {
             }
         };
         fetchStudios();
-    }, []);
+    }, [showInactive]);
 
-    if (loading) {
+    if (loading && studios.length === 0) {
         return (
             <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
                 <Loader2 className="animate-spin text-blue-500 w-10 h-10" />
@@ -53,12 +56,27 @@ export default function PartnersPage() {
             <div className="max-w-7xl mx-auto relative z-10">
                 {/* Header Section */}
                 <div className="flex flex-col gap-6 mb-20">
-                    <Link href="/" className="inline-flex items-center gap-3 text-zinc-500 hover:text-white transition-all text-[11px] font-black tracking-widest group">
-                        <div className="p-2 bg-zinc-900 rounded-xl border border-zinc-800 group-hover:border-blue-500/30 group-hover:bg-blue-500/10 group-hover:text-blue-400 transition-all">
-                            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                        </div>
-                        VOLTAR PARA A LOJA
-                    </Link>
+                    <div className="flex justify-between items-start">
+                        <Link href="/" className="inline-flex items-center gap-3 text-zinc-500 hover:text-white transition-all text-[11px] font-black tracking-widest group">
+                            <div className="p-2 bg-zinc-900 rounded-xl border border-zinc-800 group-hover:border-blue-500/30 group-hover:bg-blue-500/10 group-hover:text-blue-400 transition-all">
+                                <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                            </div>
+                            VOLTAR PARA A LOJA
+                        </Link>
+
+                        <button 
+                            onClick={() => setShowInactive(!showInactive)}
+                            className={clsx(
+                                "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all text-[10px] font-black uppercase tracking-widest",
+                                showInactive 
+                                    ? "bg-blue-500/10 border-blue-500/40 text-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.1)]" 
+                                    : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700"
+                            )}
+                        >
+                            {showInactive ? <EyeOff size={14} /> : <Eye size={14} />}
+                            {showInactive ? "Ocultar Arquivo" : "Ver Todos"}
+                        </button>
+                    </div>
                     
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
                         <div className="space-y-4">
@@ -77,27 +95,48 @@ export default function PartnersPage() {
                 {studios.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                         {studios.map((studio) => (
-                            <div key={studio.id} className="group relative flex flex-col gap-6">
+                            <div key={studio.id} className={clsx(
+                                "group relative flex flex-col gap-6 transition-all duration-700",
+                                !studio.ativo && "opacity-60 saturate-50 grayscale-[0.8] hover:grayscale-0"
+                            )}>
                                 {/* The Card wrapper - links to catalog */}
                                 <Link 
                                     href={`/?studioIds=${studio.id}&incluirNaoVendaveis=true`} 
-                                    className="block relative aspect-square bg-zinc-900/30 backdrop-blur-xl border border-zinc-800/80 rounded-[2.5rem] overflow-hidden p-10 hover:border-blue-500/40 transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,1)] group-hover:-translate-y-2"
+                                    className={clsx(
+                                        "block relative aspect-square bg-zinc-900/30 backdrop-blur-xl border rounded-[2.5rem] overflow-hidden p-10 transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,1)] group-hover:-translate-y-2",
+                                        studio.ativo ? "border-zinc-800/80 hover:border-blue-500/40" : "border-zinc-900"
+                                    )}
                                 >
                                     {/* Inner Gradient Glow */}
-                                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                                    {studio.ativo && (
+                                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                                    )}
                                     
                                     {/* Logo Container */}
                                     <div className="relative w-full h-full flex items-center justify-center">
                                         <img 
                                             src={studio.logo_url} 
                                             alt={studio.nome}
-                                            className="max-w-full max-h-full object-contain filter grayscale group-hover:grayscale-0 transition-all duration-700 opacity-60 group-hover:opacity-100 scale-95 group-hover:scale-100"
+                                            className={clsx(
+                                                "max-w-full max-h-full object-contain filter group-hover:grayscale-0 transition-all duration-700 scale-95 group-hover:scale-100",
+                                                studio.ativo ? "grayscale group-hover:opacity-100 opacity-60" : "grayscale opacity-30"
+                                            )}
                                         />
                                     </div>
 
+                                    {/* Status Badge for inactive */}
+                                    {!studio.ativo && (
+                                        <div className="absolute top-8 right-8 bg-zinc-800/80 backdrop-blur px-3 py-1 rounded-full border border-zinc-700/50">
+                                            <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Inativo</span>
+                                        </div>
+                                    )}
+
                                     {/* Link Action Indicator */}
                                     <div className="absolute inset-x-0 bottom-8 flex justify-center opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500">
-                                        <div className="bg-white text-black text-[9px] font-black tracking-widest uppercase px-5 py-2 rounded-full shadow-2xl flex items-center gap-2">
+                                        <div className={clsx(
+                                            "text-black text-[9px] font-black tracking-widest uppercase px-5 py-2 rounded-full shadow-2xl flex items-center gap-2",
+                                            studio.ativo ? "bg-white" : "bg-zinc-400"
+                                        )}>
                                             Ver Acervo <ExternalLink size={10} />
                                         </div>
                                     </div>
@@ -106,7 +145,10 @@ export default function PartnersPage() {
                                 {/* Footer Data & Socials */}
                                 <div className="px-4 flex items-center justify-between">
                                     <div className="flex flex-col gap-0.5">
-                                        <h3 className="text-sm font-black tracking-widest uppercase text-zinc-300">{studio.nome}</h3>
+                                        <h3 className={clsx(
+                                            "text-sm font-black tracking-widest uppercase",
+                                            studio.ativo ? "text-zinc-300" : "text-zinc-500"
+                                        )}>{studio.nome}</h3>
                                         <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-tighter">Artista / Parceiro</p>
                                     </div>
                                     <div className="flex gap-2">
@@ -137,27 +179,9 @@ export default function PartnersPage() {
                     </div>
                 ) : (
                     <div className="py-40 bg-zinc-900/10 border-2 border-dashed border-zinc-900 rounded-[3rem] flex flex-col items-center justify-center gap-4">
-                        <p className="text-zinc-700 font-black text-xs tracking-[0.4em] uppercase">Aguardando curadoria de elite</p>
+                        <p className="text-zinc-700 font-black text-xs tracking-[0.4em] uppercase">Nenhum parceiro encontrado</p>
                     </div>
                 )}
-
-                {/* Decorative Statement */}
-                <div className="mt-40 pt-16 border-t border-zinc-900/50 flex flex-col md:flex-row justify-between items-center gap-10">
-                    <div className="flex gap-16">
-                        <div className="flex flex-col gap-2">
-                            <span className="text-[10px] font-black tracking-[0.2em] text-zinc-600 uppercase">Qualidade</span>
-                            <span className="text-lg font-bold text-zinc-400 italic">Museum Grade</span>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                            <span className="text-[10px] font-black tracking-[0.2em] text-zinc-600 uppercase">Edições</span>
-                            <span className="text-lg font-bold text-zinc-400 italic">Strictly Limited</span>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                        <div className="w-20 h-px bg-zinc-800" />
-                        <span className="text-sm font-black text-blue-500/50 uppercase tracking-[0.3em]">FrangaToys Curated</span>
-                    </div>
-                </div>
             </div>
         </div>
     );

@@ -2,13 +2,20 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { EstudioSchema } from '@/lib/dto';
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
-        const { data, error } = await supabase
+        const { searchParams } = new URL(req.url);
+        const incluirInativos = searchParams.get('incluirInativos') === 'true';
+
+        let query = supabase
             .from('studios')
-            .select('*, figuras(count)')
-            .eq('ativo', true)
-            .order('nome', { ascending: true });
+            .select('*, figuras(count)');
+        
+        if (!incluirInativos) {
+            query = query.eq('ativo', true);
+        }
+
+        const { data, error } = await query.order('nome', { ascending: true });
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });
