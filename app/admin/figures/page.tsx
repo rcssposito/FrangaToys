@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { toast } from 'sonner';
 import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus, ChevronDown, ChevronUp, LayoutGrid, List } from 'lucide-react';
 import Link from 'next/link';
@@ -254,7 +254,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 
 // ... (tipagens permanecem as mesmas)
 
-export default function DataGridPage() {
+function DataGridContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const studioParam = searchParams.get('studio');
@@ -862,5 +862,17 @@ export default function DataGridPage() {
                 )
             }
         </div >
+    );
+}
+
+export default function DataGridPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-black flex items-center justify-center">
+                <Loader2 className="animate-spin text-orange-500" />
+            </div>
+        }>
+            <DataGridContent />
+        </Suspense>
     );
 }

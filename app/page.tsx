@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { DesktopFilters } from '@/components/Filters/DesktopFilters';
 import { MobileFilters } from '@/components/Filters/MobileFilters';
@@ -10,7 +10,7 @@ import { CartIndicator } from '@/components/Cart/CartIndicator';
 import { CartDrawer } from '@/components/Cart/CartDrawer';
 import { FiltersSchema, FiguraDTO } from '@/lib/dto';
 import { z } from 'zod';
-import { Settings, ListFilter, MoveUp, MoveDown, Sparkles } from 'lucide-react';
+import { Settings, ListFilter, MoveUp, MoveDown, Sparkles, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useFiguras } from '@/hooks/useFiguras';
 import { clsx } from 'clsx';
@@ -21,7 +21,7 @@ type FilterState = z.infer<typeof FiltersSchema>;
 
 const CATEGORIES = ['Anime', 'Games', 'Marvel', 'DC', 'Random'];
 
-export default function Home() {
+function HomeContent() {
   const searchParams = useSearchParams();
   const studioParam = searchParams.get('studioIds');
   const showAllParam = searchParams.get('incluirNaoVendaveis');
@@ -171,3 +171,16 @@ export default function Home() {
     </main>
   );
 }
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loader2 className="animate-spin text-blue-500" size={40} />
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
