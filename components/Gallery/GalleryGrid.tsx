@@ -3,8 +3,7 @@
 import { useFiguras } from '@/hooks/useFiguras';
 import { FiltersSchema, FiguraDTO } from '@/lib/dto';
 import { z } from 'zod';
-import { DesktopCard } from '@/components/cards/DesktopCard';
-import { MobileCard } from '@/components/cards/MobileCard';
+import { FigureCard } from '@/components/Gallery/FigureCard';
 import { useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 
@@ -64,20 +63,13 @@ export const GalleryGrid = ({ filters }: GalleryGridProps) => {
 
     return (
         <div className="pb-20">
-            <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
                 {data.pages.map((page, i) => (
                     page.items.map((figure) => (
-                        <div key={figure.id}>
-                            <MobileCard
-                                figure={figure}
-                                className="block sm:hidden"
-                            />
-                            <div className="hidden sm:block">
-                                <DesktopCard
-                                    figure={figure}
-                                />
-                            </div>
-                        </div>
+                        <FigureCard 
+                            key={figure.id} 
+                            figure={figure} 
+                        />
                     ))
                 ))}
             </div>

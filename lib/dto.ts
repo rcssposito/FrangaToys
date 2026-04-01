@@ -19,8 +19,16 @@ export const FiguraSchema = z.object({
   altura_cm: z.number().nullable().optional(),
   largura_cm: z.number().nullable().optional(),
   profundidade_cm: z.number().nullable().optional(),
+  resina_kg: z.number().nullable().optional(),
+  horas_impressao: z.number().nullable().optional(),
+  horas_pintura: z.number().nullable().optional(),
   slug: z.string().nullable().optional(),
   preco: z.number().nullable().optional(),
+  precos: z.object({
+    estilizado: z.number(),
+    colorido: z.number(),
+    premium: z.number(),
+  }).optional(),
   tem_extras: z.boolean().nullable().optional(),
 });
 

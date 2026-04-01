@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Trash2, Send, ChevronLeft, User, Phone, MessageSquare } from 'lucide-react';
+import { X, Trash2, Send, ChevronLeft, User, Phone, MessageSquare, ChevronRight } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
@@ -62,6 +62,19 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
         return () => document.removeEventListener('mousedown', handleClick);
     }, [isOpen, onClose]);
 
+    const formatPrice = (val?: number) => {
+        if (!val) return 'Sob consulta';
+        return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    const getFinishLabel = (finish: string) => {
+        switch (finish) {
+            case 'colorido': return 'Pintura Colorida';
+            case 'premium': return 'Premium / 2D';
+            default: return 'Pintura Estilizada';
+        }
+    };
+
     const handleCheckout = () => {
         if (items.length === 0) return;
         if (!nome) {
@@ -83,7 +96,7 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
         items.forEach((item, index) => {
             msg += `*${index + 1}. ${item.nome}*\n`;
             msg += `   Quantidade: ${item.quantity}\n`;
-            msg += `   Acabamento: ${item.finish === 'basic' ? 'Básico' : 'Premium'}\n`;
+            msg += `   Acabamento: ${getFinishLabel(item.finish)}\n`;
             if (item.categoria) msg += `   Categoria: ${item.categoria}\n`;
             if (item.studio) msg += `   Estúdio: ${item.studio}\n`;
             msg += `\n`;
@@ -112,7 +125,7 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.3 }}
-                        className="fixed inset-0 bg-[var(--background)]/60 backdrop-blur-md z-[60]"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-md z-[60]"
                     />
 
                     {/* Drawer */}
@@ -122,16 +135,16 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="fixed inset-y-0 right-0 w-full max-w-md bg-[var(--card-bg)] border-l border-[var(--card-border)] shadow-[var(--shadow-xl)] z-[70] flex flex-col transition-all duration-300"
+                        className="fixed inset-y-0 right-0 w-full max-w-md bg-[#09090b] border-l border-zinc-800 shadow-2xl z-[70] flex flex-col transition-all duration-300"
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between p-6 border-b border-[var(--card-border)] bg-[var(--background)]/10">
+                        <div className="flex items-center justify-between p-6 border-b border-zinc-800 bg-black/20">
                             {step === 'cart' ? (
                                 <div>
-                                    <h2 className="text-xl font-black text-orange-500 uppercase tracking-tighter">
+                                    <h2 className="text-xl font-black text-white uppercase tracking-tighter">
                                         Seu Orçamento
                                     </h2>
-                                    <p className="text-xs font-bold text-[var(--text-muted)] tracking-widest uppercase mt-0.5">
+                                    <p className="text-xs font-bold text-zinc-500 tracking-widest uppercase mt-0.5">
                                         {totalItems} {totalItems === 1 ? 'item' : 'itens'} adicionados
                                     </p>
                                 </div>
@@ -139,15 +152,15 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                                 <div className="flex items-center gap-3">
                                     <button
                                         onClick={() => setStep('cart')}
-                                        className="p-2 hover:bg-[var(--input-bg)] rounded-xl text-[var(--text-muted)] transition-colors active:scale-95"
+                                        className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-400 transition-colors active:scale-95"
                                     >
                                         <ChevronLeft size={20} strokeWidth={2.5} />
                                     </button>
                                     <div>
-                                        <h2 className="text-xl font-black text-orange-500 uppercase tracking-tighter">
+                                        <h2 className="text-xl font-black text-white uppercase tracking-tighter">
                                             Finalizar Pedido
                                         </h2>
-                                        <p className="text-xs font-bold text-[var(--text-muted)] tracking-widest uppercase mt-0.5">
+                                        <p className="text-xs font-bold text-zinc-500 tracking-widest uppercase mt-0.5">
                                             Dados para contato
                                         </p>
                                     </div>
@@ -156,7 +169,7 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
 
                             <button
                                 onClick={onClose}
-                                className="p-2.5 bg-[var(--input-bg)] hover:text-orange-500 rounded-xl text-[var(--text-muted)] border border-[var(--card-border)] transition-all active:scale-90"
+                                className="p-2.5 bg-zinc-900 hover:text-white rounded-xl text-zinc-500 border border-zinc-800 transition-all active:scale-90"
                             >
                                 <X size={20} strokeWidth={2.5} />
                             </button>
@@ -174,11 +187,11 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                                         className="space-y-4"
                                     >
                                         {items.length === 0 ? (
-                                            <div className="h-full min-h-[50vh] flex flex-col items-center justify-center text-[var(--text-muted)] gap-4">
-                                                <div className="w-20 h-20 bg-orange-500/5 rounded-full flex items-center justify-center border border-orange-500/10 shadow-inner">
-                                                    <Trash2 size={32} className="text-orange-500/50" strokeWidth={1.5} />
+                                            <div className="h-full min-h-[50vh] flex flex-col items-center justify-center text-zinc-600 gap-4">
+                                                <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center border border-white/10 shadow-inner">
+                                                    <Trash2 size={32} className="text-zinc-600" strokeWidth={1.5} />
                                                 </div>
-                                                <p className="font-bold tracking-tight text-sm">Seu carrinho está vazio.</p>
+                                                <p className="font-bold tracking-tight text-sm uppercase tracking-widest">Carrinho vazio</p>
                                             </div>
                                         ) : (
                                             items.map((item) => (
@@ -188,10 +201,10 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                                                     initial={{ opacity: 0, scale: 0.95 }}
                                                     animate={{ opacity: 1, scale: 1 }}
                                                     exit={{ opacity: 0, scale: 0.95 }}
-                                                    className="flex flex-col gap-3 bg-[var(--input-bg)] p-4 rounded-2xl border border-[var(--card-border)] shadow-sm group hover:border-orange-500/30 transition-all"
+                                                    className="flex flex-col gap-3 bg-zinc-900/50 p-4 rounded-3xl border border-zinc-800 shadow-sm group hover:border-blue-500/20 transition-all"
                                                 >
                                                     <div className="flex gap-4">
-                                                        <div className="relative w-20 h-20 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl flex-shrink-0 overflow-hidden shadow-inner group-hover:border-orange-500/20 transition-colors">
+                                                        <div className="relative w-16 h-16 bg-black border border-zinc-800 rounded-2xl flex-shrink-0 overflow-hidden shadow-inner group-hover:border-blue-500/10 transition-colors">
                                                             <Image
                                                                 loader={imageKitLoader}
                                                                 src={getOptimizedImageUrl(item.imagem_url)}
@@ -203,14 +216,14 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                                                         <div className="flex-1 min-w-0 flex flex-col justify-between">
                                                             <div className="flex justify-between items-start gap-2">
                                                                 <div>
-                                                                    <h3 className="font-bold text-[var(--foreground)] truncate text-sm leading-tight">{item.nome}</h3>
-                                                                    <p className="text-[10px] text-[var(--text-muted)] font-black uppercase tracking-wider mt-1 opacity-70">
-                                                                        {item.categoria}
+                                                                    <h3 className="font-black text-white truncate text-sm leading-tight tracking-tight">{item.nome}</h3>
+                                                                    <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mt-1">
+                                                                        {item.studio}
                                                                     </p>
                                                                 </div>
                                                                 <button
                                                                     onClick={() => removeFromCart(item.id)}
-                                                                    className="p-1.5 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all active:scale-90"
+                                                                    className="p-1.5 text-zinc-700 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all active:scale-90"
                                                                     title="Remover"
                                                                 >
                                                                     <Trash2 size={16} strokeWidth={2.5} />
@@ -220,38 +233,48 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                                                     </div>
 
                                                     {/* Controls */}
-                                                    <div className="flex items-center gap-3 pt-3 border-t border-[var(--card-border)]/50 mt-1">
-                                                        <div className="flex items-center gap-2 flex-1">
-                                                            <span className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-wider">QTD</span>
-                                                            <div className="flex items-center bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg shadow-sm overflow-hidden">
-                                                                <button
-                                                                    onClick={() => updateQuantity(item.id, (item.quantity || 1) - 1)}
-                                                                    className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-orange-500 hover:bg-orange-500/10 transition-colors active:bg-orange-500/20 text-lg leading-none"
+                                                    <div className="flex flex-col gap-3 pt-3 border-t border-zinc-800/50 mt-1">
+                                                        <div className="flex items-center justify-between">
+                                                             <div className="flex items-center gap-2">
+                                                                <span className="text-[9px] font-black uppercase text-zinc-600 tracking-widest">Acabamento</span>
+                                                                <select
+                                                                    value={item.finish || 'estilizado'}
+                                                                    onChange={(e) => updateFinish(item.id, e.target.value as any)}
+                                                                    className="text-[10px] font-black bg-black border border-zinc-800 text-white rounded-full py-1 px-3 outline-none focus:border-blue-500/50 shadow-sm cursor-pointer hover:border-blue-500/30 transition-colors uppercase tracking-tighter"
                                                                 >
-                                                                    -
-                                                                </button>
-                                                                <span className="w-8 h-7 flex items-center justify-center text-xs font-bold text-[var(--foreground)] border-x border-[var(--card-border)]">
-                                                                    {item.quantity || 1}
-                                                                </span>
-                                                                <button
-                                                                    onClick={() => updateQuantity(item.id, (item.quantity || 1) + 1)}
-                                                                    className="w-7 h-7 flex items-center justify-center text-[var(--text-muted)] hover:text-orange-500 hover:bg-orange-500/10 transition-colors active:bg-orange-500/20 text-lg leading-none"
-                                                                >
-                                                                    +
-                                                                </button>
+                                                                    <option value="estilizado">Estilizado</option>
+                                                                    <option value="colorido">Colorido</option>
+                                                                    <option value="premium">Premium / 2D</option>
+                                                                </select>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <div className="text-xs font-black text-white tracking-tighter">
+                                                                    {formatPrice(item.precos?.[item.finish || 'estilizado'])}
+                                                                </div>
                                                             </div>
                                                         </div>
 
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-wider">TIPO</span>
-                                                            <select
-                                                                value={item.finish || 'basic'}
-                                                                onChange={(e) => updateFinish(item.id, e.target.value as 'basic' | 'premium')}
-                                                                className="text-xs font-bold bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--foreground)] rounded-lg py-1.5 px-2 outline-none focus:border-orange-500/50 shadow-sm cursor-pointer hover:border-orange-500/30 transition-colors"
-                                                            >
-                                                                <option value="basic">Básico</option>
-                                                                <option value="premium">Premium</option>
-                                                            </select>
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-[9px] font-black uppercase text-zinc-600 tracking-widest">Quantidade</span>
+                                                                <div className="flex items-center bg-black border border-zinc-800 rounded-full shadow-sm overflow-hidden h-7">
+                                                                    <button
+                                                                        onClick={() => updateQuantity(item.id, (item.quantity || 1) - 1)}
+                                                                        className="w-7 h-full flex items-center justify-center text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors active:bg-zinc-700 text-sm leading-none"
+                                                                    >
+                                                                        -
+                                                                    </button>
+                                                                    <span className="w-8 h-full flex items-center justify-center text-[10px] font-black text-white border-x border-zinc-800">
+                                                                        {item.quantity || 1}
+                                                                    </span>
+                                                                    <button
+                                                                        onClick={() => updateQuantity(item.id, (item.quantity || 1) + 1)}
+                                                                        className="w-7 h-full flex items-center justify-center text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors active:bg-zinc-700 text-sm leading-none"
+                                                                    >
+                                                                        +
+                                                                    </button>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </motion.div>
@@ -266,56 +289,55 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                                         exit={{ opacity: 0, x: 20 }}
                                         className="space-y-6 pt-2"
                                     >
-                                        <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-2xl flex flex-col gap-2">
-                                            <h3 className="font-bold text-[var(--foreground)] leading-tight">Quase lá!</h3>
-                                            <p className="text-sm tracking-tight text-[var(--text-muted)] leading-relaxed">
-                                                Preencha seus dados para que possamos enviar o seu orçamento personalizado via WhatsApp.<br /><br />
-                                                Por ser um processo de criação manual e artesanal, o prazo mínimo de entrega é de 30 dias após pagamento.
-                                            </p>
-                                            <p className="text-[10px] tracking-tight text-[var(--text-muted)] italic opacity-80 mt-1">
-                                                *As imagens são pinturas digitais das estátuas e usadas apenas para referências, podendo haver diferenças nos tons e acabamentos finais.
+                                        <div className="bg-blue-500/5 border border-blue-500/20 p-5 rounded-3xl flex flex-col gap-3">
+                                            <h3 className="font-black text-white tracking-tight uppercase tracking-widest text-xs">Atenção ao prazo</h3>
+                                            <p className="text-xs font-medium tracking-tight text-zinc-400 leading-relaxed">
+                                                Por ser um processo de criação manual e artesanal, o prazo mínimo de entrega é de 30 dias após pagamento.<br /><br />
+                                                As cores podem variar levemente conforme o monitor e o processo de pintura física.
                                             </p>
                                         </div>
 
                                         <div className="space-y-4">
-                                            <div className="space-y-1.5 focus-within:text-orange-500 transition-colors">
-                                                <label className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 ml-1">
-                                                    <User size={14} /> Nome *
+                                            <div className="space-y-2 focus-within:text-blue-500 transition-colors">
+                                                <label className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 ml-1 text-zinc-600">
+                                                    <User size={12} /> Seu Nome
                                                 </label>
                                                 <input
                                                     type="text"
                                                     value={nome}
                                                     onChange={(e) => setNome(e.target.value)}
                                                     placeholder="Como gosta de ser chamado"
-                                                    className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] text-[var(--foreground)] rounded-xl px-4 py-3 outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-medium placeholder-[var(--text-muted)]/50"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-bold placeholder-zinc-700 text-sm"
                                                 />
                                             </div>
 
-                                            <div className="space-y-1.5 focus-within:text-orange-500 transition-colors">
-                                                <label className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 ml-1">
-                                                    <User size={14} /> Quem te atendeu? (Opcional)
+                                            <div className="space-y-2 focus-within:text-blue-500 transition-colors">
+                                                <label className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 ml-1 text-zinc-600">
+                                                    <Phone size={12} /> Consultor (Opcional)
                                                 </label>
-                                                <select
-                                                    value={selectedVendedorId}
-                                                    onChange={(e) => setSelectedVendedorId(e.target.value === '' ? '' : Number(e.target.value))}
-                                                    className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] text-[var(--foreground)] rounded-xl px-4 py-3 outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-medium appearance-none"
-                                                >
-                                                    <option value="">Ninguém específico / Atendimento Franga Toys</option>
-                                                    {vendedores.map(v => (
-                                                        <option key={v.id} value={v.id}>{v.nome}</option>
-                                                    ))}
-                                                </select>
+                                                <div className="relative">
+                                                     <select
+                                                        value={selectedVendedorId}
+                                                        onChange={(e) => setSelectedVendedorId(e.target.value === '' ? '' : Number(e.target.value))}
+                                                        className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-bold appearance-none text-sm cursor-pointer"
+                                                    >
+                                                        <option value="">Atendimento Franga Toys</option>
+                                                        {vendedores.map(v => (
+                                                            <option key={v.id} value={v.id}>{v.nome}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
                                             </div>
 
-                                            <div className="space-y-1.5 focus-within:text-orange-500 transition-colors">
-                                                <label className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 ml-1">
-                                                    <MessageSquare size={14} /> Algum detalhe extra?
+                                            <div className="space-y-2 focus-within:text-blue-500 transition-colors">
+                                                <label className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 ml-1 text-zinc-600">
+                                                    <MessageSquare size={12} /> Detalhes Extras
                                                 </label>
                                                 <textarea
                                                     value={observacoes}
                                                     onChange={(e) => setObservacoes(e.target.value)}
-                                                    placeholder="Tamanho específico, ideia de pintura, etc..."
-                                                    className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] text-[var(--foreground)] rounded-xl px-4 py-3 outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-medium placeholder-[var(--text-muted)]/50 min-h-[100px] resize-none"
+                                                    placeholder="Algum detalhe específico?"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-bold placeholder-zinc-700 min-h-[120px] resize-none text-sm"
                                                 />
                                             </div>
                                         </div>
@@ -326,31 +348,30 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
 
                         {/* Footer */}
                         {items.length > 0 && (
-                            <div className="p-6 border-t border-[var(--card-border)] bg-[var(--background)]/30 backdrop-blur-sm space-y-4 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+                            <div className="p-6 border-t border-zinc-800 bg-black/40 backdrop-blur-md space-y-4">
                                 {step === 'cart' ? (
                                     <>
                                         <button
-                                            onClick={clearCart}
-                                            className="w-full py-2 text-xs text-[var(--text-muted)] hover:text-red-500 font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1"
+                                            onClick={() => setStep('checkout')}
+                                            className="w-full bg-white text-black font-black uppercase tracking-[0.2em] py-5 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-[0_15px_40px_rgba(255,255,255,0.1)] active:scale-[0.98] text-xs hover:bg-blue-500 hover:text-white"
                                         >
-                                            <Trash2 size={12} strokeWidth={2.5} />
-                                            Esvaziar carrinho
+                                            Checkout <ChevronRight size={16} />
                                         </button>
                                         <button
-                                            onClick={() => setStep('checkout')}
-                                            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black uppercase tracking-wider py-4 rounded-xl flex items-center justify-center gap-3 transition-all shadow-lg shadow-orange-600/20 active:scale-95"
+                                            onClick={clearCart}
+                                            className="w-full py-1 text-[9px] text-zinc-700 hover:text-red-500 font-black uppercase tracking-widest transition-colors flex items-center justify-center gap-1"
                                         >
-                                            Continuar para Contato
+                                            Limpar lista
                                         </button>
                                     </>
                                 ) : (
                                     <button
                                         onClick={handleCheckout}
                                         disabled={!nome}
-                                        className="w-full bg-[#25D366] hover:bg-[#128C7E] disabled:bg-[var(--card-border)] disabled:text-[var(--text-muted)] text-white font-black uppercase tracking-wider py-4 rounded-xl flex items-center justify-center gap-3 transition-all shadow-lg shadow-[#25D366]/20 active:scale-95 disabled:active:scale-100 disabled:shadow-none"
+                                        className="w-full bg-[#25D366] hover:bg-[#128C7E] disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-black uppercase tracking-[0.2em] py-5 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-[0_15px_40px_rgba(37,211,102,0.2)] active:scale-[0.98] text-xs"
                                     >
-                                        <Send size={20} strokeWidth={2.5} />
-                                        Enviar Pedido
+                                        <Send size={18} />
+                                        Enviar para WhatsApp
                                     </button>
                                 )}
                             </div>

@@ -1,20 +1,19 @@
-
 import { Metadata } from 'next';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { FigureDetails } from '@/components/Gallery/FigureDetails';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { calculateFigurePrices } from '@/lib/pricing';
 
 interface Props {
     params: Promise<{ id: string }>;
 }
 
-// 1. Gerar Metadata Dinâmico para WhatsApp/SEO
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { id } = await params;
 
-    let query = supabase
+    const { data: figure } = await supabase
         .from('figuras')
         .select(`
             nome,
@@ -25,62 +24,57 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         .eq('id', id)
         .single();
 
-    const { data } = await query;
-    const figure = data as any;
-
     if (!figure) return { title: 'Figura não encontrada' };
 
     const title = `${figure.nome} | Franga Toys`;
     const description = `Confira os detalhes de ${figure.nome} ${figure.series?.nome ? `da série ${figure.series.nome}` : ''}. Faça seu orçamento de figuras 3D!`;
-    const imageUrl = figure.imagem_url;
-
+    
     return {
         title,
         description,
-        alternates: {
-            canonical: `https://frangatoys.com.br/figura/${figure.slug || id}`,
-        },
         openGraph: {
             title,
             description,
-            images: imageUrl ? [{ url: imageUrl, width: 1200, height: 1200 }] : [],
-            type: 'website',
-            url: `https://frangatoys.com.br/figura/${figure.slug || id}`,
-        },
-        twitter: {
-            card: 'summary_large_image',
-            title,
-            description,
-            images: imageUrl ? [imageUrl] : [],
+            images: figure.imagem_url ? [{ url: figure.imagem_url }] : [],
         },
     };
 }
 
-// 2. Componente da Página (Server Side)
 export default async function FiguraPage({ params }: Props) {
     const { id } = await params;
 
-    const { data: figure, error } = await supabase
-        .from('figuras')
-        .select(`
-            *,
-            slug,
-            series ( 
-                nome,
-                categorias ( nome )
-            ),
-            figuras_meta ( * ),
-            studios ( nome )
-        `)
-        .eq('id', id)
-        .single();
+    // Fetch figure and pricing params
+    const [figureRes, settingsRes] = await Promise.all([
+        supabase
+            .from('figuras')
+            .select(`
+                *,
+                series ( 
+                    nome,
+                    categorias ( nome )
+                ),
+                figuras_meta ( * ),
+                studios ( nome )
+            `)
+            .eq('id', id)
+            .single(),
+        supabase
+            .from('pricing_params')
+            .select('*')
+            .eq('id', 1)
+            .single()
+    ]);
+
+    const { data: figure, error } = figureRes;
+    const { data: settings } = settingsRes;
 
     if (error || !figure) {
-        console.error("Figure fetch error:", error, "ID:", id);
         notFound();
     }
 
-    // Adaptar dados para o DTO esperado pelo FigureDetails
+    const metaData = Array.isArray(figure.figuras_meta) ? figure.figuras_meta[0] : figure.figuras_meta;
+    const prices = settings && metaData ? calculateFigurePrices(metaData, settings) : undefined;
+
     const figureDto = {
         id: figure.id,
         nome: figure.nome,
@@ -89,39 +83,19 @@ export default async function FiguraPage({ params }: Props) {
         serie: figure.series?.nome,
         categoria: (figure.series as any)?.categorias?.nome,
         studio: (figure as any).studios?.nome,
-        altura_cm: figure.figuras_meta?.altura_cm,
-        largura_cm: figure.figuras_meta?.largura_cm,
-        profundidade_cm: figure.figuras_meta?.profundidade_cm,
-        slug: figure.slug,
+        altura_cm: metaData?.altura_cm,
+        largura_cm: metaData?.largura_cm,
+        profundidade_cm: metaData?.profundidade_cm,
         codigo: figure.codigo,
-    };
-
-    // JSON-LD Structured Data (Product)
-    const jsonLd = {
-        '@context': 'https://schema.org',
-        '@type': 'Product',
-        name: figure.nome,
-        image: figure.imagem_url ? [figure.imagem_url] : [],
-        description: `Figura ${figure.nome} da série ${figure.series?.nome}. Produzida em resina 4k.`,
-        brand: {
-            '@type': 'Brand',
-            name: 'Franga Toys',
-        },
-        offers: {
-            '@type': 'Offer',
-            url: `https://frangatoys.com.br/figura/${figure.id}`,
-            priceCurrency: 'BRL',
-            availability: 'https://schema.org/PreOrder',
-        },
+        precos: prices ? {
+            estilizado: prices.estilizado,
+            colorido: prices.colorido,
+            premium: prices.premium
+        } : undefined
     };
 
     return (
         <div className="min-h-screen bg-black text-white p-4 sm:p-8">
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-            />
-
             <div className="max-w-5xl mx-auto">
                 <Link
                     href="/"

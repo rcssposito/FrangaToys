@@ -7,15 +7,15 @@ import { toast } from 'sonner';
 interface CartItem extends FiguraDTO {
     addedAt: number;
     quantity: number;
-    finish: 'basic' | 'premium';
+    finish: 'estilizado' | 'colorido' | 'premium';
 }
 
 interface CartContextType {
     items: CartItem[];
-    addToCart: (figure: keyof FiguraDTO | FiguraDTO) => void;
+    addToCart: (figure: FiguraDTO, finish?: 'estilizado' | 'colorido' | 'premium') => void;
     removeFromCart: (figureId: number) => void;
     updateQuantity: (figureId: number, quantity: number) => void;
-    updateFinish: (figureId: number, finish: 'basic' | 'premium') => void;
+    updateFinish: (figureId: number, finish: 'estilizado' | 'colorido' | 'premium') => void;
     clearCart: () => void;
     isInCart: (figureId: number) => boolean;
     totalItems: number;
@@ -47,14 +47,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
     }, [items, isInitialized]);
 
-    const addToCart = (figure: keyof FiguraDTO | FiguraDTO) => {
-        // Handle case where figure might be passed loosely, ensure it has id
-        const fig = figure as FiguraDTO;
-        if (items.some(i => i.id === fig.id)) {
+    const addToCart = (figure: FiguraDTO, finish: 'estilizado' | 'colorido' | 'premium' = 'estilizado') => {
+        if (items.some(i => i.id === figure.id)) {
             toast.error('Figura já está no orçamento!');
             return;
         }
-        setItems(prev => [...prev, { ...fig, addedAt: Date.now(), quantity: 1, finish: 'basic' }]);
+        setItems(prev => [...prev, { ...figure, addedAt: Date.now(), quantity: 1, finish }]);
         toast.success('Adicionado ao orçamento!');
     };
 
@@ -68,7 +66,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setItems(prev => prev.map(i => i.id === figureId ? { ...i, quantity } : i));
     };
 
-    const updateFinish = (figureId: number, finish: 'basic' | 'premium') => {
+    const updateFinish = (figureId: number, finish: 'estilizado' | 'colorido' | 'premium') => {
         setItems(prev => prev.map(i => i.id === figureId ? { ...i, finish } : i));
     };
 
@@ -95,3 +93,4 @@ export function useCart() {
     }
     return context;
 }
+
