@@ -19,6 +19,7 @@ const fetchFiguras = async ({ pageParam = 0, queryKey }: any) => {
     if (filters.studioIds) params.set('studioIds', filters.studioIds);
     if (filters.incluirNaoVendaveis) params.set('incluirNaoVendaveis', filters.incluirNaoVendaveis);
     if (filters.novidades) params.set('novidades', filters.novidades);
+    if (filters.sort) params.set('sort', filters.sort);
 
     // Pass 'page' to backend
     params.set('page', pageParam.toString());

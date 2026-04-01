@@ -78,7 +78,6 @@ export const DesktopFilters = ({ filters, onChange, categories }: FiltersProps) 
     const handleClear = () => {
         onChange({
             q: filters.q,
-            novidades: filters.novidades,
             categoria: filters.categoria
         });
     };
@@ -99,15 +98,6 @@ export const DesktopFilters = ({ filters, onChange, categories }: FiltersProps) 
                     placeholder="Buscar por nome, série ou estúdio..."
                     className="w-full px-4 py-3 rounded border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-[var(--text-muted)] shadow-[var(--shadow-sm)] transition-all"
                 />
-                <label className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2 items-center text-sm select-none cursor-pointer">
-                    <input
-                        type="checkbox"
-                        className="accent-orange-500 w-4 h-4"
-                        checked={filters.novidades === 'true'}
-                        onChange={(e) => onChange({ ...filters, novidades: e.target.checked ? 'true' : 'false' })}
-                    />
-                    <span className="text-[var(--text-muted)] font-medium">Novidades</span>
-                </label>
             </div>
 
             {/* 2. Busca Avançada Toggle */}
@@ -129,21 +119,6 @@ export const DesktopFilters = ({ filters, onChange, categories }: FiltersProps) 
             {showAdvanced && (
                 <div className="rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] p-6 animate-in fade-in slide-in-from-top-2 shadow-[var(--shadow-md)]">
 
-                    {/* Sorting */}
-                    <div className="mb-6">
-                        <div className="text-sm text-zinc-400 mb-2 font-medium">Ordenar por</div>
-                        <div className="flex items-center gap-6">
-                            <label className="inline-flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" className="accent-orange-500 w-4 h-4" checked disabled />
-                                <span className="text-white text-sm font-bold">A/Z</span>
-                            </label>
-                            <label className="inline-flex items-center gap-2 cursor-pointer opacity-50">
-                                <input type="checkbox" className="accent-orange-500 w-4 h-4" disabled />
-                                <span className="text-[var(--foreground)] text-sm font-bold">Z/A</span>
-                            </label>
-                            <span className="text-xs text-[var(--text-muted)]">("Novidades" é atalho para ID desc)</span>
-                        </div>
-                    </div>
 
                     {/* Studios */}
                     <div className="mb-6">

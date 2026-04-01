@@ -7,7 +7,8 @@ import { getOptimizedImageUrl } from '@/lib/image-utils';
 import imageKitLoader from '@/lib/image-loader';
 import { useCart } from '@/context/CartContext';
 import { clsx } from 'clsx';
-import { ExternalLink, Share2, Paintbrush, Palette, Crown, CheckCircle2, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ExternalLink, Share2, Paintbrush, Palette, Crown, CheckCircle2, X, HelpCircle, Info, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FigureDetailsProps {
@@ -17,6 +18,7 @@ interface FigureDetailsProps {
 export function FigureDetails({ figure }: FigureDetailsProps) {
     const { addToCart, removeFromCart, isInCart } = useCart();
     const [selectedFinish, setSelectedFinish] = useState<'estilizado' | 'colorido' | 'premium'>('estilizado');
+    const [showInfo, setShowInfo] = useState(false);
 
     const formatPrice = (val?: number) => {
         if (!val) return 'Sob consulta';
@@ -47,9 +49,9 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
     };
 
     const finishOptions = [
-        { id: 'estilizado', label: 'Estilizado', icon: Paintbrush, description: 'Base/Sombra', color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20', price: figure.precos?.estilizado },
-        { id: 'colorido', label: 'Colorido', icon: Palette, description: 'Standard/Full', color: 'text-zinc-400', bg: 'bg-zinc-400/10', border: 'border-zinc-400/20', price: figure.precos?.colorido },
-        { id: 'premium', label: 'Premium', icon: Crown, description: 'Premium/Manual', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', price: figure.precos?.premium },
+        { id: 'estilizado', label: 'Estilizado', icon: Paintbrush, description: 'OSL / Monocromático', color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20', price: figure.precos?.estilizado },
+        { id: 'colorido', label: 'Colorido', icon: Palette, description: 'Fidelidade Total', color: 'text-zinc-400', bg: 'bg-zinc-400/10', border: 'border-zinc-400/20', price: figure.precos?.colorido },
+        { id: 'premium', label: '2D / Premium', icon: Crown, description: 'Estilo Cel-Shaded', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', price: figure.precos?.premium },
     ] as const;
 
     return (
@@ -97,8 +99,63 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                     </div>
 
                     {/* Finish Selector - Square Cards Layout */}
-                    <div className="space-y-2">
-                        <h4 className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.3em] ml-1">Escolha seu acabamento</h4>
+                    <div className="space-y-2 relative">
+                        <div className="flex items-center justify-between ml-1">
+                            <h4 className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.3em]">Escolha seu acabamento</h4>
+                            <button 
+                                onClick={() => setShowInfo(!showInfo)}
+                                className="text-zinc-600 hover:text-blue-500 transition-colors p-1"
+                            >
+                                <HelpCircle size={14} />
+                            </button>
+                        </div>
+
+                        {/* Info Overlay */}
+                        <AnimatePresence>
+                            {showInfo && (
+                                <motion.div 
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    className="absolute inset-x-0 bottom-full mb-4 z-[60] bg-zinc-950/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl overflow-hidden"
+                                >
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 via-blue-500 to-purple-500" />
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h5 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                            <Sparkles size={12} className="text-blue-500" />
+                                            Guia de Pintura
+                                        </h5>
+                                        <button onClick={() => setShowInfo(false)} className="text-zinc-500 hover:text-white">
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div className="flex gap-3">
+                                            <div className="w-1 h-auto bg-amber-500 rounded-full shrink-0" />
+                                            <div>
+                                                <p className="text-[9px] font-black text-amber-500 uppercase tracking-wider mb-0.5">Estilizado</p>
+                                                <p className="text-[10px] text-zinc-400 leading-relaxed font-medium">Arte em contraste. Tons de cinza/prata com efeitos de luz vibrantes (OSL). Realça a escultura.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <div className="w-1 h-auto bg-zinc-400 rounded-full shrink-0" />
+                                            <div>
+                                                <p className="text-[9px] font-black text-zinc-200 uppercase tracking-wider mb-0.5">Colorido</p>
+                                                <p className="text-[10px] text-zinc-400 leading-relaxed font-medium">Fidelidade total. Pintura completa com as cores clássicas e sombreamento de estúdio.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <div className="w-1 h-auto bg-purple-500 rounded-full shrink-0" />
+                                            <div>
+                                                <p className="text-[9px] font-black text-purple-400 uppercase tracking-wider mb-0.5">2D / Premium</p>
+                                                <p className="text-[10px] text-zinc-400 leading-relaxed font-medium">O ápice da arte. Estilos exclusivos como Cel-Shaded (Anime/Hades), transformando a peça em uma ilustração real.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
                         <div className="grid grid-cols-3 gap-2">
                             {finishOptions.map((opt) => (
                                 <button

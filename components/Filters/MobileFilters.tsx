@@ -93,7 +93,6 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
         let count = 0;
         if (filters.studioIds) count += filters.studioIds.split(',').filter(Boolean).length;
         if (filters.incluirNaoVendaveis === 'true') count++;
-        if (filters.novidades === 'true') count++;
         return count;
     };
 
@@ -222,15 +221,6 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
 
                                     {/* Toggles */}
                                     <div className="space-y-4">
-                                        <label className="flex items-center justify-between p-3 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] shadow-sm">
-                                            <span className="font-bold text-sm text-[var(--foreground)]">Apenas Novidades</span>
-                                            <input
-                                                type="checkbox"
-                                                className="accent-orange-500 w-5 h-5"
-                                                checked={filters.novidades === 'true'}
-                                                onChange={(e) => onChange({ ...filters, novidades: e.target.checked ? 'true' : 'false' })}
-                                            />
-                                        </label>
                                         <label className="flex items-center justify-between p-3 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] shadow-sm">
                                             <span className="font-bold text-sm text-[var(--foreground)]">Exibir Indisponíveis</span>
                                             <input
