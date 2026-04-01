@@ -43,6 +43,13 @@ export async function GET(req: Request) {
             const formatted = data.map((item: any) => {
                 const meta = item.figuras_meta || {};
 
+                // Custo Estilizado: Pintura fixa de 20 minutos (0.33h)
+                const custoPinturaEstilizado = 0.33 * (settings.custo_h_pintura || 50);
+                const custoBaseEstilizado =
+                    ((meta.resina_kg || 0) * (settings.custo_resina_kg || 0)) +
+                    ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0)) +
+                    custoPinturaEstilizado;
+
                 const custoBase =
                     ((meta.resina_kg || 0) * (settings.custo_resina_kg || 0)) +
                     ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0)) +
@@ -60,14 +67,15 @@ export async function GET(req: Request) {
                     Figura: item.nome,
                     codigo: item.codigo,
                     studio: item.studios?.nome || 'N/A',
-                    resina_kg: meta.resina_kg || 0, // Adicionado para cálculo de estoque no PDV
+                    resina_kg: meta.resina_kg || 0,
                     horas_pintura: meta.horas_pintura || 0,
                     altura_cm: meta.altura_cm || 0,
                     largura_cm: meta.largura_cm || 0,
                     profundidade_cm: meta.profundidade_cm || 0,
                     custo_producao: custoProducao,
-                    "Básico (R$)": roundTo5(custoBase * settings.margem_basica),
-                    "Premium (R$)": roundTo5(custoBase * settings.margem_premium)
+                    "Estilizado (R$)": roundTo5(custoBaseEstilizado * (settings.margem_pobre || 1.15)),
+                    "Colorido (R$)": roundTo5(custoBase * (settings.margem_basica || 1.30)),
+                    "2D (R$)": roundTo5(custoBase * (settings.margem_premium || 1.60))
                 };
             });
 
@@ -97,6 +105,14 @@ export async function GET(req: Request) {
 
         const formatted = data.map((item: any) => {
             const meta = item.figuras_meta || {};
+
+            // Custo Estilizado: Pintura fixa de 20 minutos (0.33h)
+            const custoPinturaEstilizado = 0.33 * (settings.custo_h_pintura || 50);
+            const custoBaseEstilizado =
+                ((meta.resina_kg || 0) * (settings.custo_resina_kg || 0)) +
+                ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0)) +
+                custoPinturaEstilizado;
+
             const custoBase =
                 ((meta.resina_kg || 0) * (settings.custo_resina_kg || 0)) +
                 ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0)) +
@@ -120,8 +136,9 @@ export async function GET(req: Request) {
                 largura_cm: meta.largura_cm || 0,
                 profundidade_cm: meta.profundidade_cm || 0,
                 custo_producao: custoProducao,
-                "Básico (R$)": roundTo5(custoBase * settings.margem_basica),
-                "Premium (R$)": roundTo5(custoBase * settings.margem_premium)
+                "Estilizado (R$)": roundTo5(custoBaseEstilizado * (settings.margem_pobre || 1.15)),
+                "Colorido (R$)": roundTo5(custoBase * (settings.margem_basica || 1.30)),
+                "2D (R$)": roundTo5(custoBase * (settings.margem_premium || 1.60))
             };
         });
 

@@ -34,6 +34,8 @@ interface PricingSettings {
     custo_resina_kg: number;
     margem_basica: number;
     margem_premium: number;
+    margem_pobre?: number;
+    taxa_cartao?: number;
 }
 
 const FigureMobileCard = ({
@@ -56,16 +58,23 @@ const FigureMobileCard = ({
             </div>
 
             {/* Precos Principais */}
-            <div className="flex justify-between items-center bg-[var(--input-bg)] rounded-lg p-3 border border-[var(--card-border)]">
-                <div className="flex flex-col">
-                    <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-tighter">Básico (Cartão)</span>
-                    <span className="text-sm font-black text-blue-400">R$ {prices.basicCredito}</span>
-                    <span className="text-[10px] font-bold text-[var(--accent-emerald)]">PIX: R$ {prices.basic}</span>
+            <div className="flex flex-col gap-2 bg-[var(--input-bg)] rounded-lg p-3 border border-[var(--card-border)]">
+                <div className="flex justify-between items-center border-b border-[var(--card-border)] pb-2">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-tighter">Estilizado</span>
+                        <span className="text-xs font-black text-blue-400">R$ {prices.basicCredito}</span>
+                        <span className="text-[10px] font-bold text-[var(--accent-emerald)]">PIX: R$ {prices.basic}</span>
+                    </div>
+                    <div className="flex flex-col text-right">
+                        <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-tighter">Colorido</span>
+                        <span className="text-xs font-black text-blue-400">R$ {prices.premiumCredito}</span>
+                        <span className="text-[10px] font-bold text-[var(--accent-fuchsia)]">PIX: R$ {prices.premium}</span>
+                    </div>
                 </div>
-                <div className="flex flex-col text-right">
-                    <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-tighter">Premium (Cartão)</span>
-                    <span className="text-sm font-black text-blue-400">R$ {prices.premiumCredito}</span>
-                    <span className="text-[10px] font-bold text-[var(--accent-fuchsia)]">PIX: R$ {prices.premium}</span>
+                <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-tighter">2D</span>
+                    <span className="text-sm font-black text-orange-500">R$ {prices.twoDCredito}</span>
+                    <span className="text-[10px] font-bold text-orange-500">PIX: R$ {prices.twoD}</span>
                 </div>
             </div>
 
@@ -429,6 +438,12 @@ export default function DataGridPage() {
         const res_kg = Number(f.resina_kg);
         const h_pint = Number(f.horas_pintura);
 
+        // Custo Estilizado: Pintura fixa de 20 minutos (0.33h)
+        const custoBaseEstilizado =
+            (h_imp * settings.custo_h_impressao) +
+            (res_kg * settings.custo_resina_kg) +
+            (0.33 * settings.custo_h_pintura);
+
         const custoBase =
             (h_imp * settings.custo_h_impressao) +
             (res_kg * settings.custo_resina_kg) +
@@ -437,11 +452,17 @@ export default function DataGridPage() {
         // Round up to nearest multiple of 5
         const roundTo5 = (val: number) => Math.ceil(val / 5) * 5;
 
+        const mEstilizado = settings.margem_pobre || 1.15;
+        const mColorido = settings.margem_basica || 1.30;
+        const mTwoD = settings.margem_premium || 1.60;
+
         return {
-            basic: roundTo5(custoBase * settings.margem_basica),
-            premium: roundTo5(custoBase * settings.margem_premium),
-            basicCredito: roundTo5(custoBase * settings.margem_basica * 1.15),
-            premiumCredito: roundTo5(custoBase * settings.margem_premium * 1.15)
+            basic: roundTo5(custoBaseEstilizado * mEstilizado),
+            premium: roundTo5(custoBase * mColorido),
+            twoD: roundTo5(custoBase * mTwoD),
+            basicCredito: roundTo5(custoBaseEstilizado * mEstilizado * (settings.taxa_cartao || 1.15)),
+            premiumCredito: roundTo5(custoBase * mColorido * (settings.taxa_cartao || 1.15)),
+            twoDCredito: roundTo5(custoBase * mTwoD * (settings.taxa_cartao || 1.15))
         };
     };
 
@@ -543,8 +564,9 @@ export default function DataGridPage() {
                                     <th className="px-2 py-4 text-center text-[10px]">H. Pintura</th>
                                     <th className="px-3 py-4 text-center">Medidas (cm)</th>
                                     <th className="px-3 py-4 text-center uppercase">Extras</th>
-                                    <th className="px-4 py-4 text-center text-[var(--accent-emerald)]"><div className="flex flex-col"><span>BÁSICO (CARTÃO)</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
-                                    <th className="px-4 py-4 text-center text-[var(--accent-fuchsia)]"><div className="flex flex-col"><span>PREMIUM (CARTÃO)</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
+                                    <th className="px-4 py-4 text-center text-zinc-400 group-hover:text-zinc-200 transition-colors"><div className="flex flex-col"><span>ESTILIZADO</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
+                                    <th className="px-4 py-4 text-center text-zinc-400 group-hover:text-zinc-200 transition-colors"><div className="flex flex-col"><span>COLORIDO</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
+                                    <th className="px-4 py-4 text-center text-orange-500"><div className="flex flex-col"><span>2D (LUXO)</span><span className="text-[9px] text-orange-600 mt-0.5 uppercase tracking-tighter font-black">PIX (-15%)</span></div></th>
                                     <th className="px-4 py-4 w-[120px] text-right">AÇÕES</th>
                                 </tr>
                             </thead>
@@ -688,15 +710,22 @@ export default function DataGridPage() {
 
                                             <td className="px-4 py-4 text-center">
                                                 <div className="flex flex-col items-center justify-center">
-                                                    <div className="text-[15px] font-black text-blue-400 whitespace-nowrap drop-shadow-sm">R$ {prices.basicCredito}</div>
-                                                    <div className="text-[10px] font-bold text-[var(--accent-emerald)] opacity-90">PIX: R$ {prices.basic}</div>
+                                                    <div className="text-[13px] font-black text-blue-400 whitespace-nowrap">R$ {prices.basicCredito}</div>
+                                                    <div className="text-[10px] font-bold text-[var(--text-muted)]">PIX R$ {prices.basic}</div>
                                                 </div>
                                             </td>
 
                                             <td className="px-4 py-4 text-center">
                                                 <div className="flex flex-col items-center justify-center">
-                                                    <div className="text-[15px] font-black text-blue-400 whitespace-nowrap drop-shadow-sm">R$ {prices.premiumCredito}</div>
-                                                    <div className="text-[10px] font-bold text-[var(--accent-fuchsia)] opacity-90">PIX: R$ {prices.premium}</div>
+                                                    <div className="text-[13px] font-black text-blue-400 whitespace-nowrap">R$ {prices.premiumCredito}</div>
+                                                    <div className="text-[10px] font-bold text-[var(--text-muted)]">PIX R$ {prices.premium}</div>
+                                                </div>
+                                            </td>
+
+                                            <td className="px-4 py-4 text-center bg-orange-500/5">
+                                                <div className="flex flex-col items-center justify-center">
+                                                    <div className="text-[15px] font-black text-orange-500 whitespace-nowrap drop-shadow-sm">R$ {prices.twoDCredito}</div>
+                                                    <div className="text-[10px] font-black text-orange-600">PIX R$ {prices.twoD}</div>
                                                 </div>
                                             </td>
 

@@ -16,6 +16,7 @@ export default function SettingsPage() {
         estoque_resina_kg: 0,
         margem_basica: 0,
         margem_premium: 0,
+        margem_pobre: 0,
         taxa_cartao: 1.15
     });
 
@@ -131,38 +132,48 @@ export default function SettingsPage() {
                     {/* Margens de Lucro */}
                     <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl p-8 shadow-[var(--shadow-md)]">
                         <h2 className="text-xl font-black mb-6 flex items-center gap-3 tracking-tight">
-                            <Percent className="text-orange-500" size={24} /> Margens de Lucro
+                            <Percent className="text-orange-500" size={24} /> Margens de Lucro (HCI Tático)
                         </h2>
                         <div className="grid gap-6 md:grid-cols-2">
                             <div className="space-y-1.5">
-                                <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Margem Básica (Multiplicador)</label>
+                                <label className="block text-xs font-black uppercase tracking-widest text-orange-500 ml-1">Margem Estilizado (15% Lucro)</label>
+                                <input
+                                    type="number" step="0.01"
+                                    value={formData.margem_pobre}
+                                    onChange={e => handleChange('margem_pobre', e.target.value)}
+                                    className="w-full bg-[var(--input-bg)] border border-orange-500/20 rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
+                                />
+                                <p className="text-[10px] text-[var(--text-muted)] font-medium ml-1">Ex: 1.15 = 15% de lucro base (Coluna: margem_pobre)</p>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Margem Colorido (30% Lucro)</label>
                                 <input
                                     type="number" step="0.01"
                                     value={formData.margem_basica}
                                     onChange={e => handleChange('margem_basica', e.target.value)}
                                     className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
                                 />
-                                <p className="text-[10px] text-[var(--text-muted)] font-medium ml-1">Ex: 1.4 = 40% de lucro final</p>
+                                <p className="text-[10px] text-[var(--text-muted)] font-medium ml-1">Ex: 1.30 = 30% de lucro final (Coluna: margem_basica)</p>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Margem Premium (Multiplicador)</label>
+                                <label className="block text-xs font-black uppercase tracking-widest text-orange-500 ml-1">Margem 2D (60% Lucro)</label>
                                 <input
                                     type="number" step="0.01"
-                                    value={formData.margem_premium}
-                                    onChange={e => handleChange('margem_premium', e.target.value)}
-                                    className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
+                                    value={formData.margem_pobre}
+                                    onChange={e => handleChange('margem_pobre', e.target.value)}
+                                    className="w-full bg-[var(--input-bg)] border border-orange-500/20 rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
                                 />
-                                <p className="text-[10px] text-[var(--text-muted)] font-medium ml-1">Ex: 1.8 = 80% de lucro final</p>
+                                <p className="text-[10px] text-[var(--text-muted)] font-medium ml-1">Ex: 1.60 = 60% de lucro (Coluna: margem_premium)</p>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="block text-xs font-black uppercase tracking-widest text-orange-500 ml-1">Taxa Acréscimo Cartão (Multiplicador)</label>
+                                <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Taxa Acréscimo Cartão (Global)</label>
                                 <input
                                     type="number" step="0.01"
                                     value={formData.taxa_cartao}
                                     onChange={e => handleChange('taxa_cartao', e.target.value)}
-                                    className="w-full bg-[var(--input-bg)] border border-orange-500/30 rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
+                                    className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
                                 />
-                                <p className="text-[10px] text-[var(--text-muted)] font-medium ml-1">Ex: 1.15 = 15% de acréscimo no cartão</p>
+                                <p className="text-[10px] text-[var(--text-muted)] font-medium ml-1">Ex: 1.15 = 15% de acréscimo final</p>
                             </div>
                         </div>
                     </div>

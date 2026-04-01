@@ -40,5 +40,6 @@ export const EstudioSchema = z.object({
   qtd_display: z.number().nullable().optional(),
   qualidade: z.number().nullable().optional(),
   observacao: z.string().nullable().optional(),
+  logo_url: z.string().nullable().optional(),
   figuras: z.array(z.object({ count: z.number() })).optional(),
 });

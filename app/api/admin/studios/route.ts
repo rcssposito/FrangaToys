@@ -6,13 +6,13 @@ import { supabaseAdmin as supabase } from '@/lib/supabase';
 export async function PUT(req: Request) {
     try {
         const body = await req.json();
-        const { id, custo_mensal, qtd_display, qualidade, observacao } = body;
+        const { id, custo_mensal, qtd_display, qualidade, observacao, logo_url } = body;
 
         if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
 
         const { data, error } = await supabase
             .from('studios')
-            .update({ custo_mensal, qtd_display, qualidade, observacao })
+            .update({ custo_mensal, qtd_display, qualidade, observacao, logo_url })
             .eq('id', id)
             .select()
             .single();
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     try {
         const body = await req.json();
 
-        const { nome, custo_mensal, qtd_display, qualidade, observacao } = body;
+        const { nome, custo_mensal, qtd_display, qualidade, observacao, logo_url } = body;
 
         if (!nome) return NextResponse.json({ error: 'Nome required' }, { status: 400 });
 
@@ -41,6 +41,7 @@ export async function POST(req: Request) {
         if (qtd_display !== undefined && qtd_display !== '') payload.qtd_display = qtd_display;
         if (qualidade !== undefined && qualidade !== '') payload.qualidade = qualidade;
         if (observacao !== undefined && observacao !== '') payload.observacao = observacao;
+        if (logo_url !== undefined && logo_url !== '') payload.logo_url = logo_url;
 
         const { data, error } = await supabase
             .from('studios')

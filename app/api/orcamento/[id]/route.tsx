@@ -16,26 +16,25 @@ export async function GET(
     try {
         const { id } = await params;
 
-        // 1. Fetch prices and basic info from the view
-        const { data: figure, error } = await supabase
-            .from('vw_figuras_orcamento')
+        // 1. Fetch settings first (always id: 1)
+        const { data: settings } = await supabase
+            .from('pricing_params')
             .select('*')
-            .eq('id', id)
+            .eq('id', 1)
             .single();
 
-        if (error || !figure) {
-            console.error("Supabase Error fetching figure:", error);
-            return new Response('Figure not found', { status: 404 });
-        }
-
-        // 2. Fetch technical details and images from tables
-        const { data: details } = await supabase
+        // 2. Fetch figure and technical details
+        const { data: figure, error } = await supabase
             .from('figuras')
             .select(`
+                nome,
                 imagem_url, 
                 tem_extras,
                 studios(nome),
                 figuras_meta(
+                    resina_kg,
+                    horas_impressao,
+                    horas_pintura,
                     altura_cm, 
                     largura_cm, 
                     profundidade_cm, 
@@ -47,9 +46,14 @@ export async function GET(
             .eq('id', id)
             .single();
 
-        const imageUrl = details?.imagem_url || '';
-        const studioName = (details?.studios as any)?.nome || 'N/A';
-        const meta = (Array.isArray(details?.figuras_meta) ? details?.figuras_meta[0] : details?.figuras_meta) as any || {};
+        if (error || !figure) {
+            console.error("Supabase Error fetching figure:", error);
+            return new Response('Figure not found', { status: 404 });
+        }
+
+        const imageUrl = figure.imagem_url || '';
+        const studioName = (figure.studios as any)?.nome || 'Studio FrangaToys';
+        const meta = (Array.isArray(figure.figuras_meta) ? figure.figuras_meta[0] : figure.figuras_meta) as any || {};
 
         const formatDim = (current: any, original: any) => {
             const curr = Number(current) || 0;
@@ -64,11 +68,33 @@ export async function GET(
         const larguraStr = formatDim(meta.largura_cm, meta.largura_original);
         const profundidadeStr = formatDim(meta.profundidade_cm, meta.profundidade_original);
 
+        // Preço: Lógica unificada com o Catálogo
         const roundTo5 = (val: number) => Math.ceil(val / 5) * 5;
-        const basicoPix = figure['Básico (R$)'] || 0;
-        const basicoCartao = roundTo5(basicoPix * 1.15);
-        const premiumPix = figure['Premium (R$)'] || 0;
-        const premiumCartao = roundTo5(premiumPix * 1.15);
+        const taxaCard = settings?.taxa_cartao || 1.15;
+        const custoHPintura = settings?.custo_h_pintura || 50;
+
+        // Custo Base Comum (Resina + Impressão)
+        const custoBaseProducao = 
+            ((meta.resina_kg || 0) * (settings?.custo_resina_kg || 250)) +
+            ((meta.horas_impressao || 0) * (settings?.custo_h_impressao || 1));
+
+        // Regra Estilizado: Pintura fixa de 20 minutos (0.33h)
+        const custoBaseEstilizado = custoBaseProducao + (0.33 * custoHPintura);
+        
+        // Regra Padrão (Colorido / 2D): Usa horas reais de pintura
+        const custoBasePadrao = custoBaseProducao + ((meta.horas_pintura || 0) * custoHPintura);
+
+        const prices = {
+            estilizado: roundTo5(custoBaseEstilizado * (settings?.margem_pobre || 1.15)),
+            colorido: roundTo5(custoBasePadrao * (settings?.margem_basica || 1.30)),
+            twoD: roundTo5(custoBasePadrao * (settings?.margem_premium || 1.60)),
+        };
+
+        const cardPrices = {
+            estilizado: roundTo5(prices.estilizado * taxaCard),
+            colorido: roundTo5(prices.colorido * taxaCard),
+            twoD: roundTo5(prices.twoD * taxaCard),
+        };
 
         return new ImageResponse(
             (
@@ -78,134 +104,157 @@ export async function GET(
                         width: '100%',
                         display: 'flex',
                         flexDirection: 'column',
-                        backgroundColor: '#121212',
+                        backgroundColor: '#000000',
                         position: 'relative',
-                        fontFamily: 'Inter, "sans-serif"',
+                        color: 'white',
                     }}
                 >
-                    {/* Main Image Container */}
-                    <div style={{ display: 'flex', flex: 1, position: 'relative', overflow: 'hidden' }}>
-                        {imageUrl && (
-                            <img
-                                src={imageUrl}
-                                style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover',
-                                }}
-                            />
-                        )}
-
-                        {/* Logo Top Left */}
+                    {/* FULL BACKGROUND IMAGE */}
+                    {imageUrl && (
                         <img
-                            src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
+                            src={imageUrl}
                             style={{
                                 position: 'absolute',
-                                top: 40,
-                                left: 40,
-                                width: 220,
+                                inset: 0,
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                filter: 'contrast(1.1) brightness(0.6)',
                             }}
                         />
+                    )}
 
-                        {/* Extras Badge Top Right */}
-                        {details?.tem_extras && (
-                            <div
-                                style={{
-                                    position: 'absolute',
-                                    top: 40,
-                                    right: 40,
-                                    backgroundColor: '#EA580C',
-                                    color: 'white',
-                                    padding: '12px 24px',
-                                    borderRadius: '12px',
-                                    fontSize: 28,
-                                    fontWeight: 'bold',
-                                    display: 'flex',
-                                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
-                                    border: '2px solid rgba(255,255,255,0.2)'
-                                }}
-                            >
-                                TEM EXTRAS
-                            </div>
-                        )}
-                    </div>
+                    {/* Gradient Overlay for Legibility */}
+                    <div 
+                        style={{ 
+                            position: 'absolute', 
+                            inset: 0, 
+                            background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, transparent 30%, rgba(0,0,0,0.6) 70%, #000000 100%)' 
+                        }} 
+                    />
 
-                    {/* Footer Section */}
+                    {/* LOGO */}
+                    <img
+                        src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
+                        style={{
+                            position: 'absolute',
+                            top: 60,
+                            left: 60,
+                            width: 240,
+                            filter: 'drop-shadow(0 0 30px rgba(0,0,0,0.5))',
+                        }}
+                    />
+
+                    {/* MAIN CONTENT CONTAINER */}
                     <div
                         style={{
-                            display: 'flex',
+                            position: 'absolute',
+                            bottom: 0,
                             width: '100%',
-                            backgroundColor: 'black',
-                            padding: '40px',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            padding: '60px',
+                            gap: 15,
                         }}
                     >
-                        {/* Left: Info details with Icons */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'white', fontSize: 28, fontWeight: 600 }}>
-                                <span style={{ fontSize: 32 }}>📏</span>
-                                <span>Altura: <span style={{ color: '#aaa', marginLeft: 8 }}>{alturaStr}</span></span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'white', fontSize: 28, fontWeight: 600 }}>
-                                <span style={{ fontSize: 32 }}>📐</span>
-                                <span>Largura: <span style={{ color: '#aaa', marginLeft: 8 }}>{larguraStr}</span></span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'white', fontSize: 28, fontWeight: 600 }}>
-                                <span style={{ fontSize: 32 }}>📦</span>
-                                <span>Profundidade: <span style={{ color: '#aaa', marginLeft: 8 }}>{profundidadeStr}</span></span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'white', fontSize: 28, fontWeight: 600 }}>
-                                <span style={{ fontSize: 32 }}>🏷️</span>
-                                <span>Estúdio: <span style={{ color: '#EA580C', marginLeft: 8 }}>{studioName}</span></span>
+                        {/* Title Section (Glass Card - Opacity 0.6) */}
+                        <div style={{ 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            gap: 5,
+                            backgroundColor: 'rgba(9, 9, 11, 0.6)',
+                            padding: '30px 45px',
+                            borderRadius: 30,
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            width: '100%',
+                        }}>
+                            <h1 style={{ fontSize: 56, fontWeight: 950, textTransform: 'uppercase', letterSpacing: -2, margin: 0, lineHeight: 1, color: 'white' }}>{figure.nome}</h1>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+                                <span style={{ color: '#F97316', fontSize: 24, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 4 }}>STUDIO: {studioName}</span>
+                                
+                                {/* Quick Specs */}
+                                <div style={{ display: 'flex', gap: 35 }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <span style={{ fontSize: 13, color: '#a1a1aa', fontWeight: 900, textTransform: 'uppercase' }}>Altura</span>
+                                        <span style={{ fontSize: 26, fontWeight: 900 }}>{alturaStr}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <span style={{ fontSize: 13, color: '#a1a1aa', fontWeight: 900, textTransform: 'uppercase' }}>Largura</span>
+                                        <span style={{ fontSize: 26, fontWeight: 900 }}>{larguraStr}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Right: Prices */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                            {/* Básico Bar */}
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    backgroundColor: '#1E1E1E',
-                                    borderRadius: 12,
-                                    width: 440,
-                                    padding: '16px 20px',
-                                    border: '1px solid #333',
-                                }}
-                            >
-                                <span style={{ flex: 0.6, textAlign: 'right', color: '#a1a1aa', fontSize: 24, paddingRight: 15 }}>Básico:</span>
-                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1.4, gap: 8 }}>
-                                    <span style={{ color: '#60a5fa', fontSize: 32, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        R$ {basicoCartao.toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#60a5fa', fontWeight: 600 }}>(Cartão)</span>
-                                    </span>
-                                    <span style={{ color: '#10B981', fontSize: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        R$ {basicoPix.toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#10B981', fontWeight: 400 }}>(PIX -15%)</span>
-                                    </span>
+                        {/* Price Grid */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                            {/* Row 1: Estilizado & Colorido */}
+                            <div style={{ display: 'flex', gap: 15 }}>
+                                {/* Estilizado */}
+                                <div style={{ 
+                                    flex: 1, 
+                                    backgroundColor: 'rgba(9, 9, 11, 0.6)', 
+                                    border: '1px solid rgba(255, 255, 255, 0.12)', 
+                                    borderRadius: 30, 
+                                    padding: '30px 35px', 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    gap: 10 
+                                }}>
+                                    <span style={{ fontSize: 15, color: '#a1a1aa', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 2 }}>Estilizado</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <span style={{ fontSize: 44, fontWeight: 950, color: '#ffffff' }}>R$ {prices.estilizado.toFixed(0)} <span style={{ fontSize: 18, color: '#71717a', fontWeight: 900 }}>(PIX)</span></span>
+                                        <span style={{ fontSize: 18, color: '#3b82f6', fontWeight: 800 }}>CRED R$ {cardPrices.estilizado.toFixed(0)}</span>
+                                    </div>
+                                </div>
+                                {/* Colorido */}
+                                <div style={{ 
+                                    flex: 1, 
+                                    backgroundColor: 'rgba(9, 9, 11, 0.6)', 
+                                    border: '1px solid rgba(249, 115, 22, 0.25)', 
+                                    borderRadius: 30, 
+                                    padding: '30px 35px', 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    gap: 10 
+                                }}>
+                                    <span style={{ fontSize: 15, color: '#F97316', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 2 }}>Colorido</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <span style={{ fontSize: 44, fontWeight: 950, color: '#ffffff' }}>R$ {prices.colorido.toFixed(0)} <span style={{ fontSize: 18, color: '#F97316', fontWeight: 900 }}>(PIX)</span></span>
+                                        <span style={{ fontSize: 18, color: '#fb923c', fontWeight: 800 }}>CRED R$ {cardPrices.colorido.toFixed(0)}</span>
+                                    </div>
                                 </div>
                             </div>
-                            {/* Premium Bar */}
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    backgroundColor: '#EA580C',
-                                    borderRadius: 12,
-                                    width: 440,
-                                    padding: '16px 20px',
-                                }}
-                            >
-                                <span style={{ flex: 0.6, textAlign: 'right', color: '#ffedd5', fontSize: 24, paddingRight: 15, fontWeight: 600 }}>Premium:</span>
-                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1.4, gap: 8 }}>
-                                    <span style={{ color: '#fed7aa', fontSize: 32, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        R$ {premiumCartao.toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#fed7aa', fontWeight: 600 }}>(Cartão)</span>
-                                    </span>
-                                    <span style={{ color: '#ffffff', fontSize: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        R$ {premiumPix.toFixed(2).replace('.', ',')} <span style={{ fontSize: 16, color: '#ffffff', fontWeight: 400 }}>(PIX -15%)</span>
-                                    </span>
+
+                            {/* Row 2: 2D Premium Series (NOIR GLASS STYLE) */}
+                            <div style={{ 
+                                backgroundColor: 'rgba(180, 77, 18, 0.8)', 
+                                border: '1px solid rgba(255,255,255,0.15)',
+                                borderRadius: 35, 
+                                padding: '35px 50px', 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'center',
+                                boxShadow: '0 20px 50px -10px rgba(0,0,0,0.5)'
+                            }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <span style={{ fontSize: 16, color: '#ffedd5', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 3 }}>MAIOR IMPACTO VISUAL</span>
+                                    <span style={{ fontSize: 82, fontWeight: 950, color: 'white', textTransform: 'uppercase', letterSpacing: -4, lineHeight: 0.8 }}>2D</span>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
+                                    <span style={{ fontSize: 86, fontWeight: 950, color: 'white', lineHeight: 1 }}>R$ {prices.twoD.toFixed(0)}</span>
+                                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                                        <span style={{ fontSize: 20, color: '#ffffff', fontWeight: 900, textTransform: 'uppercase' }}>PIX (-15%)</span>
+                                        <span style={{ fontSize: 20, color: '#fed7aa', fontWeight: 950 }}>•</span>
+                                        <span style={{ fontSize: 20, color: '#fed7aa', fontWeight: 900, textTransform: 'uppercase' }}>CARD R$ {cardPrices.twoD.toFixed(0)}</span>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Footer Branding */}
+                        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
+                            <span style={{ fontSize: 14, color: '#71717a', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 10, opacity: 0.6 }}>FrangaToys • Elite Digital Art</span>
                         </div>
                     </div>
                 </div>

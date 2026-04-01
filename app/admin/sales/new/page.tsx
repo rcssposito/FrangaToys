@@ -12,8 +12,9 @@ interface CatalogItem {
     Figura: string;
     codigo?: string;
     studio: string;
-    "Básico (R$)": number;
-    "Premium (R$)": number;
+    "Estilizado (R$)": number;
+    "Colorido (R$)": number;
+    "2D (R$)": number;
     resina_kg: number;
     horas_pintura: number;
     custo_producao: number;
@@ -21,7 +22,8 @@ interface CatalogItem {
 
 interface CartItem extends CatalogItem {
     quantidade: number;
-    valor_final: number;
+    valor_final: number; // Valor Unitário selecionado (já com markup se for crédito)
+    selectedTier: 'estilizado' | 'colorido' | '2D';
     altura_cm?: number;
     largura_cm?: number;
     profundidade_cm?: number;
@@ -141,13 +143,20 @@ export default function NewSalePage() {
 
     const addToCart = (item: CatalogItem) => {
         const existing = cart.find(i => i.id === item.id);
+        const taxaCard = settings?.taxa_cartao || 1.15;
         if (existing) {
             updateItemQuantity(item.id, existing.quantidade + 1);
         } else {
-            setCart([...cart, { ...item, quantidade: 1, valor_final: Number(((item['Básico (R$)'] || 0) * (settings?.taxa_cartao || 1.15)).toFixed(2)) }]);
+            const unitPrice = item["Estilizado (R$)"] || 0;
+            setCart([...cart, { 
+                ...item, 
+                quantidade: 1, 
+                selectedTier: 'estilizado',
+                valor_final: Number((unitPrice * taxaCard).toFixed(2)) 
+            }]);
         }
         setSearch('');
-        setShippingQuotes([]); // Limpa as as cotações se o peso mudou
+        setShippingQuotes([]);
         toast.success(`${item.Figura} adicionado ao carrinho`);
     };
 
@@ -160,12 +169,28 @@ export default function NewSalePage() {
         if (qty < 1) return;
         setCart(cart.map(i => {
             if (i.id === id) {
-                const unitPriceCard = Number(((i['Básico (R$)'] || 0) * (settings?.taxa_cartao || 1.15)).toFixed(2));
+                const taxaCard = settings?.taxa_cartao || 1.15;
+                const tierPrice = i.selectedTier === 'estilizado' ? i["Estilizado (R$)"] : 
+                                 i.selectedTier === 'colorido' ? i["Colorido (R$)"] : i["2D (R$)"];
+                const unitPriceCard = Number(((tierPrice || 0) * taxaCard).toFixed(2));
                 return { ...i, quantidade: qty, valor_final: Number((unitPriceCard * qty).toFixed(2)) };
             }
             return i;
         }));
         setShippingQuotes([]);
+    };
+
+    const updateItemTier = (id: number, tier: 'estilizado' | 'colorido' | '2D') => {
+        setCart(cart.map(i => {
+            if (i.id === id) {
+                const taxaCard = settings?.taxa_cartao || 1.15;
+                const tierPrice = tier === 'estilizado' ? i["Estilizado (R$)"] : 
+                                 tier === 'colorido' ? i["Colorido (R$)"] : i["2D (R$)"];
+                const unitPriceCard = Number(((tierPrice || 0) * taxaCard).toFixed(2));
+                return { ...i, selectedTier: tier, valor_final: Number((unitPriceCard * i.quantidade).toFixed(2)) };
+            }
+            return i;
+        }));
     };
 
     const updateItemPrice = (id: number, price: number) => {
@@ -178,8 +203,10 @@ export default function NewSalePage() {
     // Cálculo dinâmico: 'Outros' não tem desconto de PIX (markup)
     const totalVendaBase = cart.reduce((acc, i) => {
         const isOutros = i.studio === 'Outros';
-        const itemPixPrice = isOutros ? i.valor_final : i.valor_final / taxaMarkup;
-        return acc + itemPixPrice;
+        // O valor_final é UNITÁRIO * QUANTIDADE (já com markup). 
+        const unitPriceCard = i.valor_final / i.quantidade;
+        const unitPricePix = isOutros ? unitPriceCard : unitPriceCard / taxaMarkup;
+        return acc + (unitPricePix * i.quantidade);
     }, 0);
 
     const freteSomar = metodoEntrega === 'envio' ? (Number(valorFrete.replace(',', '.')) || 0) : 0;
@@ -190,7 +217,10 @@ export default function NewSalePage() {
 
     // Novos cálculos dinâmicos de lucro e custos
     const totalCustoProducao = cart.reduce((acc, i) => acc + ((i.custo_producao || 0) * i.quantidade), 0);
-    const totalFreelancer = pinturaFreelancer ? cart.reduce((acc, i) => acc + (Math.ceil((i.horas_pintura || 0) * 50) * i.quantidade), 0) : 0;
+    const totalFreelancer = pinturaFreelancer ? cart.reduce((acc, i) => {
+        const hPinturaEfetiva = i.selectedTier === 'estilizado' ? 0.33 : (i.horas_pintura || 0);
+        return acc + (Math.ceil(hPinturaEfetiva * (settings?.custo_h_pintura || 50)) * i.quantidade);
+    }, 0) : 0;
     const OWNER_EMAIL = 'rcssposito@gmail.com';
     const emailComissao = vendedorSelecionado || user?.email;
     const nomeVendedorComissao = vendedores.find(v => v.email === emailComissao)?.nome || emailComissao;
@@ -573,6 +603,22 @@ export default function NewSalePage() {
                                                     <Trash2 size={14} />
                                                 </button>
                                             </div>
+                                            {/* Tier Selector - HCI Tático */}
+                                            <div className="flex bg-zinc-950/50 p-1 rounded-xl border border-zinc-800/50 mb-3 w-full">
+                                                {(['estilizado', 'colorido', '2D'] as const).map((tier) => (
+                                                    <button
+                                                        key={tier}
+                                                        onClick={() => updateItemTier(item.id, tier)}
+                                                        className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-tighter rounded-lg transition-all ${
+                                                            item.selectedTier === tier 
+                                                            ? 'bg-zinc-800 text-cyan-400 shadow-sm border border-cyan-500/20' 
+                                                            : 'text-zinc-600 hover:text-zinc-400'
+                                                        }`}
+                                                    >
+                                                        {tier}
+                                                    </button>
+                                                ))}
+                                            </div>
                                             <div className="grid grid-cols-2 gap-4 items-center">
                                                 <div className="flex items-center gap-1 bg-zinc-950 p-1.5 rounded-lg border border-zinc-800 w-fit shadow-inner">
                                                     <button onClick={() => updateItemQuantity(item.id, item.quantidade - 1)} className="p-1.5 rounded bg-zinc-900 text-zinc-400 hover:text-cyan-400 transition-colors"><Minus size={14} /></button>
@@ -581,12 +627,12 @@ export default function NewSalePage() {
                                                 </div>
                                                 <div className="flex flex-col gap-1.5 items-end w-full">
                                                     <div className="relative w-full">
-                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-600 font-black tracking-widest text-[10px]">VAREJO</span>
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-600 font-black tracking-widest text-[10px]">TOTAL</span>
                                                         <input
                                                             type="text"
                                                             value={item.valor_final}
                                                             onChange={(e) => updateItemPrice(item.id, parseFloat(e.target.value) || 0)}
-                                                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 pl-16 pr-3 text-right text-sm font-bold text-cyan-400 outline-none focus:border-cyan-500"
+                                                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 pl-12 pr-3 text-right text-sm font-bold text-white focus:border-cyan-500 outline-none transition-all shadow-inner"
                                                         />
                                                     </div>
                                                     <span className="text-[10px] text-emerald-400 font-bold tracking-widest uppercase">

@@ -26,8 +26,9 @@ export async function GET() {
                     custo_h_pintura: 50.00,
                     custo_resina_kg: 250.00,
                     estoque_resina_kg: 0,
-                    margem_basica: 1.40,
-                    margem_premium: 1.70,
+                    margem_pobre: 1.15,   // Alvo: Estilizado (15%)
+                    margem_basica: 1.30,  // Alvo: Colorido (30%)
+                    margem_premium: 1.60, // Alvo: 2D (60%)
                     taxa_cartao: 1.15
                 }])
                 .select()
@@ -50,7 +51,7 @@ export async function PUT(req: Request) {
         const body = await req.json();
 
         // Validação básica
-        if (body.margem_basica < 1 || body.margem_premium < 1) {
+        if (body.margem_basica < 1 || body.margem_premium < 1 || (body.margem_pobre && body.margem_pobre < 1)) {
             return NextResponse.json({ error: 'Margens devem ser maiores que 1.0' }, { status: 400 });
         }
 
@@ -63,6 +64,7 @@ export async function PUT(req: Request) {
                 estoque_resina_kg: body.estoque_resina_kg,
                 margem_basica: body.margem_basica,
                 margem_premium: body.margem_premium,
+                margem_pobre: body.margem_pobre,
                 taxa_cartao: body.taxa_cartao
             })
             .eq('id', 1)
