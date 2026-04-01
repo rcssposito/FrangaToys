@@ -40,7 +40,10 @@ export async function GET(req: NextRequest) {
              ),
             studios: studios(
                 id,
-                nome
+                nome,
+                logo_url,
+                instagram_handle,
+                social_url
             ),
             figuras_meta(
                 altura_cm,
@@ -112,6 +115,9 @@ export async function GET(req: NextRequest) {
                 serie: item.series?.nome || null,
                 categoria: item.series?.categorias?.nome || null,
                 studio: item.studios?.nome || null,
+                studio_logo: item.studios?.logo_url || null,
+                studio_instagram: item.studios?.instagram_handle || null,
+                studio_social: item.studios?.social_url || null,
                 altura_cm: meta?.altura_cm || null,
                 largura_cm: meta?.largura_cm || null,
                 profundidade_cm: meta?.profundidade_cm || null,

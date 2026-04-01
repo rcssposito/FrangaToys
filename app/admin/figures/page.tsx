@@ -250,7 +250,15 @@ const FigureMobileCard = ({
     );
 };
 
+import { useSearchParams, useRouter } from 'next/navigation';
+
+// ... (tipagens permanecem as mesmas)
+
 export default function DataGridPage() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const studioParam = searchParams.get('studio');
+
     const [figures, setFigures] = useState<Figure[]>([]);
     const [settings, setSettings] = useState<PricingSettings | null>(null);
     const [loading, setLoading] = useState(true);
@@ -263,11 +271,8 @@ export default function DataGridPage() {
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | string | null>(null);
 
     const { hasRole } = usePermission();
-    // Check if user has permission to edit (admin or pricing)
-    // Users with ONLY 'orcamento' role can view but not edit
     const canEdit = hasRole('admin') || hasRole('pricing');
 
-    // Modal State
     const [previewImage, setPreviewImage] = useState<{ url: string, nome: string } | null>(null);
 
     // Fetch settings on mount
@@ -303,6 +308,12 @@ export default function DataGridPage() {
             } else if (catId) {
                 params.append('categoria_id', catId.toString());
             }
+
+            // Filtro de Estúdio (vindo da URL)
+            if (studioParam) {
+                params.append('studio_id', studioParam);
+            }
+
             if (searchTerm) params.append('search', searchTerm);
             if (!pageZero && nextCursor) {
                 params.append('page', nextCursor.toString());
@@ -336,7 +347,7 @@ export default function DataGridPage() {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [selectedCategoryId, search, nextCursor]); // Dependencies for useCallback
+    }, [selectedCategoryId, search, nextCursor, studioParam]); // Added studioParam as dependency
 
     // Initial Load & Filter Changes with debounce
     useEffect(() => {
@@ -344,7 +355,7 @@ export default function DataGridPage() {
             fetchFigures(selectedCategoryId, search, true);
         }, 300); // 300ms debounce
         return () => clearTimeout(timer);
-    }, [selectedCategoryId, search]); // run when filters change
+    }, [selectedCategoryId, search, studioParam]); // run when studioParam changes too
 
     const handleChange = (id: number, field: keyof Figure, value: string | boolean) => {
         setFigures(prev => prev.map(f => f.id === id ? { ...f, [field]: value } : f));
@@ -529,6 +540,15 @@ export default function DataGridPage() {
 
                 <div className="flex gap-4 items-center mb-6">
                     <div className="flex-1 flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[var(--card-border)]">
+                        {studioParam && (
+                            <button
+                                onClick={() => router.push('/admin/figures')}
+                                className="px-4 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-all bg-blue-600 text-white shadow-lg shadow-blue-500/20 flex items-center gap-2 group"
+                            >
+                                <X size={14} className="group-hover:scale-120 transition-transform" />
+                                Filtrando Estúdio: #{studioParam}
+                            </button>
+                        )}
                         <button
                             onClick={() => setSelectedCategoryId(null)}
                             className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${!selectedCategoryId ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] hover:bg-[var(--input-bg)] hover:text-[var(--foreground)]'}`}

@@ -12,6 +12,9 @@ export const FiguraSchema = z.object({
   serie: z.string().nullable().optional(),
   categoria: z.string().nullable().optional(),
   studio: z.string().nullable().optional(),
+  studio_logo: z.string().nullable().optional(),
+  studio_instagram: z.string().nullable().optional(),
+  studio_social: z.string().nullable().optional(),
   // Meta fields (joined or null)
   altura_cm: z.number().nullable().optional(),
   largura_cm: z.number().nullable().optional(),
@@ -41,5 +44,6 @@ export const EstudioSchema = z.object({
   qualidade: z.number().nullable().optional(),
   observacao: z.string().nullable().optional(),
   logo_url: z.string().nullable().optional(),
+  ativo: z.boolean().nullable().optional(),
   figuras: z.array(z.object({ count: z.number() })).optional(),
 });

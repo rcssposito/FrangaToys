@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DesktopFilters } from '@/components/Filters/DesktopFilters';
 import { MobileFilters } from '@/components/Filters/MobileFilters';
 import { GalleryGrid } from '@/components/Gallery/GalleryGrid';
@@ -21,7 +22,14 @@ type FilterState = z.infer<typeof FiltersSchema>;
 const CATEGORIES = ['Anime', 'Games', 'Marvel', 'DC', 'Random'];
 
 export default function Home() {
-  const [filters, setFilters] = useState<FilterState>({});
+  const searchParams = useSearchParams();
+  const studioParam = searchParams.get('studioIds');
+  const showAllParam = searchParams.get('incluirNaoVendaveis');
+
+  const [filters, setFilters] = useState<FilterState>({
+    studioIds: studioParam || undefined,
+    incluirNaoVendaveis: showAllParam || undefined
+  });
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // State for Modal Navigation
@@ -65,7 +73,15 @@ export default function Home() {
               className="h-32 object-contain"
             />
           </Link>
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-6">
+            <Link 
+              href="/parceiros" 
+              className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] hover:text-blue-500 transition-all flex items-center gap-2 group"
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 group-hover:animate-ping" />
+              Parceiros
+            </Link>
+            <div className="h-4 w-px bg-[var(--card-border)]" />
             <ThemeToggle />
             <CartIndicator onClick={() => setIsDrawerOpen(true)} className="hover:bg-zinc-900/10 dark:hover:bg-zinc-800/50 px-3 py-2 rounded-lg" />
             <Link

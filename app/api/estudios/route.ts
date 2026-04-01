@@ -7,6 +7,7 @@ export async function GET() {
         const { data, error } = await supabase
             .from('studios')
             .select('*, figuras(count)')
+            .eq('ativo', true)
             .order('nome', { ascending: true });
 
         if (error) {

@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
         const { searchParams } = new URL(req.url);
         const search = searchParams.get('search') || '';
         const categoria_id = searchParams.get('categoria_id');
+        const studio_id = searchParams.get('studio_id');
         const page = parseInt(searchParams.get('page') || '0');
         const limit = parseInt(searchParams.get('limit') || '50');
 
@@ -45,6 +46,7 @@ export async function GET(req: NextRequest) {
         tem_extras,
         sinonimos,
         serie_id,
+        studio_id,
         ${seriesJoin} ( 
             nome, 
             ${categoryJoin} ( nome, id ) 
@@ -63,6 +65,11 @@ export async function GET(req: NextRequest) {
         // 1. Filter by Category ID
         if (shouldFilterCategory) {
             query = query.eq('series.categorias.id', categoria_id);
+        }
+
+        // 1b. Filter by Studio ID
+        if (studio_id && studio_id !== '0') {
+            query = query.eq('studio_id', studio_id);
         }
 
         // 2. Filter by Search Term (Name)

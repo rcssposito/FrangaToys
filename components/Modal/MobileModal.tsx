@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { FiguraDTO } from '@/lib/dto';
-import { X, ChevronLeft, ChevronRight, Share } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Share, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import { getOptimizedImageUrl } from '@/lib/image-utils';
 import imageKitLoader from '@/lib/image-loader';
 import { useCart } from '@/context/CartContext';
 import { clsx } from 'clsx';
+import { useRouter } from 'next/navigation';
 
 interface MobileModalProps {
     figure: FiguraDTO | null;
@@ -21,9 +22,18 @@ interface MobileModalProps {
 
 export const MobileModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIndex, total }: MobileModalProps) => {
     const { addToCart, removeFromCart, isInCart } = useCart();
+    const router = useRouter();
 
     const [quantity, setQuantity] = useState(1);
     const [finish, setFinish] = useState<'basic' | 'premium'>('basic');
+
+    const handleSeeMoreStudio = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (figure?.studio_id) {
+            router.push(`/?studioIds=${figure.studio_id}&incluirNaoVendaveis=true`);
+            onClose();
+        }
+    };
 
     useEffect(() => {
         if (isOpen) {
@@ -81,19 +91,41 @@ export const MobileModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIn
             <div className="bg-[var(--card-bg)] border-t border-[var(--card-border)] rounded-t-3xl pt-6 pb-6 px-5 z-20 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
                 <h2 className="text-xl font-black text-[var(--foreground)] mb-3 leading-tight tracking-tight">{figure.nome}</h2>
 
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-[var(--text-muted)] font-medium mb-5">
-                    <div className="flex justify-between border-b border-[var(--card-border)]/50 pb-1">
-                        <span>Altura</span> <span className="text-[var(--foreground)] font-bold">{figure.altura_cm || '-'} cm</span>
+                <div className="flex flex-col gap-6 mb-5">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-[var(--text-muted)] font-medium">
+                        <div className="flex justify-between border-b border-[var(--card-border)]/50 pb-1">
+                            <span>Altura</span> <span className="text-[var(--foreground)] font-bold">{figure.altura_cm || '-'} cm</span>
+                        </div>
+                        <div className="flex justify-between border-b border-[var(--card-border)]/50 pb-1">
+                            <span>Largura</span> <span className="text-[var(--foreground)] font-bold">{figure.largura_cm || '-'} cm</span>
+                        </div>
+                        <div className="flex justify-between border-b border-[var(--card-border)]/50 pb-1">
+                            <span>Profund.</span> <span className="text-[var(--foreground)] font-bold">{figure.profundidade_cm || '-'} cm</span>
+                        </div>
                     </div>
-                    <div className="flex justify-between border-b border-[var(--card-border)]/50 pb-1">
-                        <span>Largura</span> <span className="text-[var(--foreground)] font-bold">{figure.largura_cm || '-'} cm</span>
-                    </div>
-                    <div className="flex justify-between border-b border-[var(--card-border)]/50 pb-1">
-                        <span>Profund.</span> <span className="text-[var(--foreground)] font-bold">{figure.profundidade_cm || '-'} cm</span>
-                    </div>
-                    <div className="flex justify-between border-b border-[var(--card-border)]/50 pb-1">
-                        <span>Estúdio</span> <span className="text-orange-500 font-bold">{figure.studio || '-'}</span>
-                    </div>
+
+                    {figure.studio && (
+                        <div className="flex items-center gap-3 p-3 bg-zinc-950/50 rounded-2xl border border-zinc-800/50">
+                            <div className="w-12 h-12 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-center overflow-hidden shadow-inner flex-shrink-0">
+                                {figure.studio_logo ? (
+                                    <img src={figure.studio_logo} alt={figure.studio} className="w-full h-full object-contain p-1" />
+                                ) : (
+                                    <span className="text-[10px] font-black text-zinc-700">{figure.studio.slice(0, 2).toUpperCase()}</span>
+                                )}
+                            </div>
+                            <div className="flex flex-col flex-1 overflow-hidden text-left">
+                                <span className="text-[9px] font-black uppercase tracking-wider text-zinc-600">Escultor Parceiro</span>
+                                <h4 className="text-sm font-bold text-[var(--foreground)] truncate">{figure.studio}</h4>
+                            </div>
+                            <button 
+                                onClick={handleSeeMoreStudio}
+                                className="p-3 bg-blue-500/10 text-blue-500 rounded-xl active:scale-95 transition-all"
+                                title="Ver Acervo"
+                            >
+                                <ExternalLink size={18} />
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {!isInCart(figure.id) && (
@@ -135,7 +167,7 @@ export const MobileModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIn
                     )}
                     onClick={() => isInCart(figure.id) ? removeFromCart(figure.id) : handleAddToCart()}
                 >
-                    <Share size={20} strokeWidth={2.5} />
+                    <ExternalLink size={20} strokeWidth={2.5} />
                     {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar ao Orçamento"}
                 </button>
             </div>

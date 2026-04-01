@@ -8,6 +8,7 @@ import { getOptimizedImageUrl } from '@/lib/image-utils';
 import imageKitLoader from '@/lib/image-loader';
 import { useCart } from '@/context/CartContext';
 import { clsx } from 'clsx';
+import { useRouter } from 'next/navigation';
 
 interface ImageModalProps {
     figure: FiguraDTO | null;
@@ -21,6 +22,7 @@ interface ImageModalProps {
 
 export const DesktopModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIndex, total }: ImageModalProps) => {
     const { addToCart, removeFromCart, isInCart } = useCart();
+    const router = useRouter();
 
     const [quantity, setQuantity] = useState(1);
     const [finish, setFinish] = useState<'basic' | 'premium'>('basic');
@@ -31,6 +33,14 @@ export const DesktopModal = ({ figure, isOpen, onClose, onNext, onPrev, currentI
         if (e.key === 'ArrowRight') onNext();
         if (e.key === 'ArrowLeft') onPrev();
     }, [isOpen, onClose, onNext, onPrev]);
+
+    const handleSeeMoreStudio = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (figure?.studio_id) {
+            router.push(`/?studioIds=${figure.studio_id}&incluirNaoVendaveis=true`);
+            onClose();
+        }
+    };
 
     // Reset state when figure changes
     useEffect(() => {
@@ -52,7 +62,6 @@ export const DesktopModal = ({ figure, isOpen, onClose, onNext, onPrev, currentI
         return () => { document.body.style.overflow = 'unset'; };
     }, [isOpen]);
 
-    // Safe return after all hooks
     if (!isOpen || !figure) return null;
 
     const handleAddToCart = () => {
@@ -115,8 +124,29 @@ export const DesktopModal = ({ figure, isOpen, onClose, onNext, onPrev, currentI
                                 <span>{figure.altura_cm ? `Alt: ${figure.altura_cm}cm` : ''}</span>
                                 <span>{figure.largura_cm ? `Lrg: ${figure.largura_cm}cm` : ''}</span>
                                 <span>{figure.profundidade_cm ? `Prof: ${figure.profundidade_cm}cm` : ''}</span>
-                                {figure.studio && <span className="text-orange-500 font-black">{figure.studio}</span>}
                             </div>
+                            
+                            {figure.studio && (
+                                <div className="mt-4 flex items-center justify-center md:justify-start gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-center overflow-hidden shadow-inner">
+                                        {figure.studio_logo ? (
+                                            <img src={figure.studio_logo} alt={figure.studio} className="w-full h-full object-contain p-1" />
+                                        ) : (
+                                            <span className="text-[10px] font-black text-zinc-700">{figure.studio.slice(0, 2).toUpperCase()}</span>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col text-left">
+                                        <span className="text-[9px] font-black uppercase tracking-wider text-zinc-600">Esculpido por</span>
+                                        <button 
+                                            onClick={handleSeeMoreStudio}
+                                            className="text-xs font-bold text-blue-500 hover:text-blue-400 transition-colors uppercase tracking-widest flex items-center gap-1.5 group/link"
+                                        >
+                                            {figure.studio}
+                                            <ExternalLink size={10} className="opacity-0 group-hover/link:opacity-100 transition-opacity" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {!isInCart(figure.id) && (
