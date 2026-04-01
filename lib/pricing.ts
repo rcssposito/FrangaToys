@@ -5,7 +5,7 @@ export interface PricingParams {
     custo_h_pintura: number;
     margem_pobre: number;    // Estilizado
     margem_basica: number;   // Colorido
-    margem_premium: number;  // 2D/Elite
+    margem_premium: number;  // 2D/Premium
 }
 
 export interface FigureMeta {

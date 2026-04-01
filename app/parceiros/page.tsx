@@ -43,7 +43,7 @@ export default function PartnersPage() {
         return (
             <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
                 <Loader2 className="animate-spin text-blue-500 w-10 h-10" />
-                <p className="text-zinc-600 font-bold text-[10px] tracking-[0.3em] uppercase animate-pulse">Sincronizando com a Elite...</p>
+                <p className="text-zinc-600 font-bold text-[10px] tracking-[0.3em] uppercase animate-pulse">Conectando com o Acervo...</p>
             </div>
         );
     }

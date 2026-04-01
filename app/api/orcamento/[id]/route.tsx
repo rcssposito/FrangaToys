@@ -254,7 +254,7 @@ export async function GET(
 
                         {/* Footer Branding */}
                         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
-                            <span style={{ fontSize: 14, color: '#71717a', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 10, opacity: 0.6 }}>FrangaToys • Elite Digital Art</span>
+                            <span style={{ fontSize: 14, color: '#71717a', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 10, opacity: 0.6 }}>FrangaToys • Digital Art Studio</span>
                         </div>
                     </div>
                 </div>

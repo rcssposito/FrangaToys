@@ -81,21 +81,26 @@ export const FigureCard = ({ figure, className }: FigureCardProps) => {
                         )}
                     </div>
 
-                    {/* Footer Info */}
-                    <div className="absolute bottom-0 inset-x-0 p-3 sm:p-5 pt-8 bg-gradient-to-t from-black to-transparent pointer-events-none">
+                    {/* Footer Info (Glassmorphism Overlay for Contrast) */}
+                    <div className="absolute bottom-0 inset-x-0 p-3 sm:p-5 pt-12 pb-4 sm:pb-6 bg-gradient-to-t from-black via-black/80 to-transparent z-20 pointer-events-none">
                         <div className="flex flex-col gap-0.5 sm:gap-1 items-center">
-                            <h3 className="text-[9px] sm:text-xs font-black text-zinc-400 uppercase tracking-[0.2em] mb-0.5">
-                                {figure.studio || 'Studio Indiferente'}
-                            </h3>
-                            <h2 className="text-sm sm:text-base font-black text-white tracking-tight text-center leading-tight line-clamp-1">
+                            <div className="backdrop-blur-md bg-black/40 px-3 py-1 rounded-full border border-white/10 mb-1 shadow-2xl">
+                                <h3 className="text-[8px] sm:text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] drop-shadow-md">
+                                    {figure.studio || 'Studio Indiferente'}
+                                </h3>
+                            </div>
+                            
+                            <h2 className="text-sm sm:text-base font-black text-white tracking-tight text-center leading-tight line-clamp-1 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
                                 {figure.nome}
                             </h2>
                             
-                            {/* Starting Price Badge */}
-                            <div className="mt-2 sm:mt-3 bg-zinc-900/80 backdrop-blur-md border border-zinc-700/50 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full text-blue-400 text-[10px] sm:text-xs font-black tracking-tighter">
-                                <span className="text-[8px] sm:text-[9px] text-zinc-500 uppercase font-black mr-1 sm:mr-2 tracking-widest">A partir de</span>
-                                {formatPrice(figure.precos?.estilizado)}
-                            </div>
+                            {/* Starting Price Badge (High Visibility) */}
+                            {figure.precos && (
+                                <div className="mt-2 sm:mt-3 bg-blue-600/90 backdrop-blur-xl border border-blue-400/30 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full text-white text-[10px] sm:text-xs font-black tracking-tighter shadow-[0_10px_30px_rgba(37,99,235,0.3)] ring-1 ring-white/10">
+                                    <span className="text-[8px] sm:text-[9px] text-zinc-200 uppercase font-black mr-1 sm:mr-2 tracking-widest opacity-80">A partir de</span>
+                                    {formatPrice(figure.precos.estilizado)}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -172,7 +177,7 @@ export const FigureCard = ({ figure, className }: FigureCardProps) => {
                                             <div className="text-xs sm:text-sm font-black text-white">{formatPrice(figure.precos.colorido)}</div>
                                         </div>
 
-                                        {/* Pack Premium (Elite/Purple) */}
+                                        {/* Pack Premium (Master/Purple) */}
                                         <div className="group/row flex items-center justify-between p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-purple-500/5 border border-purple-500/20 hover:border-purple-500/50 transition-all ring-1 ring-purple-500/10">
                                             <div className="flex items-center gap-2 sm:gap-3">
                                                 <div className="w-6 h-6 sm:w-8 sm:h-8 rounded bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
@@ -180,7 +185,7 @@ export const FigureCard = ({ figure, className }: FigureCardProps) => {
                                                 </div>
                                                 <div>
                                                     <div className="text-[9px] sm:text-[10px] font-black text-purple-300 uppercase tracking-tighter">Premium</div>
-                                                    <div className="hidden sm:block text-[8px] text-purple-500 uppercase tracking-widest font-black">2D/Elite</div>
+                                                    <div className="hidden sm:block text-[8px] text-purple-500 uppercase tracking-widest font-black">2D / Master</div>
                                                 </div>
                                             </div>
                                             <div className="text-xs sm:text-sm font-black text-purple-300">{formatPrice(figure.precos.premium)}</div>

@@ -49,7 +49,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
     const finishOptions = [
         { id: 'estilizado', label: 'Estilizado', icon: Paintbrush, description: 'Base/Sombra', color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20', price: figure.precos?.estilizado },
         { id: 'colorido', label: 'Colorido', icon: Palette, description: 'Standard/Full', color: 'text-zinc-400', bg: 'bg-zinc-400/10', border: 'border-zinc-400/20', price: figure.precos?.colorido },
-        { id: 'premium', label: 'Premium', icon: Crown, description: 'Elite/Manual', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', price: figure.precos?.premium },
+        { id: 'premium', label: 'Premium', icon: Crown, description: 'Premium/Manual', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', price: figure.precos?.premium },
     ] as const;
 
     return (
