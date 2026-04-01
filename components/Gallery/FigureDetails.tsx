@@ -7,7 +7,7 @@ import { getOptimizedImageUrl } from '@/lib/image-utils';
 import imageKitLoader from '@/lib/image-loader';
 import { useCart } from '@/context/CartContext';
 import { clsx } from 'clsx';
-import { ExternalLink, Share2, Paintbrush, Palette, Crown, CheckCircle2 } from 'lucide-react';
+import { ExternalLink, Share2, Paintbrush, Palette, Crown, CheckCircle2, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FigureDetailsProps {
@@ -83,44 +83,60 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                         </div>
                         <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter leading-[0.9]">{figure.nome}</h2>
                         
-                        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-zinc-500">
-                             <div className="flex items-center gap-2 bg-zinc-900/50 px-3 py-1.5 rounded-full border border-white/5">
+                        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-zinc-500">
+                             <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2.5 py-1.5 rounded-full border border-white/5">
                                 <span className="text-zinc-600">H</span> {figure.altura_cm || '-'}<small className="text-[8px] ml-0.5 opacity-50">cm</small>
                              </div>
-                             <div className="flex items-center gap-2 bg-zinc-900/50 px-3 py-1.5 rounded-full border border-white/5">
+                             <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2.5 py-1.5 rounded-full border border-white/5">
                                 <span className="text-zinc-600">W</span> {figure.largura_cm || '-'}<small className="text-[8px] ml-0.5 opacity-50">cm</small>
                              </div>
-                             <div className="flex items-center gap-2 bg-zinc-900/50 px-3 py-1.5 rounded-full border border-white/5">
+                             <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2.5 py-1.5 rounded-full border border-white/5">
                                 <span className="text-zinc-600">D</span> {figure.profundidade_cm || '-'}<small className="text-[8px] ml-0.5 opacity-50">cm</small>
                              </div>
                         </div>
                     </div>
 
-                    {/* Finish Selector */}
-                    <div className="space-y-4">
-                        <h4 className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] ml-1">Escolha seu acabamento</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* Finish Selector - Square Cards Layout */}
+                    <div className="space-y-2">
+                        <h4 className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.3em] ml-1">Escolha seu acabamento</h4>
+                        <div className="grid grid-cols-3 gap-2">
                             {finishOptions.map((opt) => (
                                 <button
                                     key={opt.id}
                                     onClick={() => setSelectedFinish(opt.id)}
                                     className={clsx(
-                                        "relative flex flex-col p-4 rounded-2xl border-2 transition-all duration-300 text-left group",
+                                        "relative flex flex-col items-center justify-center aspect-[1/1.1] p-2 rounded-2xl border-2 transition-all duration-300 text-center group",
                                         selectedFinish === opt.id 
-                                            ? `${opt.border} bg-zinc-900/80 ring-1 ring-white/10` 
-                                            : "border-transparent bg-zinc-900/40 opacity-60 hover:opacity-100 hover:bg-zinc-900/60"
+                                            ? `${opt.border} bg-zinc-900/80 ring-1 ring-white/20 scale-[1.02] shadow-2xl` 
+                                            : "border-transparent bg-zinc-900/40 opacity-50 hover:opacity-100 hover:bg-zinc-900/60"
                                     )}
                                 >
-                                    <div className={clsx("mb-4 w-10 h-10 rounded-xl flex items-center justify-center", opt.bg, opt.color)}>
+                                    <div className={clsx(
+                                        "mb-2 w-10 h-10 rounded-xl flex items-center justify-center transition-transform",
+                                        selectedFinish === opt.id ? "scale-110" : "group-hover:scale-105",
+                                        opt.bg, 
+                                        opt.color
+                                    )}>
                                         <opt.icon size={20} />
                                     </div>
-                                    <span className={clsx("text-xs font-black uppercase tracking-widest block mb-1", selectedFinish === opt.id ? "text-white" : "text-zinc-400")}>{opt.label}</span>
-                                    <span className="text-[9px] text-zinc-600 uppercase font-black tracking-tighter mb-3">{opt.description}</span>
-                                    <span className={clsx("text-sm font-black mt-auto", selectedFinish === opt.id ? opt.color : "text-zinc-500")}>{formatPrice(opt.price)}</span>
                                     
+                                    <span className={clsx(
+                                        "text-[9px] font-black uppercase tracking-widest block leading-tight mb-1",
+                                        selectedFinish === opt.id ? "text-white" : "text-zinc-500"
+                                    )}>
+                                        {opt.label}
+                                    </span>
+                                    
+                                    <span className={clsx(
+                                        "text-xs font-black tracking-tight",
+                                        selectedFinish === opt.id ? opt.color : "text-zinc-400"
+                                    )}>
+                                        {formatPrice(opt.price)}
+                                    </span>
+
                                     {selectedFinish === opt.id && (
-                                        <div className="absolute top-3 right-3 text-white">
-                                            <CheckCircle2 size={16} className="fill-blue-500 text-black border-none" />
+                                        <div className="absolute -top-2 -right-2">
+                                            <CheckCircle2 size={24} className="fill-blue-500 text-black border-none drop-shadow-lg" />
                                         </div>
                                     )}
                                 </button>
@@ -129,10 +145,10 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex flex-col sm:flex-row items-center gap-4 mt-4">
+                    <div className="flex flex-col sm:flex-row items-center gap-4 mt-4 relative">
                         <button
                             className={clsx(
-                                "flex-1 flex items-center justify-center gap-3 w-full px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-500 shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-[0.98]",
+                                "flex-1 flex items-center justify-center gap-3 w-full px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-500 shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-[0.98] relative z-10",
                                 isInCart(figure.id)
                                     ? "bg-emerald-500 text-black hover:bg-emerald-400"
                                     : "bg-white text-black hover:bg-blue-500 hover:text-white"
@@ -149,10 +165,18 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
 
                         <button
                             onClick={handleShare}
-                            className="p-5 bg-zinc-900 border border-white/5 hover:border-white/20 text-zinc-400 hover:text-white rounded-2xl transition-all duration-300 group"
+                            className="p-5 bg-zinc-900 border border-white/5 hover:border-white/20 text-zinc-400 hover:text-white rounded-2xl transition-all duration-300 group relative z-10"
                             title="Compartilhar"
                         >
                             <Share2 size={24} className="group-hover:rotate-12 transition-transform" />
+                        </button>
+
+                        {/* Close Button (Touch Optimized) */}
+                        <button
+                            onClick={() => (window as any).history.back()}
+                            className="absolute -top-16 right-0 p-4 bg-zinc-900/50 backdrop-blur-xl border border-white/10 text-zinc-400 hover:text-white rounded-full transition-all active:scale-90 shadow-2xl lg:hidden"
+                        >
+                            <X size={24} />
                         </button>
                     </div>
                 </div>

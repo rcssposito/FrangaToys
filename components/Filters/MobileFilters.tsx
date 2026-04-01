@@ -151,16 +151,19 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                 </button>
             </div>
 
-            {/* 2. Horizontal Scroll Categories */}
-            <div className="w-full overflow-x-auto no-scrollbar px-4">
-                <div className="flex gap-2">
+            {/* 2. Horizontal Scroll Categories with Visual Hint */}
+            <div className="relative w-full">
+                {/* Left Gradient Hint */}
+                <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[var(--background)] to-transparent z-10 pointer-events-none opacity-100" />
+                
+                <div className="w-full overflow-x-auto no-scrollbar px-6 flex gap-2 py-1">
                     <button
                         onClick={() => onChange({ ...filters, categoria: undefined })}
                         className={clsx(
-                            "whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95",
+                            "whitespace-nowrap px-5 py-2 rounded-full text-xs font-bold border transition-all active:scale-95 shadow-sm",
                             (!filters.categoria || filters.categoria === 'Todos')
-                                ? "bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20"
-                                : "bg-[var(--card-bg)] text-[var(--text-muted)] border-[var(--card-border)] shadow-[var(--shadow-sm)]"
+                                ? "bg-orange-600 text-white border-orange-600 shadow-md shadow-orange-500/30"
+                                : "bg-[var(--card-bg)] text-[var(--text-muted)] border-[var(--card-border)]"
                         )}
                     >
                         Todos
@@ -170,16 +173,21 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                             key={cat}
                             onClick={() => onChange({ ...filters, categoria: filters.categoria === cat ? undefined : cat })}
                             className={clsx(
-                                "whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95",
+                                "whitespace-nowrap px-5 py-2 rounded-full text-xs font-bold border transition-all active:scale-95 shadow-sm",
                                 filters.categoria === cat
-                                    ? "bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20"
-                                    : "bg-[var(--card-bg)] text-[var(--text-muted)] border-[var(--card-border)] shadow-[var(--shadow-sm)]"
+                                    ? "bg-orange-600 text-white border-orange-600 shadow-md shadow-orange-500/30"
+                                    : "bg-[var(--card-bg)] text-[var(--text-muted)] border-[var(--card-border)]"
                             )}
                         >
                             {cat}
                         </button>
                     ))}
+                    {/* Spacer for right padding in overflow */}
+                    <div className="min-w-[16px] h-1" />
                 </div>
+
+                {/* Right Gradient Hint */}
+                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[var(--background)] to-transparent z-10 pointer-events-none opacity-100" />
             </div>
 
             {/* 3. Bottom Sheet (Portal to Body) */}

@@ -57,12 +57,12 @@ export const FigureCard = ({ figure, className }: FigureCardProps) => {
                     {/* Overlay Gradient */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80 pointer-events-none" />
 
-                    {/* Navigation Hint (Top Right) */}
+                    {/* Navigation Hint (Top Right) - Enlarged Touch Target */}
                     <div
-                        className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20"
+                        className="absolute top-0 right-0 p-3 sm:p-4 z-40"
                         onClick={handleFlip}
                     >
-                        <div className="bg-black/40 backdrop-blur-xl border border-white/10 text-white/70 text-[9px] sm:text-[10px] px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300">
+                        <div className="bg-black/60 backdrop-blur-xl border border-white/20 text-white/90 text-[10px] sm:text-[10px] px-3.5 py-2 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-2xl active:scale-90">
                             Detalhes
                         </div>
                     </div>
@@ -130,16 +130,16 @@ export const FigureCard = ({ figure, className }: FigureCardProps) => {
                             {/* Dimensions Table */}
                             <div className="grid grid-cols-3 gap-1 sm:gap-2 bg-zinc-900/50 backdrop-blur-md border border-zinc-800/50 p-2 sm:p-3 rounded-xl sm:rounded-2xl">
                                 <div className="flex flex-col items-center">
-                                    <span className="text-[7px] sm:text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-0.5">Altura</span>
-                                    <span className="text-xs sm:text-sm font-black text-white">{figure.altura_cm || '-'}<small className="text-[8px] sm:text-[10px] text-zinc-600 ml-0.5">cm</small></span>
+                                    <span className="text-[8px] sm:text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Altura</span>
+                                    <span className="text-sm sm:text-sm font-black text-white">{figure.altura_cm || '-'}<small className="text-[10px] sm:text-[10px] text-zinc-600 ml-0.5">cm</small></span>
                                 </div>
                                 <div className="flex flex-col items-center border-x border-zinc-800">
-                                    <span className="text-[7px] sm:text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-0.5">Largura</span>
-                                    <span className="text-xs sm:text-sm font-black text-white">{figure.largura_cm || '-'}<small className="text-[8px] sm:text-[10px] text-zinc-600 ml-0.5">cm</small></span>
+                                    <span className="text-[8px] sm:text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Largura</span>
+                                    <span className="text-sm sm:text-sm font-black text-white">{figure.largura_cm || '-'}<small className="text-[10px] sm:text-[10px] text-zinc-600 ml-0.5">cm</small></span>
                                 </div>
                                 <div className="flex flex-col items-center">
-                                    <span className="text-[7px] sm:text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-0.5">Profund.</span>
-                                    <span className="text-xs sm:text-sm font-black text-white">{figure.profundidade_cm || '-'}<small className="text-[8px] sm:text-[10px] text-zinc-600 ml-0.5">cm</small></span>
+                                    <span className="text-[8px] sm:text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Profund.</span>
+                                    <span className="text-sm sm:text-sm font-black text-white">{figure.profundidade_cm || '-'}<small className="text-[10px] sm:text-[10px] text-zinc-600 ml-0.5">cm</small></span>
                                 </div>
                             </div>
 
@@ -205,9 +205,9 @@ export const FigureCard = ({ figure, className }: FigureCardProps) => {
                                 href={`/figura/${figure.id}`}
                                 scroll={false}
                                 onClick={(e) => e.stopPropagation()}
-                                className="w-full flex items-center justify-center gap-2 bg-white text-black py-3 sm:py-3.5 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] hover:bg-blue-500 hover:text-white transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.5)] active:scale-[0.98]"
+                                className="w-full flex items-center justify-center gap-2 bg-white text-black py-4 sm:py-3.5 rounded-xl text-xs sm:text-[11px] font-black uppercase tracking-[0.2em] hover:bg-blue-600 hover:text-white transition-all duration-300 shadow-[0_20px_40px_rgba(0,0,0,0.6)] active:scale-[0.96]"
                             >
-                                Detalhes <ChevronRight size={14} />
+                                Detalhes Completos <ChevronRight size={16} />
                             </Link>
                         </div>
                     </div>
