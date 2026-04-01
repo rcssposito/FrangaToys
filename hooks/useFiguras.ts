@@ -4,7 +4,8 @@ import { z } from 'zod';
 
 const ResponseSchema = z.object({
     items: z.array(FiguraSchema),
-    nextCursor: z.number().optional(), // Changed from string to number
+    nextCursor: z.number().optional(),
+    total: z.number().optional(),
 });
 
 type Filters = z.infer<typeof FiltersSchema>;

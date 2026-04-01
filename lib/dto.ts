@@ -42,6 +42,7 @@ export const FiltersSchema = z.object({
   novidades: z.string().optional(), // 'true' or 'false'
   limit: z.string().optional(),
   cursor: z.string().optional(),
+  sort: z.string().optional(),
 });
 
 export const EstudioSchema = z.object({

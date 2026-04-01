@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
                 horas_impressao,
                 horas_pintura
             )
-        `);
+        `, { count: 'exact' });
 
         // --- Filters ---
         if (filters.incluirNaoVendaveis !== 'true') {
@@ -83,9 +83,15 @@ export async function GET(req: NextRequest) {
             query = query.or(`nome.ilike.%${term}%,sinonimos.ilike.%${term}%`);
         }
 
-        if (filters.novidades === 'true') {
+        // --- Sorting ---
+        const sortType = filters.sort || (filters.novidades === 'true' ? 'newest' : 'name_asc');
+
+        if (sortType === 'newest') {
             query = query.order('id', { ascending: false });
+        } else if (sortType === 'name_desc') {
+            query = query.order('nome', { ascending: false });
         } else {
+            // Default: name_asc
             query = query.order('nome', { ascending: true });
         }
 
@@ -96,7 +102,7 @@ export async function GET(req: NextRequest) {
 
         query = query.range(from, to);
 
-        const { data, error } = await query;
+        const { data, error, count } = await query;
 
         if (error) {
             throw error;
@@ -108,6 +114,12 @@ export async function GET(req: NextRequest) {
             
             const precos = settings && meta ? calculateFigurePrices(meta, settings) : undefined;
 
+            // Handle joined objects that might come as arrays
+            const seriesData = Array.isArray(item.series) ? item.series[0] : item.series;
+            const studioData = Array.isArray(item.studios) ? item.studios[0] : item.studios;
+            const categoriaData = seriesData?.categorias;
+            const categoriaNome = Array.isArray(categoriaData) ? categoriaData[0]?.nome : categoriaData?.nome;
+
             return {
                 id: item.id,
                 nome: item.nome,
@@ -117,12 +129,12 @@ export async function GET(req: NextRequest) {
                 tem_extras: item.tem_extras || false,
                 studio_id: item.studio_id,
                 serie_id: item.serie_id,
-                serie: item.series?.nome || null,
-                categoria: item.series?.categorias?.nome || null,
-                studio: item.studios?.nome || null,
-                studio_logo: item.studios?.logo_url || null,
-                studio_instagram: item.studios?.instagram_handle || null,
-                studio_social: item.studios?.social_url || null,
+                serie: seriesData?.nome || null,
+                categoria: categoriaNome || null,
+                studio: studioData?.nome || null,
+                studio_logo: studioData?.logo_url || null,
+                studio_instagram: studioData?.instagram_handle || null,
+                studio_social: studioData?.social_url || null,
                 altura_cm: meta?.altura_cm || null,
                 largura_cm: meta?.largura_cm || null,
                 profundidade_cm: meta?.profundidade_cm || null,
@@ -139,7 +151,11 @@ export async function GET(req: NextRequest) {
 
         const nextPage = items.length === limit ? page + 1 : undefined;
 
-        return NextResponse.json({ items, nextCursor: nextPage }, {
+        return NextResponse.json({ 
+            items, 
+            nextCursor: nextPage,
+            total: count || 0
+        }, {
             headers: {
                 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
             },

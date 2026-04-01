@@ -26,8 +26,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     if (!figure) return { title: 'Figura não encontrada' };
 
+    // Supabase joins can return an array even for 1-to-1 if not specified
+    const series = Array.isArray(figure.series) ? figure.series[0] : (figure.series as any);
     const title = `${figure.nome} | Franga Toys`;
-    const description = `Confira os detalhes de ${figure.nome} ${figure.series?.nome ? `da série ${figure.series.nome}` : ''}. Faça seu orçamento de figuras 3D!`;
+    const description = `Confira os detalhes de ${figure.nome} ${series?.nome ? `da série ${series.nome}` : ''}. Faça seu orçamento de figuras 3D!`;
     
     return {
         title,
@@ -75,13 +77,15 @@ export default async function FiguraPage({ params }: Props) {
     const metaData = Array.isArray(figure.figuras_meta) ? figure.figuras_meta[0] : figure.figuras_meta;
     const prices = settings && metaData ? calculateFigurePrices(metaData, settings) : undefined;
 
+    const seriesData = Array.isArray(figure.series) ? figure.series[0] : (figure.series as any);
+
     const figureDto = {
         id: figure.id,
         nome: figure.nome,
         imagem_url: figure.imagem_url,
         disponivel: figure.disponivel,
-        serie: figure.series?.nome,
-        categoria: (figure.series as any)?.categorias?.nome,
+        serie: seriesData?.nome,
+        categoria: seriesData?.categorias?.nome || (seriesData as any)?.categorias?.[0]?.nome,
         studio: (figure as any).studios?.nome,
         altura_cm: metaData?.altura_cm,
         largura_cm: metaData?.largura_cm,
