@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2, Plus, Minus, AlertTriangle, CheckCircle2, User, Copy } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2, Plus, Minus, AlertTriangle, CheckCircle2, User, Copy, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 
@@ -142,23 +142,37 @@ export default function NewSalePage() {
     };
 
     const addToCart = (item: CatalogItem) => {
-        const existing = cart.find(i => i.id === item.id);
-        const taxaCard = settings?.taxa_cartao || 1.15;
-        if (existing) {
-            updateItemQuantity(item.id, existing.quantidade + 1);
+        if (cart.find(i => i.id === item.id)) {
+            updateItemQuantity(item.id, cart.find(i => i.id === item.id)!.quantidade + 1);
         } else {
-            const unitPrice = item["Estilizado (R$)"] || 0;
+            const taxaCard = settings?.taxa_cartao || 1.15;
+            const basePrice = item["Estilizado (R$)"] || 0;
+            const unitPrice = paymentMethod === 'credit' ? Number((basePrice * taxaCard).toFixed(2)) : basePrice;
+            
             setCart([...cart, { 
                 ...item, 
                 quantidade: 1, 
                 selectedTier: 'estilizado',
-                valor_final: Number((unitPrice * taxaCard).toFixed(2)) 
+                valor_final: Number((unitPrice * 1).toFixed(2)) 
             }]);
         }
         setSearch('');
         setShippingQuotes([]);
         toast.success(`${item.Figura} adicionado ao carrinho`);
     };
+
+    // Efeito para sincronizar todos os itens do carrinho quando mudar o método global de pagamento
+    useEffect(() => {
+        if (cart.length === 0) return;
+        const taxaCard = settings?.taxa_cartao || 1.15;
+        
+        setCart(prev => prev.map(i => {
+            const tierPrice = i.selectedTier === 'estilizado' ? i["Estilizado (R$)"] : 
+                             i.selectedTier === 'colorido' ? i["Colorido (R$)"] : i["2D (R$)"];
+            const unitPrice = paymentMethod === 'credit' ? Number(((tierPrice || 0) * taxaCard).toFixed(2)) : (tierPrice || 0);
+            return { ...i, valor_final: Number((unitPrice * i.quantidade).toFixed(2)) };
+        }));
+    }, [paymentMethod, settings?.taxa_cartao]);
 
     const removeFromCart = (id: number) => {
         setCart(cart.filter(i => i.id !== id));
@@ -172,8 +186,8 @@ export default function NewSalePage() {
                 const taxaCard = settings?.taxa_cartao || 1.15;
                 const tierPrice = i.selectedTier === 'estilizado' ? i["Estilizado (R$)"] : 
                                  i.selectedTier === 'colorido' ? i["Colorido (R$)"] : i["2D (R$)"];
-                const unitPriceCard = Number(((tierPrice || 0) * taxaCard).toFixed(2));
-                return { ...i, quantidade: qty, valor_final: Number((unitPriceCard * qty).toFixed(2)) };
+                const unitPrice = paymentMethod === 'credit' ? Number(((tierPrice || 0) * taxaCard).toFixed(2)) : (tierPrice || 0);
+                return { ...i, quantidade: qty, valor_final: Number((unitPrice * qty).toFixed(2)) };
             }
             return i;
         }));
@@ -186,8 +200,8 @@ export default function NewSalePage() {
                 const taxaCard = settings?.taxa_cartao || 1.15;
                 const tierPrice = tier === 'estilizado' ? i["Estilizado (R$)"] : 
                                  tier === 'colorido' ? i["Colorido (R$)"] : i["2D (R$)"];
-                const unitPriceCard = Number(((tierPrice || 0) * taxaCard).toFixed(2));
-                return { ...i, selectedTier: tier, valor_final: Number((unitPriceCard * i.quantidade).toFixed(2)) };
+                const unitPrice = paymentMethod === 'credit' ? Number(((tierPrice || 0) * taxaCard).toFixed(2)) : (tierPrice || 0);
+                return { ...i, selectedTier: tier, valor_final: Number((unitPrice * i.quantidade).toFixed(2)) };
             }
             return i;
         }));
@@ -197,20 +211,14 @@ export default function NewSalePage() {
         setCart(cart.map(i => i.id === id ? { ...i, valor_final: price } : i));
     };
 
-    const totalVendaCartao = cart.reduce((acc, i) => acc + (i.valor_final || 0), 0);
+    const totalCartSum = cart.reduce((acc, i) => acc + (i.valor_final || 0), 0);
     const taxaMarkup = settings?.taxa_cartao || 1.15;
     
-    // Cálculo dinâmico: 'Outros' não tem desconto de PIX (markup)
-    const totalVendaBase = cart.reduce((acc, i) => {
-        const isOutros = i.studio === 'Outros';
-        // O valor_final é UNITÁRIO * QUANTIDADE (já com markup). 
-        const unitPriceCard = i.valor_final / i.quantidade;
-        const unitPricePix = isOutros ? unitPriceCard : unitPriceCard / taxaMarkup;
-        return acc + (unitPricePix * i.quantidade);
-    }, 0);
+    // Para fins de comissão e lucro real, se for crédito, removemos a taxa do cartão do montante
+    const totalVendaBase = paymentMethod === 'credit' ? (totalCartSum / taxaMarkup) : totalCartSum;
 
     const freteSomar = metodoEntrega === 'envio' ? (Number(valorFrete.replace(',', '.')) || 0) : 0;
-    const totalVenda = (paymentMethod === 'credit' ? totalVendaCartao : totalVendaBase) + freteSomar;
+    const totalVenda = totalCartSum + freteSomar;
 
     const totalResinaNecessaria = cart.reduce((acc, i) => acc + (i.resina_kg * i.quantidade), 0);
     const temEstoqueSuficiente = totalResinaNecessaria <= estoqueResina;
@@ -225,7 +233,7 @@ export default function NewSalePage() {
     const emailComissao = vendedorSelecionado || user?.email;
     const nomeVendedorComissao = vendedores.find(v => v.email === emailComissao)?.nome || emailComissao;
     const totalComissao = (emailComissao && emailComissao.toLowerCase() !== OWNER_EMAIL.toLowerCase()) ? Math.round(totalVendaBase * 0.15) : 0;
-    const lucroEstimado = (paymentMethod === 'credit' ? totalVendaCartao : totalVendaBase) - totalCustoProducao - totalFreelancer - totalComissao;
+    const lucroEstimado = totalVendaBase - totalCustoProducao - totalFreelancer - totalComissao;
 
     const fetchShippingQuotes = async () => {
         if (!cepDestino || cepDestino.replace(/\D/g, '').length !== 8) {
@@ -595,65 +603,102 @@ export default function NewSalePage() {
                                         <p className="text-xs uppercase font-black tracking-widest">Aguardando Produtos</p>
                                     </div>
                                 ) : (
-                                    cart.map((item) => (
-                                        <div key={item.id} className="p-5 hover:bg-zinc-900/40 transition-colors group">
-                                            <div className="flex justify-between items-start mb-3">
-                                                <div className="font-black text-sm text-zinc-200 group-hover:text-cyan-400 transition-colors">{item.Figura}</div>
-                                                <button onClick={() => removeFromCart(item.id)} className="text-zinc-600 hover:text-red-500 p-1.5 bg-zinc-900 rounded border border-zinc-800 transition-colors shadow-sm">
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </div>
-                                            {/* Tier Selector - HCI Tático */}
-                                            <div className="flex bg-zinc-950/50 p-1 rounded-xl border border-zinc-800/50 mb-3 w-full">
-                                                {(['estilizado', 'colorido', '2D'] as const).map((tier) => (
-                                                    <button
-                                                        key={tier}
-                                                        onClick={() => updateItemTier(item.id, tier)}
-                                                        className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-tighter rounded-lg transition-all ${
-                                                            item.selectedTier === tier 
-                                                            ? 'bg-zinc-800 text-cyan-400 shadow-sm border border-cyan-500/20' 
-                                                            : 'text-zinc-600 hover:text-zinc-400'
-                                                        }`}
-                                                    >
-                                                        {tier}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4 items-center">
-                                                <div className="flex items-center gap-1 bg-zinc-950 p-1.5 rounded-lg border border-zinc-800 w-fit shadow-inner">
-                                                    <button onClick={() => updateItemQuantity(item.id, item.quantidade - 1)} className="p-1.5 rounded bg-zinc-900 text-zinc-400 hover:text-cyan-400 transition-colors"><Minus size={14} /></button>
-                                                    <span className="w-10 text-center font-black text-sm text-zinc-200">{item.quantidade}</span>
-                                                    <button onClick={() => updateItemQuantity(item.id, item.quantidade + 1)} className="p-1.5 rounded bg-zinc-900 text-zinc-400 hover:text-cyan-400 transition-colors"><Plus size={14} /></button>
-                                                </div>
-                                                <div className="flex flex-col gap-1.5 items-end w-full">
-                                                    <div className="relative w-full">
-                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-600 font-black tracking-widest text-[10px]">TOTAL</span>
-                                                        <input
-                                                            type="text"
-                                                            value={item.valor_final}
-                                                            onChange={(e) => updateItemPrice(item.id, parseFloat(e.target.value) || 0)}
-                                                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2 pl-12 pr-3 text-right text-sm font-bold text-white focus:border-cyan-500 outline-none transition-all shadow-inner"
-                                                        />
+                                    cart.map((item) => {
+                                        const taxaMarkup = settings?.taxa_cartao || 1.15;
+                                        const tierKey = item.selectedTier === 'estilizado' ? "Estilizado (R$)" : 
+                                                         item.selectedTier === 'colorido' ? "Colorido (R$)" : "2D (R$)";
+                                        const baseTierPrice = item[tierKey] || 0;
+                                        const isOutros = item.studio === 'Outros';
+                                        
+                                        // Cálculo sugerido (Baseado no Tier selecionado e Método de Pagto)
+                                        const suggestedUnit = paymentMethod === 'credit' ? (isOutros ? baseTierPrice : baseTierPrice * taxaMarkup) : baseTierPrice;
+                                        const suggestedTotal = Number((suggestedUnit * item.quantidade).toFixed(2));
+                                        const isSynced = Math.abs((item.valor_final || 0) - suggestedTotal) < 0.1;
+
+                                        return (
+                                            <div key={item.id} className="p-5 hover:bg-zinc-900/40 transition-colors group">
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <div className="flex flex-col">
+                                                        <div className="font-black text-sm text-zinc-200 group-hover:text-cyan-400 transition-colors">{item.Figura}</div>
+                                                        <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-tight">{item.studio}</div>
                                                     </div>
-                                                    <span className="text-[10px] text-emerald-400 font-bold tracking-widest uppercase">
-                                                        PIX: R$ {(item.studio === 'Outros' ? item.valor_final : item.valor_final / taxaMarkup).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                        {item.studio === 'Outros' && <span className="ml-1 text-[8px] opacity-70">(S/ DESCONTO)</span>}
-                                                    </span>
+                                                    <button onClick={() => removeFromCart(item.id)} className="text-zinc-600 hover:text-red-500 p-1.5 bg-zinc-900 rounded border border-zinc-800 transition-colors shadow-sm">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                                
+                                                {/* Tier Selector */}
+                                                <div className="flex bg-zinc-950/50 p-1 rounded-xl border border-zinc-800/50 mb-3 w-full">
+                                                    {(['estilizado', 'colorido', '2D'] as const).map((tier) => (
+                                                        <button
+                                                            key={tier}
+                                                            onClick={() => updateItemTier(item.id, tier)}
+                                                            className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-tighter rounded-lg transition-all ${
+                                                                item.selectedTier === tier 
+                                                                ? 'bg-zinc-800 text-cyan-400 shadow-sm border border-cyan-500/20' 
+                                                                : 'text-zinc-600 hover:text-zinc-400'
+                                                            }`}
+                                                        >
+                                                            {tier}
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4 items-center">
+                                                    <div className="flex items-center gap-1 bg-zinc-950 p-1.5 rounded-lg border border-zinc-800 w-fit shadow-inner">
+                                                        <button onClick={() => updateItemQuantity(item.id, item.quantidade - 1)} className="p-1.5 rounded bg-zinc-900 text-zinc-400 hover:text-cyan-400 transition-colors"><Minus size={14} /></button>
+                                                        <span className="w-10 text-center font-black text-sm text-zinc-200">{item.quantidade}</span>
+                                                        <button onClick={() => updateItemQuantity(item.id, item.quantidade + 1)} className="p-1.5 rounded bg-zinc-900 text-zinc-400 hover:text-cyan-400 transition-colors"><Plus size={14} /></button>
+                                                    </div>
+
+                                                    <div className="flex flex-col gap-1.5 items-end w-full">
+                                                        <div className="relative w-full">
+                                                            <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                                                <span className="text-cyan-600 font-black tracking-widest text-[10px]">TOTAL</span>
+                                                                {isSynced ? (
+                                                                    <CheckCircle2 size={12} className="text-emerald-500" />
+                                                                ) : (
+                                                                    <div className="flex items-center gap-1">
+                                                                        <AlertTriangle size={12} className="text-orange-500" />
+                                                                        <button 
+                                                                            onClick={() => updateItemPrice(item.id, suggestedTotal)}
+                                                                            className="p-1 bg-zinc-800 rounded hover:bg-zinc-700 text-zinc-400 hover:text-white transition-all"
+                                                                            title="Restaurar Preço Sugerido"
+                                                                        >
+                                                                            <RefreshCw size={10} />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <input
+                                                                type="text"
+                                                                value={item.valor_final}
+                                                                onChange={(e) => updateItemPrice(item.id, parseFloat(e.target.value) || 0)}
+                                                                className={`w-full bg-zinc-950 border ${isSynced ? 'border-zinc-800' : 'border-orange-500/30'} rounded-xl py-2 pl-16 pr-3 text-right text-sm font-bold text-white focus:border-cyan-500 outline-none transition-all shadow-inner`}
+                                                            />
+                                                        </div>
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="text-[10px] text-zinc-500 font-bold tracking-widest uppercase">
+                                                                Sugerido: R$ {suggestedTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                            </span>
+                                                            <span className="text-[9px] text-emerald-500/80 font-black tracking-tight uppercase">
+                                                                Base PIX: R$ {(baseTierPrice * item.quantidade).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
+
                                 )}
                             </div>
 
                             {cart.length > 0 && (
                                 <div className="p-5 bg-zinc-950/80 border-t border-zinc-800/80 flex flex-col gap-2.5 text-sm shadow-inner relative">
-                                    <div className="flex justify-between items-center text-zinc-400 font-bold">
-                                        <div className="flex flex-col">
-                                            <span>Valor Bruto (Subtotal):</span>
-                                            {paymentMethod === 'pix' && <span className="text-[10px] text-emerald-500 font-black tracking-widest uppercase mt-0.5 animate-pulse">- {Math.round((1 - (1 / taxaMarkup)) * 100)}% Desconto (PIX)</span>}
-                                        </div>
-                                        <span className="text-zinc-200">R$ {Number((paymentMethod === 'credit' ? totalVendaCartao : totalVendaBase).toFixed(2)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    <div className="flex justify-between items-center text-zinc-400 font-bold border-b border-zinc-800/50 pb-2 mb-1">
+                                        <span>Valor Bruto:</span>
+                                        <span className="text-zinc-200 uppercase text-[10px] tracking-widest bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">R$ {totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                     {metodoEntrega === 'envio' && freteSomar > 0 && (
                                         <div className="flex justify-between items-center text-cyan-400 font-bold text-xs border-b border-zinc-800/50 pb-2 mb-1">
@@ -965,7 +1010,7 @@ export default function NewSalePage() {
                                     <div className="flex flex-col">
                                         <span className="text-zinc-400 font-black uppercase tracking-widest text-[11px] mb-1">Fechar Total do Pedido</span>
                                         <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded w-fit ${paymentMethod === 'credit' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
-                                            {paymentMethod === 'credit' ? 'Mercado Pago (Cartão)' : 'PIX (-17% Taxa)'}
+                                            {paymentMethod === 'credit' ? 'Mercado Pago (Cartão)' : 'PAGAMENTO VIA PIX'}
                                         </span>
                                     </div>
                                     <div className={`flex items-baseline gap-1.5 ${paymentMethod === 'credit' ? 'text-blue-400' : 'text-emerald-400'}`}>
