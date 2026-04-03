@@ -25,26 +25,36 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
         return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     };
 
-    const handleShare = async () => {
-        const shareUrl = `${window.location.origin}/figura/${figure.id}`;
+    const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/figura/${figure.id}` : '';
+    const shareText = `Confira essa figura na Franga Toys: ${figure.nome}`;
 
+    const shareWhatsApp = () => {
+        const url = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+        window.open(url, '_blank');
+    };
+
+    const shareLink = async () => {
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            toast.success('Link copiado!');
+        } catch (err) {
+            toast.error('Erro ao copiar link');
+        }
+    };
+
+    const handleShare = async () => {
         if (navigator.share) {
             try {
                 await navigator.share({
                     title: figure.nome,
-                    text: `Confira essa figura na Franga Toys: ${figure.nome}`,
+                    text: shareText,
                     url: shareUrl,
                 });
             } catch (err) {
-                // Silently fail if user cancels share
+                // Silently fail
             }
         } else {
-            try {
-                await navigator.clipboard.writeText(shareUrl);
-                toast.success('Link copiado para a área de transferência!');
-            } catch (err) {
-                toast.error('Erro ao copiar link');
-            }
+            shareWhatsApp();
         }
     };
 
@@ -236,7 +246,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                         <button
                             onClick={handleShare}
                             className="p-5 bg-zinc-900 border border-white/5 hover:border-white/20 text-zinc-400 hover:text-white rounded-2xl transition-all duration-300 group relative z-10"
-                            title="Compartilhar"
+                            title="Compartilhar no WhatsApp"
                         >
                             <Share2 size={24} className="group-hover:rotate-12 transition-transform" />
                         </button>
