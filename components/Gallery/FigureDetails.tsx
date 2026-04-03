@@ -55,11 +55,24 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
     ] as const;
 
     return (
-        <div className="flex flex-col items-center justify-center h-full w-full max-w-6xl mx-auto p-4 md:p-8">
-            <div className="flex flex-col lg:flex-row w-full gap-8 items-start lg:items-center">
+        <div className="relative flex flex-col items-center justify-center min-h-full w-full max-w-6xl mx-auto p-4 md:p-8">
+            {/* Mobile Atmospheric Background Image */}
+            <div className="lg:hidden absolute inset-x-0 top-0 h-[60vh] -z-10 overflow-hidden pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10" />
+                <Image
+                    loader={imageKitLoader}
+                    src={getOptimizedImageUrl(figure.imagem_url)}
+                    alt=""
+                    fill
+                    className="object-contain p-4 opacity-60 sm:opacity-40"
+                    priority
+                />
+            </div>
+
+            <div className="flex flex-col lg:flex-row w-full gap-8 items-start lg:items-center relative z-20">
                 
-                {/* Main Image Container */}
-                <div className="relative w-full lg:w-1/2 aspect-square flex items-center justify-center p-4 bg-zinc-900/20 rounded-3xl overflow-hidden shadow-inner order-1">
+                {/* Main Image Container (Desktop Only or refined Mobile) */}
+                <div className="hidden lg:flex relative w-full lg:w-1/2 aspect-square items-center justify-center p-4 bg-zinc-900/20 rounded-3xl overflow-hidden shadow-inner order-1">
                     <Image
                         loader={imageKitLoader}
                         src={getOptimizedImageUrl(figure.imagem_url)}
@@ -73,7 +86,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                 </div>
 
                 {/* Info & Pricing Panel */}
-                <div className="w-full lg:w-1/2 flex flex-col gap-6 order-2">
+                <div className="w-full lg:w-1/2 flex flex-col gap-6 order-2 pt-[25vh] lg:pt-0">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                              <h3 className="text-sm font-black text-blue-500 uppercase tracking-[0.3em]">{figure.studio || 'Studio Indiferente'}</h3>
@@ -228,13 +241,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                             <Share2 size={24} className="group-hover:rotate-12 transition-transform" />
                         </button>
 
-                        {/* Close Button (Touch Optimized) */}
-                        <button
-                            onClick={() => (window as any).history.back()}
-                            className="absolute -top-16 right-0 p-4 bg-zinc-900/50 backdrop-blur-xl border border-white/10 text-zinc-400 hover:text-white rounded-full transition-all active:scale-90 shadow-2xl lg:hidden"
-                        >
-                            <X size={24} />
-                        </button>
+                        {/* Close Button removed as it was redundant */}
                     </div>
                 </div>
             </div>
