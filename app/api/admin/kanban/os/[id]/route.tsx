@@ -109,6 +109,12 @@ export async function GET(
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(originUrl)}`;
         const formatMoney = (val: number) => val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+        const dataVendaObj = new Date(sale.data_venda);
+        const dataPrazoObj = new Date(sale.data_venda);
+        dataPrazoObj.setDate(dataPrazoObj.getDate() + 45);
+        const dataPrazo = dataPrazoObj.toLocaleDateString('pt-BR');
+        
+        // Retornar o Layout da Ordem de Serviço (Edge Runtime)
         return new ImageResponse(
             (
                 <div
@@ -118,194 +124,219 @@ export async function GET(
                         display: 'flex',
                         flexDirection: 'column',
                         backgroundColor: '#ffffff',
-                        padding: '40px 50px',
+                        padding: '40px',
                         color: '#000000',
                         fontFamily: 'sans-serif',
                     }}
                 >
-                    {/* Header Section */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '3px solid #000', paddingBottom: 20, marginBottom: 30 }}>
+                    {/* Header Section - Industrial Style */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '4px solid #000', paddingBottom: 15, marginBottom: 25 }}>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <div style={{ width: 10, height: 35, backgroundColor: '#ea580c', borderRadius: 3 }}></div>
-                                <h1 style={{ fontSize: 38, margin: 0, fontWeight: '900', color: '#ea580c', letterSpacing: '-1px' }}>ORDEM DE SERVIÇO</h1>
-                            </div>
-                            <p style={{ fontSize: 18, color: '#444', margin: '5px 0 0 22px', fontWeight: '500' }}>Franga Toys - Ateliê de Impressão 3D</p>
+                            <h1 style={{ fontSize: 32, margin: 0, fontWeight: '900', color: '#000', letterSpacing: '-0.5px' }}>FICHA DE PRODUÇÃO // OS</h1>
+                            <p style={{ fontSize: 14, color: '#64748b', margin: '2px 0 0 0', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '2px' }}>Franga Toys - Ateliê de Impressão 3D</p>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                            <div style={{ display: 'flex', backgroundColor: '#000', color: '#fff', padding: '4px 12px', borderRadius: 6, marginBottom: 4 }}>
-                                <span style={{ fontSize: 24, fontWeight: '900' }}>#{sale.id}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', borderRight: '2px solid #e2e8f0', paddingRight: 20 }}>
+                                <span style={{ fontSize: 10, color: '#64748b', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>Entrada</span>
+                                <span style={{ fontSize: 16, color: '#000', fontWeight: 'bold' }}>{dataVendaObj.toLocaleDateString('pt-BR')}</span>
                             </div>
-                            <span style={{ fontSize: 16, color: '#666', fontWeight: 'bold' }}>{new Date(sale.data_venda).toLocaleDateString('pt-BR')}</span>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', borderRight: '2px solid #e2e8f0', paddingRight: 20 }}>
+                                <span style={{ fontSize: 10, color: '#ea580c', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>Prazo Max (45d)</span>
+                                <span style={{ fontSize: 16, color: '#ea580c', fontWeight: 'bold' }}>{dataPrazo}</span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#000', color: '#fff', padding: '8px 20px', borderRadius: 4 }}>
+                                <span style={{ fontSize: 10, fontWeight: '600', letterSpacing: '1px', opacity: 0.8 }}>ID</span>
+                                <span style={{ fontSize: 26, fontWeight: '900', lineHeight: 1 }}>#{sale.id}</span>
+                            </div>
                         </div>
                     </div>
 
                     {/* Content Section */}
-                    <div style={{ display: 'flex', gap: 40 }}>
-                        {/* Info Column */}
-                        <div style={{ display: 'flex', flexDirection: 'column', width: 420 }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 20 }}>
-                                <span style={{ fontSize: 12, textTransform: 'uppercase', color: '#999', fontWeight: '800', letterSpacing: '1px' }}>Cliente</span>
-                                <span style={{ fontSize: 26, fontWeight: '800', color: '#111' }}>{sale.cliente_nome}</span>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 20 }}>
-                                <span style={{ fontSize: 12, textTransform: 'uppercase', color: '#999', fontWeight: '800', letterSpacing: '1px' }}>Peça / Modelo</span>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <span style={{ fontSize: 26, fontWeight: '800', color: '#111' }}>{fig?.nome}</span>
-                                    {fig?.codigo && (
-                                        <span style={{ fontSize: 14, fontWeight: '900', backgroundColor: '#000', color: '#fff', padding: '2px 8px', borderRadius: 4, marginTop: 4 }}>{fig.codigo}</span>
-                                    )}
+                    <div style={{ display: 'flex', gap: 30, flex: 1 }}>
+                        
+                        {/* LEFT COLUMN: Data & Details */}
+                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1.1, gap: 20 }}>
+                            {/* Client & Product Block */}
+                            <div style={{ display: 'flex', flexDirection: 'column', border: '2px solid #000', padding: 20 }}>
+                                <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', paddingBottom: 15, marginBottom: 15 }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                        <span style={{ fontSize: 11, color: '#64748b', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>Cliente</span>
+                                        <span style={{ fontSize: 24, fontWeight: '900', color: '#000', textTransform: 'uppercase' }}>{sale.cliente_nome}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+                                        <span style={{ fontSize: 11, color: '#64748b', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>Qtd</span>
+                                        <span style={{ fontSize: 32, fontWeight: '900', color: '#ea580c', lineHeight: 1 }}>{sale.quantidade}x</span>
+                                    </div>
                                 </div>
-                                <span style={{ fontSize: 16, color: '#ea580c', fontWeight: 'bold', marginTop: 2 }}>Estúdio: {studio?.nome || 'N/A'}</span>
-                            </div>
-
-                            {/* Tech Specs */}
-                            <div style={{ display: 'flex', background: '#f8fafc', padding: '15px 20px', borderRadius: 12, border: '1px solid #e2e8f0', flexDirection: 'column', marginBottom: 20 }}>
-                                <span style={{ fontSize: 11, textTransform: 'uppercase', color: '#555', fontWeight: '900', borderBottom: '1px solid #e2e8f0', paddingBottom: 8, marginBottom: 12 }}>Ficha Técnica de Produção</span>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                        <span style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 'bold' }}>Altura</span>
-                                        <span style={{ fontSize: 18, fontWeight: '900', color: '#000' }}>{meta.altura_cm || '?'}cm</span>
+                                
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: 11, color: '#64748b', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>Modelo / Figura</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                                        <span style={{ fontSize: 28, fontWeight: '900', color: '#000', letterSpacing: '-0.5px' }}>{fig?.nome}</span>
+                                        {fig?.codigo && (
+                                            <span style={{ fontSize: 14, fontWeight: '900', backgroundColor: '#000', color: '#fff', padding: '4px 8px', borderRadius: 2 }}>{fig.codigo}</span>
+                                        )}
                                     </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                        <span style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 'bold' }}>Resina</span>
-                                        <span style={{ fontSize: 18, fontWeight: '900', color: '#000' }}>{meta.resina_kg ? (meta.resina_kg * 1000).toFixed(0) : '?'}g</span>
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                        <span style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 'bold' }}>Impressão</span>
-                                        <span style={{ fontSize: 18, fontWeight: '900', color: '#000' }}>{meta.horas_impressao || '?'}h</span>
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                        <span style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 'bold' }}>Pintura</span>
-                                        <span style={{ fontSize: 18, fontWeight: '900', color: '#000' }}>{meta.horas_pintura || '?'}h</span>
-                                    </div>
+                                    <span style={{ fontSize: 14, color: '#ea580c', fontWeight: '800', marginTop: 4, textTransform: 'uppercase' }}>Estúdio: {studio?.nome || 'N/A'}</span>
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontSize: 12, textTransform: 'uppercase', color: '#999', fontWeight: '800' }}>Quantidade</span>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <span style={{ fontSize: 42, fontWeight: '900', color: '#ea580c' }}>{sale.quantidade}x</span>
-                                    <span style={{ fontSize: 24, fontWeight: '800', color: '#ea580c', paddingTop: 8 }}>Unidades</span>
+                            {/* Technical Specifications (Blueprint Style) */}
+                            <div style={{ display: 'flex', flexDirection: 'column', border: '2px solid #e2e8f0', backgroundColor: '#f8fafc', padding: 20 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                                    <div style={{ width: 12, height: 12, backgroundColor: '#000' }}></div>
+                                    <span style={{ fontSize: 14, color: '#000', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '2px' }}>Parâmetros Técnicos</span>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 15, borderTop: '1px solid #cbd5e1', paddingTop: 15 }}>
+                                    {/* Primeira Linha: Tamanho */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 15, borderBottom: '1px dashed #cbd5e1' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                            <span style={{ fontSize: 10, color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>Altura</span>
+                                            <span style={{ fontSize: 22, fontWeight: '700', fontFamily: 'monospace', color: '#0f172a' }}>{meta.altura_cm || '--'} cm</span>
+                                        </div>
+                                        <div style={{ width: 1, backgroundColor: '#cbd5e1' }}></div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, alignItems: 'center' }}>
+                                            <span style={{ fontSize: 10, color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>Largura</span>
+                                            <span style={{ fontSize: 22, fontWeight: '700', fontFamily: 'monospace', color: '#0f172a' }}>{meta.largura_cm || '--'} cm</span>
+                                        </div>
+                                        <div style={{ width: 1, backgroundColor: '#cbd5e1' }}></div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, alignItems: 'flex-end' }}>
+                                            <span style={{ fontSize: 10, color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>Profund.</span>
+                                            <span style={{ fontSize: 22, fontWeight: '700', fontFamily: 'monospace', color: '#0f172a' }}>{meta.profundidade_cm || '--'} cm</span>
+                                        </div>
+                                    </div>
+                                    {/* Segunda Linha: Tempo e Peso */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                            <span style={{ fontSize: 10, color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>Peso (Resina)</span>
+                                            <span style={{ fontSize: 22, fontWeight: '700', fontFamily: 'monospace', color: '#0f172a' }}>{meta.resina_kg ? (meta.resina_kg * 1000).toFixed(0) : '--'} g</span>
+                                        </div>
+                                        <div style={{ width: 1, backgroundColor: '#cbd5e1' }}></div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, alignItems: 'center' }}>
+                                            <span style={{ fontSize: 10, color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>T. Impressão</span>
+                                            <span style={{ fontSize: 22, fontWeight: '700', fontFamily: 'monospace', color: '#0f172a' }}>{meta.horas_impressao || '--'} h</span>
+                                        </div>
+                                        <div style={{ width: 1, backgroundColor: '#cbd5e1' }}></div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, alignItems: 'flex-end' }}>
+                                            <span style={{ fontSize: 10, color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>T. Pintura</span>
+                                            <span style={{ fontSize: 22, fontWeight: '700', fontFamily: 'monospace', color: '#0f172a' }}>{meta.horas_pintura || '--'} h</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Special Observations */}
+                            {sale.observacao && (
+                                <div style={{ display: 'flex', padding: 20, borderLeft: '8px solid #ea580c', background: '#fffaf5', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: 12, textTransform: 'uppercase', color: '#c2410c', fontWeight: '900', letterSpacing: '1px', marginBottom: 8 }}>Observações do Cliente / Pedido</span>
+                                    <p style={{ fontSize: 18, margin: 0, lineHeight: 1.4, color: '#000', fontWeight: '600' }}>{sale.observacao}</p>
+                                </div>
+                            )}
+                            
+                            {/* Process Workflow Checkboxes */}
+                            <div style={{ display: 'flex', marginTop: 20, border: '2px solid #000', padding: '15px 20px', justifyContent: 'center', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: 20 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <div style={{ width: 20, height: 20, border: '3px solid #000', marginRight: 8 }}></div>
+                                        <span style={{ fontSize: 14, fontWeight: '900', textTransform: 'uppercase' }}>Estilizado</span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <div style={{ width: 20, height: 20, border: '3px solid #000', marginRight: 8 }}></div>
+                                        <span style={{ fontSize: 14, fontWeight: '900', textTransform: 'uppercase' }}>Colorido</span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <div style={{ width: 20, height: 20, border: '3px solid #000', marginRight: 8 }}></div>
+                                        <span style={{ fontSize: 14, fontWeight: '900', textTransform: 'uppercase' }}>2D</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Image Column */}
-                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                        {/* RIGHT COLUMN: Image, QR Code & Stamp */}
+                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 20 }}>
+                            {/* Figure Image */}
                             {fig?.imagem_url && (
                                 <div style={{ 
                                     display: 'flex', 
                                     position: 'relative',
-                                    height: 380,
+                                    height: 480,
                                     width: '100%',
-                                    backgroundColor: '#ffffff',
-                                    borderRadius: 16,
-                                    border: '1px solid #f1f5f9',
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                                    overflow: 'hidden',
+                                    backgroundColor: '#f8fafc',
+                                    border: '2px solid #e2e8f0',
                                     justifyContent: 'center',
                                     alignItems: 'center',
-                                    padding: '20px',
-                                    marginBottom: 12
+                                    padding: '20px'
                                 }}>
                                     <img
                                         src={fig.imagem_url}
                                         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                                     />
-                                    {sale.pintura_freelancer && (
-                                        <div style={{ position: 'absolute', top: 12, right: 12, backgroundColor: '#d946ef', color: '#fff', padding: '4px 10px', fontSize: 11, fontWeight: '900', borderRadius: 6, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                                            PINTURA EXTERNA
-                                        </div>
-                                    )}
+                                    <div style={{ display: 'flex', position: 'absolute', bottom: 0, right: 0, backgroundColor: '#000', padding: '6px 12px' }}>
+                                        <span style={{ color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: '2px' }}>REF: {fig.codigo || 'S/N'}</span>
+                                    </div>
                                 </div>
                             )}
-                            <div style={{ display: 'flex', background: '#000', padding: '12px', borderRadius: 10, justifyContent: 'center', alignItems: 'center' }}>
-                                <span style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: '1px' }}>VENDEDOR: @{vendedorNome.toUpperCase()}</span>
+
+                            {/* Seller & Tags */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                <div style={{ display: 'flex', background: '#000', padding: '12px', justifyContent: 'center', alignItems: 'center' }}>
+                                    <span style={{ color: '#fff', fontSize: 12, fontWeight: '900', letterSpacing: '1px' }}>VENDEDOR: @{vendedorNome.toUpperCase()}</span>
+                                </div>
+                                <div style={{ display: 'flex', background: '#000', padding: '12px', justifyContent: 'center', alignItems: 'center' }}>
+                                    <span style={{ color: '#fff', fontSize: 12, fontWeight: '900', letterSpacing: '1px' }}>PINTOR(A): @{sale.pintura_freelancer && typeof sale.pintura_freelancer === 'string' ? sale.pintura_freelancer.split('@')[0].toUpperCase() : vendedorNome.toUpperCase()}</span>
+                                </div>
+                            </div>
+
+                            {/* Lower Box: Payment & Stamp */}
+                            <div style={{ display: 'flex', marginTop: 'auto', gap: 15 }}>
+                                {/* Financial & QR */}
+                                <div style={{
+                                    display: 'flex',
+                                    flex: 1,
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    border: '2px solid #000',
+                                    height: 140,
+                                    gap: 5
+                                }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <span style={{ fontSize: 10, color: '#64748b', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>Total {sale.link_pagamento ? 'M.P.' : 'PIX'}</span>
+                                        <span style={{ fontSize: 20, fontWeight: '900', color: '#000', marginTop: 2 }}>R$ {formatMoney(valorTotalReal)}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', width: 80, height: 80, justifyContent: 'center', alignItems: 'center' }}>
+                                        <img src={qrCodeUrl} style={{ width: 80, height: 80 }} />
+                                    </div>
+                                </div>
+
+                                {/* Stamp Box - Empty for PDF Stamp */}
+                                <div style={{
+                                    width: 140,
+                                    height: 140,
+                                    border: '2px dashed #cbd5e1',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    backgroundColor: '#fff'
+                                }}>
+                                    {/* Empty area meant for digital/physical stamp */}
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Observations - Spaced out */}
-                    <div style={{ display: 'flex', flexDirection: 'column', marginTop: 40 }}>
-                        {sale.observacao && (
-                            <div style={{ display: 'flex', padding: '15px 20px', borderLeft: '6px solid #ea580c', background: '#fffaf5', borderRadius: '0 10px 10px 0', flexDirection: 'column', marginBottom: 30 }}>
-                                <span style={{ fontSize: 11, textTransform: 'uppercase', color: '#c2410c', fontWeight: '900', letterSpacing: '1px', marginBottom: 5 }}>Observações Especiais</span>
-                                <p style={{ fontSize: 16, margin: 0, lineHeight: 1.5, color: '#333', fontWeight: '500' }}>{sale.observacao}</p>
-                            </div>
-                        )}
-
-                        {/* Compact Horizontal Section */}
-                        <div style={{ 
-                            display: 'flex', 
-                            borderTop: '2px solid #f1f5f9', 
-                            paddingTop: 30, 
-                            marginTop: sale.observacao ? 20 : 40,
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                        }}>
-                            {/* Checkboxes */}
-                            <div style={{ display: 'flex', gap: 20 }}>
-                                <div style={{ display: 'flex', alignItems: 'center' }}>
-                                    <div style={{ width: 18, height: 18, border: '2px solid #ea580c', borderRadius: 4, marginRight: 6 }}></div>
-                                    <span style={{ fontSize: 13, fontWeight: '800' }}>IMPRESSÃO</span>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center' }}>
-                                    <div style={{ width: 18, height: 18, border: '2px solid #ea580c', borderRadius: 4, marginRight: 6 }}></div>
-                                    <span style={{ fontSize: 13, fontWeight: '800' }}>LIMPEZA</span>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center' }}>
-                                    <div style={{ width: 18, height: 18, border: '2px solid #ea580c', borderRadius: 4, marginRight: 6 }}></div>
-                                    <span style={{ fontSize: 13, fontWeight: '800' }}>PINTURA</span>
-                                </div>
-                            </div>
-
-                            {/* Payment */}
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 12,
-                                backgroundColor: '#f8fafc',
-                                padding: '10px 15px',
-                                borderRadius: 12,
-                                border: '1px solid #e2e8f0'
-                            }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                    <span style={{ fontSize: 9, color: '#64748b', fontWeight: '900', textTransform: 'uppercase' }}>Total {sale.link_pagamento ? 'MP' : 'PIX'}</span>
-                                    <span style={{ fontSize: 22, fontWeight: '900', color: '#000' }}>R$ {formatMoney(valorTotalReal)}</span>
-                                </div>
-                                <img src={qrCodeUrl} style={{ width: 70, height: 70 }} />
-                            </div>
-
-                            {/* Stamp */}
-                            <div style={{
-                                width: 150,
-                                height: 150,
-                                border: '2px dashed #cbd5e1',
-                                borderRadius: 12,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                backgroundColor: '#f8fafc'
-                            }}>
-                                <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: '900' }}>CARIMBO</span>
-                                <span style={{ fontSize: 8, color: '#94a3b8', fontWeight: '900' }}>6x6</span>
-                            </div>
-                        </div>
-
-                        {/* Quality Control labels */}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', opacity: 0.5, marginTop: 15 }}>
-                            <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 'bold', letterSpacing: '1px' }}>CONTROLE DE QUALIDADE / CONFERÊNCIA FINAL</span>
-                            <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 'black' }}>FRANGATOYS PRODUCTION v2.3 (COMPACT LAYOUT)</span>
+                    {/* Footer Footer */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '2px solid #e2e8f0', paddingTop: 15, marginTop: 25 }}>
+                        <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: '900', letterSpacing: '2px' }}>FRANGA TOYS // WORKSHOP PRINT</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                            <span style={{ fontSize: 8, color: '#94a3b8', fontWeight: 'bold' }}>LAYOUT v3.0</span>
                         </div>
                     </div>
                 </div>
             ),
             {
-                width: 800,
-                height: 1100,
+                width: 850,
+                height: 1200,
             }
         );
     } catch (e) {
