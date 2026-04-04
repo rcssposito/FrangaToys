@@ -301,8 +301,11 @@ export async function GET(
                                     gap: 5
                                 }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                        <span style={{ fontSize: 10, color: '#64748b', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>Total {sale.link_pagamento ? 'M.P.' : 'PIX'}</span>
+                                        <span style={{ fontSize: 10, color: '#64748b', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>Total {sale.link_pagamento ? 'M.P.' : 'PIX'} {alliedSales && alliedSales.length > 1 ? `(${alliedSales.length} OS)` : ''}</span>
                                         <span style={{ fontSize: 20, fontWeight: '900', color: '#000', marginTop: 2 }}>R$ {formatMoney(valorTotalReal)}</span>
+                                        {alliedSales && alliedSales.length > 1 && (
+                                            <span style={{ fontSize: 10, color: '#ea580c', fontWeight: '900', marginTop: 2, letterSpacing: '0.5px' }}>PEÇA DA OS: R$ {formatMoney(Number(sale.valor_venda_final) || 0)}</span>
+                                        )}
                                     </div>
                                     <div style={{ display: 'flex', width: 80, height: 80, justifyContent: 'center', alignItems: 'center' }}>
                                         <img src={qrCodeUrl} style={{ width: 80, height: 80 }} />
