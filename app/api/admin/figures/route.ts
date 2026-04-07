@@ -80,9 +80,9 @@ export async function GET(req: NextRequest) {
         // 3. Sorting
         const isNovidades = searchParams.get('novidades') === 'true';
         if (isNovidades) {
+            query = query.or('resina_kg.is.null,resina_kg.eq.0', { foreignTable: 'figuras_meta' });
             query = query.order('id', { ascending: false });
         } else {
-            // "No botão todos a busca é por ordem alfabética"
             query = query.order('nome', { ascending: true });
         }
 
