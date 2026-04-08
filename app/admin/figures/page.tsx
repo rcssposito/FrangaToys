@@ -402,9 +402,14 @@ function DataGridContent() {
     };
 
     const handleDelete = async (id: number, nome: string) => {
-        if (!confirm(`Tem certeza que deseja excluir "${nome}"? Esta ação é irreversível.`)) return;
+        const msg = `Tem certeza que deseja excluir "${nome}"?\n\nOs metadados e sinônimos serão apagados permanentemente, mas o histórico de vendas será preservado.`;
+        if (!confirm(msg)) return;
 
+        // Atualização Otimista: Remove da tela imediatamente
+        const previousFigures = [...figures];
+        setFigures(prev => prev.filter(f => f.id !== id));
         setDeletingId(id);
+
         try {
             const res = await fetch('/api/admin/figures', {
                 method: 'DELETE',
@@ -412,12 +417,17 @@ function DataGridContent() {
                 body: JSON.stringify({ id }),
             });
 
-            if (!res.ok) throw new Error('Erro ao excluir');
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Erro ao excluir');
+            }
 
             toast.success('Figura removida com sucesso');
-            await fetchFigures(); // Refresh data
-        } catch (err) {
-            toast.error('Erro ao excluir figura');
+            // Não precisa de fetchFigures() aqui pois já removemos otimisticamente
+        } catch (err: any) {
+            // Reverte se der erro
+            setFigures(previousFigures);
+            toast.error(err.message || 'Erro ao excluir figura');
         } finally {
             setDeletingId(null);
         }

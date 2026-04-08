@@ -268,11 +268,50 @@ export async function DELETE(req: Request) {
         const { id } = await req.json();
         if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 });
 
-        const { error } = await supabase.from('figuras').delete().eq('id', id);
-        if (error) throw error;
+        // 1. Buscar dados da figura para limpeza (Slug é necessário para sinônimos)
+        const { data: figura } = await supabase
+            .from('figuras')
+            .select('slug')
+            .eq('id', id)
+            .single();
+
+        // 2. Desvincular Vendas (Preserva o histórico financeiro, apenas remove a ligação com o ID)
+        const { error: errorVendas } = await supabase
+            .from('vendas')
+            .update({ figura_id: null })
+            .eq('figura_id', id);
+        
+        if (errorVendas) console.error('Erro ao desvincular vendas:', errorVendas);
+
+        // 3. Deletar Metadados
+        const { error: errorMeta } = await supabase
+            .from('figuras_meta')
+            .delete()
+            .eq('figura_id', id);
+
+        if (errorMeta) console.error('Erro ao deletar metadados:', errorMeta);
+
+        // 4. Deletar Sinônimos (se o slug existir)
+        if (figura?.slug) {
+            const { error: errorSin } = await supabase
+                .from('figuras_sinonimos')
+                .delete()
+                .eq('figura_slug', figura.slug);
+            
+            if (errorSin) console.error('Erro ao deletar sinônimos:', errorSin);
+        }
+
+        // 5. Exclusão Final da Figura
+        const { error: errorFigura } = await supabase
+            .from('figuras')
+            .delete()
+            .eq('id', id);
+
+        if (errorFigura) throw errorFigura;
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
+        console.error('Erro fatal na exclusão:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
