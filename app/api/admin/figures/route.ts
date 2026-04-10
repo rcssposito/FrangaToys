@@ -154,16 +154,40 @@ export async function PUT(req: Request) {
         const updateFields: any = {};
         if (nome !== undefined) updateFields.nome = nome;
         if (tem_extras !== undefined) updateFields.tem_extras = tem_extras;
-        if (sinonimos !== undefined) updateFields.sinonimos = sinonimos;
+        // Removido: O catálogo não pode escrever diretamente o sinônimo na tabela figuras.
+        // if (sinonimos !== undefined) updateFields.sinonimos = sinonimos;
 
-        if (Object.keys(updateFields).length > 0) {
-            const { error: figError } = await supabase
-                .from('figuras')
-                .update(updateFields)
-                .eq('id', id);
+        if (Object.keys(updateFields).length > 0 || sinonimos !== undefined) {
+            // Get slug dynamically if we need to sync to figuras_sinonimos
+            let figuraSlug = null;
+            if (sinonimos !== undefined) {
+                const { data: slugData } = await supabase
+                    .from('figuras')
+                    .select('slug')
+                    .eq('id', id)
+                    .single();
+                figuraSlug = slugData?.slug;
+            }
 
-            if (figError) {
-                console.error('Error updating figuras:', figError);
+            if (Object.keys(updateFields).length > 0) {
+                const { error: figError } = await supabase
+                    .from('figuras')
+                    .update(updateFields)
+                    .eq('id', id);
+
+                if (figError) {
+                    console.error('Error updating figuras:', figError);
+                }
+            }
+
+            if (sinonimos !== undefined && figuraSlug) {
+                const { error: sinError } = await supabase
+                    .from('figuras_sinonimos')
+                    .upsert({ figura_slug: figuraSlug, sinonimos }, { onConflict: 'figura_slug' });
+                
+                if (sinError) {
+                    console.error('Error updating figuras_sinonimos from catalog:', sinError);
+                }
             }
         }
 
