@@ -78,6 +78,41 @@ export async function GET(req: Request) {
 
         if (studiosError) throw studiosError;
 
+        // 4. Fetch Resin Stock (Try ID 1 first, fallback to first available)
+        const { data: settingsList } = await supabase
+            .from('pricing_params')
+            .select('estoque_resina_kg')
+            .order('id', { ascending: true })
+            .limit(1);
+        
+        const settings = settingsList?.[0];
+        const resinStock = Number(settings?.estoque_resina_kg) || 0;
+
+        // 5. Calculate Total Resin Required (Only for printing queue)
+        const { data: pendingResinData } = await supabase
+            .from('vendas')
+            .select(`
+                quantidade,
+                figuras (
+                    figuras_meta (
+                        resina_kg
+                    )
+                )
+            `)
+            .in('status', ['Fila de Impressão', 'Imprimindo']);
+
+        let totalResinRequired = 0;
+        if (pendingResinData) {
+            totalResinRequired = pendingResinData.reduce((acc, sale: any) => {
+                const figura = Array.isArray(sale.figuras) ? sale.figuras[0] : sale.figuras;
+                const metaList = figura?.figuras_meta;
+                const meta = Array.isArray(metaList) ? metaList[0] : metaList;
+                
+                const resinaPerUnit = Number(meta?.resina_kg) || 0;
+                return acc + (resinaPerUnit * (Number(sale.quantidade) || 1));
+            }, 0);
+        }
+
         // Fetch Users for Display Names
         const { data: users } = await supabase.from('admin_users').select('email, nome');
         const userMap = (users || []).reduce((acc: any, u) => {
@@ -178,6 +213,7 @@ export async function GET(req: Request) {
         const categorySalesMap: { [key: string]: number } = {};
         const seriesSalesMap: { [key: string]: { value: number, category: string, studios: { [key: string]: number } } } = {};
         const sellerSalesMap: { [key: string]: { revenue: number, qty: number, figures: any[] } } = {};
+        const customerSalesMap: { [key: string]: { revenue: number, count: number } } = {};
 
         sales.forEach(sale => {
             // @ts-ignore
@@ -187,11 +223,19 @@ export async function GET(req: Request) {
             // @ts-ignore
             if (Array.isArray(figure?.studios)) studioName = figure?.studios[0]?.nome || 'Outros';
 
+            // --- Customer Aggregation ---
+            const customerName = sale.cliente_nome || 'Cliente Final';
+            if (!customerSalesMap[customerName]) {
+                customerSalesMap[customerName] = { revenue: 0, count: 0 };
+            }
+            customerSalesMap[customerName].revenue += (sale.valor_venda_final || 0);
+            customerSalesMap[customerName].count += 1;
+
             // --- Seller Aggregation ---
             // @ts-ignore
             const rawVendedor = (sale.vendedor || '').toLowerCase();
             const sellerName = rawVendedor ? (userMap[rawVendedor] || rawVendedor) : 'Site / Desconhecido';
-
+            
             if (!sellerSalesMap[sellerName]) {
                 sellerSalesMap[sellerName] = { revenue: 0, qty: 0, figures: [] };
             }
@@ -252,6 +296,11 @@ export async function GET(req: Request) {
         const topProducts = Object.values(productSalesMap)
             .sort((a, b) => b.revenue - a.revenue)
             .slice(0, 5);
+
+        const topCustomers = Object.entries(customerSalesMap)
+            .map(([name, data]) => ({ name, revenue: data.revenue, count: data.count }))
+            .sort((a, b) => b.revenue - a.revenue)
+            .slice(0, 10);
 
         const recentActivity = sales
             .sort((a, b) => new Date(b.data_venda).getTime() - new Date(a.data_venda).getTime())
@@ -542,6 +591,8 @@ export async function GET(req: Request) {
                 trends,
                 profitMargin,
                 revenueCoverage,
+                resinStock,
+                resinRequired: totalResinRequired,
                 comparisonLabel
             },
             charts: {
@@ -565,6 +616,7 @@ export async function GET(req: Request) {
             },
             lists: {
                 topProducts,
+                topCustomers,
                 recentActivity
             }
         });

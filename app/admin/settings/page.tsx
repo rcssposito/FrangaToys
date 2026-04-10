@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Save, Loader2, ArrowLeft, DollarSign, Percent } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, DollarSign, Percent, Plus } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SettingsPage() {
@@ -59,6 +59,15 @@ export default function SettingsPage() {
         }
     };
 
+    const handleAddResin = () => {
+        const more = prompt('Quantos KG de resina deseja adicionar ao estoque atual?');
+        if (more && !isNaN(parseFloat(more))) {
+            const val = parseFloat(more);
+            setFormData(prev => ({ ...prev, estoque_resina_kg: Number((prev.estoque_resina_kg + val).toFixed(2)) }));
+            toast.info(`${val}kg adicionados ao estoque (temporário). Clique em SALVAR para confirmar.`);
+        }
+    };
+
     const handleChange = (field: string, value: string) => {
         setFormData(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
     };
@@ -101,12 +110,22 @@ export default function SettingsPage() {
                             </div>
                             <div className="space-y-1.5">
                                 <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Estoque Resina (Kg)</label>
-                                <input
-                                    type="number" step="0.01"
-                                    value={formData.estoque_resina_kg}
-                                    onChange={e => handleChange('estoque_resina_kg', e.target.value)}
-                                    className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
-                                />
+                                <div className="flex gap-2">
+                                    <input
+                                        type="number" step="0.01"
+                                        value={formData.estoque_resina_kg}
+                                        onChange={e => handleChange('estoque_resina_kg', e.target.value)}
+                                        className="flex-1 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
+                                    />
+                                    <button 
+                                        type="button"
+                                        onClick={handleAddResin}
+                                        className="bg-zinc-900 border border-zinc-800 hover:border-orange-500 text-orange-500 p-3.5 rounded-xl transition-all shadow-sm active:scale-95"
+                                        title="Adicionar Compra"
+                                    >
+                                        <Plus size={20} />
+                                    </button>
+                                </div>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Hora Impressão (R$/h)</label>
