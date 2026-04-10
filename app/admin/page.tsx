@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, DollarSign, Box, Activity, Store, Maximize2, X, ArrowUpRight, ArrowDownRight, Clock, Tag, Layers, Ruler, ImageIcon, ExternalLink, Droplet } from 'lucide-react';
+import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, DollarSign, Box, Activity, Store, Maximize2, X, ArrowUpRight, ArrowDownRight, Clock, Tag, Layers, Ruler, ImageIcon, ExternalLink, Droplet, Printer } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { toast } from 'sonner';
@@ -872,6 +872,16 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="flex flex-col md:flex-row gap-4 items-end md:items-center w-full xl:w-auto">
+                        <Link 
+                            href="/api/admin/reports/executive" 
+                            target="_blank"
+                            className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 hover:bg-emerald-500/5 text-zinc-400 hover:text-emerald-400 px-5 py-2.5 rounded-2xl transition-all shadow-xl active:scale-95 group group"
+                            title="Gerar Ficha Executiva A4"
+                        >
+                            <Printer size={18} className="group-hover:drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Relatório Executivo</span>
+                        </Link>
+
                         <div className="flex items-center gap-2 bg-zinc-900/60 backdrop-blur-xl p-2 rounded-full border border-zinc-800 shadow-xl">
                             <select
                                 value={year}
