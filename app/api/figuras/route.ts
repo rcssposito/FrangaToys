@@ -144,7 +144,10 @@ export async function GET(req: NextRequest) {
                 precos: precos ? {
                     estilizado: precos.estilizado,
                     colorido: precos.colorido,
-                    premium: precos.premium
+                    premium: precos.premium,
+                    pix_estilizado: precos.pix_estilizado,
+                    pix_colorido: precos.pix_colorido,
+                    pix_premium: precos.pix_premium
                 } : undefined
             };
         });

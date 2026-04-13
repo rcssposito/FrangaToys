@@ -28,6 +28,9 @@ export const FiguraSchema = z.object({
     estilizado: z.number(),
     colorido: z.number(),
     premium: z.number(),
+    pix_estilizado: z.number().optional(),
+    pix_colorido: z.number().optional(),
+    pix_premium: z.number().optional(),
   }).optional(),
   tem_extras: z.boolean().nullable().optional(),
 });

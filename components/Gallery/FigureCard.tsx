@@ -160,7 +160,10 @@ export const FigureCard = ({ figure, className }: FigureCardProps) => {
                                                     <div className="hidden sm:block text-[8px] text-zinc-500 uppercase tracking-widest">Base/Sombra</div>
                                                 </div>
                                             </div>
-                                            <div className="text-xs sm:text-sm font-black text-white">{formatPrice(figure.precos.estilizado)}</div>
+                                            <div className="text-right">
+                                                <div className="text-xs sm:text-sm font-black text-white">{formatPrice(figure.precos.estilizado)}</div>
+                                                <div className="text-[9px] font-bold text-emerald-500 tracking-tighter">PIX: {formatPrice(figure.precos.pix_estilizado)}</div>
+                                            </div>
                                         </div>
 
                                         {/* Pack Colorido (Prata) */}
@@ -174,7 +177,10 @@ export const FigureCard = ({ figure, className }: FigureCardProps) => {
                                                     <div className="hidden sm:block text-[8px] text-zinc-400 uppercase tracking-widest font-bold">Standard</div>
                                                 </div>
                                             </div>
-                                            <div className="text-xs sm:text-sm font-black text-white">{formatPrice(figure.precos.colorido)}</div>
+                                            <div className="text-right">
+                                                <div className="text-xs sm:text-sm font-black text-white">{formatPrice(figure.precos.colorido)}</div>
+                                                <div className="text-[9px] font-bold text-emerald-500 tracking-tighter">PIX: {formatPrice(figure.precos.pix_colorido)}</div>
+                                            </div>
                                         </div>
 
                                         {/* Pack Premium (Master/Purple) */}
@@ -188,7 +194,10 @@ export const FigureCard = ({ figure, className }: FigureCardProps) => {
                                                     <div className="hidden sm:block text-[8px] text-purple-500 uppercase tracking-widest font-black">2D / Master</div>
                                                 </div>
                                             </div>
-                                            <div className="text-xs sm:text-sm font-black text-purple-300">{formatPrice(figure.precos.premium)}</div>
+                                            <div className="text-right">
+                                                <div className="text-xs sm:text-sm font-black text-purple-300">{formatPrice(figure.precos.premium)}</div>
+                                                <div className="text-[9px] font-bold text-purple-400/80 tracking-tighter">PIX: {formatPrice(figure.precos.pix_premium)}</div>
+                                            </div>
                                         </div>
                                     </>
                                 ) : (

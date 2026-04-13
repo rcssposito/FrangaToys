@@ -59,9 +59,9 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
     };
 
     const finishOptions = [
-        { id: 'estilizado', label: 'Estilizado', icon: Paintbrush, description: 'OSL / Monocromático', color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20', price: figure.precos?.estilizado },
-        { id: 'colorido', label: 'Colorido', icon: Palette, description: 'Fidelidade Total', color: 'text-zinc-400', bg: 'bg-zinc-400/10', border: 'border-zinc-400/20', price: figure.precos?.colorido },
-        { id: 'premium', label: '2D / Premium', icon: Crown, description: 'Estilo Cel-Shaded', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', price: figure.precos?.premium },
+        { id: 'estilizado', label: 'Estilizado', icon: Paintbrush, description: 'OSL / Monocromático', color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20', price: figure.precos?.estilizado, pixPrice: figure.precos?.pix_estilizado },
+        { id: 'colorido', label: 'Colorido', icon: Palette, description: 'Fidelidade Total', color: 'text-zinc-400', bg: 'bg-zinc-400/10', border: 'border-zinc-400/20', price: figure.precos?.colorido, pixPrice: figure.precos?.pix_colorido },
+        { id: 'premium', label: '2D / Premium', icon: Crown, description: 'Estilo Cel-Shaded', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', price: figure.precos?.premium, pixPrice: figure.precos?.pix_premium },
     ] as const;
 
     return (
@@ -212,6 +212,13 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                                         selectedFinish === opt.id ? opt.color : "text-zinc-400"
                                     )}>
                                         {formatPrice(opt.price)}
+                                    </span>
+
+                                    <span className={clsx(
+                                        "text-[9px] font-bold tracking-tight mt-0.5",
+                                        selectedFinish === opt.id ? "text-emerald-500" : "text-emerald-500/50"
+                                    )}>
+                                        PIX: {formatPrice(opt.pixPrice)}
                                     </span>
 
                                     {selectedFinish === opt.id && (
