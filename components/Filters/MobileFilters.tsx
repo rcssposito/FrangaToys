@@ -2,7 +2,7 @@
 
 import { useEstudios } from '@/hooks/useEstudios';
 import { FiltersSchema } from '@/lib/dto';
-import { SlidersHorizontal, ArrowLeft, X, Search, Settings } from 'lucide-react';
+import { SlidersHorizontal, ArrowLeft, X, Search, Settings, Truck } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useState, useEffect, useRef } from 'react';
 import { z } from 'zod';
@@ -103,8 +103,11 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
 
             {/* 0. Mobile Brand Header */}
             <div className="px-4 py-2 flex items-center justify-between relative">
-                <div className="w-12 flex justify-start items-center gap-2">
+                <div className="w-16 flex justify-start items-center gap-2">
                     <CartIndicator onClick={onOpenCart} />
+                    <Link href="/rastreio" className="p-1 text-orange-500 hover:text-orange-400 transition-colors" title="Rastrear Pedido">
+                        <Truck size={20} />
+                    </Link>
                 </div>
                 <div className="flex-1 flex justify-center">
                     <img
@@ -113,7 +116,7 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                         className="h-16 object-contain"
                     />
                 </div>
-                <div className="w-12 flex justify-end items-center gap-2">
+                <div className="w-16 flex justify-end items-center gap-2">
                     <ThemeToggle />
                     <Link href="/admin" className="p-1 text-[var(--text-muted)] hover:text-orange-500 transition-colors">
                         <Settings size={18} />

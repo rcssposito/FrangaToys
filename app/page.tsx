@@ -10,7 +10,7 @@ import { CartIndicator } from '@/components/Cart/CartIndicator';
 import { CartDrawer } from '@/components/Cart/CartDrawer';
 import { FiltersSchema, FiguraDTO } from '@/lib/dto';
 import { z } from 'zod';
-import { Settings, ListFilter, MoveUp, MoveDown, Sparkles, Loader2 } from 'lucide-react';
+import { Settings, ListFilter, MoveUp, MoveDown, Sparkles, Loader2, Truck } from 'lucide-react';
 import Link from 'next/link';
 import { useFiguras } from '@/hooks/useFiguras';
 import { clsx } from 'clsx';
@@ -65,6 +65,15 @@ function HomeContent() {
             />
           </Link>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-6">
+            <Link 
+              href="/rastreio" 
+              className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500 hover:text-orange-400 transition-all flex items-center gap-2 group"
+              title="Rastrear meu Pedido"
+            >
+              <Truck size={18} className="group-hover:animate-bounce" />
+              Rastrear
+            </Link>
+            <div className="h-4 w-px bg-[var(--card-border)]" />
             <Link 
               href="/parceiros" 
               className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] hover:text-blue-500 transition-all flex items-center gap-2 group"

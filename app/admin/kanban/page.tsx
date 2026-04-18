@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign } from 'lucide-react';
+import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
@@ -11,6 +11,7 @@ interface Sale {
     id: number;
     data_venda: string;
     cliente_nome: string;
+    cliente_contato: string;
     status: string;
     quantidade: number;
     pintura_freelancer?: boolean;
@@ -224,6 +225,23 @@ export default function KanbanPage() {
                                                     >
                                                         <CheckCircle2 size={16} />
                                                     </Link>
+                                                    <button
+                                                        onClick={() => {
+                                                            const phone = (task.cliente_contato || '').replace(/\D/g, '');
+                                                            if (!phone) {
+                                                                toast.error('Cliente sem telefone cadastrado');
+                                                                return;
+                                                            }
+                                                            const urlBase = window.location.origin;
+                                                            const link = `${urlBase}/rastreio/${phone}`;
+                                                            navigator.clipboard.writeText(link);
+                                                            toast.success('Link de rastreio copiado!');
+                                                        }}
+                                                        title="Copiar Link de Rastreio para o Cliente"
+                                                        className="p-2 bg-zinc-900 text-zinc-500 hover:text-orange-500 border border-zinc-800 hover:border-orange-500/50 hover:bg-orange-500/10 hover:shadow-[0_0_15px_rgba(249,115,22,0.2)] rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center"
+                                                    >
+                                                        <ExternalLink size={16} />
+                                                    </button>
                                                 </div>
                                             </div>
 
