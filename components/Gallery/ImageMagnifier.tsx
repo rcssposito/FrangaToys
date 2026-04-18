@@ -26,12 +26,14 @@ export const ImageMagnifier = ({
     const [showMagnifier, setShowMagnifier] = useState(false);
 
     // ImageKit specific URL resolution for background image
-    const resolvedSrc = src.startsWith('http') ? src : `https://ik.imagekit.io/lojinha3d/${src}`;
+    // We strip any existing transformations (like ?tr=w-500) to ensure the zoom uses the high-res original.
+    const resolvedSrc = src ? (src.startsWith('http') ? src : `https://ik.imagekit.io/lojinha3d/${src}`).split('?')[0] : '';
 
     return (
         <div
             className="relative w-full h-full cursor-crosshair group lg:block hidden"
             onMouseEnter={(e) => {
+                if (!src) return;
                 const elem = e.currentTarget;
                 const { width, height } = elem.getBoundingClientRect();
                 setSize([width, height]);

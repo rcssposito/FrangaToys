@@ -292,12 +292,25 @@ export async function DELETE(req: Request) {
         const { id } = await req.json();
         if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 });
 
-        // 1. Buscar dados da figura para limpeza (Slug é necessário para sinônimos)
+        // 1. Buscar dados da figura para limpeza (Slug e Imagem)
         const { data: figura } = await supabase
             .from('figuras')
-            .select('slug')
+            .select('slug, imagem_url')
             .eq('id', id)
             .single();
+
+        // 1.5 Limpeza no ImageKit (Aguardamos para garantir que a Vercel não mate o processo)
+        if (figura?.imagem_url) {
+            try {
+                console.log(`[CleanUp] Iniciando limpeza para: ${figura.imagem_url}`);
+                await deleteImageFromImageKit(figura.imagem_url);
+            } catch (err) {
+                console.error('[ImageKit] Falha na limpeza automática:', err);
+                // Não travamos a execução principal se a limpeza falhar
+            }
+        }
+
+        // 2. Desvincular Vendas...
 
         // 2. Desvincular Vendas (Preserva o histórico financeiro, apenas remove a ligação com o ID)
         const { error: errorVendas } = await supabase
@@ -337,5 +350,90 @@ export async function DELETE(req: Request) {
     } catch (error: any) {
         console.error('Erro fatal na exclusão:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+// HELPER: Limpeza de imagem no ImageKit via API REST
+async function deleteImageFromImageKit(url: string) {
+    const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
+    const endpoint = process.env.IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/lojinha3d';
+
+    if (!privateKey) {
+        console.warn('[ImageKit] Private Key não configurada. Limpeza abortada.');
+        return;
+    }
+
+    try {
+        // 1. Extrair o path relativo (ignora query params e o hostname)
+        // Ex: https://ik.imagekit.io/lojinha3d/random/figura.webp -> random/figura.webp
+        const cleanUrl = url.split('?')[0];
+        
+        if (!cleanUrl.includes(endpoint)) {
+            console.log('[ImageKit] URL não pertence ao endpoint configurado. Ignorando.');
+            return;
+        }
+
+        let path = cleanUrl.replace(endpoint, '');
+        if (path.startsWith('/')) path = path.substring(1);
+        
+        if (!path) return;
+
+        console.log(`[ImageKit] Tentando localizar arquivo: ${path}`);
+
+        // Auth Header (Basic Auth: privateKey + :)
+        const auth = Buffer.from(`${privateKey}:`).toString('base64');
+
+        // 2. Buscar o fileId pelo path (ImageKit API)
+        // IMPORTANTE: encodeURIComponent no path para evitar erro em nomes com espaços/traços
+        const listResponse = await fetch(`https://api.imagekit.io/v1/files?path=${encodeURIComponent(path)}`, {
+            headers: { 'Authorization': `Basic ${auth}` }
+        });
+
+        if (!listResponse.ok) {
+            console.error(`[ImageKit] Erro ao buscar arquivo (${listResponse.status}): ${listResponse.statusText}`);
+            return;
+        }
+        
+        const files: any = await listResponse.json();
+        if (!files || files.length === 0) {
+            // Tenta uma busca secundária sem o path exato se falhou (fallback)
+            console.log(`[ImageKit] Busca exata por path falhou para: ${path}. Tentando busca por nome.`);
+            const fileName = path.split('/').pop() || '';
+            const listResponseFallback = await fetch(`https://api.imagekit.io/v1/files?name=${encodeURIComponent(fileName)}`, {
+                headers: { 'Authorization': `Basic ${auth}` }
+            });
+            const fallbackFiles: any = await listResponseFallback.json();
+            
+            if (!fallbackFiles || fallbackFiles.length === 0) {
+                console.log(`[ImageKit] Arquivo não encontrado após fallback: ${fileName}`);
+                return;
+            }
+            
+            // Verifica se o path bate (segurança para não deletar arquivos com mesmo nome em pastas diferentes)
+            const match = fallbackFiles.find((f: any) => f.filePath === '/' + path || f.filePath === path);
+            if (!match) {
+                console.log(`[ImageKit] Nome encontrado mas caminho não confere.`);
+                return;
+            }
+            files.push(match);
+        }
+
+        const fileId = files[0].fileId;
+
+        // 3. Deletar pelo fileId
+        console.log(`[ImageKit] Deletando fileId: ${fileId}`);
+        const deleteResponse = await fetch(`https://api.imagekit.io/v1/files/${fileId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Basic ${auth}` }
+        });
+
+        if (deleteResponse.ok) {
+            console.log(`[ImageKit] Limpeza concluída com sucesso: ${fileId} (${path})`);
+        } else {
+            const errorData = await deleteResponse.json();
+            console.error(`[ImageKit] Falha na exclusão do arquivo ${fileId}:`, errorData);
+        }
+    } catch (err) {
+        console.error('[ImageKit] Erro crítico na limpeza automática:', err);
     }
 }

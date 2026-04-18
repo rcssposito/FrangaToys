@@ -71,7 +71,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
 
     return (
         <div className="relative flex flex-col items-center justify-center min-h-full w-full max-w-6xl mx-auto p-4 md:p-8">
-            
+
             {/* Zen Mode Overlay */}
             <AnimatePresence>
                 {isZenMode && (
@@ -85,7 +85,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                         <div className="absolute top-8 right-8 text-white/40 hover:text-white transition-colors">
                             <X size={40} strokeWidth={1} />
                         </div>
-                        <motion.div 
+                        <motion.div
                             initial={{ scale: 0.9, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.9, y: 20 }}
@@ -93,7 +93,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                         >
                             <Image
                                 loader={imageKitLoader}
-                                src={imageUrl}
+                                src={(figure.imagem_url || '').split('?')[0]}
                                 alt={figure.nome}
                                 fill
                                 className="object-contain"
@@ -124,17 +124,17 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
             </div>
 
             <div className="flex flex-col lg:flex-row w-full gap-8 items-start lg:items-center relative z-20">
-                
+
                 {/* Main Image Container (Desktop Only or refined Mobile) */}
-                <div 
+                <div
                     className="flex relative w-full lg:w-1/2 aspect-square items-center justify-center p-4 bg-zinc-900/20 rounded-3xl overflow-hidden shadow-inner order-1 transition-all duration-500 hover:bg-zinc-900/40 group"
                     onClick={() => setIsZenMode(true)}
                 >
                     {/* Desktop: Pro Magnifier */}
-                    <ImageMagnifier 
-                        src={figure.imagem_url} 
+                    <ImageMagnifier
+                        src={figure.imagem_url || ''}
                         alt={figure.nome}
-                        onClick={(e) => {
+                        onClick={() => {
                             // Link inside FigureCard prevented propagation but here we want to trigger ZenMode
                         }}
                     />
@@ -162,25 +162,25 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                 <div className="w-full lg:w-1/2 flex flex-col gap-6 order-2 pt-[25vh] lg:pt-0">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
-                             <h3 className="text-sm font-black text-blue-500 uppercase tracking-[0.3em]">{figure.studio || 'Studio Indiferente'}</h3>
-                             {figure.codigo && (
+                            <h3 className="text-sm font-black text-blue-500 uppercase tracking-[0.3em]">{figure.studio || 'Studio Indiferente'}</h3>
+                            {figure.codigo && (
                                 <span className="text-[10px] bg-zinc-800 text-zinc-500 font-black px-2 py-0.5 rounded border border-white/5 uppercase tracking-widest">
                                     #{figure.codigo}
                                 </span>
                             )}
                         </div>
                         <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter leading-[0.9]">{figure.nome}</h2>
-                        
+
                         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-zinc-500">
-                             <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2.5 py-1.5 rounded-full border border-white/5">
+                            <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2.5 py-1.5 rounded-full border border-white/5">
                                 <span className="text-zinc-600">H</span> {figure.altura_cm || '-'}<small className="text-[8px] ml-0.5 opacity-50">cm</small>
-                             </div>
-                             <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2.5 py-1.5 rounded-full border border-white/5">
+                            </div>
+                            <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2.5 py-1.5 rounded-full border border-white/5">
                                 <span className="text-zinc-600">W</span> {figure.largura_cm || '-'}<small className="text-[8px] ml-0.5 opacity-50">cm</small>
-                             </div>
-                             <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2.5 py-1.5 rounded-full border border-white/5">
+                            </div>
+                            <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2.5 py-1.5 rounded-full border border-white/5">
                                 <span className="text-zinc-600">D</span> {figure.profundidade_cm || '-'}<small className="text-[8px] ml-0.5 opacity-50">cm</small>
-                             </div>
+                            </div>
                         </div>
                     </div>
 
@@ -188,7 +188,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                     <div className="space-y-2 relative">
                         <div className="flex items-center justify-between ml-1">
                             <h4 className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.3em]">Escolha seu acabamento</h4>
-                            <button 
+                            <button
                                 onClick={() => setShowInfo(!showInfo)}
                                 className="text-zinc-600 hover:text-blue-500 transition-colors p-1"
                             >
@@ -199,7 +199,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                         {/* Info Overlay */}
                         <AnimatePresence>
                             {showInfo && (
-                                <motion.div 
+                                <motion.div
                                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -249,27 +249,27 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                                     onClick={() => setSelectedFinish(opt.id)}
                                     className={clsx(
                                         "relative flex flex-col items-center justify-center aspect-[1/1.1] p-2 rounded-2xl border-2 transition-all duration-300 text-center group",
-                                        selectedFinish === opt.id 
-                                            ? `${opt.border} bg-zinc-900/80 ring-1 ring-white/20 scale-[1.02] shadow-2xl` 
+                                        selectedFinish === opt.id
+                                            ? `${opt.border} bg-zinc-900/80 ring-1 ring-white/20 scale-[1.02] shadow-2xl`
                                             : "border-transparent bg-zinc-900/40 opacity-50 hover:opacity-100 hover:bg-zinc-900/60"
                                     )}
                                 >
                                     <div className={clsx(
                                         "mb-2 w-10 h-10 rounded-xl flex items-center justify-center transition-transform",
                                         selectedFinish === opt.id ? "scale-110" : "group-hover:scale-105",
-                                        opt.bg, 
+                                        opt.bg,
                                         opt.color
                                     )}>
                                         <opt.icon size={20} />
                                     </div>
-                                    
+
                                     <span className={clsx(
                                         "text-[9px] font-black uppercase tracking-widest block leading-tight mb-1",
                                         selectedFinish === opt.id ? "text-white" : "text-zinc-500"
                                     )}>
                                         {opt.label}
                                     </span>
-                                    
+
                                     <span className={clsx(
                                         "text-xs font-black tracking-tight",
                                         selectedFinish === opt.id ? opt.color : "text-zinc-400"
