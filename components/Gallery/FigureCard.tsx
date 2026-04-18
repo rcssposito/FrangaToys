@@ -12,9 +12,10 @@ import { getOptimizedImageUrl } from '@/lib/image-utils';
 interface FigureCardProps {
     figure: FiguraDTO;
     className?: string;
+    priority?: boolean;
 }
 
-export const FigureCard = ({ figure, className }: FigureCardProps) => {
+export const FigureCard = ({ figure, className, priority }: FigureCardProps) => {
     const [isFlipped, setIsFlipped] = useState(false);
 
     const formatPrice = (val?: number) => {
@@ -51,6 +52,7 @@ export const FigureCard = ({ figure, className }: FigureCardProps) => {
                             fill
                             className="object-contain p-4 transition-transform duration-700 group-hover/front:scale-110 opacity-90 group-hover/front:opacity-100"
                             sizes="(max-width: 768px) 50vw, 25vw"
+                            priority={priority}
                         />
                     </Link>
 
@@ -115,6 +117,7 @@ export const FigureCard = ({ figure, className }: FigureCardProps) => {
                             alt="Background"
                             fill
                             className="object-cover blur-sm"
+                            sizes="(max-width: 768px) 100vw, 33vw"
                         />
                     </div>
 

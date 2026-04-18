@@ -111,6 +111,7 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                             alt="Background"
                             fill
                             className="object-cover blur-sm"
+                            sizes="(max-width: 768px) 100vw, 25vw"
                         />
                     </div>
 

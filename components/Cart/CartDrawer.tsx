@@ -211,6 +211,7 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                                                                 alt={item.nome}
                                                                 fill
                                                                 className="object-contain p-1"
+                                                                sizes="64px"
                                                             />
                                                         </div>
                                                         <div className="flex-1 min-w-0 flex flex-col justify-between">

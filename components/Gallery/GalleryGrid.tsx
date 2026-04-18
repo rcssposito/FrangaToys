@@ -102,7 +102,7 @@ export const GalleryGrid = ({
                                 ease: [0.16, 1, 0.3, 1] 
                             }}
                         >
-                            <FigureCard figure={figure} />
+                            <FigureCard figure={figure} priority={index < 4} />
                         </motion.div>
                     ))}
                 </AnimatePresence>

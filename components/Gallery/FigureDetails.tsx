@@ -8,8 +8,10 @@ import imageKitLoader from '@/lib/image-loader';
 import { useCart } from '@/context/CartContext';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, Share2, Paintbrush, Palette, Crown, CheckCircle2, X, HelpCircle, Info, Sparkles } from 'lucide-react';
+import { ExternalLink, Share2, Paintbrush, Palette, Crown, CheckCircle2, X, HelpCircle, Info, Sparkles, Maximize2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+import { ImageMagnifier } from './ImageMagnifier';
 
 interface FigureDetailsProps {
     figure: FiguraDTO;
@@ -19,6 +21,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
     const { addToCart, removeFromCart, isInCart } = useCart();
     const [selectedFinish, setSelectedFinish] = useState<'estilizado' | 'colorido' | 'premium'>('estilizado');
     const [showInfo, setShowInfo] = useState(false);
+    const [isZenMode, setIsZenMode] = useState(false);
 
     const formatPrice = (val?: number) => {
         if (!val) return 'Sob consulta';
@@ -64,17 +67,58 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
         { id: 'premium', label: '2D / Premium', icon: Crown, description: 'Estilo Cel-Shaded', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', price: figure.precos?.premium, pixPrice: figure.precos?.pix_premium },
     ] as const;
 
+    const imageUrl = getOptimizedImageUrl(figure.imagem_url);
+
     return (
         <div className="relative flex flex-col items-center justify-center min-h-full w-full max-w-6xl mx-auto p-4 md:p-8">
+            
+            {/* Zen Mode Overlay */}
+            <AnimatePresence>
+                {isZenMode && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] bg-black flex items-center justify-center p-4 md:p-12 cursor-zoom-out"
+                        onClick={() => setIsZenMode(false)}
+                    >
+                        <div className="absolute top-8 right-8 text-white/40 hover:text-white transition-colors">
+                            <X size={40} strokeWidth={1} />
+                        </div>
+                        <motion.div 
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="relative w-full h-full"
+                        >
+                            <Image
+                                loader={imageKitLoader}
+                                src={imageUrl}
+                                alt={figure.nome}
+                                fill
+                                className="object-contain"
+                                sizes="100vw"
+                                priority
+                            />
+                        </motion.div>
+                        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 text-center">
+                            <h2 className="text-xl font-black text-white uppercase tracking-widest drop-shadow-2xl">{figure.nome}</h2>
+                            <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-[0.5em] mt-2">Arraste para explorar • Clique para sair</p>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Mobile Atmospheric Background Image */}
             <div className="lg:hidden absolute inset-x-0 top-0 h-[60vh] -z-10 overflow-hidden pointer-events-none">
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10" />
                 <Image
                     loader={imageKitLoader}
-                    src={getOptimizedImageUrl(figure.imagem_url)}
+                    src={imageUrl}
                     alt=""
                     fill
                     className="object-contain p-4 opacity-60 sm:opacity-40"
+                    sizes="100vw"
                     priority
                 />
             </div>
@@ -82,17 +126,36 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
             <div className="flex flex-col lg:flex-row w-full gap-8 items-start lg:items-center relative z-20">
                 
                 {/* Main Image Container (Desktop Only or refined Mobile) */}
-                <div className="hidden lg:flex relative w-full lg:w-1/2 aspect-square items-center justify-center p-4 bg-zinc-900/20 rounded-3xl overflow-hidden shadow-inner order-1">
-                    <Image
-                        loader={imageKitLoader}
-                        src={getOptimizedImageUrl(figure.imagem_url)}
+                <div 
+                    className="flex relative w-full lg:w-1/2 aspect-square items-center justify-center p-4 bg-zinc-900/20 rounded-3xl overflow-hidden shadow-inner order-1 transition-all duration-500 hover:bg-zinc-900/40 group"
+                    onClick={() => setIsZenMode(true)}
+                >
+                    {/* Desktop: Pro Magnifier */}
+                    <ImageMagnifier 
+                        src={figure.imagem_url} 
                         alt={figure.nome}
-                        width={1200}
-                        height={1200}
-                        quality={90}
-                        className="object-contain max-h-full max-w-full drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform duration-700 hover:scale-105"
-                        priority
+                        onClick={(e) => {
+                            // Link inside FigureCard prevented propagation but here we want to trigger ZenMode
+                        }}
                     />
+
+                    {/* Mobile: Standard Display (Since magnifier is hidden lg:block) */}
+                    <div className="lg:hidden w-full h-full relative">
+                        <Image
+                            loader={imageKitLoader}
+                            src={imageUrl}
+                            alt={figure.nome}
+                            fill
+                            className="object-contain p-4 transition-transform duration-700 active:scale-105"
+                            sizes="100vw"
+                            priority
+                        />
+                    </div>
+
+                    {/* Zoom Hint */}
+                    <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-md p-2 rounded-xl border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Maximize2 size={16} className="text-zinc-400" />
+                    </div>
                 </div>
 
                 {/* Info & Pricing Panel */}

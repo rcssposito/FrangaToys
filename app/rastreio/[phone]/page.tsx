@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw, ShoppingBag } from 'lucide-react';
 import { OrderTracker } from '@/components/OrderTracker';
+import Image from 'next/image';
+import imageKitLoader from '@/lib/image-loader';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -89,7 +91,14 @@ export default function CustomerDashboard() {
                                         <div className="flex gap-4 items-center">
                                             <div className="w-16 h-16 rounded-2xl bg-black border border-zinc-800 overflow-hidden relative shadow-inner">
                                                 {order.figura?.imagem ? (
-                                                    <img src={order.figura.imagem} alt="" className="object-cover w-full h-full opacity-80" />
+                                                    <Image
+                                                        loader={imageKitLoader}
+                                                        src={order.figura.imagem}
+                                                        alt=""
+                                                        fill
+                                                        className="object-cover opacity-80"
+                                                        sizes="64px"
+                                                    />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center text-zinc-800">
                                                         <Package size={24} />

@@ -71,6 +71,7 @@ export const MobileModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIn
                     alt={figure.nome}
                     fill
                     className="object-contain"
+                    sizes="100vw"
                     priority
                 />
 
