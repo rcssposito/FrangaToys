@@ -335,7 +335,6 @@ export default function NewSalePage() {
                     data_venda: dataVenda,
                     pintura_freelancer: pinturaFreelancer,
                     pintor_nome: pintorNome || null,
-                    metodo_entrega: metodoEntrega,
                     valor_frete: freteSomar,
                     vendedor: vendedorSelecionado || user?.email || '',
                     observacao,

@@ -19,25 +19,6 @@ export async function GET() {
 
         if (error) throw error;
 
-        // Auto-fix statuses for legacy/broken sales
-        const pendingSales = sales.filter(s => s.status?.includes('Pendente') || s.status_pagamento?.includes('Pendente'));
-        if (pendingSales.length > 0) {
-            console.log(`Fixing ${pendingSales.length} sales with legacy Pending status...`);
-            const idsToFix = pendingSales.map(s => s.id);
-            await supabase
-                .from('vendas')
-                .update({ status: 'Aguardando Pagamento', status_pagamento: 'Aguardando Pagamento' })
-                .in('id', idsToFix);
-
-            // Update in-memory for immediate response
-            sales.forEach(s => {
-                if (idsToFix.includes(s.id)) {
-                    s.status = 'Aguardando Pagamento';
-                    s.status_pagamento = 'Aguardando Pagamento';
-                }
-            });
-        }
-
         // Fetch display names for vendors
         const { data: users } = await supabase
             .from('admin_users')
@@ -152,7 +133,7 @@ export async function POST(req: Request) {
                 custo_producao_snapshot: custo_total_real,
                 lucro_real,
                 valor_pago_pintor: custo_pintura_freelancer,
-                status: 'Aguardando Pagamento', // Atualizado para nova coluna no Kanban
+                status: 'Aguardando Pagamento', 
                 quantidade: item.quantidade,
                 observacao: observacao || '',
                 link_pagamento: body.link_pagamento || null,
