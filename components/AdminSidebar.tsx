@@ -66,12 +66,6 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             roles: ['admin', 'finance', 'sales']
         },
         {
-            name: 'Estoque',
-            href: '/admin/inventory',
-            icon: PackageOpen,
-            roles: ['admin', 'sales', 'production']
-        },
-        {
             name: 'Estúdios',
             href: '/admin/studios',
             icon: Activity,
