@@ -20,7 +20,8 @@ import {
     KanbanSquare,
     PackageOpen,
     PanelLeftClose,
-    PanelLeftOpen
+    PanelLeftOpen,
+    ShieldCheck
 } from 'lucide-react';
 import ThemeToggle from '@/components/common/ThemeToggle';
 
@@ -60,6 +61,12 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             roles: ['admin', 'sales', 'production']
         },
         {
+            name: 'Clientes',
+            href: '/admin/customers',
+            icon: Users,
+            roles: ['admin', 'sales', 'finance']
+        },
+        {
             name: 'Comissões',
             href: '/admin/commissions',
             icon: DollarSign,
@@ -74,7 +81,7 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
         {
             name: 'Usuários',
             href: '/admin/users',
-            icon: Users,
+            icon: ShieldCheck,
             roles: ['admin']
         },
         {

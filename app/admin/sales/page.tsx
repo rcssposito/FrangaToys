@@ -2,11 +2,28 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Plus, Loader2, ArrowLeft, TrendingUp, Calendar, Trash2, Package, Paintbrush, DollarSign, RotateCcw, Receipt, Edit3, X, Save } from 'lucide-react';
-import Link from 'next/link';
+import { 
+    Plus, 
+    Loader2, 
+    ArrowLeft, 
+    TrendingUp, 
+    Calendar, 
+    Trash2, 
+    Package, 
+    Paintbrush, 
+    DollarSign, 
+    RotateCcw, 
+    Receipt, 
+    Edit3, 
+    X, 
+    Save, 
+    ShoppingCart 
+} from 'lucide-react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { usePermission } from '@/hooks/usePermission';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import Link from 'next/link';
 
 interface Sale {
     id: number;
@@ -30,6 +47,7 @@ interface Sale {
     };
     link_pagamento?: string;
     checkout_id?: string;
+    cliente_id?: string;
 }
 
 interface MonthGroup {
@@ -38,13 +56,18 @@ interface MonthGroup {
     totalLucro: number;
     sales: Sale[];
 }
-
 export default function SalesPage() {
     const [loading, setLoading] = useState(true);
+    const [allSales, setAllSales] = useState<Sale[]>([]);
     const [groups, setGroups] = useState<MonthGroup[]>([]);
     const [editingSale, setEditingSale] = useState<Sale | null>(null);
     const [vendedores, setVendedores] = useState<any[]>([]);
     const [isUpdating, setIsUpdating] = useState(false);
+
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const customerFilter = searchParams.get('cliente_id');
+
     const { hasRole } = usePermission();
 
     useEffect(() => {
@@ -67,7 +90,7 @@ export default function SalesPage() {
             const data: Sale[] = await res.json();
 
             if (res.ok) {
-                processGroups(data);
+                setAllSales(data);
             }
         } catch (err) {
             toast.error('Erro ao carregar vendas');
@@ -76,14 +99,23 @@ export default function SalesPage() {
         }
     };
 
+    useEffect(() => {
+        if (allSales.length > 0) {
+            processGroups(allSales);
+        }
+    }, [allSales, customerFilter]);
+
     const processGroups = (data: Sale[]) => {
         const grouped: { [key: string]: MonthGroup } = {};
         const order: string[] = [];
 
-        data.forEach(sale => {
+        // Aplicar filtro de cliente se existir
+        const filtered = customerFilter 
+            ? data.filter(s => s.cliente_id === customerFilter)
+            : data;
+
+        filtered.forEach(sale => {
             const date = new Date(sale.data_venda);
-            // Label ex: "Dezembro 2025"
-            // Capitalize first letter
             let label = format(date, 'MMMM yyyy', { locale: ptBR });
             label = label.charAt(0).toUpperCase() + label.slice(1);
 
@@ -98,8 +130,8 @@ export default function SalesPage() {
             }
 
             grouped[label].sales.push(sale);
-            grouped[label].totalVenda += sale.valor_venda_final;
-            grouped[label].totalLucro += sale.lucro_real;
+            grouped[label].totalVenda += (sale.valor_venda_final || 0);
+            grouped[label].totalLucro += (sale.lucro_real || 0);
         });
 
         const result = order.map(key => grouped[key]);
@@ -191,7 +223,17 @@ export default function SalesPage() {
                             <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
                         </Link>
                         <div>
-                            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">Vendas Históricas</h1>
+                            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white flex items-center gap-3">
+                                {customerFilter ? 'Vendas do Cliente' : 'Vendas Históricas'}
+                                {customerFilter && (
+                                    <button 
+                                        onClick={() => router.push('/admin/sales')}
+                                        className="text-[10px] bg-orange-500/10 border border-orange-500/50 text-orange-500 px-3 py-1 rounded-full flex items-center gap-2 hover:bg-orange-500 hover:text-white transition-all"
+                                    >
+                                        <X size={10} /> REMOVER FILTRO
+                                    </button>
+                                )}
+                            </h1>
                             <p className="text-zinc-500 text-sm font-medium mt-1 uppercase tracking-widest text-[10px]">Livro Caixa Tático de Receitas.</p>
                         </div>
                     </div>

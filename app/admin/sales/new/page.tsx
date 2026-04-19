@@ -63,6 +63,13 @@ export default function NewSalePage() {
     const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit'>('pix');
     const [completedSaleData, setCompletedSaleData] = useState<{ id: number, link_pagamento: string | null, total: number, method: 'pix' | 'credit' } | null>(null);
 
+    const [isMounted, setIsMounted] = useState(false);
+
+    // CRM / Clientes States
+    const [clienteId, setClienteId] = useState<string | null>(null);
+    const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
+    const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
+
     // PIX Payload Generator for Client-Side Copy
     const generatePixPayload = (key: string, name: string, amount: number) => {
         name = name.substring(0, 25).normalize('NFD').replace(/[\u0300-\u036f]/g, "").toUpperCase();
@@ -83,11 +90,12 @@ export default function NewSalePage() {
     const isFinanceOrAdmin = user?.roles?.some(r => r === 'admin' || r === 'finance');
 
     useEffect(() => {
+        setIsMounted(true);
         fetchSettings();
         if (isFinanceOrAdmin) {
             fetchVendedores();
         }
-    }, [user]);
+    }, [user, isFinanceOrAdmin]);
 
     useEffect(() => {
         if (user?.email && !vendedorSelecionado) {
@@ -101,6 +109,30 @@ export default function NewSalePage() {
         }, 300);
         return () => clearTimeout(timer);
     }, [search]);
+
+    const fetchCustomerSuggestions = async (query: string) => {
+        setIsSearchingCustomers(true);
+        try {
+            const res = await fetch(`/api/admin/customers?q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            setCustomerSuggestions(data);
+        } catch (err) {
+            console.error('Erro ao buscar sugestões de clientes:', err);
+        } finally {
+            setIsSearchingCustomers(false);
+        }
+    };
+
+    useEffect(() => {
+        if (cliente.length > 2 && !clienteId) {
+            const delayDebounceFn = setTimeout(() => {
+                fetchCustomerSuggestions(cliente);
+            }, 300);
+            return () => clearTimeout(delayDebounceFn);
+        } else {
+            setCustomerSuggestions([]);
+        }
+    }, [cliente, clienteId]);
 
     const fetchSettings = async () => {
         try {
@@ -287,7 +319,29 @@ export default function NewSalePage() {
         setSubmitting(true);
         try {
             const checkoutId = crypto.randomUUID();
-            let mpLink = '';
+            let mpLink = null;
+
+            let finalClienteId = clienteId;
+
+            // Se o cliente não existe (não tem ID vinculado), criamos um novo cadastro automático
+            if (!finalClienteId && cliente && clienteContato) {
+                try {
+                    const customerRes = await fetch('/api/admin/customers', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            nome: cliente,
+                            telefone: clienteContato
+                        })
+                    });
+                    const customerData = await customerRes.json();
+                    if (customerData.id) {
+                        finalClienteId = customerData.id;
+                        setClienteId(finalClienteId);
+                    }
+                } catch (err) {
+                    console.error('Falha ao registrar novo cliente no CRM:', err);
+                }
+            }
 
             // Se for crédito, primeiro criamos a Sessão no Mercado Pago
             if (paymentMethod === 'credit') {
@@ -339,7 +393,8 @@ export default function NewSalePage() {
                     vendedor: vendedorSelecionado || user?.email || '',
                     observacao,
                     link_pagamento: mpLink,
-                    checkout_id: checkoutId
+                    checkout_id: checkoutId,
+                    cliente_id: finalClienteId
                 }),
             });
 
@@ -788,15 +843,43 @@ export default function NewSalePage() {
                             )}
                             <div className="grid md:grid-cols-2 gap-5">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="col-span-1">
+                                    <div className="col-span-1 relative">
                                         <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Cliente</label>
                                         <input
                                             required
                                             value={cliente}
-                                            onChange={e => setCliente(e.target.value)}
+                                            onChange={e => {
+                                                setCliente(e.target.value);
+                                                if (clienteId) setClienteId(null); // Reset ID if name changes manually
+                                            }}
                                             className="w-full bg-zinc-900/50 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-3.5 outline-none focus:border-cyan-500 text-sm transition-all text-zinc-200"
                                             placeholder="Nome do Cliente"
                                         />
+                                        
+                                        {/* Suggestions Dropdown */}
+                                        {customerSuggestions.length > 0 && (
+                                            <div className="absolute left-0 right-0 mt-2 bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                                <div className="p-2 border-b border-zinc-800 bg-zinc-900/50">
+                                                    <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Sugestões (CRM)</span>
+                                                </div>
+                                                {customerSuggestions.map((c) => (
+                                                    <button
+                                                        key={c.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setCliente(c.nome);
+                                                            setClienteContato(c.telefone);
+                                                            setClienteId(c.id);
+                                                            setCustomerSuggestions([]);
+                                                        }}
+                                                        className="w-full flex flex-col items-start px-4 py-3 hover:bg-zinc-800 transition-colors text-left group"
+                                                    >
+                                                        <span className="text-sm font-bold text-zinc-100 group-hover:text-cyan-400 transition-colors">{c.nome}</span>
+                                                        <span className="text-[10px] text-zinc-500 font-mono tracking-tighter">{c.telefone} {c.instagram ? `• @${c.instagram}` : ''}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="col-span-1">
                                         <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Telefone / Whats</label>
@@ -959,7 +1042,7 @@ export default function NewSalePage() {
                                         <button
                                             type="button"
                                             onClick={() => setShowPaymentOptions(true)}
-                                            disabled={submitting || cart.length === 0}
+                                            disabled={!isMounted || submitting || cart.length === 0}
                                             className="w-full font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm active:scale-[0.98] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:shadow-none disabled:cursor-not-allowed uppercase tracking-widest"
                                         >
                                             {paymentMethod === 'pix' ? 'Confirmar e Gerar PIX' : 'Confirmar e Gerar Link MP'}

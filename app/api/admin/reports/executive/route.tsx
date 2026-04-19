@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
         
         const sellerStats: Record<string, { revenue: number, comm: number, paint: number, count: number }> = {};
         const studioStatsMap: Record<string, { revenue: number, profit: number }> = {};
-        const customerStatsMap: Record<string, { revenue: number, count: number }> = {};
+        const customerStatsMap: Record<string, { name: string, revenue: number, count: number }> = {};
 
         salesMonth.forEach(s => {
             const sellerEmail = (s.vendedor || 'Ateliê').toLowerCase();
@@ -104,10 +104,16 @@ export async function GET(req: NextRequest) {
             studioStatsMap[studioId].revenue += (s.valor_venda_final || 0) + (s.valor_frete || 0);
             studioStatsMap[studioId].profit += (s.lucro_real || 0);
 
-            const customerName = s.cliente_nome || 'Cliente Final';
-            if (!customerStatsMap[customerName]) customerStatsMap[customerName] = { revenue: 0, count: 0 };
-            customerStatsMap[customerName].revenue += (s.valor_venda_final || 0) + (s.valor_frete || 0);
-            customerStatsMap[customerName].count += 1;
+            const customerKey = s.cliente_id || s.cliente_nome || 'Cliente Final';
+            if (!customerStatsMap[customerKey]) {
+                customerStatsMap[customerKey] = { 
+                    name: s.cliente_nome || 'Cliente Final', 
+                    revenue: 0, 
+                    count: 0 
+                };
+            }
+            customerStatsMap[customerKey].revenue += (s.valor_venda_final || 0) + (s.valor_frete || 0);
+            customerStatsMap[customerKey].count += 1;
         });
 
         const ytdRevenue = (allSalesYear || []).reduce((acc, s) => acc + (s.valor_venda_final || 0) + (s.valor_frete || 0), 0);
@@ -141,8 +147,7 @@ export async function GET(req: NextRequest) {
             .sort((a, b) => b.revenue - a.revenue)
             .slice(0, 3);
 
-        const topCustomers = Object.entries(customerStatsMap)
-            .map(([name, stats]) => ({ name, ...stats }))
+        const topCustomers = Object.values(customerStatsMap)
             .sort((a, b) => b.revenue - a.revenue)
             .slice(0, 3);
 

@@ -54,7 +54,8 @@ export async function POST(req: Request) {
             pintor_nome, // Nome ou email recebido do novo Select no Frontend
             data_venda,
             observacao,
-            valor_frete
+            valor_frete,
+            cliente_id // Novo campo para CRM
         } = body;
 
         if (!carrinho || !Array.isArray(carrinho) || carrinho.length === 0) {
@@ -138,6 +139,7 @@ export async function POST(req: Request) {
                 observacao: observacao || '',
                 link_pagamento: body.link_pagamento || null,
                 checkout_id: body.checkout_id || null,
+                cliente_id: cliente_id || null, // Vínculo com a tabela clientes
                 data_venda: data_venda || new Date().toISOString()
             });
         }
