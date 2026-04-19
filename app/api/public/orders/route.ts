@@ -6,26 +6,17 @@ export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
         const phone = searchParams.get('phone');
+        const token = searchParams.get('token');
 
-        if (!phone) {
-            return NextResponse.json({ error: 'Telefone é obrigatório' }, { status: 400 });
+        if (!phone && !token) {
+            return NextResponse.json({ error: 'Telefone ou Token é obrigatório' }, { status: 400 });
         }
 
-        // Normalização simples do telefone (apenas números)
-        const sanitizedPhone = phone.replace(/\D/g, '');
-
-        if (sanitizedPhone.length < 8) {
-            return NextResponse.json({ error: 'Telefone inválido' }, { status: 400 });
-        }
-
-        // Buscar vendas que o contato contenha os números informados
-        // Usamos ilike com curingas para ignorar formatação salva (parenteses, traços)
-        const phonePattern = `%${sanitizedPhone}%`;
-
-        const { data: sales, error } = await supabase
+        let query = supabase
             .from('vendas')
             .select(`
                 id,
+                access_token,
                 status,
                 data_venda,
                 cliente_nome,
@@ -36,19 +27,45 @@ export async function GET(req: NextRequest) {
                     imagem_url,
                     studios ( nome )
                 )
-            `)
-            .or(`cliente_contato.ilike.${phonePattern}`)
-            .order('data_venda', { ascending: false });
+            `);
+
+        if (token) {
+            // Se buscar por token, primeiro descobrimos o telefone dono desse token
+            const { data: owner } = await supabase
+                .from('vendas')
+                .select('cliente_contato')
+                .eq('access_token', token)
+                .single();
+
+            if (owner?.cliente_contato) {
+                const sanitizedPhone = owner.cliente_contato.replace(/\D/g, '');
+                const phonePattern = `%${sanitizedPhone}%`;
+                query = query.or(`cliente_contato.ilike.${phonePattern}`);
+            } else {
+                query = query.eq('access_token', token); // Fallback caso não ache contato
+            }
+        } else if (phone) {
+            // Normalização simples do telefone (apenas números)
+            const sanitizedPhone = phone.replace(/\D/g, '');
+            if (sanitizedPhone.length < 8) {
+                return NextResponse.json({ error: 'Telefone inválido' }, { status: 400 });
+            }
+            const phonePattern = `%${sanitizedPhone}%`;
+            query = query.or(`cliente_contato.ilike.${phonePattern}`);
+        }
+
+        const { data: sales, error } = await query.order('data_venda', { ascending: false });
 
         if (error) throw error;
 
         if (!sales || sales.length === 0) {
-            return NextResponse.json({ items: [], message: 'Nenhum pedido encontrado para este telefone.' });
+            return NextResponse.json({ items: [], message: 'Nenhum pedido encontrado.' });
         }
 
         // Filtramos os dados finais para garantir que apenas o essencial seja enviado
         const formatted = sales.map((s: any) => ({
             id: s.id,
+            token: s.access_token,
             status: s.status,
             data: s.data_venda,
             figura: {

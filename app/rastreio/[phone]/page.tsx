@@ -13,14 +13,18 @@ import { toast } from 'sonner';
 export default function CustomerDashboard() {
     const params = useParams();
     const router = useRouter();
-    const phone = params?.phone as string;
+    const identifier = params?.phone as string; // Pode ser telefone ou token
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchOrders = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/public/orders?phone=${phone}`);
+            // Verifica se o identificador é um UUID ou telefone
+            const isToken = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+            const queryParam = isToken ? `token=${identifier}` : `phone=${identifier}`;
+            
+            const res = await fetch(`/api/public/orders?${queryParam}`);
             const data = await res.json();
             setOrders(data.items || []);
         } catch (err) {
@@ -31,8 +35,8 @@ export default function CustomerDashboard() {
     };
 
     useEffect(() => {
-        if (phone) fetchOrders();
-    }, [phone]);
+        if (identifier) fetchOrders();
+    }, [identifier]);
 
     if (loading) {
         return (
@@ -58,7 +62,7 @@ export default function CustomerDashboard() {
                     </button>
                     <div className="flex items-center gap-3">
                          <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest bg-zinc-900 px-3 py-1 rounded-full border border-white/5">
-                            ID: {phone}
+                            ACESSO PROTEGIDO
                          </span>
                          <button onClick={fetchOrders} className="p-2 text-zinc-500 hover:text-orange-500 transition-colors">
                             <RefreshCw size={18} />
@@ -116,14 +120,14 @@ export default function CustomerDashboard() {
                                         </div>
 
                                         <div className="flex items-center gap-3">
-                                            {/* Somente exibe certificado se estiver pronto/concluído ou se tiver ID */}
+                                            {/* Somente exibe certificado se estiver pronto/concluido ou se tiver ID */}
                                             <a 
-                                                href={`/api/admin/kanban/certificate/${order.id}`}
+                                                href={`/verificar/${order.token}`}
                                                 target="_blank"
-                                                className="flex items-center gap-2 bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] px-5 py-3 rounded-full hover:bg-orange-500 transition-all shadow-xl active:scale-95"
+                                                className="flex items-center gap-2 bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] px-5 py-3 rounded-full hover:bg-emerald-500 hover:text-white transition-all shadow-xl active:scale-95"
                                             >
                                                 <Award size={14} />
-                                                Certificado Digital
+                                                Visualizar Certificado
                                             </a>
                                         </div>
                                     </div>

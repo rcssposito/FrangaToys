@@ -11,10 +11,11 @@ export default async function VerificarPage({
 }: {
     params: Promise<{ id: string }>;
 }) {
-    const { id } = await params;
+    const { id: identifier } = await params;
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
 
     // Fetch detailed sale info
-    const { data: sale } = await supabase
+    let query = supabase
         .from('vendas')
         .select(`
             id,
@@ -28,9 +29,18 @@ export default async function VerificarPage({
                     categorias ( nome ) 
                 )
             )
-        `)
-        .eq('id', id)
-        .single();
+        `);
+
+    if (isUUID) {
+        query = query.eq('access_token', identifier);
+    } else if (!isNaN(Number(identifier))) {
+        query = query.eq('id', identifier);
+    } else {
+        // Force no result if invalid format
+        query = query.eq('id', -1);
+    }
+
+    const { data: sale } = await query.single();
 
     if (!sale) {
         return (

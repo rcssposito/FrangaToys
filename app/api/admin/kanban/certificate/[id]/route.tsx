@@ -19,6 +19,7 @@ export async function GET(
             .from('vendas')
             .select(`
                 id,
+                access_token,
                 cliente_nome,
                 data_venda,
                 figuras (
@@ -155,7 +156,7 @@ export async function GET(
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                             <div style={{ display: 'flex', padding: 8, backgroundColor: 'white', borderRadius: 8, marginBottom: 8 }}>
                                 <img
-                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(req.nextUrl.origin + '/verificar/' + sale.id)}`}
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(req.nextUrl.origin + '/verificar/' + (sale.access_token || sale.id))}`}
                                     style={{ width: 90, height: 90 }}
                                 />
                             </div>

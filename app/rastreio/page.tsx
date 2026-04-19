@@ -40,9 +40,14 @@ export default function TrackingPage() {
             const data = await res.json();
 
             if (data.items && data.items.length > 0) {
+                // Usamos o token do pedido mais recente como chave de acesso
+                const latestToken = data.items[0].token;
+                
                 // Salva no localStorage para não precisar digitar de novo
                 localStorage.setItem('frangatoys_tracking_phone', sanitized);
-                router.push(`/rastreio/${sanitized}`);
+                localStorage.setItem('frangatoys_tracking_token', latestToken);
+                
+                router.push(`/rastreio/${latestToken}`);
             } else {
                 toast.error('Nenhum pedido encontrado para este telefone.');
             }
