@@ -276,7 +276,7 @@ export default function StudiosPage() {
                                                     ? "bg-purple-500/10 border-purple-500/40 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.2)]" 
                                                     : "bg-zinc-900 border-zinc-800 text-zinc-700"
                                             )}
-                                            title={studio.merchant ? "Merchant: Visível na Vitrine" : "Merchant: Oculto da Vitrine"}
+                                            title={studio.merchant ? "Desativar TODAS as figuras deste estúdio na vitrine" : "Ativar TODAS as figuras deste estúdio na vitrine"}
                                         >
                                             <ShoppingBag size={18} />
                                         </button>

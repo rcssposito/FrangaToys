@@ -25,6 +25,7 @@ interface Figure {
     horas_pintura: number | string;
     escala: number | string;
     tem_extras?: boolean;
+    disponivel?: boolean;
     sinonimos?: string;
 }
 
@@ -224,6 +225,17 @@ const FigureMobileCard = ({
                     </div>
 
                     <div className="flex items-center justify-between mt-2 py-2 border-t border-[var(--card-border)]">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={f.disponivel}
+                                disabled={!canEdit}
+                                onChange={e => handleChange(f.id, 'disponivel', e.target.checked)}
+                                className="w-5 h-5 rounded-sm border-[var(--input-border)] text-blue-500 bg-[var(--input-bg)] focus:ring-0"
+                            />
+                            <span className="text-xs font-medium text-[var(--text-muted)]">Disponível (Vitrine)</span>
+                        </label>
+
                         <label className="flex items-center gap-2 cursor-pointer">
                             <input
                                 type="checkbox"
@@ -593,6 +605,7 @@ function DataGridContent() {
                                     <th className="px-2 py-4 text-center text-[10px]">H. Impressão</th>
                                     <th className="px-2 py-4 text-center text-[10px]">H. Pintura</th>
                                     <th className="px-3 py-4 text-center">Medidas (cm)</th>
+                                    <th className="px-3 py-4 text-center uppercase">Merchant</th>
                                     <th className="px-3 py-4 text-center uppercase">Extras</th>
                                     <th className="px-4 py-4 text-center text-zinc-400 group-hover:text-zinc-200 transition-colors"><div className="flex flex-col"><span>ESTILIZADO</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
                                     <th className="px-4 py-4 text-center text-zinc-400 group-hover:text-zinc-200 transition-colors"><div className="flex flex-col"><span>COLORIDO</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
@@ -726,6 +739,16 @@ function DataGridContent() {
                                                         />
                                                     </Tooltip>
                                                 </div>
+                                            </td>
+
+                                            <td className="px-3 py-4 text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={f.disponivel}
+                                                    disabled={!canEdit}
+                                                    onChange={e => handleChange(f.id, 'disponivel', e.target.checked)}
+                                                    className="w-5 h-5 rounded-sm border-[var(--input-border)] text-blue-500 bg-[var(--input-bg)] focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                />
                                             </td>
 
                                             <td className="px-3 py-4 text-center">

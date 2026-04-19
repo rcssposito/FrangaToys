@@ -19,6 +19,19 @@ export async function PUT(req: Request) {
 
         if (error) throw error;
 
+        // CASCATURAMENTO: Se o status de merchant do estúdio mudou, atualiza todas as figuras
+        if (merchant !== undefined) {
+             const { error: cascadeError } = await supabase
+                .from('figuras')
+                .update({ disponivel: merchant })
+                .eq('studio_id', id);
+            
+            if (cascadeError) {
+                console.error("Erro no cascateamento de merchant:", cascadeError);
+                // Não travamos a resposta do estúdio, mas logamos o erro
+            }
+        }
+
         return NextResponse.json(data);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });

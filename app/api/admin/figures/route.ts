@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
         nome, 
         codigo,
         imagem_url,
+        disponivel,
         tem_extras,
         sinonimos,
         serie_id,
@@ -118,6 +119,7 @@ export async function GET(req: NextRequest) {
                 categoria: cat.nome || 'Outros',
                 categoria_id: cat.id || 0,
                 imagem_url: item.imagem_url,
+                disponivel: item.disponivel || false,
                 tem_extras: item.tem_extras || false,
                 sinonimos: item.sinonimos || '',
                 altura_cm: meta.altura_cm ?? 0,
@@ -149,10 +151,11 @@ export async function PUT(req: Request) {
         }
 
         const body = await req.json();
-        const { id, nome, serie, imagem_url, tem_extras, sinonimos, ...rawMeta } = body;
+        const { id, nome, serie, imagem_url, disponivel, tem_extras, sinonimos, ...rawMeta } = body;
 
         const updateFields: any = {};
         if (nome !== undefined) updateFields.nome = nome;
+        if (disponivel !== undefined) updateFields.disponivel = disponivel;
         if (tem_extras !== undefined) updateFields.tem_extras = tem_extras;
         // Removido: O catálogo não pode escrever diretamente o sinônimo na tabela figuras.
         // if (sinonimos !== undefined) updateFields.sinonimos = sinonimos;
