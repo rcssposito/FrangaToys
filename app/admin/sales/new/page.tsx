@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2, Plus, Minus, AlertTriangle, CheckCircle2, User, Copy, RefreshCw } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2, Plus, Minus, AlertTriangle, CheckCircle2, User, Copy, RefreshCw, UserCheck, Sparkles, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 
@@ -844,40 +844,57 @@ export default function NewSalePage() {
                             <div className="grid md:grid-cols-2 gap-5">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="col-span-1 relative">
-                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Cliente</label>
+                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Cliente {clienteId && <span className="text-emerald-500">● CRM</span>}</label>
                                         <input
                                             required
+                                            autoComplete="new-password"
                                             value={cliente}
                                             onChange={e => {
                                                 setCliente(e.target.value);
-                                                if (clienteId) setClienteId(null); // Reset ID if name changes manually
+                                                if (clienteId) setClienteId(null);
                                             }}
-                                            className="w-full bg-zinc-900/50 backdrop-blur-sm border border-zinc-800/80 rounded-xl p-3.5 outline-none focus:border-cyan-500 text-sm transition-all text-zinc-200"
-                                            placeholder="Nome do Cliente"
+                                            className={`w-full bg-zinc-900 border rounded-xl p-3.5 outline-none transition-all text-sm ${clienteId ? 'border-emerald-500 text-emerald-400 font-bold' : 'border-zinc-800 text-zinc-200 focus:border-cyan-500'}`}
+                                            placeholder="Digite o nome..."
                                         />
                                         
                                         {/* Suggestions Dropdown */}
                                         {customerSuggestions.length > 0 && (
-                                            <div className="absolute left-0 right-0 mt-2 bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                                                <div className="p-2 border-b border-zinc-800 bg-zinc-900/50">
-                                                    <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Sugestões (CRM)</span>
+                                            <div className="absolute left-0 right-0 mt-3 bg-zinc-950/95 backdrop-blur-xl border border-zinc-800/80 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                                                <div className="px-4 py-2 bg-zinc-900/80 border-b border-zinc-800/50 flex justify-between items-center">
+                                                    <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Encontrados no CRM</span>
+                                                    <Sparkles size={10} className="text-cyan-500 animate-pulse" />
                                                 </div>
-                                                {customerSuggestions.map((c) => (
-                                                    <button
-                                                        key={c.id}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setCliente(c.nome);
-                                                            setClienteContato(c.telefone);
-                                                            setClienteId(c.id);
-                                                            setCustomerSuggestions([]);
-                                                        }}
-                                                        className="w-full flex flex-col items-start px-4 py-3 hover:bg-zinc-800 transition-colors text-left group"
-                                                    >
-                                                        <span className="text-sm font-bold text-zinc-100 group-hover:text-cyan-400 transition-colors">{c.nome}</span>
-                                                        <span className="text-[10px] text-zinc-500 font-mono tracking-tighter">{c.telefone} {c.instagram ? `• @${c.instagram}` : ''}</span>
-                                                    </button>
-                                                ))}
+                                                <div className="max-h-60 overflow-auto divide-y divide-zinc-900">
+                                                    {customerSuggestions.map((c) => (
+                                                        <button
+                                                            key={c.id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setCliente(c.nome);
+                                                                setClienteContato(c.telefone);
+                                                                setClienteId(c.id);
+                                                                setCustomerSuggestions([]);
+                                                                toast.success(`Perfil de ${c.nome.split(' ')[0]} vinculado!`, {
+                                                                    icon: <UserCheck size={16} className="text-emerald-500" />
+                                                                });
+                                                            }}
+                                                            className="w-full flex items-center gap-4 px-4 py-4 hover:bg-zinc-800/60 transition-all text-left group"
+                                                        >
+                                                            <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 font-bold group-hover:border-cyan-500/50 group-hover:text-cyan-400 transition-all shrink-0">
+                                                                {c.nome[0].toUpperCase()}
+                                                            </div>
+                                                            <div className="flex flex-col flex-1 truncate">
+                                                                <span className="text-sm font-bold text-zinc-200 group-hover:text-white transition-colors">{c.nome}</span>
+                                                                <span className="text-[10px] text-zinc-500 font-mono tracking-tighter truncate opacity-70">
+                                                                    {c.telefone} {c.instagram ? `• @${c.instagram}` : ''}
+                                                                </span>
+                                                            </div>
+                                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity pr-2">
+                                                                <ArrowRight size={14} className="text-cyan-500" />
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -1042,7 +1059,7 @@ export default function NewSalePage() {
                                         <button
                                             type="button"
                                             onClick={() => setShowPaymentOptions(true)}
-                                            disabled={!isMounted || submitting || cart.length === 0}
+                                            disabled={!isMounted || submitting || (isMounted && cart.length === 0)}
                                             className="w-full font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm active:scale-[0.98] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:shadow-none disabled:cursor-not-allowed uppercase tracking-widest"
                                         >
                                             {paymentMethod === 'pix' ? 'Confirmar e Gerar PIX' : 'Confirmar e Gerar Link MP'}

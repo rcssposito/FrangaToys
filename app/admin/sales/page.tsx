@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { toast } from 'sonner';
 import { 
     Plus, 
@@ -57,6 +57,19 @@ interface MonthGroup {
     sales: Sale[];
 }
 export default function SalesPage() {
+    return (
+        <Suspense fallback={
+            <div className="p-8 flex flex-col items-center justify-center min-h-screen gap-4">
+                <Loader2 className="animate-spin text-orange-500" size={40} />
+                <p className="text-xs font-black uppercase tracking-widest text-zinc-500">Carregando Histórico...</p>
+            </div>
+        }>
+            <SalesContent />
+        </Suspense>
+    );
+}
+
+function SalesContent() {
     const [loading, setLoading] = useState(true);
     const [allSales, setAllSales] = useState<Sale[]>([]);
     const [groups, setGroups] = useState<MonthGroup[]>([]);
