@@ -13,7 +13,8 @@ export async function GET(req: Request) {
                 *,
                 vendas (
                     valor_venda_final,
-                    valor_frete
+                    valor_frete,
+                    data_venda
                 )
             `);
 
@@ -30,15 +31,21 @@ export async function GET(req: Request) {
             const stats = (c.vendas || []).reduce((acc: any, v: any) => {
                 acc.total_pedidos += 1;
                 acc.total_gasto += (v.valor_venda_final || 0) + (v.valor_frete || 0);
+                
+                const saleDate = new Date(v.data_venda);
+                if (!acc.ultima_venda_em || saleDate > acc.ultima_venda_em) {
+                    acc.ultima_venda_em = saleDate;
+                }
                 return acc;
-            }, { total_pedidos: 0, total_gasto: 0 });
+            }, { total_pedidos: 0, total_gasto: 0, ultima_venda_em: null as Date | null });
 
             // Remover a lista de vendas para reduzir o payload
             const { vendas, ...customerData } = c;
             return {
                 ...customerData,
                 total_pedidos: stats.total_pedidos,
-                total_gasto: stats.total_gasto
+                total_gasto: stats.total_gasto,
+                ultima_venda_em: stats.ultima_venda_em ? stats.ultima_venda_em.toISOString() : null
             };
         });
 
@@ -88,6 +95,20 @@ export async function PATCH(req: Request) {
             .single();
 
         if (error) throw error;
+
+        // --- Sincronização Global (Opção B do Usuário) ---
+        // Se o nome foi alterado, atualizamos em todas as vendas vinculadas a esse ID
+        if (nome) {
+            const { error: syncError } = await supabase
+                .from('vendas')
+                .update({ cliente_nome: nome })
+                .eq('cliente_id', id);
+            
+            if (syncError) {
+                console.error('Falha na sincronização de nomes nas vendas:', syncError);
+                // Não travamos a resposta principal por isso, mas logamos o erro
+            }
+        }
 
         return NextResponse.json(data);
     } catch (error: any) {

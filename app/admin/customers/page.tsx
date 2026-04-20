@@ -20,7 +20,9 @@ import {
     Award,
     Edit2,
     X as CloseIcon,
-    Save
+    Save,
+    Copy,
+    Check
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePermission } from '@/hooks/usePermission';
@@ -34,6 +36,7 @@ interface Customer {
     data_cadastro: string;
     total_pedidos?: number;
     total_gasto?: number;
+    ultima_venda_em?: string;
 }
 
 export default function CustomersPage() {
@@ -42,9 +45,11 @@ export default function CustomersPage() {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [activeFilter, setActiveFilter] = useState<'all' | 'vips' | 'inactives' | 'new'>('all');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [isCopying, setIsCopying] = useState(false);
 
     const fetchCustomers = async () => {
         setLoading(true);
@@ -52,9 +57,12 @@ export default function CustomersPage() {
             const res = await fetch(`/api/admin/customers?q=${encodeURIComponent(search)}`);
             const data = await res.json();
             
-            // Aqui poderíamos buscar estatísticas se a API suportasse. 
-            // Como é um MVP, vamos mostrar apenas a lista por enquanto.
-            setCustomers(data);
+            if (res.ok && Array.isArray(data)) {
+                setCustomers(data);
+            } else {
+                setCustomers([]);
+                if (data.error) toast.error(data.error);
+            }
         } catch (err) {
             toast.error('Erro ao carregar clientes');
         } finally {
@@ -93,22 +101,61 @@ export default function CustomersPage() {
         }
     };
 
-    // Cálculos de Métricas em Tempo Real
-    const totalCustomers = customers.length;
+    // Cálculos de Métricas em Tempo Real - Protegidos contra erros de tipo
+    const customersArray = Array.isArray(customers) ? customers : [];
+    const totalCustomers = customersArray.length;
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
     
-    const newCustomersThisMonth = customers.filter(c => {
+    const newCustomersThisMonth = customersArray.filter(c => {
         const regDate = new Date(c.data_cadastro);
         return regDate.getMonth() === currentMonth && regDate.getFullYear() === currentYear;
     }).length;
 
-    const topCustomer = [...customers].sort((a,b) => (b.total_gasto || 0) - (a.total_gasto || 0))[0];
+    const topCustomer = [...customersArray].sort((a,b) => (b.total_gasto || 0) - (a.total_gasto || 0))[0];
+
+    const handleCopyList = async () => {
+        if (filteredCustomers.length === 0 || isCopying) return;
+        
+        setIsCopying(true);
+        try {
+            const listText = filteredCustomers
+                .map(c => `${c.nome} - ${c.telefone}`)
+                .join('\n');
+            
+            await navigator.clipboard.writeText(listText);
+            toast.success(`${filteredCustomers.length} contatos copiados para a área de transferência!`);
+            
+            setTimeout(() => {
+                setIsCopying(false);
+            }, 3000);
+        } catch (err) {
+            toast.error('Erro ao copiar contatos');
+            setIsCopying(false);
+        }
+    };
+
+    const filteredCustomers = customersArray.filter(c => {
+        if (activeFilter === 'all') return true;
+        if (activeFilter === 'vips') return (c.total_gasto || 0) > 500;
+        if (activeFilter === 'new') {
+            const regDate = new Date(c.data_cadastro);
+            return regDate.getMonth() === currentMonth && regDate.getFullYear() === currentYear;
+        }
+        if (activeFilter === 'inactives') {
+            if (!c.ultima_venda_em) return true;
+            const lastSale = new Date(c.ultima_venda_em);
+            const sixtyDaysAgo = new Date();
+            sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+            return lastSale < sixtyDaysAgo;
+        }
+        return true;
+    });
 
     return (
         <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
             {/* Header Area */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
                 <div className="space-y-1">
                     <h1 className="text-3xl md:text-4xl font-black tracking-tighter flex items-center gap-3">
                         <div className="p-2 bg-orange-500 rounded-xl text-white shadow-lg shadow-orange-500/20">
@@ -121,19 +168,57 @@ export default function CustomersPage() {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <div className="relative group">
+                <div className="flex flex-col md:flex-row items-center gap-4">
+                    <div className="relative group w-full md:w-80">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-orange-500 transition-colors" size={18} />
                         <input
                             type="text"
-                            placeholder="Buscar por nome ou WhatsApp..."
+                            placeholder="Buscar nome ou WhatsApp..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="bg-black border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-6 outline-none focus:border-orange-500 w-full md:w-80 text-sm font-medium transition-all shadow-inner"
+                            className="bg-black border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-6 outline-none focus:border-orange-500 w-full text-sm font-medium transition-all shadow-inner"
                         />
                     </div>
                 </div>
             </div>
+
+            <div className="flex flex-wrap items-center gap-3 bg-zinc-900/10 p-3 rounded-3xl border border-zinc-800/50">
+                    <button 
+                        onClick={() => setActiveFilter('all')}
+                        className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${activeFilter === 'all' ? 'bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
+                    >
+                        Todos
+                    </button>
+                    <button 
+                        onClick={() => setActiveFilter('vips')}
+                        className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 ${activeFilter === 'vips' ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
+                    >
+                        <Award size={14} /> VIPs (LTV &gt; 500)
+                    </button>
+                    <button 
+                        onClick={() => setActiveFilter('inactives')}
+                        className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 ${activeFilter === 'inactives' ? 'bg-zinc-200 border-zinc-200 text-black shadow-lg shadow-white/20' : 'bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
+                    >
+                        <Clock size={14} /> Inativos (+60 dias)
+                    </button>
+                    <button 
+                        onClick={() => setActiveFilter('new')}
+                        className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 ${activeFilter === 'new' ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
+                    >
+                        <UserPlus size={14} /> Novos (Este Mês)
+                    </button>
+
+                    <div className="flex-1" />
+
+                    <button 
+                        onClick={handleCopyList}
+                        disabled={filteredCustomers.length === 0}
+                        className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 ${isCopying ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 active:scale-95 disabled:opacity-50'}`}
+                    >
+                        {isCopying ? <Check size={14} /> : <Copy size={14} />}
+                        {isCopying ? 'Contatos Copiados' : `Copiar ${filteredCustomers.length} Contatos para WhatsApp`}
+                    </button>
+                </div>
 
             {/* Loyalty Quick Stats (Placeholders for now) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -186,10 +271,13 @@ export default function CustomersPage() {
                         <Loader2 className="animate-spin text-orange-500" size={40} />
                         <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-600">Sincronizando Base de Dados...</p>
                     </div>
-                ) : customers.length === 0 ? (
+                ) : filteredCustomers.length === 0 ? (
                     <div className="p-20 text-center space-y-4">
                         <Users size={60} className="mx-auto text-zinc-800" />
                         <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Nenhum cliente encontrado com esses critérios.</p>
+                        {activeFilter !== 'all' && (
+                            <button onClick={() => setActiveFilter('all')} className="text-orange-500 text-[10px] font-black uppercase tracking-widest hover:underline">Limpar Filtros</button>
+                        )}
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -198,13 +286,13 @@ export default function CustomersPage() {
                                 <tr className="border-b border-zinc-800/50 bg-black/40">
                                     <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Cliente / Contato</th>
                                     <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden md:table-cell">Redes Sociais</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden md:table-cell">Pedidos</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden md:table-cell">Última Compra</th>
                                     <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden md:table-cell">Total Gasto (LTV)</th>
                                     <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] text-right">Ações</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-800/30">
-                                {customers.map((customer) => (
+                                {filteredCustomers.map((customer) => (
                                     <tr key={customer.id} className="group hover:bg-zinc-800/30 transition-colors">
                                         <td className="px-8 py-5">
                                             <div className="flex items-center gap-4">
@@ -240,8 +328,12 @@ export default function CustomersPage() {
                                         </td>
                                         <td className="px-8 py-5 hidden md:table-cell">
                                             <div className="flex flex-col">
-                                                <span className="text-[11px] font-bold text-zinc-400">{customer.total_pedidos || 0}</span>
-                                                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">Encomendas</span>
+                                                <span className="text-[11px] font-bold text-zinc-400">
+                                                    {customer.ultima_venda_em ? new Date(customer.ultima_venda_em).toLocaleDateString('pt-BR') : 'Nenhuma'}
+                                                </span>
+                                                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">
+                                                    {customer.total_pedidos || 0} Pedidos
+                                                </span>
                                             </div>
                                         </td>
                                         <td className="px-8 py-5 hidden md:table-cell">
