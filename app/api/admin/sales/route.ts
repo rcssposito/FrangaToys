@@ -62,6 +62,29 @@ export async function POST(req: Request) {
             throw new Error('Carrinho vazio ou inválido');
         }
 
+        // --- MOTOR DE AUTO-CRM (POST) ---
+        let final_cliente_id = cliente_id;
+        if (!final_cliente_id && cliente_contato && cliente_contato.trim() !== '') {
+            // 1. Tentar localizar por telefone
+            const { data: existing } = await supabase
+                .from('clientes')
+                .select('id')
+                .eq('telefone', cliente_contato)
+                .maybeSingle();
+            
+            if (existing) {
+                final_cliente_id = existing.id;
+            } else if (cliente_nome) {
+                // 2. Criar novo se não existir
+                const { data: novo } = await supabase
+                    .from('clientes')
+                    .insert([{ nome: cliente_nome, telefone: cliente_contato }])
+                    .select('id')
+                    .single();
+                if (novo) final_cliente_id = novo.id;
+            }
+        }
+
         console.log(`Registering ${carrinho.length} items for client ${cliente_nome}`);
         if (vendedor) {
             console.log(`Sale made by vendor: ${vendedor}`);
@@ -139,7 +162,7 @@ export async function POST(req: Request) {
                 observacao: observacao || '',
                 link_pagamento: body.link_pagamento || null,
                 checkout_id: body.checkout_id || null,
-                cliente_id: cliente_id || null, // Vínculo com a tabela clientes
+                cliente_id: final_cliente_id || null, // Vínculo oficial (Auto-CRM)
                 data_venda: data_venda || new Date().toISOString()
             });
         }
@@ -176,9 +199,34 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
     try {
         const body = await req.json();
-        const { id, cliente_nome, cliente_contato, canal_venda, vendedor, status, observacao, pintura_freelancer, pintor_nome } = body;
+        const { id, cliente_nome, cliente_contato, canal_venda, vendedor, status, observacao, pintura_freelancer, pintor_nome, cliente_id } = body;
 
         if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 });
+
+        // --- MOTOR DE AUTO-CRM (PATCH) ---
+        let final_cliente_id = cliente_id;
+        
+        // Se não temos um ID mas temos o contato, tentamos vincular ou criar
+        if (!final_cliente_id && cliente_contato && cliente_contato.trim() !== '') {
+            // 1. Tentar localizar por telefone exato
+            const { data: existing } = await supabase
+                .from('clientes')
+                .select('id')
+                .eq('telefone', cliente_contato)
+                .maybeSingle();
+            
+            if (existing) {
+                final_cliente_id = existing.id;
+            } else if (cliente_nome) {
+                // 2. Criar novo se não existir
+                const { data: novo } = await supabase
+                    .from('clientes')
+                    .insert([{ nome: cliente_nome, telefone: cliente_contato }])
+                    .select('id')
+                    .single();
+                if (novo) final_cliente_id = novo.id;
+            }
+        }
 
         // 1. Buscar a venda atual para ter os snapshots de custo e valor original
         const { data: currentSale, error: fetchError } = await supabase
@@ -231,7 +279,8 @@ export async function PATCH(req: Request) {
                 pintura_freelancer,
                 pintor_nome,
                 valor_pago_pintor,
-                lucro_real
+                lucro_real,
+                cliente_id: final_cliente_id === undefined ? currentSale.cliente_id : final_cliente_id
             })
             .eq('id', id)
             .select();

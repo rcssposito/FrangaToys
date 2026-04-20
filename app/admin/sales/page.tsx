@@ -17,7 +17,12 @@ import {
     Edit3, 
     X, 
     Save, 
-    ShoppingCart 
+    ShoppingCart,
+    UserCheck,
+    Sparkles,
+    ArrowRight,
+    Search,
+    ChevronDown
 } from 'lucide-react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { usePermission } from '@/hooks/usePermission';
@@ -47,6 +52,7 @@ interface Sale {
     };
     link_pagamento?: string;
     checkout_id?: string;
+    cliente_contato?: string;
     cliente_id?: string;
 }
 
@@ -81,12 +87,43 @@ function SalesContent() {
     const router = useRouter();
     const customerFilter = searchParams.get('cliente_id');
 
+    // CRM States for Editing
+    const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
+    const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
+
     const { hasRole } = usePermission();
 
     useEffect(() => {
         fetchSales();
         fetchVendedores();
     }, []);
+
+    // CRM Search Logic for Edit Modal
+    useEffect(() => {
+        if (!editingSale || !editingSale.cliente_nome || editingSale.cliente_nome.length <= 2 || editingSale.cliente_id) {
+            setCustomerSuggestions([]);
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            fetchCustomerSuggestions(editingSale.cliente_nome);
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [editingSale?.cliente_nome, editingSale?.cliente_id]);
+
+    const fetchCustomerSuggestions = async (query: string) => {
+        setIsSearchingCustomers(true);
+        try {
+            const res = await fetch(`/api/admin/customers?q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            setCustomerSuggestions(data);
+        } catch (err) {
+            console.error('Erro ao buscar sugestões:', err);
+        } finally {
+            setIsSearchingCustomers(false);
+        }
+    };
 
     const fetchVendedores = async () => {
         try {
@@ -396,16 +433,61 @@ function SalesContent() {
 
                         <form onSubmit={handleUpdate} className="space-y-6">
                             <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Cliente</label>
-                                    <input
-                                        type="text"
-                                        value={editingSale.cliente_nome || ''}
-                                        onChange={e => setEditingSale({ ...editingSale, cliente_nome: e.target.value })}
-                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-sm focus:border-cyan-500/50 outline-none transition-all font-bold text-zinc-200"
-                                        placeholder="Nome do Cliente"
-                                        required
-                                    />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="col-span-1 relative">
+                                        <label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Cliente {editingSale.cliente_id && <span className="text-emerald-500">● CRM</span>}</label>
+                                        <input
+                                            type="text"
+                                            autoComplete="off"
+                                            value={editingSale.cliente_nome || ''}
+                                            onChange={e => setEditingSale({ ...editingSale, cliente_nome: e.target.value, cliente_id: undefined })}
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-sm focus:border-cyan-500/50 outline-none transition-all font-bold text-zinc-200"
+                                            placeholder="Nome do Cliente"
+                                            required
+                                        />
+
+                                        {/* Suggestions Dropdown */}
+                                        {customerSuggestions.length > 0 && (
+                                            <div className="absolute left-0 right-0 mt-2 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 divide-y divide-zinc-900">
+                                                {customerSuggestions.map((c) => (
+                                                    <button
+                                                        key={c.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setEditingSale({ 
+                                                                ...editingSale, 
+                                                                cliente_nome: c.nome, 
+                                                                cliente_contato: c.telefone,
+                                                                cliente_id: c.id 
+                                                            });
+                                                            setCustomerSuggestions([]);
+                                                            toast.success('Cliente vinculado via CRM');
+                                                        }}
+                                                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-900 transition-all text-left group"
+                                                    >
+                                                        <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-500 group-hover:text-cyan-400">
+                                                            {c.nome[0].toUpperCase()}
+                                                        </div>
+                                                        <div className="flex flex-col flex-1 truncate">
+                                                            <span className="text-xs font-bold text-zinc-200 group-hover:text-white">{c.nome}</span>
+                                                            <span className="text-[10px] text-zinc-500 font-mono">{c.telefone}</span>
+                                                        </div>
+                                                        <ArrowRight size={12} className="text-zinc-700 group-hover:text-cyan-500" />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="col-span-1">
+                                        <label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Telefone / Whats</label>
+                                        <input
+                                            type="text"
+                                            value={editingSale.cliente_contato || ''}
+                                            onChange={e => setEditingSale({ ...editingSale, cliente_contato: e.target.value })}
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-sm focus:border-cyan-500/50 outline-none transition-all font-bold text-zinc-200"
+                                            placeholder="(11) 99999-9999"
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Vendedor</label>
@@ -422,19 +504,24 @@ function SalesContent() {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Status Logístico</label>
-                                    <select
-                                        value={editingSale.status || 'Aguardando Pagamento'}
-                                        onChange={e => setEditingSale({ ...editingSale, status: e.target.value })}
-                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-sm focus:border-cyan-500/50 outline-none transition-all font-black text-zinc-200 appearance-none cursor-pointer"
-                                    >
-                                        <option value="Aguardando Pagamento">Aguardando Pagamento (PDV)</option>
-                                        <option value="Fila de Impressão">Fila de Impressão</option>
-                                        <option value="Imprimindo">Imprimindo</option>
-                                        <option value="Lavagem e Cura">Cura e Limpeza</option>
-                                        <option value="Pintura Secagem">Pintura</option>
-                                        <option value="Pronto p/ Entrega">Pronto p/ Entrega</option>
-                                        <option value="Concluída">Pedido Concluído</option>
-                                    </select>
+                                    <div className="relative">
+                                        <select
+                                            value={editingSale.status || 'Aguardando Pagamento'}
+                                            onChange={e => setEditingSale({ ...editingSale, status: e.target.value })}
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-sm focus:border-cyan-500/50 outline-none transition-all font-black text-zinc-200 appearance-none cursor-pointer"
+                                        >
+                                            <option value="Aguardando Pagamento">Aguardando Pagamento (PDV)</option>
+                                            <option value="Fila de Impressão">Fila de Impressão</option>
+                                            <option value="Imprimindo">Imprimindo</option>
+                                            <option value="Lavagem e Cura">Cura e Limpeza</option>
+                                            <option value="Pintura Secagem">Pintura</option>
+                                            <option value="Pronto p/ Entrega">Pronto p/ Entrega</option>
+                                            <option value="Concluída">Pedido Concluído</option>
+                                        </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+                                            <ChevronDown size={14} />
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Canal</label>
