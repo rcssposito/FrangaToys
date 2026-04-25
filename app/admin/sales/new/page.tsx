@@ -373,7 +373,7 @@ export default function NewSalePage() {
                 body: JSON.stringify({
                     carrinho: cart.map(i => {
                         const isOutros = i.studio === 'Outros';
-                        const valorFinalItem = paymentMethod === 'credit' ? i.valor_final : (isOutros ? i.valor_final : i.valor_final / taxaMarkup);
+                        const valorFinalItem = i.valor_final;
                         
                         return {
                             id: i.id,
@@ -422,7 +422,7 @@ export default function NewSalePage() {
 
             cart.forEach(item => {
                 const isOutros = item.studio === 'Outros';
-                const precoItem = paymentMethod === 'credit' ? item.valor_final : (isOutros ? item.valor_final : item.valor_final / taxaMarkup);
+                const precoItem = item.valor_final;
                 msg += `👉 ${item.quantidade}x ${item.Figura} - R$ ${precoItem.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
             });
 
