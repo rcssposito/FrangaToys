@@ -88,7 +88,7 @@ export function InterceptedModal({ figure }: InterceptedModalProps) {
             onClick={onClose}
         >
             <div
-                className="relative w-full max-w-5xl h-[90vh] flex flex-col items-center justify-center p-2 animate-in zoom-in-95 duration-300"
+                className="relative w-full max-w-5xl h-full md:h-[90vh] flex flex-col items-center justify-start md:justify-center p-2 overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-300"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Close Button */}

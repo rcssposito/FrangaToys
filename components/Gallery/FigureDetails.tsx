@@ -110,14 +110,14 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
             </AnimatePresence>
 
             {/* Mobile Atmospheric Background Image */}
-            <div className="lg:hidden absolute inset-x-0 top-0 h-[60vh] -z-10 overflow-hidden pointer-events-none">
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10" />
+            <div className="lg:hidden absolute inset-x-0 top-0 h-[70vh] -z-10 overflow-hidden pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent z-10" />
                 <Image
                     loader={imageKitLoader}
                     src={imageUrl}
                     alt=""
                     fill
-                    className="object-contain p-4 opacity-60 sm:opacity-40"
+                    className="object-cover opacity-20 blur-3xl scale-125"
                     sizes="100vw"
                     priority
                 />
@@ -159,7 +159,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                 </div>
 
                 {/* Info & Pricing Panel */}
-                <div className="w-full lg:w-1/2 flex flex-col gap-6 order-2 pt-[25vh] lg:pt-0">
+                <div className="w-full lg:w-1/2 flex flex-col gap-6 order-2 pt-[35vh] sm:pt-[45vh] lg:pt-0">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <h3 className="text-sm font-black text-blue-500 uppercase tracking-[0.3em]">{figure.studio || 'Studio Indiferente'}</h3>
