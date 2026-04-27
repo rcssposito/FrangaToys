@@ -109,25 +109,34 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                 )}
             </AnimatePresence>
 
-            {/* Mobile Atmospheric Background Image */}
-            <div className="lg:hidden absolute inset-x-0 top-0 h-[70vh] -z-10 overflow-hidden pointer-events-none">
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent z-10" />
+            {/* Mobile Main Image (Interactive Area) */}
+            <div className="lg:hidden absolute inset-x-0 top-0 h-[60vh] overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10 pointer-events-none" />
                 <Image
                     loader={imageKitLoader}
                     src={imageUrl}
-                    alt=""
+                    alt={figure.nome}
                     fill
-                    className="object-cover opacity-20 blur-3xl scale-125"
+                    className="object-contain p-6 -z-10"
                     sizes="100vw"
                     priority
                 />
+                {/* Clickable Area for Zen Mode */}
+                <div 
+                    className="absolute inset-0 z-20 cursor-zoom-in"
+                    onClick={() => setIsZenMode(true)}
+                >
+                    <div className="absolute top-10 right-10 bg-black/40 backdrop-blur-md p-2.5 rounded-full border border-white/10">
+                        <Maximize2 size={20} className="text-white/70" />
+                    </div>
+                </div>
             </div>
 
             <div className="flex flex-col lg:flex-row w-full gap-8 items-start lg:items-center relative z-20">
 
-                {/* Main Image Container (Desktop Only or refined Mobile) */}
+                {/* Main Image Container (Desktop Only) */}
                 <div
-                    className="flex relative w-full lg:w-1/2 aspect-square items-center justify-center p-4 bg-zinc-900/20 rounded-3xl overflow-hidden shadow-inner order-1 transition-all duration-500 hover:bg-zinc-900/40 group"
+                    className="hidden lg:flex relative w-full lg:w-1/2 aspect-square items-center justify-center p-4 bg-zinc-900/20 rounded-3xl overflow-hidden shadow-inner order-1 transition-all duration-500 hover:bg-zinc-900/40 group cursor-zoom-in"
                     onClick={() => setIsZenMode(true)}
                 >
                     {/* Desktop: Pro Magnifier */}
@@ -169,7 +178,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                                 </span>
                             )}
                         </div>
-                        <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter leading-[0.9]">{figure.nome}</h2>
+                        <h2 className="text-2xl md:text-5xl font-black text-white tracking-tighter leading-[0.9]">{figure.nome}</h2>
 
                         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-zinc-500">
                             <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2.5 py-1.5 rounded-full border border-white/5">
