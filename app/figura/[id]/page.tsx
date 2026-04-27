@@ -74,6 +74,13 @@ export default async function FiguraPage({ params }: Props) {
         notFound();
     }
 
+    // Increment view counter (Fire and forget on server side)
+    supabase
+        .from('figuras')
+        .update({ views: (figure.views || 0) + 1 })
+        .eq('id', id)
+        .then();
+
     const metaData = Array.isArray(figure.figuras_meta) ? figure.figuras_meta[0] : figure.figuras_meta;
     const prices = settings && metaData ? calculateFigurePrices(metaData, settings) : undefined;
 
