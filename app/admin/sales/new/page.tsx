@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2, Plus, Minus, AlertTriangle, CheckCircle2, User, Copy, RefreshCw, UserCheck, Sparkles, ArrowRight } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2, Plus, Minus, AlertTriangle, CheckCircle2, User, Copy, RefreshCw, UserCheck, Sparkles, ArrowRight, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 
@@ -461,6 +461,17 @@ export default function NewSalePage() {
             toast.success(`${type} copiado para a área de transferência!`);
         };
 
+        const handleSendWhatsAppClient = () => {
+            const clientWhatsApp = clienteContato.replace(/\D/g, '');
+            if (!clientWhatsApp || clientWhatsApp.length < 10) {
+                toast.error('O número de contato do cliente parece inválido.');
+                return;
+            }
+            const msgCliente = `Olá ${cliente}, obrigado pela sua compra na Franga Toys! 🚀\n\nAqui está o seu recibo:\n${window.location.origin}/api/admin/receipt/${completedSaleData?.id}\n\nVocê pode acompanhar o status do seu pedido no seu painel de rastreio:\n${window.location.origin}/rastreio/${clientWhatsApp}`;
+            const waClientLink = `https://wa.me/55${clientWhatsApp}?text=${encodeURIComponent(msgCliente)}`;
+            window.open(waClientLink, '_blank');
+        };
+
         return (
             <div className="min-h-screen bg-black text-white p-4 md:p-8 flex items-center justify-center relative overflow-hidden">
                 <div className="absolute inset-0 pointer-events-none opacity-20 z-0">
@@ -520,10 +531,17 @@ export default function NewSalePage() {
                     )}
 
                     <div className="pt-6 flex flex-col gap-3">
+                        <button
+                            onClick={handleSendWhatsAppClient}
+                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-black font-black py-4 rounded-full flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-widest active:scale-95"
+                        >
+                            <MessageCircle size={22} className="opacity-80" />
+                            Enviar para Cliente (WPP)
+                        </button>
                         <a
                             href={`/api/admin/receipt/${completedSaleData?.id}`}
                             target="_blank"
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-black font-black py-4 rounded-full flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-widest active:scale-95"
+                            className="w-full bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 font-black py-4 rounded-full flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-widest active:scale-95"
                         >
                             <DollarSign size={22} className="opacity-80" />
                             Ver Imagem (Cartão)
