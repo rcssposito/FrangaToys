@@ -441,6 +441,7 @@ export default function NewSalePage() {
             // Exibe a UI de sucesso localmente com botão do recibo:
             setCompletedSaleData({
                 id: firstSaleId,
+                access_token: insertedSales[0]?.access_token,
                 link_pagamento: mpLink || null,
                 total: totalVenda,
                 method: paymentMethod
@@ -467,7 +468,8 @@ export default function NewSalePage() {
                 toast.error('O número de contato do cliente parece inválido.');
                 return;
             }
-            const msgCliente = `Olá ${cliente}, obrigado pela sua compra na Franga Toys! 🚀\n\nAqui está o seu recibo:\n${window.location.origin}/api/admin/receipt/${completedSaleData?.id}\n\nVocê pode acompanhar o status do seu pedido no seu painel de rastreio:\n${window.location.origin}/rastreio/${clientWhatsApp}`;
+            const trackingIdentifier = completedSaleData?.access_token || clientWhatsApp;
+            const msgCliente = `Olá ${cliente}, obrigado pela sua compra na Franga Toys! 🚀\n\nAqui está o seu recibo:\n${window.location.origin}/api/admin/receipt/${completedSaleData?.id}\n\nVocê pode acompanhar o status do seu pedido no seu painel de rastreio:\n${window.location.origin}/rastreio/${trackingIdentifier}`;
             const waClientLink = `https://wa.me/55${clientWhatsApp}?text=${encodeURIComponent(msgCliente)}`;
             window.open(waClientLink, '_blank');
         };
