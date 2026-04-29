@@ -16,7 +16,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <ThemeProvider attribute="data-theme" defaultTheme="dark" enableSystem={false} suppressHydrationWarning>
+            <ThemeProvider attribute="data-theme" defaultTheme="dark" enableSystem={false}>
                 <CartProvider>
                     {children}
                 </CartProvider>
