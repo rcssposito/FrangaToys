@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2, Plus, Minus, AlertTriangle, CheckCircle2, User, Copy, RefreshCw, UserCheck, Sparkles, ArrowRight, MessageCircle } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2, Plus, Minus, AlertTriangle, CheckCircle2, User, Copy, RefreshCw, UserCheck, Sparkles, ArrowRight, MessageCircle, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 
@@ -457,7 +457,7 @@ export default function NewSalePage() {
     if (completedSaleData) {
         const pixCode = completedSaleData.method === 'pix' ? generatePixPayload("43687871886", "Renan C S Sposito", completedSaleData.total) : null;
 
-        const handleCopy = (text: string, type: 'PIX' | 'Link') => {
+        const handleCopy = (text: string, type: string) => {
             navigator.clipboard.writeText(text);
             toast.success(`${type} copiado para a área de transferência!`);
         };
@@ -469,7 +469,7 @@ export default function NewSalePage() {
                 return;
             }
             const trackingIdentifier = completedSaleData?.access_token || clientWhatsApp;
-            const msgCliente = `Olá ${cliente}, obrigado pela sua compra na Franga Toys! 🚀\n\nAqui está o seu recibo:\n${window.location.origin}/api/admin/receipt/${completedSaleData?.id}\n\nVocê pode acompanhar o status do seu pedido no seu painel de rastreio:\n${window.location.origin}/rastreio/${trackingIdentifier}`;
+            const msgCliente = `Olá ${cliente}, obrigado pela sua compra na Franga Toys! 🚀\n\nAqui está o seu recibo:\n${window.location.origin}/recibo/${trackingIdentifier}\n\nVocê pode acompanhar o status do seu pedido no seu painel de rastreio:\n${window.location.origin}/rastreio/${trackingIdentifier}`;
             const waClientLink = `https://wa.me/55${clientWhatsApp}?text=${encodeURIComponent(msgCliente)}`;
             window.open(waClientLink, '_blank');
         };
@@ -541,13 +541,20 @@ export default function NewSalePage() {
                             Enviar para Cliente (WPP)
                         </button>
                         <a
-                            href={`/api/admin/receipt/${completedSaleData?.id}`}
+                            href={`/recibo/${completedSaleData?.access_token || completedSaleData?.id}`}
                             target="_blank"
                             className="w-full bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 font-black py-4 rounded-full flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-widest active:scale-95"
                         >
                             <DollarSign size={22} className="opacity-80" />
                             Ver Imagem (Cartão)
                         </a>
+                        <button
+                            onClick={() => handleCopy(`${window.location.origin}/rastreio/${completedSaleData?.access_token || clienteContato.replace(/\D/g, '')}`, 'Link de Rastreio')}
+                            className="w-full bg-zinc-900/50 hover:bg-zinc-800 text-zinc-400 border border-zinc-800/50 font-bold py-3 rounded-full flex items-center justify-center gap-2 transition-all active:scale-95 text-[10px] uppercase tracking-widest"
+                        >
+                            <ExternalLink size={16} />
+                            Copiar Link de Rastreio
+                        </button>
                         <Link
                             href="/admin/kanban"
                             className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 font-bold py-4 rounded-full flex items-center justify-center transition-all uppercase tracking-widest active:scale-95"

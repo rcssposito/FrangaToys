@@ -17,7 +17,6 @@ export async function GET() {
             .select(`
                 id, 
                 nome, 
-                slug, 
                 imagem_url, 
                 views, 
                 studios(nome), 
@@ -80,6 +79,20 @@ export async function GET() {
             }
         });
 
+        // 3. Fetch sales for these figures to calculate performance
+        const figureIds = allFigures.map(f => f.id);
+        const { data: salesData } = await supabase
+            .from('vendas')
+            .select('figura_id, quantidade, valor_venda_final')
+            .in('figura_id', figureIds);
+
+        const salesStats: Record<number, { units: number, revenue: number }> = {};
+        (salesData || []).forEach(s => {
+            if (!salesStats[s.figura_id]) salesStats[s.figura_id] = { units: 0, revenue: 0 };
+            salesStats[s.figura_id].units += s.quantidade || 0;
+            salesStats[s.figura_id].revenue += s.valor_venda_final || 0;
+        });
+
         const getTop = (record: Record<string, number>) => {
             return Object.entries(record).sort((a, b) => b[1] - a[1])[0] || ['N/A', 0];
         };
@@ -91,7 +104,11 @@ export async function GET() {
             topPriceRange: { name: getTop(priceBuckets)[0], views: getTop(priceBuckets)[1] }
         };
 
-        const top10 = (allFigures || []).slice(0, 10);
+        const top10 = (allFigures || []).slice(0, 10).map(fig => ({
+            ...fig,
+            vendas: salesStats[fig.id]?.units || 0,
+            faturamento: salesStats[fig.id]?.revenue || 0
+        }));
 
         return NextResponse.json({
             figures: top10,

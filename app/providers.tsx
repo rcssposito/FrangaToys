@@ -3,7 +3,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { CartProvider } from '@/context/CartContext';
-import { Toaster } from 'sonner';
 import { ThemeProvider } from 'next-themes';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
@@ -17,10 +16,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <ThemeProvider attribute="data-theme" defaultTheme="dark" enableSystem={false}>
+            <ThemeProvider attribute="data-theme" defaultTheme="dark" enableSystem={false} suppressHydrationWarning>
                 <CartProvider>
                     {children}
-                    <Toaster position="top-center" richColors />
                 </CartProvider>
             </ThemeProvider>
         </QueryClientProvider>

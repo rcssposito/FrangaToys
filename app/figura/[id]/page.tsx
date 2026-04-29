@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { FigureDetails } from '@/components/Gallery/FigureDetails';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -12,12 +12,10 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { id } = await params;
-
     const { data: figure } = await supabase
         .from('figuras')
         .select(`
             nome,
-            slug,
             imagem_url,
             series ( nome )
         `)
@@ -70,7 +68,12 @@ export default async function FiguraPage({ params }: Props) {
     const { data: figure, error } = figureRes;
     const { data: settings } = settingsRes;
 
-    if (error || !figure) {
+    if (error && error.code !== 'PGRST116') {
+        // Log or handle database error (PGRST116 is "not found")
+        console.error("Database Error:", error);
+    }
+
+    if (!figure) {
         notFound();
     }
 

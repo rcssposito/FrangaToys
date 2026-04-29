@@ -12,7 +12,9 @@ export async function GET(
         const { id } = await params;
 
         // 1. Fetch Sale details
-        const { data: sale, error } = await supabase
+        const isToken = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+        let query = supabase
             .from('vendas')
             .select(`
                 *,
@@ -21,9 +23,15 @@ export async function GET(
                     imagem_url,
                     studios ( nome )
                 )
-            `)
-            .eq('id', id)
-            .single();
+            `);
+            
+        if (isToken) {
+            query = query.eq('access_token', id);
+        } else {
+            query = query.eq('id', id);
+        }
+
+        const { data: sale, error } = await query.single();
 
         if (error || !sale) {
             console.error("Supabase Error fetching sale receipt:", error);

@@ -18,6 +18,7 @@ interface Sale {
     observacao?: string;
     vendedor?: string;
     vendedor_nome?: string;
+    access_token?: string;
     figuras: {
         nome: string;
         imagem_url: string;
@@ -210,7 +211,7 @@ export default function KanbanPage() {
                                                 </div>
                                                 <div className="flex flex-col gap-2 justify-center">
                                                     <Link
-                                                        href={`/api/admin/kanban/os/${task.id}`}
+                                                        href={`/os/${task.id}`}
                                                         target="_blank"
                                                         title="Imprimir Ordem de Serviço (OS)"
                                                         className="p-2 bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white border border-blue-500/20 rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center"
@@ -218,7 +219,7 @@ export default function KanbanPage() {
                                                         <FileText size={16} />
                                                     </Link>
                                                     <Link
-                                                        href={`/api/admin/kanban/certificate/${task.id}`}
+                                                        href={`/certificado/${task.access_token || task.id}`}
                                                         target="_blank"
                                                         title="Imprimir Certificado de Autenticidade"
                                                         className="p-2 bg-zinc-900 text-zinc-500 hover:text-emerald-400 border border-zinc-800 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center"
@@ -227,13 +228,13 @@ export default function KanbanPage() {
                                                     </Link>
                                                     <button
                                                         onClick={() => {
-                                                            const phone = (task.cliente_contato || '').replace(/\D/g, '');
-                                                            if (!phone) {
-                                                                toast.error('Cliente sem telefone cadastrado');
+                                                            const trackingIdentifier = task.access_token || (task.cliente_contato || '').replace(/\D/g, '');
+                                                            if (!trackingIdentifier) {
+                                                                toast.error('Cliente sem contato ou token cadastrado');
                                                                 return;
                                                             }
                                                             const urlBase = window.location.origin;
-                                                            const link = `${urlBase}/rastreio/${phone}`;
+                                                            const link = `${urlBase}/rastreio/${trackingIdentifier}`;
                                                             navigator.clipboard.writeText(link);
                                                             toast.success('Link de rastreio copiado!');
                                                         }}

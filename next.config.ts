@@ -9,6 +9,22 @@ const nextConfig: NextConfig = {
   // @ts-ignore - Turbopack options
   turbopack: {
     root: path.resolve(__dirname),
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/recibo/:id',
+        destination: '/api/admin/receipt/:id',
+      },
+      {
+        source: '/certificado/:id',
+        destination: '/api/admin/kanban/certificate/:id',
+      },
+      {
+        source: '/os/:id',
+        destination: '/api/admin/kanban/os/:id',
+      },
+    ]
   }
 };
 

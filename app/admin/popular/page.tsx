@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Eye, TrendingUp, Trophy, Package, ExternalLink, Image as ImageIcon, Clapperboard, Film, Layers, DollarSign } from 'lucide-react';
+import { Eye, TrendingUp, Trophy, Package, ExternalLink, Image as ImageIcon, Clapperboard, Film, Layers, DollarSign, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
 
@@ -158,14 +158,36 @@ export default function PopularFiguresPage() {
                         </div>
 
                         {/* Stats Side */}
-                        <div className="flex flex-col items-end pr-4">
-                            <div className="flex items-center gap-2 text-emerald-400">
-                                <Eye size={18} />
-                                <span className="text-2xl font-black tracking-tighter">
-                                    {fig.views || 0}
-                                </span>
+                        <div className="flex items-center gap-4 md:gap-8 pr-4 shrink-0">
+                            <div className="flex flex-col items-end">
+                                <div className="flex items-center gap-2 text-emerald-400">
+                                    <Eye size={18} className="opacity-70" />
+                                    <span className="text-2xl font-black tracking-tighter leading-none">
+                                        {fig.views || 0}
+                                    </span>
+                                </div>
+                                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">Views</p>
                             </div>
-                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Visualizações</p>
+
+                            <div className="hidden md:flex flex-col items-end border-l border-white/10 pl-6">
+                                <div className="flex items-center gap-2 text-blue-400">
+                                    <TrendingUp size={18} className="opacity-70" />
+                                    <span className="text-2xl font-black tracking-tighter leading-none">
+                                        {((fig.vendas / (fig.views || 1)) * 100).toFixed(1)}%
+                                    </span>
+                                </div>
+                                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">Conv.</p>
+                            </div>
+
+                            <div className="hidden lg:flex flex-col items-end border-l border-white/10 pl-6">
+                                <div className="flex items-center gap-2 text-orange-500">
+                                    <ShoppingBag size={18} className="opacity-70" />
+                                    <span className="text-2xl font-black tracking-tighter leading-none">
+                                        {fig.vendas || 0}
+                                    </span>
+                                </div>
+                                <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">Vendas</p>
+                            </div>
                         </div>
 
                         {/* Action Link */}

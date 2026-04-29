@@ -15,7 +15,9 @@ export async function GET(
     try {
         const { id } = await params;
 
-        const { data: sale, error } = await supabase
+        const isToken = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+        let query = supabase
             .from('vendas')
             .select(`
                 id,
@@ -30,9 +32,15 @@ export async function GET(
                         altura_cm
                     )
                 )
-            `)
-            .eq('id', id)
-            .single();
+            `);
+
+        if (isToken) {
+            query = query.eq('access_token', id);
+        } else {
+            query = query.eq('id', id);
+        }
+
+        const { data: sale, error } = await query.single();
 
         if (error || !sale) {
             return new Response('Certificado não encontrado', { status: 404 });
