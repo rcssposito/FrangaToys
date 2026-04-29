@@ -61,7 +61,7 @@ export default function NewSalePage() {
 
     const [showPaymentOptions, setShowPaymentOptions] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit'>('pix');
-    const [completedSaleData, setCompletedSaleData] = useState<{ id: number, link_pagamento: string | null, total: number, method: 'pix' | 'credit' } | null>(null);
+    const [completedSaleData, setCompletedSaleData] = useState<{ id: number, access_token?: string, link_pagamento: string | null, total: number, method: 'pix' | 'credit' } | null>(null);
 
     const [isMounted, setIsMounted] = useState(false);
 
