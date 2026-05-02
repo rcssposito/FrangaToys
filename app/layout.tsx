@@ -8,8 +8,25 @@ import { Toaster } from 'sonner';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Franga Toys',
-  description: 'Galeria de figuras 3D customizadas',
+  title: {
+    template: '%s | Franga Toys',
+    default: 'Franga Toys | Pintura em Impressão 3D',
+  },
+  description: 'Figures 3D pintadas à mão. Peças únicas para colecionadores. Sob encomenda. Orçamentos via DM ou no site.',
+  keywords: ['action figures', 'impressão 3d', 'pintura à mão', 'colecionáveis', 'anime', 'marvel', 'dc', 'customização', 'franga toys'],
+  openGraph: {
+    title: 'Franga Toys | Pintura em Impressão 3D',
+    description: 'Figures 3D pintadas à mão. Peças únicas para colecionadores. Sob encomenda.',
+    url: 'https://frangatoys.com.br',
+    siteName: 'Franga Toys',
+    locale: 'pt_BR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Franga Toys | Pintura em Impressão 3D',
+    description: 'Figures 3D pintadas à mão. Peças únicas para colecionadores. Sob encomenda.',
+  },
 };
 
 export default function RootLayout({
