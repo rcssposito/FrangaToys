@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FiguraDTO } from '@/lib/dto';
 import Image from 'next/image';
 import { getOptimizedImageUrl } from '@/lib/image-utils';
@@ -22,6 +22,15 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
     const [selectedFinish, setSelectedFinish] = useState<'estilizado' | 'colorido' | 'premium'>('estilizado');
     const [showInfo, setShowInfo] = useState(false);
     const [isZenMode, setIsZenMode] = useState(false);
+
+    useEffect(() => {
+        // Dispara o incremento de view silenciosamente no client-side
+        fetch('/api/views', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ figureId: figure.id })
+        }).catch(() => {});
+    }, [figure.id]);
 
     const formatPrice = (val?: number) => {
         if (!val) return 'Sob consulta';
