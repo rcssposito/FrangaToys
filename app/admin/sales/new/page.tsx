@@ -394,7 +394,8 @@ export default function NewSalePage() {
                     observacao,
                     link_pagamento: mpLink,
                     checkout_id: checkoutId,
-                    cliente_id: finalClienteId
+                    cliente_id: finalClienteId,
+                    metodo_entrega: metodoEntrega
                 }),
             });
 
@@ -469,8 +470,9 @@ export default function NewSalePage() {
                 return;
             }
             const trackingIdentifier = completedSaleData?.access_token || clientWhatsApp;
-            const msgCliente = `Olá ${cliente}, obrigado pela sua compra na Franga Toys! 🚀\n\nAqui está o seu recibo:\n${window.location.origin}/recibo/${trackingIdentifier}\n\nVocê pode acompanhar o status do seu pedido no seu painel de rastreio:\n${window.location.origin}/rastreio/${trackingIdentifier}`;
-            const waClientLink = `https://wa.me/55${clientWhatsApp}?text=${encodeURIComponent(msgCliente)}`;
+            const rocket = String.fromCodePoint(0x1F680);
+            const msgCliente = `Olá ${cliente.trim()}, obrigado pela sua compra na Franga Toys! ${rocket}\n\nAqui está o seu recibo:\n${window.location.origin}/recibo/${trackingIdentifier}\n\nVocê pode acompanhar o status do seu pedido no seu painel de rastreio:\n${window.location.origin}/rastreio/${trackingIdentifier}`;
+            const waClientLink = `https://api.whatsapp.com/send?phone=55${clientWhatsApp}&text=${encodeURIComponent(msgCliente)}`;
             window.open(waClientLink, '_blank');
         };
 

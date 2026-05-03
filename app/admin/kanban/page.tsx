@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink } from 'lucide-react';
+import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
@@ -24,6 +24,7 @@ interface Sale {
         imagem_url: string;
         studios: { nome: string } | { nome: string }[];
     };
+    metodo_entrega?: string;
 }
 
 const COLUMNS = [
@@ -263,12 +264,32 @@ export default function KanbanPage() {
                                             </div>
 
                                             {col.id === 'Pronto p/ Entrega' && (
-                                                <button
-                                                    onClick={() => markAsCompleted(task.id)}
-                                                    className="w-full mt-4 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] active:scale-95"
-                                                >
-                                                    <Truck size={16} /> FINALIZAR ENTREGA
-                                                </button>
+                                                <div className="flex flex-col gap-2 mt-4">
+                                                    <button
+                                                        onClick={() => {
+                                                            const clientWhatsApp = (task.cliente_contato || '').replace(/\D/g, '');
+                                                            if (!clientWhatsApp || clientWhatsApp.length < 10) {
+                                                                toast.error('Cliente sem WhatsApp cadastrado');
+                                                                return;
+                                                            }
+                                                            const entregaStr = task.metodo_entrega === 'envio' ? 'postagem' : 'retirada';
+                                                            const emojis = String.fromCodePoint(0x1F423, 0x2728, 0x1F680);
+                                                            const msg = `Olá, ${task.cliente_nome.trim()}!\nSeu ${task.figuras.nome} ficou pronto e já está pronto para ${entregaStr}!\nQualquer dúvida, estou por aqui! ${emojis}`;
+                                                            const waLink = `https://api.whatsapp.com/send?phone=55${clientWhatsApp}&text=${encodeURIComponent(msg)}`;
+                                                            window.open(waLink, '_blank');
+                                                        }}
+                                                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-black text-[10px] font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 uppercase tracking-widest"
+                                                    >
+                                                        <MessageCircle size={14} /> NOTIFICAR CLIENTE
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => markAsCompleted(task.id)}
+                                                        className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all border border-zinc-700 active:scale-95 uppercase tracking-widest"
+                                                    >
+                                                        <Truck size={14} /> FINALIZAR ENTREGA
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
                                     ))}

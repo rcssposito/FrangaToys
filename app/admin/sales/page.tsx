@@ -54,6 +54,7 @@ interface Sale {
     checkout_id?: string;
     cliente_contato?: string;
     cliente_id?: string;
+    metodo_entrega?: string;
 }
 
 interface MonthGroup {
@@ -532,6 +533,22 @@ function SalesContent() {
                                         className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-sm focus:border-cyan-500/50 outline-none transition-all font-bold text-zinc-200"
                                         placeholder="Ex: WhatsApp, Instagram"
                                     />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Método de Entrega</label>
+                                    <div className="relative">
+                                        <select
+                                            value={editingSale.metodo_entrega || 'retirada'}
+                                            onChange={e => setEditingSale({ ...editingSale, metodo_entrega: e.target.value })}
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-sm focus:border-cyan-500/50 outline-none transition-all font-black text-zinc-200 appearance-none cursor-pointer"
+                                        >
+                                            <option value="retirada">Retirada no Ateliê</option>
+                                            <option value="envio">Envio (Correios/Transportadora)</option>
+                                        </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+                                            <ChevronDown size={14} />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 

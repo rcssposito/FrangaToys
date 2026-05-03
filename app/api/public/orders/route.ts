@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
                 cliente_nome,
                 quantidade,
                 figura_id,
+                metodo_entrega,
                 figuras (
                     nome,
                     imagem_url,
@@ -73,7 +74,8 @@ export async function GET(req: NextRequest) {
                 imagem: s.figuras?.imagem_url,
                 studio: s.figuras?.studios?.nome
             },
-            quantidade: s.quantidade
+            quantidade: s.quantidade,
+            metodo_entrega: s.metodo_entrega
         }));
 
         return NextResponse.json({ items: formatted });

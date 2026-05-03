@@ -55,7 +55,8 @@ export async function POST(req: Request) {
             data_venda,
             observacao,
             valor_frete,
-            cliente_id // Novo campo para CRM
+            cliente_id, // Novo campo para CRM
+            metodo_entrega // Novo campo para logística
         } = body;
 
         if (!carrinho || !Array.isArray(carrinho) || carrinho.length === 0) {
@@ -163,7 +164,8 @@ export async function POST(req: Request) {
                 link_pagamento: body.link_pagamento || null,
                 checkout_id: body.checkout_id || null,
                 cliente_id: final_cliente_id || null, // Vínculo oficial (Auto-CRM)
-                data_venda: data_venda || new Date().toISOString()
+                data_venda: data_venda || new Date().toISOString(),
+                metodo_entrega: metodo_entrega || 'retirada'
             });
         }
 
@@ -199,7 +201,7 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
     try {
         const body = await req.json();
-        const { id, cliente_nome, cliente_contato, canal_venda, vendedor, status, observacao, pintura_freelancer, pintor_nome, cliente_id } = body;
+        const { id, cliente_nome, cliente_contato, canal_venda, vendedor, status, observacao, pintura_freelancer, pintor_nome, cliente_id, metodo_entrega } = body;
 
         if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 });
 
@@ -280,7 +282,8 @@ export async function PATCH(req: Request) {
                 pintor_nome,
                 valor_pago_pintor,
                 lucro_real,
-                cliente_id: final_cliente_id === undefined ? currentSale.cliente_id : final_cliente_id
+                cliente_id: final_cliente_id === undefined ? currentSale.cliente_id : final_cliente_id,
+                metodo_entrega: metodo_entrega === undefined ? currentSale.metodo_entrega : metodo_entrega
             })
             .eq('id', id)
             .select();
