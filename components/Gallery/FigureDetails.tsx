@@ -19,7 +19,7 @@ interface FigureDetailsProps {
 
 export function FigureDetails({ figure }: FigureDetailsProps) {
     const { addToCart, removeFromCart, isInCart } = useCart();
-    const [selectedFinish, setSelectedFinish] = useState<'estilizado' | 'colorido' | 'premium'>('estilizado');
+    const [selectedFinish, setSelectedFinish] = useState<'estilizado' | 'colorido' | 'premium'>('colorido');
     const [showInfo, setShowInfo] = useState(false);
     const [isZenMode, setIsZenMode] = useState(false);
 
