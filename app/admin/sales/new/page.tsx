@@ -18,6 +18,9 @@ interface CatalogItem {
     resina_kg: number;
     horas_pintura: number;
     custo_producao: number;
+    is_campanha?: boolean;
+    preco_fixo_campanha?: number;
+    desconto_campanha?: number;
 }
 
 interface CartItem extends CatalogItem {
@@ -178,13 +181,14 @@ export default function NewSalePage() {
             updateItemQuantity(item.id, cart.find(i => i.id === item.id)!.quantidade + 1);
         } else {
             const taxaCard = settings?.taxa_cartao || 1.15;
-            const basePrice = item["Estilizado (R$)"] || 0;
+            const isCampanha = item.is_campanha;
+            const basePrice = (isCampanha && item["Estilizado (R$)"]) ? item["Estilizado (R$)"] : (item["Estilizado (R$)"] || 0);
             const unitPrice = paymentMethod === 'credit' ? Number((basePrice * taxaCard).toFixed(2)) : basePrice;
             
             setCart([...cart, { 
                 ...item, 
                 quantidade: 1, 
-                selectedTier: 'estilizado',
+                selectedTier: isCampanha ? 'estilizado' : 'estilizado', // Já é o padrão
                 valor_final: Number((unitPrice * 1).toFixed(2)) 
             }]);
         }
@@ -710,21 +714,29 @@ export default function NewSalePage() {
                                                     </button>
                                                 </div>
                                                 
-                                                {/* Tier Selector */}
-                                                <div className="flex bg-zinc-950/50 p-1 rounded-xl border border-zinc-800/50 mb-3 w-full">
-                                                    {(['estilizado', 'colorido', '2D'] as const).map((tier) => (
-                                                        <button
-                                                            key={tier}
-                                                            onClick={() => updateItemTier(item.id, tier)}
-                                                            className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-tighter rounded-lg transition-all ${
-                                                                item.selectedTier === tier 
-                                                                ? 'bg-zinc-800 text-cyan-400 shadow-sm border border-cyan-500/20' 
-                                                                : 'text-zinc-600 hover:text-zinc-400'
-                                                            }`}
-                                                        >
-                                                            {tier}
-                                                        </button>
-                                                    ))}
+                                                <div className="flex bg-zinc-950/50 p-1 rounded-xl border border-zinc-800/50 mb-3 w-full relative">
+                                                    {(['estilizado', 'colorido', '2D'] as const).map((tier) => {
+                                                        const isLocked = item.is_campanha && tier !== 'estilizado';
+                                                        return (
+                                                            <button
+                                                                key={tier}
+                                                                onClick={() => !isLocked && updateItemTier(item.id, tier)}
+                                                                disabled={isLocked}
+                                                                className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-tighter rounded-lg transition-all ${
+                                                                    item.selectedTier === tier 
+                                                                    ? 'bg-zinc-800 text-cyan-400 shadow-sm border border-cyan-500/20' 
+                                                                    : isLocked ? 'opacity-20 cursor-not-allowed' : 'text-zinc-600 hover:text-zinc-400'
+                                                                }`}
+                                                            >
+                                                                {tier}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                    {item.is_campanha && (
+                                                        <div className="absolute -top-2 -right-2">
+                                                            <span className="bg-purple-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-lg border border-purple-400">OFERTA</span>
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 <div className="grid grid-cols-2 gap-4 items-center">
@@ -1088,7 +1100,7 @@ export default function NewSalePage() {
                                         <button
                                             type="button"
                                             onClick={() => setShowPaymentOptions(true)}
-                                            disabled={!isMounted || submitting || (isMounted && cart.length === 0)}
+                                            disabled={!isMounted ? true : (submitting || cart.length === 0)}
                                             className="w-full font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm active:scale-[0.98] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:shadow-none disabled:cursor-not-allowed uppercase tracking-widest"
                                         >
                                             {paymentMethod === 'pix' ? 'Confirmar e Gerar PIX' : 'Confirmar e Gerar Link MP'}

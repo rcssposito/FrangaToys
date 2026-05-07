@@ -370,10 +370,6 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                     </div>
                 </div>
             </div>
-            {/* Diagnostic Overlay - Temporário para Debug */}
-            <div className="fixed bottom-4 right-4 z-[100] bg-black/80 border border-white/20 p-2 rounded text-[8px] font-mono text-zinc-500 pointer-events-none">
-                ID: {figure.id} | Camp: {String(isCampanha)} | Fixo: {figure.preco_fixo_campanha} | Desc: {figure.desconto_campanha}%
-            </div>
         </div>
     );
 }

@@ -45,16 +45,22 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             roles: ['admin', 'sales', 'pricing', 'finance', 'orcamento']
         },
         {
+            name: 'Catálogo',
+            href: '/admin/figures',
+            icon: Package,
+            roles: ['admin', 'pricing', 'orcamento']
+        },
+        {
             name: 'Popularidade',
             href: '/admin/popular',
             icon: TrendingUp,
             roles: ['admin', 'sales', 'pricing', 'orcamento']
         },
         {
-            name: 'Catálogo',
-            href: '/admin/figures',
-            icon: Package,
-            roles: ['admin', 'pricing', 'orcamento']
+            name: 'Campanhas',
+            href: '/admin/campaigns',
+            icon: Flame,
+            roles: ['admin', 'sales', 'pricing']
         },
         {
             name: 'Vendas',
@@ -93,12 +99,6 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             roles: ['admin']
         },
         {
-            name: 'Campanhas',
-            href: '/admin/campaigns',
-            icon: Flame,
-            roles: ['admin', 'sales', 'pricing']
-        },
-        {
             name: 'Configurações',
             href: '/admin/settings',
             icon: Settings,
@@ -134,32 +134,26 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
                 ${isCollapsed ? 'w-20' : 'w-64'}
             `}>
                 {/* Header */}
-                <div className={`p-8 border-b border-[var(--card-border)] bg-[var(--background)]/10 transition-all ${isCollapsed ? 'px-4 flex justify-center' : ''}`}>
-                    <h1 className={`text-2xl font-black text-orange-500 flex items-center tracking-tighter ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
-                        <Store size={isCollapsed ? 28 : 32} strokeWidth={2.5} className="shrink-0" />
+                <div className={`p-5 border-b border-[var(--card-border)] bg-[var(--background)]/10 transition-all ${isCollapsed ? 'px-4 flex justify-center' : ''}`}>
+                    <h1 className={`text-xl font-black text-orange-500 flex items-center tracking-tighter ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
+                        <Store size={isCollapsed ? 24 : 28} strokeWidth={2.5} className="shrink-0" />
                         {!isCollapsed && (
                             <div className="animate-in fade-in duration-300">
-                                <p className="leading-tight">FRANGA</p>
-                                <p className="text-[var(--foreground)] opacity-90 leading-tight">ADMIN</p>
+                                <p className="leading-tight text-lg">FRANGA</p>
+                                <p className="text-[var(--foreground)] opacity-90 leading-tight text-lg">ADMIN</p>
                             </div>
                         )}
                     </h1>
-                    {!isCollapsed && (
-                        <div className="flex items-center gap-2 mt-4 animate-in fade-in duration-300">
-                            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)]">Chiaroscuro v2.0</p>
-                        </div>
-                    )}
                 </div>
 
                 {/* Header Actions (Collapse & Theme) */}
-                <div className={`hidden md:flex p-3 border-b border-[var(--card-border)] bg-[var(--background)]/5 items-center ${isCollapsed ? 'flex-col gap-4' : 'justify-between px-6'}`}>
+                <div className={`hidden md:flex p-2 border-b border-[var(--card-border)] bg-[var(--background)]/5 items-center ${isCollapsed ? 'flex-col gap-3' : 'justify-between px-5'}`}>
                     <button
                         onClick={onToggleCollapse}
-                        className="p-2 flex items-center justify-center text-[var(--text-muted)] hover:text-orange-500 hover:bg-[var(--input-bg)] rounded-xl transition-all"
+                        className="p-1.5 flex items-center justify-center text-[var(--text-muted)] hover:text-orange-500 hover:bg-[var(--input-bg)] rounded-lg transition-all"
                         title={isCollapsed ? "Expandir Menu" : "Recolher Menu"}
                     >
-                        {isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+                        {isCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
                     </button>
                     <ThemeToggle />
                 </div>
@@ -198,29 +192,29 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
                 {/* Navigation ends, no collapse button here anymore */}
 
                 {/* User & Logout */}
-                <div className={`p-6 border-t border-[var(--card-border)] bg-[var(--background)]/20 backdrop-blur-sm flex flex-col gap-4 ${isCollapsed ? 'items-center px-2' : ''}`}>
-                    <Link href="/admin/profile" className={`flex items-center ${isCollapsed ? 'justify-center p-2' : 'gap-3 p-3'} bg-[var(--input-bg)] hover:bg-[var(--card-bg)] rounded-[1.25rem] border border-[var(--card-border)] transition-all group shadow-sm active:scale-95`} title={isCollapsed ? "Perfil" : undefined}>
-                        <div className="w-10 h-10 shrink-0 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-sm font-black text-orange-500 group-hover:scale-110 transition-all shadow-inner">
+                <div className={`p-4 border-t border-[var(--card-border)] bg-[var(--background)]/20 backdrop-blur-sm flex flex-col gap-3 ${isCollapsed ? 'items-center px-2' : ''}`}>
+                    <Link href="/admin/profile" className={`flex items-center ${isCollapsed ? 'justify-center p-1.5' : 'gap-2.5 p-2'} bg-[var(--input-bg)] hover:bg-[var(--card-bg)] rounded-xl border border-[var(--card-border)] transition-all group shadow-sm active:scale-95`} title={isCollapsed ? "Perfil" : undefined}>
+                        <div className="w-8 h-8 shrink-0 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-xs font-black text-orange-500 group-hover:scale-110 transition-all shadow-inner">
                             {user?.email?.[0].toUpperCase()}
                         </div>
                         {!isCollapsed && (
                             <div className="overflow-hidden animate-in fade-in duration-300">
-                                <p className="text-xs font-black text-[var(--foreground)] truncate group-hover:text-orange-500 transition-colors uppercase tracking-tight">{user?.email?.split('@')[0]}</p>
-                                <p className="text-[9px] text-[var(--text-muted)] truncate font-black uppercase tracking-widest opacity-60">
+                                <p className="text-[10px] font-black text-[var(--foreground)] truncate group-hover:text-orange-500 transition-colors uppercase tracking-tight leading-tight">{user?.email?.split('@')[0]}</p>
+                                <p className="text-[7px] text-[var(--text-muted)] truncate font-black uppercase tracking-widest opacity-60 leading-tight">
                                     {user?.roles?.[0]}
                                 </p>
                             </div>
                         )}
                     </Link>
 
-                    <div className={`flex items-center ${isCollapsed ? 'flex-col gap-4' : 'gap-3'}`}>
+                    <div className={`flex items-center ${isCollapsed ? 'flex-col gap-3' : 'gap-2.5'}`}>
                         <button
                             onClick={logout}
                             title={isCollapsed ? "Sair" : undefined}
-                            className={`flex flex-1 items-center justify-center gap-2 ${isCollapsed ? 'w-10 h-10 p-0 rounded-xl' : 'px-4 py-3 rounded-xl'} bg-red-500/5 hover:bg-red-500 text-red-500 hover:text-white transition-all font-black uppercase tracking-widest border border-red-500/20 hover:border-red-500 shadow-sm active:scale-95`}
+                            className={`flex flex-1 items-center justify-center gap-2 ${isCollapsed ? 'w-8 h-8 p-0 rounded-lg' : 'px-3 py-2 rounded-lg'} bg-red-500/5 hover:bg-red-500 text-red-500 hover:text-white transition-all font-black uppercase tracking-widest border border-red-500/20 hover:border-red-500 shadow-sm active:scale-95`}
                         >
-                            <LogOut size={isCollapsed ? 18 : 16} strokeWidth={2.5} />
-                            {!isCollapsed && <span className="text-[10px]">SAIR</span>}
+                            <LogOut size={isCollapsed ? 16 : 14} strokeWidth={2.5} />
+                            {!isCollapsed && <span className="text-[8px]">SAIR</span>}
                         </button>
                     </div>
                 </div>

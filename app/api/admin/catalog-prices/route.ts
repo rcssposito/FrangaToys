@@ -32,7 +32,10 @@ export async function GET(req: Request) {
                         horas_pintura,
                         altura_cm,
                         largura_cm,
-                        profundidade_cm
+                        profundidade_cm,
+                        is_campanha_active,
+                        desconto_campanha,
+                        preco_fixo_campanha
                     )
                 `)
                 .or(`nome.ilike.%${search}%,codigo.ilike.%${search}%,sinonimos.ilike.%${search}%`)
@@ -62,6 +65,18 @@ export async function GET(req: Request) {
                     ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0))
                 );
 
+                let estilizadoFinal = roundTo5(custoBaseEstilizado * (settings.margem_pobre || 1.15));
+                
+                // Aplicação de Campanha (Regra: Apenas Estilizado muda)
+                const isCampanha = meta.is_campanha_active || !!meta.preco_fixo_campanha;
+                if (isCampanha) {
+                    if (meta.preco_fixo_campanha) {
+                        estilizadoFinal = meta.preco_fixo_campanha;
+                    } else if (meta.desconto_campanha) {
+                        estilizadoFinal = Math.round(estilizadoFinal * (1 - (meta.desconto_campanha / 100)));
+                    }
+                }
+
                 return {
                     id: item.id,
                     Figura: item.nome,
@@ -73,7 +88,10 @@ export async function GET(req: Request) {
                     largura_cm: meta.largura_cm || 0,
                     profundidade_cm: meta.profundidade_cm || 0,
                     custo_producao: custoProducao,
-                    "Estilizado (R$)": roundTo5(custoBaseEstilizado * (settings.margem_pobre || 1.15)),
+                    is_campanha: isCampanha,
+                    preco_fixo_campanha: meta.preco_fixo_campanha,
+                    desconto_campanha: meta.desconto_campanha,
+                    "Estilizado (R$)": estilizadoFinal,
                     "Colorido (R$)": roundTo5(custoBase * (settings.margem_basica || 1.30)),
                     "2D (R$)": roundTo5(custoBase * (settings.margem_premium || 1.60))
                 };
@@ -125,6 +143,18 @@ export async function GET(req: Request) {
                 ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0))
             );
 
+            let estilizadoFinal = roundTo5(custoBaseEstilizado * (settings.margem_pobre || 1.15));
+            
+            // Aplicação de Campanha (Regra: Apenas Estilizado muda)
+            const isCampanha = meta.is_campanha_active || !!meta.preco_fixo_campanha;
+            if (isCampanha) {
+                if (meta.preco_fixo_campanha) {
+                    estilizadoFinal = meta.preco_fixo_campanha;
+                } else if (meta.desconto_campanha) {
+                    estilizadoFinal = Math.round(estilizadoFinal * (1 - (meta.desconto_campanha / 100)));
+                }
+            }
+
             return {
                 id: item.id,
                 Figura: item.nome,
@@ -136,7 +166,10 @@ export async function GET(req: Request) {
                 largura_cm: meta.largura_cm || 0,
                 profundidade_cm: meta.profundidade_cm || 0,
                 custo_producao: custoProducao,
-                "Estilizado (R$)": roundTo5(custoBaseEstilizado * (settings.margem_pobre || 1.15)),
+                is_campanha: isCampanha,
+                preco_fixo_campanha: meta.preco_fixo_campanha,
+                desconto_campanha: meta.desconto_campanha,
+                "Estilizado (R$)": estilizadoFinal,
                 "Colorido (R$)": roundTo5(custoBase * (settings.margem_basica || 1.30)),
                 "2D (R$)": roundTo5(custoBase * (settings.margem_premium || 1.60))
             };
