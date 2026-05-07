@@ -22,7 +22,8 @@ import {
     PanelLeftClose,
     PanelLeftOpen,
     ShieldCheck,
-    TrendingUp
+    TrendingUp,
+    Flame
 } from 'lucide-react';
 import ThemeToggle from '@/components/common/ThemeToggle';
 
@@ -90,6 +91,12 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             href: '/admin/users',
             icon: ShieldCheck,
             roles: ['admin']
+        },
+        {
+            name: 'Campanhas',
+            href: '/admin/campaigns',
+            icon: Flame,
+            roles: ['admin', 'sales', 'pricing']
         },
         {
             name: 'Configurações',

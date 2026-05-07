@@ -19,6 +19,8 @@ interface CartContextType {
     clearCart: () => void;
     isInCart: (figureId: number) => boolean;
     totalItems: number;
+    isCartOpen: boolean;
+    setIsCartOpen: (open: boolean) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -26,6 +28,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
     const [items, setItems] = useState<CartItem[]>([]);
     const [isInitialized, setIsInitialized] = useState(false);
+    const [isCartOpen, setIsCartOpen] = useState(false);
 
     // Load from LocalStorage
     useEffect(() => {
@@ -50,10 +53,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const addToCart = (figure: FiguraDTO, finish: 'estilizado' | 'colorido' | 'premium' = 'estilizado') => {
         if (items.some(i => i.id === figure.id)) {
             toast.error('Figura já está no orçamento!');
+            setIsCartOpen(true);
             return;
         }
         setItems(prev => [...prev, { ...figure, addedAt: Date.now(), quantity: 1, finish }]);
         toast.success('Adicionado ao orçamento!');
+        setIsCartOpen(true);
     };
 
     const removeFromCart = (figureId: number) => {
@@ -80,7 +85,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const totalItems = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
 
     return (
-        <CartContext.Provider value={{ items, addToCart, removeFromCart, updateQuantity, updateFinish, clearCart, isInCart, totalItems }}>
+        <CartContext.Provider value={{ items, addToCart, removeFromCart, updateQuantity, updateFinish, clearCart, isInCart, totalItems, isCartOpen, setIsCartOpen }}>
             {children}
         </CartContext.Provider>
     );

@@ -13,6 +13,9 @@ export interface FigureMeta {
     resina_kg?: number | null;
     horas_impressao?: number | null;
     horas_pintura?: number | null;
+    is_campanha_active?: boolean | null;
+    desconto_campanha?: number | null;
+    preco_fixo_campanha?: number | null;
 }
 
 export interface PriceResult {
@@ -53,9 +56,23 @@ export function calculateFigurePrices(meta: FigureMeta, settings: PricingParams)
     const roundTo5 = (val: number) => Math.ceil(val / 5) * 5;
 
     // Cálculo das margas líquidas (PIX)
-    const pixEstilizado = roundTo5(custoBaseEstilizado * (settings.margem_pobre || 1.15));
-    const pixColorido = roundTo5(custoBaseTotal * (settings.margem_basica || 1.30));
-    const pixPremium = roundTo5(custoBaseTotal * (settings.margem_premium || 1.60));
+    let pixEstilizado = roundTo5(custoBaseEstilizado * (settings.margem_pobre || 1.15));
+    let pixColorido = roundTo5(custoBaseTotal * (settings.margem_basica || 1.30));
+    let pixPremium = roundTo5(custoBaseTotal * (settings.margem_premium || 1.60));
+
+    // Aplicar desconto de campanha se ativo
+    if (meta.is_campanha_active) {
+        if (meta.preco_fixo_campanha && meta.preco_fixo_campanha > 0) {
+            // Se tiver preço fixo, ele sobrepõe apenas a versão estilizada (conforme pedido)
+            pixEstilizado = meta.preco_fixo_campanha;
+        } else if (meta.desconto_campanha && meta.desconto_campanha > 0) {
+            // Se não tiver preço fixo, mas tiver porcentagem, aplica em todos
+            const factor = 1 - (meta.desconto_campanha / 100);
+            pixEstilizado = roundTo5(pixEstilizado * factor);
+            pixColorido = roundTo5(pixColorido * factor);
+            pixPremium = roundTo5(pixPremium * factor);
+        }
+    }
 
     return {
         custo_producao: custoProducao,

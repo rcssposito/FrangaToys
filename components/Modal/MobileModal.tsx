@@ -21,7 +21,7 @@ interface MobileModalProps {
 }
 
 export const MobileModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIndex, total }: MobileModalProps) => {
-    const { addToCart, removeFromCart, isInCart } = useCart();
+    const { addToCart, removeFromCart, isInCart, setIsCartOpen } = useCart();
     const router = useRouter();
 
     const [quantity, setQuantity] = useState(1);
@@ -166,7 +166,7 @@ export const MobileModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIn
                             ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
                             : "bg-orange-500 hover:bg-orange-600 shadow-orange-500/20"
                     )}
-                    onClick={() => isInCart(figure.id) ? removeFromCart(figure.id) : handleAddToCart()}
+                    onClick={() => isInCart(figure.id) ? setIsCartOpen(true) : handleAddToCart()}
                 >
                     <ExternalLink size={20} strokeWidth={2.5} />
                     {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar ao Orçamento"}

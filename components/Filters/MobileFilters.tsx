@@ -12,8 +12,7 @@ import Link from 'next/link';
 
 type FilterState = z.infer<typeof FiltersSchema>;
 
-import { CartIndicator } from '@/components/Cart/CartIndicator';
-import ThemeToggle from '@/components/common/ThemeToggle';
+import { usePathname } from 'next/navigation';
 
 interface MobileFiltersProps {
     filters: FilterState;
@@ -101,28 +100,7 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
     return (
         <div className="w-full flex flex-col mb-4 sticky top-0 z-30 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--card-border)] pb-2 pt-2 transition-all">
 
-            {/* 0. Mobile Brand Header */}
-            <div className="px-4 py-2 flex items-center justify-between relative">
-                <div className="w-16 flex justify-start items-center gap-2">
-                    <CartIndicator onClick={onOpenCart} />
-                    <Link href="/rastreio" className="p-1 text-orange-500 hover:text-orange-400 transition-colors" title="Rastrear Pedido">
-                        <Truck size={20} />
-                    </Link>
-                </div>
-                <div className="flex-1 flex justify-center">
-                    <img
-                        src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
-                        alt="Logo"
-                        className="h-16 object-contain"
-                    />
-                </div>
-                <div className="w-16 flex justify-end items-center gap-2">
-                    <ThemeToggle />
-                    <Link href="/admin" className="p-1 text-[var(--text-muted)] hover:text-orange-500 transition-colors">
-                        <Settings size={18} />
-                    </Link>
-                </div>
-            </div>
+
 
             {/* 1. Search Row */}
             <div className="flex gap-3 px-4 mb-3">

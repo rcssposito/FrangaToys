@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { FiguraDTO } from '@/lib/dto';
 import Image from 'next/image';
 import { getOptimizedImageUrl } from '@/lib/image-utils';
@@ -8,7 +9,7 @@ import imageKitLoader from '@/lib/image-loader';
 import { useCart } from '@/context/CartContext';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, Share2, Paintbrush, Palette, Crown, CheckCircle2, X, HelpCircle, Info, Sparkles, Maximize2 } from 'lucide-react';
+import { ExternalLink, Share2, Paintbrush, Palette, Crown, CheckCircle2, X, HelpCircle, Info, Sparkles, Maximize2, ArrowLeft, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ImageMagnifier } from './ImageMagnifier';
@@ -18,10 +19,29 @@ interface FigureDetailsProps {
 }
 
 export function FigureDetails({ figure }: FigureDetailsProps) {
-    const { addToCart, removeFromCart, isInCart } = useCart();
-    const [selectedFinish, setSelectedFinish] = useState<'estilizado' | 'colorido' | 'premium'>('colorido');
+    const router = useRouter();
+    const { addToCart, removeFromCart, isInCart, setIsCartOpen } = useCart();
+    // Verificação de campanha super agressiva (Lê da raiz, do objeto precos e por assinatura de valor)
+    const isCampanha = !!(
+        figure.is_campanha || 
+        figure.is_campanha_active || 
+        (figure.precos as any)?.is_campanha ||
+        (figure.preco_fixo_campanha && figure.preco_fixo_campanha > 0) ||
+        // Plano B: Se o preço Estilizado for igual ao PIX Estilizado, geralmente é preço fixo de campanha
+        (figure.precos?.estilizado === figure.precos?.pix_estilizado && figure.precos?.estilizado && figure.precos?.estilizado < 100)
+    );
+
+    const [selectedFinishOverride, setSelectedFinishOverride] = useState<'estilizado' | 'colorido' | 'premium' | null>(null);
+    const selectedFinish = selectedFinishOverride || (isCampanha ? 'estilizado' : 'colorido');
+    
     const [showInfo, setShowInfo] = useState(false);
     const [isZenMode, setIsZenMode] = useState(false);
+
+    // Reset override when figure changes
+    useEffect(() => {
+        setSelectedFinishOverride(null);
+        console.log('Figura carregada:', figure.id, 'Campanha:', isCampanha);
+    }, [figure.id, isCampanha]);
 
     useEffect(() => {
         // Dispara o incremento de view silenciosamente no client-side
@@ -79,7 +99,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
     const imageUrl = getOptimizedImageUrl(figure.imagem_url);
 
     return (
-        <div className="relative flex flex-col items-center justify-center min-h-full w-full max-w-6xl mx-auto p-4 md:p-8">
+        <div className="relative flex flex-col items-center justify-center min-h-full w-full max-w-6xl mx-auto p-4 md:p-4">
 
             {/* Zen Mode Overlay */}
             <AnimatePresence>
@@ -186,6 +206,11 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                                     #{figure.codigo}
                                 </span>
                             )}
+                            {figure.is_campanha && (
+                                <span className="text-[10px] bg-purple-600 text-white font-black px-3 py-1 rounded-full border border-purple-400 shadow-lg shadow-purple-600/20 uppercase tracking-[0.2em] flex items-center gap-1 animate-pulse">
+                                    <Sparkles size={12} className="fill-white" /> Oferta Especial
+                                </span>
+                            )}
                         </div>
                         <h2 className="text-2xl md:text-5xl font-black text-white tracking-tighter leading-[0.9]">{figure.nome}</h2>
 
@@ -204,8 +229,8 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
 
                     {/* Finish Selector - Square Cards Layout */}
                     <div className="space-y-2 relative">
-                        <div className="flex items-center justify-between ml-1">
-                            <h4 className="text-[8px] font-black text-zinc-600 uppercase tracking-[0.3em]">Escolha seu acabamento</h4>
+                        <div className="flex items-center justify-between ml-1 mb-2">
+                            <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Escolha seu acabamento</h4>
                             <button
                                 onClick={() => setShowInfo(!showInfo)}
                                 className="text-zinc-600 hover:text-blue-500 transition-colors p-1"
@@ -264,12 +289,14 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                             {finishOptions.map((opt) => (
                                 <button
                                     key={opt.id}
-                                    onClick={() => setSelectedFinish(opt.id)}
+                                    onClick={() => !isCampanha && setSelectedFinishOverride(opt.id)}
+                                    disabled={isCampanha && opt.id !== 'estilizado'}
                                     className={clsx(
                                         "relative flex flex-col items-center justify-center aspect-[1/1.1] p-2 rounded-2xl border-2 transition-all duration-300 text-center group",
                                         selectedFinish === opt.id
                                             ? `${opt.border} bg-zinc-900/80 ring-1 ring-white/20 scale-[1.02] shadow-2xl`
-                                            : "border-transparent bg-zinc-900/40 opacity-50 hover:opacity-100 hover:bg-zinc-900/60"
+                                            : "border-transparent bg-zinc-900/40 opacity-50 hover:opacity-100 hover:bg-zinc-900/60",
+                                        isCampanha && opt.id !== 'estilizado' && "cursor-not-allowed grayscale opacity-30"
                                     )}
                                 >
                                     <div className={clsx(
@@ -321,7 +348,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                                     ? "bg-emerald-500 text-black hover:bg-emerald-400"
                                     : "bg-white text-black hover:bg-blue-500 hover:text-white"
                             )}
-                            onClick={() => isInCart(figure.id) ? removeFromCart(figure.id) : addToCart(figure, selectedFinish)}
+                            onClick={() => isInCart(figure.id) ? setIsCartOpen(true) : addToCart(figure, selectedFinish)}
                         >
                             {isInCart(figure.id) ? "No Orçamento ✓" : (
                                 <>
@@ -342,6 +369,10 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                         {/* Close Button removed as it was redundant */}
                     </div>
                 </div>
+            </div>
+            {/* Diagnostic Overlay - Temporário para Debug */}
+            <div className="fixed bottom-4 right-4 z-[100] bg-black/80 border border-white/20 p-2 rounded text-[8px] font-mono text-zinc-500 pointer-events-none">
+                ID: {figure.id} | Camp: {String(isCampanha)} | Fixo: {figure.preco_fixo_campanha} | Desc: {figure.desconto_campanha}%
             </div>
         </div>
     );

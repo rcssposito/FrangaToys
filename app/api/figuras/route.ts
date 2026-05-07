@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { FiltersSchema, FiguraDTO } from '@/lib/dto';
 import { calculateFigurePrices } from '@/lib/pricing';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
@@ -25,6 +27,8 @@ export async function GET(req: NextRequest) {
         // Construct select string dynamically based on whether we filter or not
         const seriesJoin = shouldFilterCategory ? 'series:series!inner' : 'series:series';
         const categoryJoin = shouldFilterCategory ? 'categorias:categorias!inner' : 'categorias:categorias';
+        const isCampanhaActive = searchParams.get('campanha') === 'true';
+        const metaJoin = isCampanhaActive ? 'figuras_meta!inner' : 'figuras_meta';
 
         let query = supabase
             .from('figuras')
@@ -52,18 +56,21 @@ export async function GET(req: NextRequest) {
                 instagram_handle,
                 social_url
             ),
-            figuras_meta(
+            ${metaJoin}(
                 altura_cm,
                 largura_cm,
                 profundidade_cm,
                 resina_kg,
                 horas_impressao,
-                horas_pintura
+                horas_pintura,
+                is_campanha_active,
+                desconto_campanha,
+                preco_fixo_campanha
             )
         `, { count: 'exact' });
 
         // --- Filters ---
-        if (filters.incluirNaoVendaveis !== 'true') {
+        if (filters.incluirNaoVendaveis !== 'true' && !isCampanhaActive) {
             query = query.is('disponivel', true);
         }
 
@@ -83,6 +90,10 @@ export async function GET(req: NextRequest) {
             query = query.or(`nome.ilike.%${term}%,sinonimos.ilike.%${term}%`);
         }
 
+        if (isCampanhaActive) {
+            query = query.eq('figuras_meta.is_campanha_active', true);
+        }
+
         // --- Sorting ---
         const sortType = filters.sort || (filters.novidades === 'true' ? 'newest' : 'name_asc');
 
@@ -91,7 +102,6 @@ export async function GET(req: NextRequest) {
         } else if (sortType === 'name_desc') {
             query = query.order('nome', { ascending: false });
         } else {
-            // Default: name_asc
             query = query.order('nome', { ascending: true });
         }
 
@@ -111,10 +121,21 @@ export async function GET(req: NextRequest) {
         // Transform to DTO
         const items = data.map((item: any) => {
             const meta = Array.isArray(item.figuras_meta) ? item.figuras_meta[0] : item.figuras_meta;
+            const pricesData = settings && meta ? calculateFigurePrices(meta, settings) : null;
             
-            const precos = settings && meta ? calculateFigurePrices(meta, settings) : undefined;
+            // Pre-calculate prices to avoid ternary issues in large objects
+            let precos = null;
+            if (pricesData) {
+                precos = {
+                    estilizado: pricesData.estilizado,
+                    colorido: pricesData.colorido,
+                    premium: pricesData.premium,
+                    pix_estilizado: pricesData.pix_estilizado,
+                    pix_colorido: pricesData.pix_colorido,
+                    pix_premium: pricesData.pix_premium
+                };
+            }
 
-            // Handle joined objects that might come as arrays
             const seriesData = Array.isArray(item.series) ? item.series[0] : item.series;
             const studioData = Array.isArray(item.studios) ? item.studios[0] : item.studios;
             const categoriaData = seriesData?.categorias;
@@ -141,14 +162,11 @@ export async function GET(req: NextRequest) {
                 resina_kg: meta?.resina_kg || null,
                 horas_impressao: meta?.horas_impressao || null,
                 horas_pintura: meta?.horas_pintura || null,
-                precos: precos ? {
-                    estilizado: precos.estilizado,
-                    colorido: precos.colorido,
-                    premium: precos.premium,
-                    pix_estilizado: precos.pix_estilizado,
-                    pix_colorido: precos.pix_colorido,
-                    pix_premium: precos.pix_premium
-                } : undefined
+                precos: precos,
+                is_campanha: meta?.is_campanha_active || !!meta?.preco_fixo_campanha || !!meta?.desconto_campanha,
+                is_campanha_active: meta?.is_campanha_active || false,
+                desconto_campanha: meta?.desconto_campanha || 0,
+                preco_fixo_campanha: meta?.preco_fixo_campanha || 0
             };
         });
 

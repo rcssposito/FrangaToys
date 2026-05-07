@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { CartProvider } from '@/context/CartContext';
 import { ThemeProvider } from 'next-themes';
+import { CartDrawer } from '@/components/Cart/CartDrawer';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
     const [queryClient] = useState(() => new QueryClient({
@@ -19,6 +20,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             <ThemeProvider attribute="data-theme" defaultTheme="dark" enableSystem={false}>
                 <CartProvider>
                     {children}
+                    <CartDrawer />
                 </CartProvider>
             </ThemeProvider>
         </QueryClientProvider>

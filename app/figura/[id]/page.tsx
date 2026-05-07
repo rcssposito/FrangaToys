@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+export const dynamic = 'force-dynamic';
 import { supabase } from '@/lib/supabase';
 import { FigureDetails } from '@/components/Gallery/FigureDetails';
 import { notFound } from 'next/navigation';
@@ -97,23 +98,33 @@ export default async function FiguraPage({ params }: Props) {
         precos: prices ? {
             estilizado: prices.estilizado,
             colorido: prices.colorido,
-            premium: prices.premium
-        } : undefined
+            premium: prices.premium,
+            pix_estilizado: prices.pix_estilizado,
+            pix_colorido: prices.pix_colorido,
+            pix_premium: prices.pix_premium,
+            // Redundância absoluta para garantir que o client veja a campanha
+            is_campanha: metaData?.is_campanha_active || !!metaData?.preco_fixo_campanha || !!metaData?.desconto_campanha
+        } : undefined,
+        is_campanha: metaData?.is_campanha_active || !!metaData?.preco_fixo_campanha || !!metaData?.desconto_campanha,
+        is_campanha_active: metaData?.is_campanha_active,
+        desconto_campanha: metaData?.desconto_campanha,
+        preco_fixo_campanha: metaData?.preco_fixo_campanha
     };
 
     return (
         <div className="min-h-screen bg-black text-white p-4 sm:p-8">
             <div className="max-w-5xl mx-auto">
+                {/* Back Link */}
                 <Link
                     href="/"
-                    className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors mb-8 group"
+                    className="inline-flex items-center gap-2 text-zinc-500 hover:text-white transition-colors mb-6 group text-sm font-black uppercase tracking-widest"
                 >
-                    <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+                    <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
                     Voltar para a Galeria
                 </Link>
 
-                <div className="bg-zinc-900/30 rounded-3xl p-4 sm:p-12 border border-white/5">
-                    <FigureDetails figure={figureDto as any} />
+                <div className="bg-zinc-900/30 rounded-3xl p-4 sm:p-10 border border-white/5 relative overflow-hidden">
+                    <FigureDetails key={figureDto.id} figure={figureDto as any} />
                 </div>
             </div>
         </div>

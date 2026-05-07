@@ -24,6 +24,10 @@ export const FiguraSchema = z.object({
   horas_pintura: z.number().nullable().optional(),
   slug: z.string().nullable().optional(),
   preco: z.number().nullable().optional(),
+  is_campanha: z.boolean().nullable().optional(),
+  is_campanha_active: z.boolean().nullable().optional(),
+  desconto_campanha: z.number().nullable().optional(),
+  preco_fixo_campanha: z.number().nullable().optional(),
   precos: z.object({
     estilizado: z.number(),
     colorido: z.number(),

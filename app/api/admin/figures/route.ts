@@ -59,7 +59,11 @@ export async function GET(req: NextRequest) {
           resina_kg, 
           horas_impressao, 
           horas_pintura,
-          escala
+          escala,
+          is_campanha,
+          is_campanha_active,
+          desconto_campanha,
+          preco_fixo_campanha
         )
       `);
 
@@ -76,6 +80,11 @@ export async function GET(req: NextRequest) {
         // 2. Filter by Search Term (Name)
         if (search) {
             query = query.or(`nome.ilike.%${search}%,sinonimos.ilike.%${search}%`);
+        }
+
+        const isCampanhaOnly = searchParams.get('campanha') === 'true';
+        if (isCampanhaOnly) {
+            query = query.eq('figuras_meta.is_campanha', true);
         }
 
         // 3. Sorting
@@ -129,6 +138,10 @@ export async function GET(req: NextRequest) {
                 horas_impressao: meta.horas_impressao ?? 0,
                 horas_pintura: meta.horas_pintura ?? 0,
                 escala: meta.escala ?? 100,
+                is_campanha: meta.is_campanha || false,
+                is_campanha_active: meta.is_campanha_active || false,
+                desconto_campanha: meta.desconto_campanha || 0,
+                preco_fixo_campanha: meta.preco_fixo_campanha || 0,
             };
         });
 
@@ -202,7 +215,11 @@ export async function PUT(req: Request) {
             altura_cm: rawMeta.altura_cm,
             largura_cm: rawMeta.largura_cm,
             profundidade_cm: rawMeta.profundidade_cm,
-            escala: rawMeta.escala
+            escala: rawMeta.escala,
+            is_campanha: rawMeta.is_campanha,
+            is_campanha_active: rawMeta.is_campanha_active,
+            desconto_campanha: rawMeta.desconto_campanha,
+            preco_fixo_campanha: rawMeta.preco_fixo_campanha
         };
 
         // SMART SCALING LOGIC

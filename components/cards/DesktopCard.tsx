@@ -15,7 +15,7 @@ interface FigureCardProps {
 }
 
 export const DesktopCard = ({ figure }: FigureCardProps) => {
-    const { addToCart, removeFromCart, isInCart } = useCart();
+    const { addToCart, removeFromCart, isInCart, setIsCartOpen } = useCart();
     const [isFlipped, setIsFlipped] = useState(false);
 
     const imageUrl = getOptimizedImageUrl(figure.imagem_url);
@@ -162,7 +162,7 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                                 onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    isInCart(figure.id) ? removeFromCart(figure.id) : addToCart(figure);
+                                    isInCart(figure.id) ? setIsCartOpen(true) : addToCart(figure);
                                 }}
                             >
                                 {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar ao Orçamento"}

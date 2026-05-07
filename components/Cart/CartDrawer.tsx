@@ -10,12 +10,12 @@ import { useRef, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 interface CartDrawerProps {
-    isOpen: boolean;
-    onClose: () => void;
 }
 
-export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
-    const { items, removeFromCart, updateQuantity, updateFinish, clearCart, totalItems } = useCart();
+export const CartDrawer = () => {
+    const { items, removeFromCart, updateQuantity, updateFinish, clearCart, totalItems, isCartOpen: isOpen, setIsCartOpen } = useCart();
+    
+    const onClose = () => setIsCartOpen(false);
     const drawerRef = useRef<HTMLDivElement>(null);
     const [step, setStep] = useState<'cart' | 'checkout'>('cart');
     const [nome, setNome] = useState('');
@@ -51,16 +51,16 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
         }
     }, [isOpen]);
 
-    // Close on click outside
-    useEffect(() => {
-        const handleClick = (e: MouseEvent) => {
-            if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
-                onClose();
-            }
-        };
-        if (isOpen) document.addEventListener('mousedown', handleClick);
-        return () => document.removeEventListener('mousedown', handleClick);
-    }, [isOpen, onClose]);
+    // Close on click outside - Removed global listener to avoid conflicts with other modals
+    // useEffect(() => {
+    //     const handleClick = (e: MouseEvent) => {
+    //         if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
+    //             onClose();
+    //         }
+    //     };
+    //     if (isOpen) document.addEventListener('mousedown', handleClick);
+    //     return () => document.removeEventListener('mousedown', handleClick);
+    // }, [isOpen, onClose]);
 
     const formatPrice = (val?: number) => {
         if (!val) return 'Sob consulta';
@@ -94,7 +94,8 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
         }
 
         items.forEach((item, index) => {
-            msg += `*${index + 1}. ${item.nome}*\n`;
+            const isOffer = (item as any).is_campanha || (item as any).is_campanha_active || (item as any).preco_fixo_campanha || (item as any).desconto_campanha;
+            msg += `*${index + 1}. ${item.nome}${isOffer ? ' (OFERTA 🔥)' : ''}*\n`;
             msg += `   Quantidade: ${item.quantity}\n`;
             msg += `   Acabamento: ${getFinishLabel(item.finish)}\n`;
             if (item.categoria) msg += `   Categoria: ${item.categoria}\n`;
@@ -125,7 +126,8 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.3 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-md z-[60]"
+                        onClick={onClose}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-md z-[60] cursor-pointer"
                     />
 
                     {/* Drawer */}
@@ -217,7 +219,14 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                                                         <div className="flex-1 min-w-0 flex flex-col justify-between">
                                                             <div className="flex justify-between items-start gap-2">
                                                                 <div>
-                                                                    <h3 className="font-black text-white truncate text-sm leading-tight tracking-tight">{item.nome}</h3>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <h3 className="font-black text-white truncate text-sm leading-tight tracking-tight">{item.nome}</h3>
+                                                                        {((item as any).is_campanha || (item as any).is_campanha_active) && (
+                                                                            <span className="flex-shrink-0 bg-purple-600 text-[8px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-tighter text-white animate-pulse">
+                                                                                Oferta
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                     <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mt-1">
                                                                         {item.studio}
                                                                     </p>
@@ -249,6 +258,11 @@ export const CartDrawer = ({ isOpen, onClose }: CartDrawerProps) => {
                                                                 </select>
                                                             </div>
                                                             <div className="text-right">
+                                                                {((item as any).is_campanha || (item as any).is_campanha_active) && (
+                                                                    <div className="text-[7px] font-black text-purple-400 uppercase tracking-widest mb-0.5">
+                                                                        Preço de Campanha 🔥
+                                                                    </div>
+                                                                )}
                                                                 <div className="text-xs font-black text-white tracking-tighter">
                                                                     {formatPrice(item.precos?.[item.finish || 'estilizado'])}
                                                                 </div>

@@ -27,6 +27,8 @@ interface Figure {
     tem_extras?: boolean;
     disponivel?: boolean;
     sinonimos?: string;
+    is_campanha?: boolean;
+    is_campanha_active?: boolean;
 }
 
 interface PricingSettings {

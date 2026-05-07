@@ -3,6 +3,8 @@ import { InterceptedModal } from './InterceptedModal';
 import { notFound } from 'next/navigation';
 import { calculateFigurePrices } from '@/lib/pricing';
 
+export const dynamic = 'force-dynamic';
+
 interface Props {
     params: Promise<{ id: string }>;
 }
@@ -48,8 +50,8 @@ export default async function FigureModalPage({ params }: Props) {
         nome: figure.nome,
         imagem_url: figure.imagem_url,
         disponivel: figure.disponivel,
-        serie: figure.series?.nome,
-        categoria: (figure.series as any)?.categorias?.nome,
+        serie: (figure.series as any)?.nome,
+        categoria: (figure.series as any)?.categorias?.[0]?.nome || (figure.series as any)?.categorias?.nome,
         studio: (figure as any).studios?.nome,
         altura_cm: metaData?.altura_cm,
         largura_cm: metaData?.largura_cm,
@@ -58,8 +60,16 @@ export default async function FigureModalPage({ params }: Props) {
         precos: prices ? {
             estilizado: prices.estilizado,
             colorido: prices.colorido,
-            premium: prices.premium
-        } : undefined
+            premium: prices.premium,
+            pix_estilizado: prices.pix_estilizado,
+            pix_colorido: prices.pix_colorido,
+            pix_premium: prices.pix_premium,
+            is_campanha: metaData?.is_campanha_active || !!metaData?.preco_fixo_campanha || !!metaData?.desconto_campanha
+        } : undefined,
+        is_campanha: metaData?.is_campanha_active || !!metaData?.preco_fixo_campanha || !!metaData?.desconto_campanha,
+        is_campanha_active: metaData?.is_campanha_active,
+        desconto_campanha: metaData?.desconto_campanha,
+        preco_fixo_campanha: metaData?.preco_fixo_campanha
     };
 
     return <InterceptedModal figure={figureDto as any} />;

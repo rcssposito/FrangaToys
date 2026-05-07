@@ -6,11 +6,11 @@ import { DesktopFilters } from '@/components/Filters/DesktopFilters';
 import { MobileFilters } from '@/components/Filters/MobileFilters';
 import { GalleryGrid } from '@/components/Gallery/GalleryGrid';
 import { BackToTop } from '@/components/ui/BackToTop';
-import { CartIndicator } from '@/components/Cart/CartIndicator';
-import { CartDrawer } from '@/components/Cart/CartDrawer';
+import { useCart } from '@/context/CartContext';
+import Header from '@/components/common/Header';
 import { FiltersSchema, FiguraDTO } from '@/lib/dto';
 import { z } from 'zod';
-import { Settings, ListFilter, MoveUp, MoveDown, Sparkles, Loader2, Truck } from 'lucide-react';
+import { Settings, ListFilter, MoveUp, MoveDown, Sparkles, Loader2, Truck, Flame } from 'lucide-react';
 import Link from 'next/link';
 import { useFiguras } from '@/hooks/useFiguras';
 import { clsx } from 'clsx';
@@ -32,7 +32,7 @@ function HomeContent() {
     sort: 'newest'
   });
   
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { setIsCartOpen } = useCart();
 
   // Tanstack Query Hook
   const {
@@ -54,45 +54,7 @@ function HomeContent() {
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] px-0 sm:px-4 py-4 sm:py-8 transition-colors duration-500">
       <div className="w-full sm:max-w-[95%] mx-auto">
-
-        {/* Header - Desktop */}
-        <div className="hidden sm:flex items-center justify-center relative mb-8 px-4 py-4">
-          <Link href="/" className="hover:opacity-80 transition-opacity">
-            <img
-              src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
-              alt="Franga Toys Logo"
-              className="h-32 object-contain"
-            />
-          </Link>
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-6">
-            <Link 
-              href="/rastreio" 
-              className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500 hover:text-orange-400 transition-all flex items-center gap-2 group"
-              title="Rastrear meu Pedido"
-            >
-              <Truck size={18} className="group-hover:animate-bounce" />
-              Rastrear
-            </Link>
-            <div className="h-4 w-px bg-[var(--card-border)]" />
-            <Link 
-              href="/parceiros" 
-              className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] hover:text-blue-500 transition-all flex items-center gap-2 group"
-            >
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 group-hover:animate-ping" />
-              Parceiros
-            </Link>
-            <div className="h-4 w-px bg-[var(--card-border)]" />
-            <ThemeToggle />
-            <CartIndicator onClick={() => setIsDrawerOpen(true)} className="hover:bg-zinc-900/10 dark:hover:bg-zinc-800/50 px-3 py-2 rounded-lg" />
-            <Link
-              href="/admin/figures"
-              className="p-2 text-[var(--text-muted)] hover:text-orange-500 transition-colors"
-              title="Acessar Admin"
-            >
-              <Settings size={20} />
-            </Link>
-          </div>
-        </div>
+        <Header />
 
         {/* Filters - Split */}
         <div className="block sm:hidden">
@@ -100,7 +62,7 @@ function HomeContent() {
             filters={filters}
             onChange={setFilters}
             categories={CATEGORIES}
-            onOpenCart={() => setIsDrawerOpen(true)}
+            onOpenCart={() => setIsCartOpen(true)}
           />
         </div>
         <div className="hidden sm:block">
@@ -175,7 +137,6 @@ function HomeContent() {
 
       </div>
 
-      <CartDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
       <BackToTop />
     </main>
   );
