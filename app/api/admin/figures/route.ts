@@ -35,6 +35,9 @@ export async function GET(req: NextRequest) {
         // Note: We need 'categorias' inside series to display category name even if not filtering
         // But if filtering, we want !inner to ensure match.
         const categoryJoin = shouldFilterCategory ? 'categorias:categorias!inner' : 'categorias:categorias';
+        
+        const isCampanhaOnly = searchParams.get('campanha') === 'true';
+        const metaJoin = isCampanhaOnly ? 'figuras_meta!inner' : 'figuras_meta';
 
         let query = supabase
             .from('figuras')
@@ -52,7 +55,7 @@ export async function GET(req: NextRequest) {
             nome, 
             ${categoryJoin} ( nome, id ) 
         ),
-        figuras_meta ( 
+        ${metaJoin} ( 
           altura_cm, 
           largura_cm, 
           profundidade_cm, 
@@ -82,7 +85,6 @@ export async function GET(req: NextRequest) {
             query = query.ilike('nome', `%${search}%`);
         }
 
-        const isCampanhaOnly = searchParams.get('campanha') === 'true';
         if (isCampanhaOnly) {
             query = query.or('is_campanha.eq.true,is_campanha_active.eq.true,preco_fixo_campanha.gt.0,desconto_campanha.gt.0', { foreignTable: 'figuras_meta' });
         }

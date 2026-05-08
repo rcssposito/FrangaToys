@@ -82,7 +82,7 @@ export default function CampanhaClient() {
                 <Link 
                   href={item.disponivel ? `/figura/${item.id}` : '#'}
                   onClick={(e) => !item.disponivel && e.preventDefault()}
-                  className="block relative w-full aspect-square bg-zinc-950 flex items-center justify-center overflow-hidden cursor-pointer"
+                  className="block relative w-full aspect-[4/5] bg-zinc-950 flex items-center justify-center overflow-hidden cursor-pointer"
                 >
                     <div className="relative w-full h-full">
                         <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center">
@@ -109,10 +109,10 @@ export default function CampanhaClient() {
                     )}
                 </Link>
 
-                <div className="p-5 sm:p-6 flex flex-col justify-between h-full">
+                <div className="p-3 sm:p-4 flex flex-col justify-between">
                     <div>
-                        <h3 className="text-sm sm:text-base font-bold text-white mb-2 line-clamp-2 leading-tight">{item.nome}</h3>
-                        <div className="flex items-center gap-2 mb-4">
+                        <h3 className="text-sm font-bold text-white mb-1 line-clamp-2 leading-tight">{item.nome}</h3>
+                        <div className="flex items-center gap-2 mb-3">
                             <span className="text-purple-400 font-black text-lg sm:text-xl">{formatPrice(item.precos?.pix_estilizado || 0)}</span>
                         </div>
                     </div>
