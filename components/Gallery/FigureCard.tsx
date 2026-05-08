@@ -23,9 +23,23 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
         return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     };
 
+    const trackClick = async () => {
+        try {
+            await fetch('/api/analytics/hit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ figureId: figure.id, source: 'vitrine', platform: 'site' }),
+                keepalive: true // Crucial: mantém o sinal vivo mesmo mudando de página
+            });
+        } catch (e) {
+            console.error('Analytics tracking failed', e);
+        }
+    };
+
     const handleFlip = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        trackClick(); // Conta como interesse mesmo se só girar
         setIsFlipped(!isFlipped);
     };
 
@@ -44,7 +58,12 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
 
                 {/* === FRONT FACE (Luxury Design) === */}
                 <div className="flip-card-front bg-[#09090b] border border-zinc-800/50 hover:border-blue-500/30 transition-all duration-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl group/front [transform:translateZ(0)]">
-                    <Link href={`/figura/${figure.id}?ref=vitrine`} scroll={false} className="absolute inset-0 z-10">
+                    <Link 
+                        href={`/figura/${figure.id}?ref=vitrine`} 
+                        scroll={false} 
+                        className="absolute inset-0 z-10"
+                        onClick={() => trackClick()}
+                    >
                         <Image
                             loader={imageKitLoader}
                             src={imageUrl}
@@ -61,10 +80,10 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
 
                     {/* Navigation Hint (Top Right) - Enlarged Touch Target */}
                     <div
-                        className="absolute top-0 right-0 p-3 sm:p-4 z-40"
+                        className="absolute top-0 right-0 p-2 sm:p-4 z-50"
                         onClick={handleFlip}
                     >
-                        <div className="bg-black/60 backdrop-blur-xl border border-white/20 text-white/90 text-[10px] sm:text-[10px] px-3.5 py-2 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-2xl active:scale-90">
+                        <div className="bg-black/80 backdrop-blur-xl border border-white/20 text-white text-[10px] sm:text-[10px] px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-2xl active:scale-95 touch-manipulation">
                             Detalhes
                         </div>
                     </div>

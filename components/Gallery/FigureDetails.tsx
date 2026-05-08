@@ -58,7 +58,8 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                         figureId: figure.id,
                         source: source,
                         platform: isApp ? 'app' : 'site'
-                    })
+                    }),
+                    keepalive: true
                 });
             } catch (e) {
                 // Silently ignore beacon errors

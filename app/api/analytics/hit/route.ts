@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
     try {
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
                 if (geoData.status === 'success') {
                     country = geoData.countryCode;
                     city = geoData.city;
-                    state = geoData.region; // regionName for full name, region for short
+                    state = geoData.region;
                 }
             } catch (e) {
                 console.warn('Geo Fallback failed', e);
@@ -35,11 +35,11 @@ export async function POST(req: NextRequest) {
         if (/mobile/i.test(ua)) device = 'mobile';
         if (/tablet/i.test(ua)) device = 'tablet';
 
-        // 3. Log the hit
-        const { error } = await supabase
+        // 3. Log the hit in analytics table
+        const { error: logError } = await supabaseAdmin
             .from('figuras_analytics')
             .insert({
-                figura_id: figureId,
+                figura_id: Number(figureId),
                 origem: source || 'direto',
                 cidade: city,
                 estado: state,
@@ -48,14 +48,31 @@ export async function POST(req: NextRequest) {
                 plataforma: platform || 'site'
             });
 
-        // Also increment the total views in the main table
-        await supabase.rpc('increment_views', { figure_id: figureId });
+        if (logError) console.error('Error logging analytics hit:', logError.message);
 
-        if (error) throw error;
+        // 4. Increment views in figures table (Tenta RPC, se falhar faz Manual)
+        const { error: rpcError } = await supabaseAdmin.rpc('increment_views', { figure_id: Number(figureId) });
+
+        if (rpcError) {
+            console.warn('RPC increment_views failed, using manual fallback:', rpcError.message);
+            
+            // Busca valor atual
+            const { data: currentData } = await supabaseAdmin
+                .from('figuras')
+                .select('views')
+                .eq('id', Number(figureId))
+                .single();
+            
+            // Soma +1 manualmente
+            await supabaseAdmin
+                .from('figuras')
+                .update({ views: (currentData?.views || 0) + 1 })
+                .eq('id', Number(figureId));
+        }
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
-        console.error('Analytics Error:', error.message);
+        console.error('Analytics Route Error:', error.message);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

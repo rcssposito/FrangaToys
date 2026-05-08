@@ -97,6 +97,9 @@ export default function Header() {
             <Link href="/rastreio" className="p-1 text-orange-500" title="Rastrear Pedido">
                 <Truck size={20} />
             </Link>
+            <Link href="/campanha" className="p-1 text-purple-500" title="Campanha Especial">
+                <Flame size={20} />
+            </Link>
         </div>
         <Link href="/" className="flex-1 flex justify-center">
             <img
