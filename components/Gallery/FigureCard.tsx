@@ -44,7 +44,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
 
                 {/* === FRONT FACE (Luxury Design) === */}
                 <div className="flip-card-front bg-[#09090b] border border-zinc-800/50 hover:border-blue-500/30 transition-all duration-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl group/front [transform:translateZ(0)]">
-                    <Link href={`/figura/${figure.id}`} scroll={false} className="absolute inset-0 z-10">
+                    <Link href={`/figura/${figure.id}?ref=vitrine`} scroll={false} className="absolute inset-0 z-10">
                         <Image
                             loader={imageKitLoader}
                             src={imageUrl}
@@ -82,8 +82,8 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                            </div>
                         )}
                         {/* Oferta Badge - Verificação rigorosa para evitar selo fantasma */}
-                        {(figure.is_campanha || figure.is_campanha_active || (figure.preco_fixo_campanha && figure.preco_fixo_campanha > 0)) && 
-                         (figure.precos?.estilizado && figure.precos?.estilizado < 100 || (figure.precos?.estilizado === figure.precos?.pix_estilizado)) && (
+                        {!!((figure.is_campanha || figure.is_campanha_active || (figure.preco_fixo_campanha && figure.preco_fixo_campanha > 0)) && 
+                         (figure.precos?.estilizado && figure.precos?.estilizado < 100 || (figure.precos?.estilizado === figure.precos?.pix_estilizado))) && (
                            <div className="bg-purple-600 text-white text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-sm uppercase tracking-[0.2em] flex items-center gap-1 shadow-lg shadow-purple-600/40 border border-purple-400/30 animate-pulse">
                                 <Sparkles size={10} className="fill-white" /> OFERTA
                            </div>
@@ -221,7 +221,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                         {/* Order Button (Always visible) */}
                         <div className="p-4 sm:p-6 pt-0">
                             <Link
-                                href={`/figura/${figure.id}`}
+                                href={`/figura/${figure.id}?ref=vitrine`}
                                 scroll={false}
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-full flex items-center justify-center gap-2 bg-white text-black py-4 sm:py-3.5 rounded-xl text-xs sm:text-[11px] font-black uppercase tracking-[0.2em] hover:bg-blue-600 hover:text-white transition-all duration-300 shadow-[0_20px_40px_rgba(0,0,0,0.6)] active:scale-[0.96]"

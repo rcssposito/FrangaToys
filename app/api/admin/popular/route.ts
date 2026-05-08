@@ -97,11 +97,37 @@ export async function GET() {
             return Object.entries(record).sort((a, b) => b[1] - a[1])[0] || ['N/A', 0];
         };
 
+        // 3. Fetch Analytics Data (Geo, Device, Source)
+        const { data: analyticsData } = await supabase
+            .from('figuras_analytics')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        const deviceStats: Record<string, number> = { mobile: 0, desktop: 0, tablet: 0 };
+        const platformStats: Record<string, number> = { site: 0, app: 0 };
+        const sourceStats: Record<string, number> = {};
+        const stateStats: Record<string, number> = {};
+        const cityStats: Record<string, number> = {};
+
+        (analyticsData || []).forEach(hit => {
+            if (hit.dispositivo) deviceStats[hit.dispositivo] = (deviceStats[hit.dispositivo] || 0) + 1;
+            if (hit.plataforma) platformStats[hit.plataforma] = (platformStats[hit.plataforma] || 0) + 1;
+            if (hit.origem) sourceStats[hit.origem] = (sourceStats[hit.origem] || 0) + 1;
+            if (hit.estado) stateStats[hit.estado] = (stateStats[hit.estado] || 0) + 1;
+            if (hit.cidade) cityStats[hit.cidade] = (cityStats[hit.cidade] || 0) + 1;
+        });
+
         const insights = {
             topStudio: { name: getTop(studioViews)[0], views: getTop(studioViews)[1] },
             topSeries: { name: getTop(seriesViews)[0], views: getTop(seriesViews)[1] },
             topCategory: { name: getTop(categoryViews)[0], views: getTop(categoryViews)[1] },
-            topPriceRange: { name: getTop(priceBuckets)[0], views: getTop(priceBuckets)[1] }
+            topPriceRange: { name: getTop(priceBuckets)[0], views: getTop(priceBuckets)[1] },
+            analytics: {
+                devices: Object.entries(deviceStats).map(([name, value]) => ({ name, value })),
+                platforms: Object.entries(platformStats).map(([name, value]) => ({ name, value })),
+                sources: Object.entries(sourceStats).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 5),
+                locations: Object.entries(stateStats).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 5)
+            }
         };
 
         const top10 = (allFigures || []).slice(0, 10).map(fig => ({

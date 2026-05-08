@@ -44,12 +44,28 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
     }, [figure.id, isCampanha]);
 
     useEffect(() => {
-        // Dispara o incremento de view silenciosamente no client-side
-        fetch('/api/views', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ figureId: figure.id })
-        }).catch(() => {});
+        // Beacon Analytics - Captura Origem, Dispositivo e Geolocalização
+        const fireBeacon = async () => {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const source = urlParams.get('ref') || 'direto';
+                const isApp = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches;
+                
+                await fetch('/api/analytics/hit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        figureId: figure.id,
+                        source: source,
+                        platform: isApp ? 'app' : 'site'
+                    })
+                });
+            } catch (e) {
+                // Silently ignore beacon errors
+            }
+        };
+
+        fireBeacon();
     }, [figure.id]);
 
     const formatPrice = (val?: number) => {
