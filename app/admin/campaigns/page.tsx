@@ -52,33 +52,45 @@ export default function CampaignManager() {
         fetchFigures();
     }, [fetchFigures]);
 
+    const campaignFigures = useMemo(() => allFigures.filter(f => f.is_campanha || f.is_campanha_active || f.preco_fixo_campanha > 0 || f.desconto_campanha > 0), [allFigures]);
+
     // Busca Dinâmica no Servidor (Debounced)
     useEffect(() => {
+        const controller = new AbortController();
+        const signal = controller.signal;
+
         const delayDebounceFn = setTimeout(async () => {
             if (globalSearch.length >= 2) {
                 setIsSearching(true);
                 try {
-                    const res = await fetch(`/api/admin/figures?search=${encodeURIComponent(globalSearch)}&limit=10`);
+                    // Adicionado limit maior (20) e signal para abortar se a busca mudar
+                    const res = await fetch(`/api/admin/figures?search=${encodeURIComponent(globalSearch)}&limit=20`, { signal });
                     if (res.ok) {
                         const data = await res.json();
-                        // Filtrar para não mostrar o que já está na campanha (no estado local)
+                        // Filtrar para não mostrar o que já está na campanha (visível no painel)
                         const filtered = (data.items as CampaignFigure[]).filter(
-                            f => !allFigures.some(existing => existing.id === f.id)
+                            f => !campaignFigures.some(existing => existing.id === f.id)
                         );
                         setSearchResults(filtered);
                     }
-                } catch (error) {
-                    console.error('Erro na busca:', error);
+                } catch (error: any) {
+                    if (error.name !== 'AbortError') {
+                        console.error('Erro na busca:', error);
+                    }
                 } finally {
                     setIsSearching(false);
                 }
             } else {
                 setSearchResults([]);
+                setIsSearching(false); // Garante que destrave se limpar o campo
             }
         }, 500);
 
-        return () => clearTimeout(delayDebounceFn);
-    }, [globalSearch, allFigures]);
+        return () => {
+            clearTimeout(delayDebounceFn);
+            controller.abort();
+        };
+    }, [globalSearch, campaignFigures]);
 
     const handleSave = async (f: CampaignFigure, updates: Partial<CampaignFigure>) => {
         if (!canEdit) return;
@@ -105,7 +117,7 @@ export default function CampaignManager() {
             });
 
             if (!res.ok) throw new Error('Erro ao salvar');
-            
+
             // Gerencia o estado local allFigures (adição/remoção/update)
             setAllFigures(prev => {
                 const exists = prev.find(item => item.id === f.id);
@@ -123,14 +135,14 @@ export default function CampaignManager() {
                 }
                 return prev;
             });
-            
+
             // Limpa o valor local temporário para forçar o re-render com o valor salvo
             setLocalValues(prev => {
                 const next = { ...prev };
                 delete next[f.id];
                 return next;
             });
-            
+
             if (updates.is_campanha === true) {
                 toast.success(`${f.nome} adicionado à campanha!`);
                 setGlobalSearch(''); // Limpa a busca após adicionar
@@ -183,11 +195,9 @@ export default function CampaignManager() {
         } else {
             toast.success('Desconto aplicado em massa!', { id: 'bulk-desc' });
         }
-        
+
         fetchFigures();
     };
-
-    const campaignFigures = useMemo(() => allFigures.filter(f => f.is_campanha), [allFigures]);
 
     if (!mounted) return null;
 
@@ -214,11 +224,11 @@ export default function CampaignManager() {
                             Desconto em Massa
                         </h3>
                         <p className="text-xs text-[var(--text-muted)] mb-4">Aplica % apenas nas peças que estão com o status "Em Destaque" ativado.</p>
-                        
+
                         <div className="flex items-center gap-3">
                             <div className="relative flex-1">
-                                <input 
-                                    type="number" 
+                                <input
+                                    type="number"
                                     placeholder="Ex: 15"
                                     value={bulkDiscount}
                                     onChange={(e) => setBulkDiscount(e.target.value)}
@@ -226,7 +236,7 @@ export default function CampaignManager() {
                                 />
                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 font-black text-purple-500 opacity-50">%</span>
                             </div>
-                            <button 
+                            <button
                                 onClick={handleApplyBulkDiscount}
                                 disabled={!canEdit}
                                 className="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50"
@@ -312,9 +322,9 @@ export default function CampaignManager() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {campaignFigures.map(f => (
                                 <div key={f.id} className={`bg-[var(--card-bg)] border ${f.is_campanha_active ? 'border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.1)]' : 'border-[var(--card-border)] opacity-80'} rounded-xl p-4 flex gap-4 transition-all duration-300 relative group`}>
-                                    
+
                                     {/* Botão de Remover */}
-                                    <button 
+                                    <button
                                         onClick={() => handleSave(f, { is_campanha: false, is_campanha_active: false })}
                                         disabled={!canEdit || savingId === f.id}
                                         className="absolute top-2 right-2 p-1.5 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
@@ -324,17 +334,17 @@ export default function CampaignManager() {
                                     </button>
 
                                     <img src={f.imagem_url || '/icon.png'} alt={f.nome} className="w-20 h-20 object-cover rounded-lg bg-zinc-900 shrink-0 border border-[var(--card-border)]" />
-                                    
+
                                     <div className="flex-1 min-w-0 flex flex-col justify-between">
                                         <h4 className="font-bold text-sm truncate pr-6" title={f.nome}>{f.nome}</h4>
-                                        
+
                                         <div className="flex flex-col gap-2 mt-2">
                                             <div className="flex gap-6">
                                                 <label className="flex items-center gap-2 cursor-pointer">
                                                     <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Destaque</span>
                                                     <div className="relative">
-                                                        <input 
-                                                            type="checkbox" 
+                                                        <input
+                                                            type="checkbox"
                                                             className="sr-only peer"
                                                             checked={f.is_campanha_active}
                                                             disabled={!canEdit || savingId === f.id}
@@ -347,8 +357,8 @@ export default function CampaignManager() {
                                                 <label className="flex items-center gap-2 cursor-pointer">
                                                     <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Disponível</span>
                                                     <div className="relative">
-                                                        <input 
-                                                            type="checkbox" 
+                                                        <input
+                                                            type="checkbox"
                                                             className="sr-only peer"
                                                             checked={f.disponivel}
                                                             disabled={!canEdit || savingId === f.id}
@@ -361,7 +371,7 @@ export default function CampaignManager() {
 
                                             <div className="flex items-center gap-2 bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--input-border)] flex-1">
                                                 <span className="text-[10px] font-black uppercase text-[var(--text-muted)] pl-1 whitespace-nowrap">Desc. %</span>
-                                                <input 
+                                                <input
                                                     type="number"
                                                     value={localValues[f.id]?.desconto_campanha ?? (f.desconto_campanha || '')}
                                                     placeholder="0"
@@ -377,7 +387,7 @@ export default function CampaignManager() {
 
                                             <div className="flex items-center gap-2 bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--input-border)] flex-1">
                                                 <span className="text-[10px] font-black uppercase text-[var(--text-muted)] pl-1 whitespace-nowrap">Fixo R$</span>
-                                                <input 
+                                                <input
                                                     type="number"
                                                     value={localValues[f.id]?.preco_fixo_campanha ?? (f.preco_fixo_campanha || '')}
                                                     placeholder="0.00"

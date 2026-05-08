@@ -79,12 +79,12 @@ export async function GET(req: NextRequest) {
 
         // 2. Filter by Search Term (Name)
         if (search) {
-            query = query.or(`nome.ilike.%${search}%,sinonimos.ilike.%${search}%`);
+            query = query.ilike('nome', `%${search}%`);
         }
 
         const isCampanhaOnly = searchParams.get('campanha') === 'true';
         if (isCampanhaOnly) {
-            query = query.eq('figuras_meta.is_campanha', true);
+            query = query.or('is_campanha.eq.true,is_campanha_active.eq.true,preco_fixo_campanha.gt.0,desconto_campanha.gt.0', { foreignTable: 'figuras_meta' });
         }
 
         // 3. Sorting
@@ -117,7 +117,9 @@ export async function GET(req: NextRequest) {
 
         // Formatar para ficar plano (flat) para o frontend
         const formatted = data.map((item: any) => {
-            const meta = item.figuras_meta && item.figuras_meta.length > 0 ? item.figuras_meta[0] : (item.figuras_meta || {});
+            // Prioriza metadados que estão em campanha ou ativos (para quando a figura tem múltiplas escalas)
+            const metas = Array.isArray(item.figuras_meta) ? item.figuras_meta : [item.figuras_meta].filter(Boolean);
+            const meta = metas.find((m: any) => m.is_campanha || m.is_campanha_active || m.preco_fixo_campanha > 0 || m.desconto_campanha > 0) || metas[0] || {};
             const cat = getCategory(item);
 
             return {
