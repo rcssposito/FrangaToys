@@ -21,6 +21,8 @@ export default function CampaignManager() {
     const canEdit = hasRole('admin') || hasRole('sales') || hasRole('pricing');
 
     const [allFigures, setAllFigures] = useState<CampaignFigure[]>([]);
+    const [searchResults, setSearchResults] = useState<CampaignFigure[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
     const [localValues, setLocalValues] = useState<Record<number, any>>({});
     const [loading, setLoading] = useState(true);
     const [globalSearch, setGlobalSearch] = useState('');
@@ -33,8 +35,8 @@ export default function CampaignManager() {
     const fetchFigures = useCallback(async () => {
         try {
             setLoading(true);
-            // Busca o catálogo inteiro
-            const res = await fetch(`/api/admin/figures?limit=1000`);
+            // Busca apenas peças que já estão na campanha
+            const res = await fetch(`/api/admin/figures?campanha=true&limit=1000`);
             if (!res.ok) throw new Error('Falha ao carregar figuras');
             const data = await res.json();
             setAllFigures(data.items);
@@ -49,6 +51,34 @@ export default function CampaignManager() {
         setMounted(true);
         fetchFigures();
     }, [fetchFigures]);
+
+    // Busca Dinâmica no Servidor (Debounced)
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            if (globalSearch.length >= 2) {
+                setIsSearching(true);
+                try {
+                    const res = await fetch(`/api/admin/figures?search=${encodeURIComponent(globalSearch)}&limit=10`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        // Filtrar para não mostrar o que já está na campanha (no estado local)
+                        const filtered = (data.items as CampaignFigure[]).filter(
+                            f => !allFigures.some(existing => existing.id === f.id)
+                        );
+                        setSearchResults(filtered);
+                    }
+                } catch (error) {
+                    console.error('Erro na busca:', error);
+                } finally {
+                    setIsSearching(false);
+                }
+            } else {
+                setSearchResults([]);
+            }
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [globalSearch, allFigures]);
 
     const handleSave = async (f: CampaignFigure, updates: Partial<CampaignFigure>) => {
         if (!canEdit) return;
@@ -76,7 +106,23 @@ export default function CampaignManager() {
 
             if (!res.ok) throw new Error('Erro ao salvar');
             
-            setAllFigures(prev => prev.map(item => item.id === f.id ? { ...item, ...updates } : item));
+            // Gerencia o estado local allFigures (adição/remoção/update)
+            setAllFigures(prev => {
+                const exists = prev.find(item => item.id === f.id);
+                if (exists) {
+                    // Se foi removido da campanha, tira da lista
+                    if (updates.is_campanha === false) {
+                        return prev.filter(item => item.id !== f.id);
+                    }
+                    // Se apenas atualizou valores, mapeia
+                    return prev.map(item => item.id === f.id ? { ...item, ...updates } : item);
+                }
+                // Se não existia e foi adicionado, coloca na lista
+                if (updates.is_campanha === true) {
+                    return [...prev, { ...f, ...updates }];
+                }
+                return prev;
+            });
             
             // Limpa o valor local temporário para forçar o re-render com o valor salvo
             setLocalValues(prev => {
@@ -142,15 +188,6 @@ export default function CampaignManager() {
     };
 
     const campaignFigures = useMemo(() => allFigures.filter(f => f.is_campanha), [allFigures]);
-    
-    // Mostra resultados da busca global apenas se tiver algo digitado, e que NÃO estejam na campanha ainda
-    const searchResults = useMemo(() => {
-        if (!globalSearch) return [];
-        return allFigures.filter(f => 
-            !f.is_campanha && 
-            f.nome.toLowerCase().includes(globalSearch.toLowerCase())
-        );
-    }, [allFigures, globalSearch]);
 
     if (!mounted) return null;
 
@@ -221,7 +258,11 @@ export default function CampaignManager() {
                         {/* Resultados da Busca */}
                         {globalSearch && (
                             <div className="space-y-3">
-                                {searchResults.length > 0 ? (
+                                {isSearching ? (
+                                    <div className="flex justify-center py-8">
+                                        <Loader2 className="animate-spin text-purple-500" size={24} />
+                                    </div>
+                                ) : searchResults.length > 0 ? (
                                     searchResults.map(f => (
                                         <div key={f.id} className="flex items-center gap-3 p-3 bg-[var(--background)] border border-[var(--card-border)] rounded-xl">
                                             <img src={f.imagem_url || '/icon.png'} className="w-12 h-12 rounded object-cover border border-white/5" alt={f.nome} />
@@ -238,8 +279,10 @@ export default function CampaignManager() {
                                             </button>
                                         </div>
                                     ))
-                                ) : (
+                                ) : globalSearch.length >= 2 ? (
                                     <p className="text-sm text-[var(--text-muted)] text-center py-4 italic">Nenhuma peça nova encontrada com esse nome.</p>
+                                ) : (
+                                    <p className="text-sm text-[var(--text-muted)] text-center py-4 italic">Digite pelo menos 2 caracteres para buscar...</p>
                                 )}
                             </div>
                         )}
