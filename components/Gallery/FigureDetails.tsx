@@ -23,12 +23,8 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
     const { addToCart, removeFromCart, isInCart, setIsCartOpen } = useCart();
     // Verificação de campanha super agressiva (Lê da raiz, do objeto precos e por assinatura de valor)
     const isCampanha = !!(
-        figure.is_campanha || 
         figure.is_campanha_active || 
-        (figure.precos as any)?.is_campanha ||
-        (figure.preco_fixo_campanha && figure.preco_fixo_campanha > 0) ||
-        // Plano B: Se o preço Estilizado for igual ao PIX Estilizado, geralmente é preço fixo de campanha
-        (figure.precos?.estilizado === figure.precos?.pix_estilizado && figure.precos?.estilizado && figure.precos?.estilizado < 100)
+        (figure.preco_fixo_campanha && figure.preco_fixo_campanha > 0)
     );
 
     const [selectedFinishOverride, setSelectedFinishOverride] = useState<'estilizado' | 'colorido' | 'premium' | null>(null);
@@ -169,11 +165,11 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                 />
                 {/* Clickable Area for Zen Mode */}
                 <div 
-                    className="absolute inset-0 z-20 cursor-zoom-in"
+                    className="absolute inset-0 z-30 cursor-zoom-in active:bg-white/5 transition-colors"
                     onClick={() => setIsZenMode(true)}
                 >
-                    <div className="absolute top-10 right-10 bg-black/40 backdrop-blur-md p-2.5 rounded-full border border-white/10">
-                        <Maximize2 size={20} className="text-white/70" />
+                    <div className="absolute top-10 right-10 bg-black/60 backdrop-blur-xl p-3 rounded-full border border-white/20 shadow-2xl">
+                        <Maximize2 size={24} className="text-white" />
                     </div>
                 </div>
             </div>
@@ -223,7 +219,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                                     #{figure.codigo}
                                 </span>
                             )}
-                            {figure.is_campanha && (
+                            {isCampanha && (
                                 <span className="text-[10px] bg-purple-600 text-white font-black px-3 py-1 rounded-full border border-purple-400 shadow-lg shadow-purple-600/20 uppercase tracking-[0.2em] flex items-center gap-1 animate-pulse">
                                     <Sparkles size={12} className="fill-white" /> Oferta Especial
                                 </span>

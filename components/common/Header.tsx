@@ -92,7 +92,7 @@ export default function Header() {
 
       {/* Mobile Header (Brand Only) - Filters component handles the rest of the mobile bar */}
       <div className="flex sm:hidden items-center justify-between px-4 py-2 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--card-border)] sticky top-0 z-30">
-        <div className="w-16 flex justify-start items-center gap-2">
+        <div className="flex-1 flex justify-start items-center gap-3">
             <CartIndicator onClick={() => setIsCartOpen(true)} />
             <Link href="/rastreio" className="p-1 text-orange-500" title="Rastrear Pedido">
                 <Truck size={20} />
@@ -101,14 +101,14 @@ export default function Header() {
                 <Flame size={20} />
             </Link>
         </div>
-        <Link href="/" className="flex-1 flex justify-center">
+        <Link href="/" className="flex-shrink-0 flex justify-center">
             <img
                 src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
                 alt="Logo"
-                className="h-12 object-contain"
+                className="h-10 object-contain"
             />
         </Link>
-        <div className="w-16 flex justify-end items-center gap-2">
+        <div className="flex-1 flex justify-end items-center gap-3">
             <ThemeToggle />
             <Link href="/admin/figures" className="p-1 text-[var(--text-muted)] hover:text-orange-500">
                 <Settings size={18} />

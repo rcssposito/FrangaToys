@@ -208,6 +208,7 @@ export async function PUT(req: Request) {
         }
 
         // Filter to ensure only valid columns are passed to Supabase
+        // Filter and enforce clean-up rules
         const meta: any = {
             resina_kg: rawMeta.resina_kg,
             horas_impressao: rawMeta.horas_impressao,
@@ -218,8 +219,9 @@ export async function PUT(req: Request) {
             escala: rawMeta.escala,
             is_campanha: rawMeta.is_campanha,
             is_campanha_active: rawMeta.is_campanha_active,
-            desconto_campanha: rawMeta.desconto_campanha,
-            preco_fixo_campanha: rawMeta.preco_fixo_campanha
+            // Regra de Ouro: Se a campanha estiver inativa, os valores promocionais DEVEM ser 0
+            desconto_campanha: rawMeta.is_campanha_active ? rawMeta.desconto_campanha : 0,
+            preco_fixo_campanha: rawMeta.is_campanha_active ? rawMeta.preco_fixo_campanha : 0
         };
 
         // SMART SCALING LOGIC

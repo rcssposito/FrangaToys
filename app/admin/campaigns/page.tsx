@@ -54,12 +54,16 @@ export default function CampaignManager() {
         if (!canEdit) return;
         setSavingId(f.id);
 
+        const isActivating = updates.is_campanha_active !== undefined ? updates.is_campanha_active : f.is_campanha_active;
+        const isInCampaign = updates.is_campanha !== undefined ? updates.is_campanha : f.is_campanha;
+
         const payload = {
             id: f.id,
-            is_campanha: updates.is_campanha !== undefined ? updates.is_campanha : f.is_campanha,
-            is_campanha_active: updates.is_campanha_active !== undefined ? updates.is_campanha_active : f.is_campanha_active,
-            desconto_campanha: updates.desconto_campanha !== undefined ? Number(updates.desconto_campanha) : f.desconto_campanha,
-            preco_fixo_campanha: updates.preco_fixo_campanha !== undefined ? Number(updates.preco_fixo_campanha) : f.preco_fixo_campanha,
+            is_campanha: isInCampaign,
+            is_campanha_active: isActivating,
+            // Regra de Ouro: Se a campanha for desativada ou removida, zera os valores promocionais
+            desconto_campanha: (!isActivating || !isInCampaign) ? 0 : (updates.desconto_campanha !== undefined ? Number(updates.desconto_campanha) : f.desconto_campanha),
+            preco_fixo_campanha: (!isActivating || !isInCampaign) ? 0 : (updates.preco_fixo_campanha !== undefined ? Number(updates.preco_fixo_campanha) : f.preco_fixo_campanha),
             disponivel: updates.disponivel !== undefined ? updates.disponivel : f.disponivel,
         };
 

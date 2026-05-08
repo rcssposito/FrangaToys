@@ -101,8 +101,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                            </div>
                         )}
                         {/* Oferta Badge - Verificação rigorosa para evitar selo fantasma */}
-                        {!!((figure.is_campanha || figure.is_campanha_active || (figure.preco_fixo_campanha && figure.preco_fixo_campanha > 0)) && 
-                         (figure.precos?.estilizado && figure.precos?.estilizado < 100 || (figure.precos?.estilizado === figure.precos?.pix_estilizado))) && (
+                        {!!(figure.is_campanha_active || (figure.preco_fixo_campanha && figure.preco_fixo_campanha > 0)) && (
                            <div className="bg-purple-600 text-white text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-sm uppercase tracking-[0.2em] flex items-center gap-1 shadow-lg shadow-purple-600/40 border border-purple-400/30 animate-pulse">
                                 <Sparkles size={10} className="fill-white" /> OFERTA
                            </div>
