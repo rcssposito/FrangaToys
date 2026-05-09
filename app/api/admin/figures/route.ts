@@ -89,17 +89,21 @@ export async function GET(req: NextRequest) {
             query = query.or('is_campanha.eq.true,is_campanha_active.eq.true,preco_fixo_campanha.gt.0,desconto_campanha.gt.0', { foreignTable: 'figuras_meta' });
         }
 
-        // 3. Sorting
-        const isNovidades = searchParams.get('novidades') === 'true';
-        if (isNovidades) {
+        // 3. Sorting / Specific Filters
+        const isSemPreco = searchParams.get('sem_preco') === 'true';
+        if (isSemPreco) {
+            // Sort by newest first to review recent additions
             query = query.order('id', { ascending: false });
         } else {
             // "No botão todos a busca é por ordem alfabética"
             query = query.order('nome', { ascending: true });
         }
 
-        const from = page * limit;
-        const to = from + limit - 1;
+        // Se estamos buscando por 'falta preço', puxamos um lote maior para filtrar em memória,
+        // já que filtrar tabelas filhas (left join) no Supabase é problemático se a linha não existir.
+        const dbLimit = isSemPreco ? 1000 : limit;
+        const from = page * dbLimit;
+        const to = from + dbLimit - 1;
         query = query.range(from, to);
 
         const { data, error } = await query;
@@ -118,7 +122,7 @@ export async function GET(req: NextRequest) {
         };
 
         // Formatar para ficar plano (flat) para o frontend
-        const formatted = data.map((item: any) => {
+        let formatted = data.map((item: any) => {
             // Prioriza metadados que estão em campanha ou ativos (para quando a figura tem múltiplas escalas)
             const metas = Array.isArray(item.figuras_meta) ? item.figuras_meta : [item.figuras_meta].filter(Boolean);
             const meta = metas.find((m: any) => m.is_campanha || m.is_campanha_active || m.preco_fixo_campanha > 0 || m.desconto_campanha > 0) || metas[0] || {};
@@ -149,7 +153,14 @@ export async function GET(req: NextRequest) {
             };
         });
 
-        const nextCursor = formatted.length === limit ? page + 1 : undefined;
+        if (isSemPreco) {
+            // Filtra as figuras que não têm peso de resina ou cujo peso é 0
+            formatted = formatted.filter((f: any) => !f.resina_kg || f.resina_kg === 0);
+            // Cap to 'limit' so the UI doesn't break if we fetched 1000 and 500 were missing price
+            formatted = formatted.slice(0, limit);
+        }
+
+        const nextCursor = data.length === dbLimit ? page + 1 : undefined;
 
         return NextResponse.json({ items: formatted, nextCursor });
 

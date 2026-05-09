@@ -317,8 +317,8 @@ function DataGridContent() {
             }
 
             const params = new URLSearchParams();
-            if (catId === 'novidades') {
-                params.append('novidades', 'true');
+            if (catId === 'sem_preco') {
+                params.append('sem_preco', 'true');
             } else if (catId) {
                 params.append('categoria_id', catId.toString());
             }
@@ -504,7 +504,7 @@ function DataGridContent() {
     if (loading && figures.length === 0) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" /></div>;
 
     const CATEGORY_FILTERS = [
-        { id: 'novidades', label: 'Novidades' },
+        { id: 'sem_preco', label: 'Falta Preço' },
         { id: 1, label: 'Anime' },
         { id: 2, label: 'Games' },
         { id: 3, label: 'Marvel' },
