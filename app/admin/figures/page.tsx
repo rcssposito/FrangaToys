@@ -29,6 +29,8 @@ interface Figure {
     sinonimos?: string;
     is_campanha?: boolean;
     is_campanha_active?: boolean;
+    desconto_campanha?: number;
+    preco_fixo_campanha?: number;
 }
 
 interface PricingSettings {
@@ -385,8 +387,11 @@ function DataGridContent() {
             return isNaN(num) ? null : num;
         };
 
+        // Strip campaign-related fields to prevent stale state from overwriting active campaigns
+        const { is_campanha, is_campanha_active, desconto_campanha, preco_fixo_campanha, ...restFigure } = figure;
+
         const payload = {
-            ...figure,
+            ...restFigure,
             resina_kg: toNumberOrNull(figure.resina_kg),
             horas_impressao: toNumberOrNull(figure.horas_impressao),
             horas_pintura: toNumberOrNull(figure.horas_pintura),
