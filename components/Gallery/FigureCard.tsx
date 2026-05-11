@@ -151,12 +151,25 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                         />
                     </div>
 
-                    {/* Content */}
-                    <div className="relative z-10 flex flex-col h-full">
+                    <Link 
+                        href={`/figura/${figure.slug || figure.id}?ref=vitrine`}
+                        scroll={false}
+                        className="relative z-10 flex flex-col h-full cursor-pointer"
+                        onClick={() => trackClick()}
+                    >
                         {/* Header Hint */}
                         <div className="px-4 pt-4 sm:px-6 sm:pt-6 flex justify-between items-center text-zinc-500 text-[8px] sm:text-[10px] font-black uppercase tracking-widest">
                             <span>Informações</span>
-                            <button onClick={() => setIsFlipped(false)} className="hover:text-white transition-colors">Voltar</button>
+                            <button 
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setIsFlipped(false);
+                                }} 
+                                className="hover:text-white transition-colors relative z-20"
+                            >
+                                Voltar
+                            </button>
                         </div>
 
                         <div className="flex-1 px-4 sm:px-6 flex flex-col justify-center gap-4 sm:gap-6">
@@ -241,18 +254,13 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                             </div>
                         </div>
 
-                        {/* Order Button (Always visible) */}
+                        {/* Order Button (Visual Only since parent is a Link) */}
                         <div className="p-4 sm:p-6 pt-0">
-                            <Link
-                                href={`/figura/${figure.slug || figure.id}?ref=vitrine`}
-                                scroll={false}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-full flex items-center justify-center gap-2 bg-white text-black py-4 sm:py-3.5 rounded-xl text-xs sm:text-[11px] font-black uppercase tracking-[0.2em] hover:bg-blue-600 hover:text-white transition-all duration-300 shadow-[0_20px_40px_rgba(0,0,0,0.6)] active:scale-[0.96]"
-                            >
+                            <div className="w-full flex items-center justify-center gap-2 bg-white text-black py-4 sm:py-3.5 rounded-xl text-xs sm:text-[11px] font-black uppercase tracking-[0.2em] group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-[0_20px_40px_rgba(0,0,0,0.6)]">
                                 Detalhes Completos <ChevronRight size={16} />
-                            </Link>
+                            </div>
                         </div>
-                    </div>
+                    </Link>
                 </div>
 
             </div>

@@ -111,6 +111,7 @@ export async function GET() {
         const cityStats: Record<string, number> = {};
 
         (analyticsData || []).forEach(hit => {
+            if (hit.estado === 'DEV') return; // Skip development activity
             if (hit.dispositivo) deviceStats[hit.dispositivo] = (deviceStats[hit.dispositivo] || 0) + 1;
             if (hit.plataforma) platformStats[hit.plataforma] = (platformStats[hit.plataforma] || 0) + 1;
             if (hit.origem) sourceStats[hit.origem] = (sourceStats[hit.origem] || 0) + 1;

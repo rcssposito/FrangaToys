@@ -28,63 +28,52 @@ export default function Header() {
             className="h-24 md:h-32 object-contain"
           />
         </Link>
-        
+
         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-4 md:gap-6">
-          <Link 
-            href="/rastreio" 
+          <Link
+            href="/rastreio"
             className={clsx(
-                "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group",
-                pathname === '/rastreio' ? "text-orange-400" : "text-orange-500 hover:text-orange-400"
+              "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group",
+              pathname === '/rastreio' ? "text-orange-400" : "text-orange-500 hover:text-orange-400"
             )}
             title="Rastrear meu Pedido"
           >
             <Truck size={18} className="group-hover:animate-bounce" />
             <span className="hidden lg:inline">Rastrear</span>
           </Link>
-          
+
           <div className="h-4 w-px bg-[var(--card-border)]" />
-          
-          <Link 
-            href="/campanha" 
+
+          <Link
+            href="/campanha"
             className={clsx(
-                "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group",
-                pathname === '/campanha' ? "text-purple-400" : "text-purple-500 hover:text-purple-400"
+              "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group",
+              pathname === '/campanha' ? "text-purple-400" : "text-purple-500 hover:text-purple-400"
             )}
           >
             <Flame size={18} className="group-hover:animate-pulse" />
-            <span className="hidden lg:inline">Campanha</span>
+            <span className="hidden lg:inline">Promoções</span>
           </Link>
-          
+
           <div className="h-4 w-px bg-[var(--card-border)]" />
-          
-          <Link 
-            href="/parceiros" 
+
+          <Link
+            href="/parceiros"
             className={clsx(
-                "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group",
-                pathname === '/parceiros' ? "text-blue-500" : "text-[var(--text-muted)] hover:text-blue-500"
+              "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group",
+              pathname === '/parceiros' ? "text-blue-500" : "text-[var(--text-muted)] hover:text-blue-500"
             )}
           >
             <div className={clsx(
-                "w-1.5 h-1.5 rounded-full bg-blue-500",
-                pathname === '/parceiros' ? "animate-none" : "group-hover:animate-ping"
+              "w-1.5 h-1.5 rounded-full bg-blue-500",
+              pathname === '/parceiros' ? "animate-none" : "group-hover:animate-ping"
             )} />
-            <span className="hidden lg:inline">Parceiros</span>
+            <span className="hidden lg:inline">Estúdios</span>
           </Link>
-          
-          <div className="h-4 w-px bg-[var(--card-border)]" />
-          
-          <ThemeToggle />
-          
-          <CartIndicator 
-            onClick={() => setIsCartOpen(true)} 
-            className="hover:bg-zinc-900/10 dark:hover:bg-zinc-800/50 px-3 py-2 rounded-lg" 
-          />
-          
-          <div className="h-4 w-px bg-[var(--card-border)]" />
 
-          <a 
-            href="https://www.instagram.com/frangatoys/" 
-            target="_blank" 
+          <a
+            href="https://www.instagram.com/frangatoys/"
+            target="_blank"
             rel="noopener noreferrer"
             className="p-2 text-zinc-500 hover:text-pink-500 transition-colors"
             title="Siga no Instagram"
@@ -92,42 +81,53 @@ export default function Header() {
             <Instagram size={20} />
           </a>
 
-          <Link
-            href="/admin/figures"
-            className="p-2 text-[var(--text-muted)] hover:text-orange-500 transition-colors"
-            title="Acessar Admin"
-          >
-            <Settings size={20} />
-          </Link>
+          <div className="h-4 w-px bg-[var(--card-border)]" />
+
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+
+            <CartIndicator
+              onClick={() => setIsCartOpen(true)}
+              className="hover:bg-zinc-900/10 dark:hover:bg-zinc-800/50 px-3 py-2 rounded-lg"
+            />
+
+            <Link
+              href="/admin/figures"
+              className="p-2 text-[var(--text-muted)] hover:text-orange-500 transition-colors"
+              title="Acessar Admin"
+            >
+              <Settings size={20} />
+            </Link>
+          </div>
         </div>
       </div>
 
       {/* Mobile Header (Brand Only) - Filters component handles the rest of the mobile bar */}
       <div className="flex sm:hidden items-center justify-between px-4 py-2 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--card-border)] sticky top-0 z-30">
         <div className="flex-1 flex justify-start items-center gap-3">
-            <CartIndicator onClick={() => setIsCartOpen(true)} />
-            <Link href="/rastreio" className="p-1 text-orange-500" title="Rastrear Pedido">
-                <Truck size={20} />
-            </Link>
-            <Link href="/campanha" className="p-1 text-purple-500" title="Campanha Especial">
-                <Flame size={20} />
-            </Link>
+          <CartIndicator onClick={() => setIsCartOpen(true)} />
+          <Link href="/rastreio" className="p-1 text-orange-500" title="Rastrear Pedido">
+            <Truck size={20} />
+          </Link>
+          <Link href="/campanha" className="p-1 text-purple-500" title="Campanha Especial">
+            <Flame size={20} />
+          </Link>
         </div>
         <Link href="/" className="flex-shrink-0 flex justify-center">
-            <img
-                src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
-                alt="Logo"
-                className="h-10 object-contain"
-            />
+          <img
+            src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
+            alt="Logo"
+            className="h-10 object-contain"
+          />
         </Link>
         <div className="flex-1 flex justify-end items-center gap-3">
-            <ThemeToggle />
-            <a href="https://www.instagram.com/frangatoys/" target="_blank" rel="noopener noreferrer" className="p-1 text-pink-500">
-                <Instagram size={18} />
-            </a>
-            <Link href="/admin/figures" className="p-1 text-[var(--text-muted)] hover:text-orange-500">
-                <Settings size={18} />
-            </Link>
+          <a href="https://www.instagram.com/frangatoys/" target="_blank" rel="noopener noreferrer" className="p-1 text-pink-500">
+            <Instagram size={18} />
+          </a>
+          <ThemeToggle />
+          <Link href="/admin/figures" className="p-1 text-[var(--text-muted)] hover:text-orange-500">
+            <Settings size={18} />
+          </Link>
         </div>
       </div>
     </header>
