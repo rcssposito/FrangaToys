@@ -8,21 +8,35 @@ export async function POST(req: NextRequest) {
 
         if (!figureId) return NextResponse.json({ error: 'Missing figureId' }, { status: 400 });
 
-        // 1. Get Geolocation (Vercel Headers)
-        let country = req.headers.get('x-vercel-ip-country') || 'BR';
-        let city = req.headers.get('x-vercel-ip-city') || 'Desconhecido';
-        let state = req.headers.get('x-vercel-ip-country-region') || 'Desconhecido';
+        // 1. Get Geolocation (Vercel Headers - They are URL encoded!)
+        const safeDecode = (val: string | null, fallback: string) => {
+            if (!val) return fallback;
+            try { return decodeURIComponent(val); } catch { return val; }
+        };
 
-        // Fallback for Local/Other environments using public IP API
-        if (city === 'Desconhecido' || city === 'localhost') {
+        let country = safeDecode(req.headers.get('x-vercel-ip-country'), 'BR');
+        let city = safeDecode(req.headers.get('x-vercel-ip-city'), 'Desconhecido');
+        let state = safeDecode(req.headers.get('x-vercel-ip-country-region'), 'Desconhecido');
+
+        const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
+
+        // Tratamento para localhost (ambiente de dev)
+        if (ip === '127.0.0.1' || ip === '::1') {
+            city = 'Localhost';
+            state = 'DEV';
+        } 
+        // Fallback para IPs reais quando a Vercel não sabe a cidade
+        else if (city === 'Desconhecido') {
             try {
-                const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'check';
-                const geoRes = await fetch(`http://ip-api.com/json/${ip}?fields=status,countryCode,region,regionName,city`);
-                const geoData = await geoRes.json();
-                if (geoData.status === 'success') {
-                    country = geoData.countryCode;
-                    city = geoData.city;
-                    state = geoData.region;
+                // Usando ipwho.is que é mais tolerante a rate-limits em chamadas server-side
+                const geoRes = await fetch(`https://ipwho.is/${ip}`);
+                if (geoRes.ok) {
+                    const geoData = await geoRes.json();
+                    if (geoData.success) {
+                        country = geoData.country_code || country;
+                        city = geoData.city || city;
+                        state = geoData.region_code || geoData.region || state;
+                    }
                 }
             } catch (e) {
                 console.warn('Geo Fallback failed', e);
