@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 export const dynamic = 'force-dynamic';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { FigureDetails } from '@/components/Gallery/FigureDetails';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -108,7 +108,8 @@ export default async function FiguraPage({ params }: Props) {
         is_campanha: metaData?.is_campanha_active || !!metaData?.preco_fixo_campanha || !!metaData?.desconto_campanha,
         is_campanha_active: metaData?.is_campanha_active,
         desconto_campanha: metaData?.desconto_campanha,
-        preco_fixo_campanha: metaData?.preco_fixo_campanha
+        preco_fixo_campanha: metaData?.preco_fixo_campanha,
+        tem_pintura_real: figure.tem_pintura_real
     };
 
     return (

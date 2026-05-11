@@ -69,7 +69,8 @@ export default async function FigureModalPage({ params }: Props) {
         is_campanha: metaData?.is_campanha_active || !!metaData?.preco_fixo_campanha || !!metaData?.desconto_campanha,
         is_campanha_active: metaData?.is_campanha_active,
         desconto_campanha: metaData?.desconto_campanha,
-        preco_fixo_campanha: metaData?.preco_fixo_campanha
+        preco_fixo_campanha: metaData?.preco_fixo_campanha,
+        tem_pintura_real: figure.tem_pintura_real
     };
 
     return <InterceptedModal figure={figureDto as any} />;

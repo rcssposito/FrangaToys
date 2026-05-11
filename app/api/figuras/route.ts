@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
             tem_extras,
             studio_id,
             serie_id,
+            tem_pintura_real,
             ${seriesJoin} (
                 id,
                 nome,
@@ -150,6 +151,7 @@ export async function GET(req: NextRequest) {
                 tem_extras: item.tem_extras || false,
                 studio_id: item.studio_id,
                 serie_id: item.serie_id,
+                tem_pintura_real: item.tem_pintura_real || false,
                 serie: seriesData?.nome || null,
                 categoria: categoriaNome || null,
                 studio: studioData?.nome || null,

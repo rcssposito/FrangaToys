@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Truck, Flame, Settings } from 'lucide-react';
+import { Truck, Flame, Settings, Instagram } from 'lucide-react';
 import ThemeToggle from '@/components/common/ThemeToggle';
 import { CartIndicator } from '@/components/Cart/CartIndicator';
 import { useCart } from '@/context/CartContext';
@@ -13,7 +13,7 @@ export default function Header() {
   const pathname = usePathname();
 
   // Don't show header in admin pages
-  if (pathname.startsWith('/admin')) {
+  if (pathname?.startsWith('/admin')) {
     return null;
   }
 
@@ -80,6 +80,18 @@ export default function Header() {
             className="hover:bg-zinc-900/10 dark:hover:bg-zinc-800/50 px-3 py-2 rounded-lg" 
           />
           
+          <div className="h-4 w-px bg-[var(--card-border)]" />
+
+          <a 
+            href="https://www.instagram.com/frangatoys/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="p-2 text-zinc-500 hover:text-pink-500 transition-colors"
+            title="Siga no Instagram"
+          >
+            <Instagram size={20} />
+          </a>
+
           <Link
             href="/admin/figures"
             className="p-2 text-[var(--text-muted)] hover:text-orange-500 transition-colors"
@@ -110,6 +122,9 @@ export default function Header() {
         </Link>
         <div className="flex-1 flex justify-end items-center gap-3">
             <ThemeToggle />
+            <a href="https://www.instagram.com/frangatoys/" target="_blank" rel="noopener noreferrer" className="p-1 text-pink-500">
+                <Instagram size={18} />
+            </a>
             <Link href="/admin/figures" className="p-1 text-[var(--text-muted)] hover:text-orange-500">
                 <Settings size={18} />
             </Link>

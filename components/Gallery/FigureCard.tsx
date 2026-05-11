@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { FiguraDTO } from '@/lib/dto';
 import Image from 'next/image';
 import { clsx } from 'clsx';
-import { Sparkles, Paintbrush, Palette, Crown, ChevronRight } from 'lucide-react';
+import { Sparkles, Paintbrush, Palette, Crown, ChevronRight, Instagram } from 'lucide-react';
 import Link from 'next/link';
 import imageKitLoader from '@/lib/image-loader';
 import { getOptimizedImageUrl } from '@/lib/image-utils';
@@ -94,6 +94,11 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                             <div className="bg-emerald-500 text-black text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-sm uppercase tracking-tighter shadow-lg shadow-emerald-500/20">
                                 Disponível
                             </div>
+                        )}
+                        {figure.tem_pintura_real && (
+                           <div className="bg-blue-600 text-white text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-sm uppercase tracking-tighter flex items-center gap-1 shadow-lg shadow-blue-600/20 border border-blue-400/30">
+                                <Instagram size={10} /> Pintura Real
+                           </div>
                         )}
                         {figure.tem_extras && (
                            <div className="bg-amber-400 text-black text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-sm uppercase tracking-tighter flex items-center gap-1 shadow-lg shadow-amber-400/20">

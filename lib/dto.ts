@@ -37,6 +37,7 @@ export const FiguraSchema = z.object({
     pix_premium: z.number().optional(),
   }).optional(),
   tem_extras: z.boolean().nullable().optional(),
+  tem_pintura_real: z.boolean().nullable().optional(),
 });
 
 export type FiguraDTO = z.infer<typeof FiguraSchema>;

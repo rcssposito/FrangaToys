@@ -9,7 +9,7 @@ import imageKitLoader from '@/lib/image-loader';
 import { useCart } from '@/context/CartContext';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, Share2, Paintbrush, Palette, Crown, CheckCircle2, X, HelpCircle, Info, Sparkles, Maximize2, ArrowLeft, Tag } from 'lucide-react';
+import { ExternalLink, Share2, Paintbrush, Palette, Crown, CheckCircle2, X, HelpCircle, Info, Sparkles, Maximize2, ArrowLeft, Tag, Instagram } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ImageMagnifier } from './ImageMagnifier';
@@ -224,8 +224,13 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                                     <Sparkles size={12} className="fill-white" /> Oferta Especial
                                 </span>
                             )}
+                            {figure.tem_pintura_real && (
+                                <span className="text-[10px] bg-blue-600 text-white font-black px-2 py-0.5 rounded-full border border-blue-400 shadow-lg shadow-blue-600/20 uppercase tracking-[0.2em] flex items-center gap-1">
+                                    <Instagram size={10} className="fill-white" /> Real
+                                </span>
+                            )}
                         </div>
-                        <h2 className="text-2xl md:text-5xl font-black text-white tracking-tighter leading-[0.9]">{figure.nome}</h2>
+                        <h2 className="text-xl md:text-4xl font-black text-white tracking-tighter leading-[0.9]">{figure.nome}</h2>
 
                         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-zinc-500">
                             <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2.5 py-1.5 rounded-full border border-white/5">
@@ -370,6 +375,19 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                                 </>
                             )}
                         </button>
+
+                        {figure.tem_pintura_real && (
+                            <a
+                                href="https://www.instagram.com/frangatoys/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-5 bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 text-white rounded-2xl shadow-lg hover:opacity-90 transition-opacity active:scale-[0.98]"
+                                title="Ver Pintura Real no Instagram"
+                            >
+                                <Instagram size={24} />
+                            </a>
+                        )}
+
 
                         <button
                             onClick={handleShare}

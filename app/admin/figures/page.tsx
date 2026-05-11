@@ -25,6 +25,7 @@ interface Figure {
     horas_pintura: number | string;
     escala: number | string;
     tem_extras?: boolean;
+    tem_pintura_real?: boolean;
     disponivel?: boolean;
     sinonimos?: string;
     is_campanha?: boolean;
@@ -251,6 +252,17 @@ const FigureMobileCard = ({
                             <span className="text-xs font-medium text-[var(--text-muted)]">Tem Extras?</span>
                         </label>
 
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={f.tem_pintura_real}
+                                disabled={!canEdit}
+                                onChange={e => handleChange(f.id, 'tem_pintura_real', e.target.checked)}
+                                className="w-5 h-5 rounded-sm border-[var(--input-border)] text-pink-500 bg-[var(--input-bg)] focus:ring-0"
+                            />
+                            <span className="text-xs font-medium text-[var(--text-muted)]">Real?</span>
+                        </label>
+
                         <button
                             onClick={() => handleSave(f)}
                             disabled={savingId === f.id || !canEdit}
@@ -400,6 +412,7 @@ function DataGridContent() {
             profundidade_cm: toNumberOrNull(figure.profundidade_cm),
             escala: toNumberOrNull(figure.escala) || 100,
             tem_extras: !!figure.tem_extras,
+            tem_pintura_real: !!figure.tem_pintura_real,
             sinonimos: figure.sinonimos || '',
         };
 
@@ -614,6 +627,7 @@ function DataGridContent() {
                                     <th className="px-3 py-4 text-center">Medidas (cm)</th>
                                     <th className="px-3 py-4 text-center uppercase">Merchant</th>
                                     <th className="px-3 py-4 text-center uppercase">Extras</th>
+                                    <th className="px-3 py-4 text-center uppercase">Real</th>
                                     <th className="px-4 py-4 text-center text-zinc-400 group-hover:text-zinc-200 transition-colors"><div className="flex flex-col"><span>ESTILIZADO</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
                                     <th className="px-4 py-4 text-center text-zinc-400 group-hover:text-zinc-200 transition-colors"><div className="flex flex-col"><span>COLORIDO</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
                                     <th className="px-4 py-4 text-center text-orange-500"><div className="flex flex-col"><span>2D (LUXO)</span><span className="text-[9px] text-orange-600 mt-0.5 uppercase tracking-tighter font-black">PIX (-15%)</span></div></th>
@@ -765,6 +779,16 @@ function DataGridContent() {
                                                     disabled={!canEdit}
                                                     onChange={e => handleChange(f.id, 'tem_extras', e.target.checked)}
                                                     className="w-5 h-5 rounded-sm border-[var(--input-border)] text-orange-500 bg-[var(--input-bg)] focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                />
+                                            </td>
+
+                                            <td className="px-3 py-4 text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={f.tem_pintura_real}
+                                                    disabled={!canEdit}
+                                                    onChange={e => handleChange(f.id, 'tem_pintura_real', e.target.checked)}
+                                                    className="w-5 h-5 rounded-sm border-[var(--input-border)] text-pink-500 bg-[var(--input-bg)] focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                                 />
                                             </td>
 
