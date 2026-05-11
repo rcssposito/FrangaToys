@@ -19,9 +19,10 @@ export async function POST(req: NextRequest) {
         let state = safeDecode(req.headers.get('x-vercel-ip-country-region'), 'Desconhecido');
 
         const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
+        const isLocal = ip === '127.0.0.1' || ip === '::1' || ip.includes('127.0.0.1') || ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.');
 
         // Tratamento para localhost (ambiente de dev)
-        if (ip === '127.0.0.1' || ip === '::1') {
+        if (isLocal) {
             city = 'Localhost';
             state = 'DEV';
         } 

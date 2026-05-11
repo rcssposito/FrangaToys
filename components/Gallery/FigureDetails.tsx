@@ -23,13 +23,13 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
     const { addToCart, removeFromCart, isInCart, setIsCartOpen } = useCart();
     // Verificação de campanha super agressiva (Lê da raiz, do objeto precos e por assinatura de valor)
     const isCampanha = !!(
-        figure.is_campanha_active || 
+        figure.is_campanha_active ||
         (figure.preco_fixo_campanha && figure.preco_fixo_campanha > 0)
     );
 
     const [selectedFinishOverride, setSelectedFinishOverride] = useState<'estilizado' | 'colorido' | 'premium' | null>(null);
     const selectedFinish = selectedFinishOverride || (isCampanha ? 'estilizado' : 'colorido');
-    
+
     const [showInfo, setShowInfo] = useState(false);
     const [isZenMode, setIsZenMode] = useState(false);
 
@@ -46,11 +46,11 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                 const urlParams = new URLSearchParams(window.location.search);
                 const source = urlParams.get('ref') || 'direto';
                 const isApp = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches;
-                
+
                 await fetch('/api/analytics/hit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         figureId: figure.id,
                         source: source,
                         platform: isApp ? 'app' : 'site'
@@ -164,7 +164,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                     priority
                 />
                 {/* Clickable Area for Zen Mode */}
-                <div 
+                <div
                     className="absolute inset-0 z-30 cursor-zoom-in active:bg-white/5 transition-colors"
                     onClick={() => setIsZenMode(true)}
                 >
@@ -221,12 +221,12 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                             )}
                             {isCampanha && (
                                 <span className="text-[10px] bg-purple-600 text-white font-black px-3 py-1 rounded-full border border-purple-400 shadow-lg shadow-purple-600/20 uppercase tracking-[0.2em] flex items-center gap-1 animate-pulse">
-                                    <Sparkles size={12} className="fill-white" /> Oferta Especial
+                                    <Sparkles size={12} className="fill-white" /> Oferta
                                 </span>
                             )}
                             {figure.tem_pintura_real && (
                                 <span className="text-[10px] bg-blue-600 text-white font-black px-2 py-0.5 rounded-full border border-blue-400 shadow-lg shadow-blue-600/20 uppercase tracking-[0.2em] flex items-center gap-1">
-                                    <Instagram size={10} className="fill-white" /> Real
+                                    <Instagram size={10} className="fill-white" /> Pintura
                                 </span>
                             )}
                         </div>
