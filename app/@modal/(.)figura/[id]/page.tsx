@@ -10,23 +10,30 @@ interface Props {
 }
 
 export default async function FigureModalPage({ params }: Props) {
-    const { id } = await params;
+    const { id: identifier } = await params;
+    const isNumeric = /^\d+$/.test(identifier);
 
     // Fetch figure and pricing params in parallel
+    let figureQuery = supabase
+        .from('figuras')
+        .select(`
+            *,
+            series ( 
+                nome,
+                categorias ( nome )
+            ),
+            figuras_meta ( * ),
+            studios ( nome )
+        `);
+
+    if (isNumeric) {
+        figureQuery = figureQuery.eq('id', parseInt(identifier));
+    } else {
+        figureQuery = figureQuery.eq('slug', identifier);
+    }
+
     const [figureRes, settingsRes] = await Promise.all([
-        supabase
-            .from('figuras')
-            .select(`
-                *,
-                series ( 
-                    nome,
-                    categorias ( nome )
-                ),
-                figuras_meta ( * ),
-                studios ( nome )
-            `)
-            .eq('id', id)
-            .single(),
+        figureQuery.single(),
         supabase
             .from('pricing_params')
             .select('*')

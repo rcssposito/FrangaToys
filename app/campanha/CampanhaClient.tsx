@@ -80,7 +80,7 @@ export default function CampanhaClient() {
                 )}
                 >
                 <Link 
-                  href={item.disponivel ? `/figura/${item.id}` : '#'}
+                  href={item.disponivel ? `/figura/${item.slug || item.id}` : '#'}
                   onClick={(e) => !item.disponivel && e.preventDefault()}
                   className="block relative w-full aspect-[4/5] bg-zinc-950 flex items-center justify-center overflow-hidden cursor-pointer"
                 >
@@ -118,7 +118,7 @@ export default function CampanhaClient() {
                     </div>
                     
                     <Link
-                      href={item.disponivel ? `/figura/${item.id}` : '#'}
+                      href={item.disponivel ? `/figura/${item.slug || item.id}` : '#'}
                       onClick={(e) => !item.disponivel && e.preventDefault()}
                       className={clsx(
                         "w-full text-center text-[10px] sm:text-xs font-black uppercase tracking-widest py-3 rounded-xl transition-colors duration-300 block",

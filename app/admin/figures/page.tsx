@@ -28,6 +28,7 @@ interface Figure {
     tem_pintura_real?: boolean;
     disponivel?: boolean;
     sinonimos?: string;
+    slug?: string;
     is_campanha?: boolean;
     is_campanha_active?: boolean;
     desconto_campanha?: number;

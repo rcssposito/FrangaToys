@@ -12,16 +12,24 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-    const { id } = await params;
-    const { data: figure } = await supabase
+    const { id: identifier } = await params;
+    const isNumeric = /^\d+$/.test(identifier);
+
+    let query = supabase
         .from('figuras')
         .select(`
             nome,
             imagem_url,
             series ( nome )
-        `)
-        .eq('id', id)
-        .single();
+        `);
+    
+    if (isNumeric) {
+        query = query.eq('id', parseInt(identifier));
+    } else {
+        query = query.eq('slug', identifier);
+    }
+
+    const { data: figure } = await query.single();
 
     if (!figure) return { title: 'Figura não encontrada' };
 
@@ -42,23 +50,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function FiguraPage({ params }: Props) {
-    const { id } = await params;
+    const { id: identifier } = await params;
+    const isNumeric = /^\d+$/.test(identifier);
 
     // Fetch figure and pricing params
+    let figureQuery = supabase
+        .from('figuras')
+        .select(`
+            *,
+            series ( 
+                nome,
+                categorias ( nome )
+            ),
+            figuras_meta ( * ),
+            studios ( nome )
+        `);
+
+    if (isNumeric) {
+        figureQuery = figureQuery.eq('id', parseInt(identifier));
+    } else {
+        figureQuery = figureQuery.eq('slug', identifier);
+    }
+
     const [figureRes, settingsRes] = await Promise.all([
-        supabase
-            .from('figuras')
-            .select(`
-                *,
-                series ( 
-                    nome,
-                    categorias ( nome )
-                ),
-                figuras_meta ( * ),
-                studios ( nome )
-            `)
-            .eq('id', id)
-            .single(),
+        figureQuery.single(),
         supabase
             .from('pricing_params')
             .select('*')

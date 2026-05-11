@@ -59,7 +59,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                 {/* === FRONT FACE (Luxury Design) === */}
                 <div className="flip-card-front bg-[#09090b] border border-zinc-800/50 hover:border-blue-500/30 transition-all duration-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl group/front [transform:translateZ(0)]">
                     <Link 
-                        href={`/figura/${figure.id}?ref=vitrine`} 
+                        href={`/figura/${figure.slug || figure.id}?ref=vitrine`} 
                         scroll={false} 
                         className="absolute inset-0 z-10"
                         onClick={() => trackClick()}
@@ -69,7 +69,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                             src={imageUrl}
                             alt={figure.nome}
                             fill
-                            className="object-contain p-4 transition-transform duration-700 group-hover/front:scale-110 opacity-90 group-hover/front:opacity-100"
+                            className="object-contain p-2 transition-transform duration-700 group-hover/front:scale-110 opacity-90 group-hover/front:opacity-100"
                             sizes="(max-width: 768px) 50vw, 25vw"
                             priority={priority}
                         />
@@ -116,20 +116,20 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                     {/* Footer Info (Glassmorphism Overlay for Contrast) */}
                     <div className="absolute bottom-0 inset-x-0 p-3 sm:p-5 pt-12 pb-4 sm:pb-6 bg-gradient-to-t from-black via-black/80 to-transparent z-20 pointer-events-none">
                         <div className="flex flex-col gap-0.5 sm:gap-1 items-center">
-                            <div className="backdrop-blur-md bg-black/40 px-3 py-1 rounded-full border border-white/10 mb-1 shadow-2xl">
-                                <h3 className="text-[8px] sm:text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] drop-shadow-md">
+                            <div className="backdrop-blur-md bg-black/40 px-2 py-0.5 rounded-full border border-white/10 mb-1 shadow-2xl">
+                                <h3 className="text-[7px] sm:text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em] drop-shadow-md">
                                     {figure.studio || 'Studio Indiferente'}
                                 </h3>
                             </div>
                             
-                            <h2 className="text-sm sm:text-base font-black text-white tracking-tight text-center leading-tight line-clamp-1 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+                            <h2 className="text-xs sm:text-sm font-black text-white tracking-tight text-center leading-tight line-clamp-1 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
                                 {figure.nome}
                             </h2>
                             
                             {/* Starting Price Badge (High Visibility) */}
                             {figure.precos && (
-                                <div className="mt-2 sm:mt-3 bg-blue-600/90 backdrop-blur-xl border border-blue-400/30 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full text-white text-[10px] sm:text-xs font-black tracking-tighter shadow-[0_10px_30px_rgba(37,99,235,0.3)] ring-1 ring-white/10">
-                                    <span className="text-[8px] sm:text-[9px] text-zinc-200 uppercase font-black mr-1 sm:mr-2 tracking-widest opacity-80">A partir de</span>
+                                <div className="mt-2 sm:mt-3 bg-blue-600/90 backdrop-blur-xl border border-blue-400/30 px-3 py-1 rounded-full text-white text-[9px] sm:text-[10px] font-black tracking-tighter shadow-[0_10px_30px_rgba(37,99,235,0.3)] ring-1 ring-white/10">
+                                    <span className="text-[7px] sm:text-[8px] text-zinc-200 uppercase font-black mr-1 sm:mr-1.5 tracking-widest opacity-80">A partir de</span>
                                     {formatPrice(figure.precos.estilizado)}
                                 </div>
                             )}
@@ -244,7 +244,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                         {/* Order Button (Always visible) */}
                         <div className="p-4 sm:p-6 pt-0">
                             <Link
-                                href={`/figura/${figure.id}?ref=vitrine`}
+                                href={`/figura/${figure.slug || figure.id}?ref=vitrine`}
                                 scroll={false}
                                 onClick={(e) => e.stopPropagation()}
                                 className="w-full flex items-center justify-center gap-2 bg-white text-black py-4 sm:py-3.5 rounded-xl text-xs sm:text-[11px] font-black uppercase tracking-[0.2em] hover:bg-blue-600 hover:text-white transition-all duration-300 shadow-[0_20px_40px_rgba(0,0,0,0.6)] active:scale-[0.96]"

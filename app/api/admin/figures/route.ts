@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
         serie_id,
         studio_id,
         tem_pintura_real,
+        slug,
         ${seriesJoin} ( 
             nome, 
             ${categoryJoin} ( nome, id ) 
@@ -140,6 +141,7 @@ export async function GET(req: NextRequest) {
                 disponivel: item.disponivel || false,
                 tem_extras: item.tem_extras || false,
                 tem_pintura_real: item.tem_pintura_real || false,
+                slug: item.slug || '',
                 sinonimos: item.sinonimos || '',
                 altura_cm: meta.altura_cm ?? 0,
                 largura_cm: meta.largura_cm ?? 0,

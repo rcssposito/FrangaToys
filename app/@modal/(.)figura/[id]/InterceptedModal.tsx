@@ -56,9 +56,9 @@ export function InterceptedModal({ figure }: InterceptedModalProps) {
             nextIndex = (currentIndex - 1 + figures.length) % figures.length;
         }
 
-        const nextFigureId = figures[nextIndex].id;
+        const nextFigureSlug = figures[nextIndex].slug || figures[nextIndex].id;
         // Replace routing keeps the modal 'intercepted' overlay state clean 
-        router.replace(`/figura/${nextFigureId}`, { scroll: false });
+        router.replace(`/figura/${nextFigureSlug}`, { scroll: false });
     }, [figure.id, getCachedFigures, router]);
 
     const handleKeyDown = useCallback((e: KeyboardEvent) => {

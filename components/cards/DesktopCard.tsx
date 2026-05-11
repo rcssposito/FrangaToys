@@ -40,7 +40,7 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                 {/* === FRONT FACE === */}
                 <div className="flip-card-front">
                     <div className="relative w-full h-full bg-[var(--card-bg)] rounded-lg overflow-hidden border border-[var(--card-border)] hover:border-orange-500/50 transition-all shadow-[var(--shadow-md)] hover:shadow-[var(--shadow-lg)]">
-                        <Link href={`/figura/${figure.id}`} scroll={false} className="absolute inset-0 z-10 block">
+                        <Link href={`/figura/${figure.slug || figure.id}`} scroll={false} className="absolute inset-0 z-10 block">
                             <Image
                                 loader={imageKitLoader}
                                 src={imageUrl}
@@ -116,7 +116,7 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                     </div>
 
                     {/* Full Card Link Wrapper */}
-                    <Link href={`/figura/${figure.id}`} scroll={false} className="absolute inset-0 z-0 block cursor-pointer" />
+                    <Link href={`/figura/${figure.slug || figure.id}`} scroll={false} className="absolute inset-0 z-0 block cursor-pointer" />
 
                     {/* Content Overlay */}
                     <div className="relative z-10 flex flex-col h-full bg-black/60 p-4 text-white pointer-events-none">

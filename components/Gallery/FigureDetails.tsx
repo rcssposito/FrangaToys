@@ -210,7 +210,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                 </div>
 
                 {/* Info & Pricing Panel */}
-                <div className="w-full lg:w-1/2 flex flex-col gap-6 order-2 pt-[35vh] sm:pt-[45vh] lg:pt-0">
+                <div className="w-full lg:w-1/2 flex flex-col gap-5 order-2 pt-[35vh] sm:pt-[45vh] lg:pt-0">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <h3 className="text-sm font-black text-blue-500 uppercase tracking-[0.3em]">{figure.studio || 'Studio Indiferente'}</h3>
@@ -230,16 +230,16 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                                 </span>
                             )}
                         </div>
-                        <h2 className="text-xl md:text-4xl font-black text-white tracking-tighter leading-[0.9]">{figure.nome}</h2>
+                        <h2 className="text-xl md:text-3xl font-black text-white tracking-tighter leading-[0.95]">{figure.nome}</h2>
 
-                        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-zinc-500">
-                            <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2.5 py-1.5 rounded-full border border-white/5">
+                        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                            <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2 py-1 rounded-full border border-white/5">
                                 <span className="text-zinc-600">H</span> {figure.altura_cm || '-'}<small className="text-[8px] ml-0.5 opacity-50">cm</small>
                             </div>
-                            <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2.5 py-1.5 rounded-full border border-white/5">
+                            <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2 py-1 rounded-full border border-white/5">
                                 <span className="text-zinc-600">W</span> {figure.largura_cm || '-'}<small className="text-[8px] ml-0.5 opacity-50">cm</small>
                             </div>
-                            <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2.5 py-1.5 rounded-full border border-white/5">
+                            <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2 py-1 rounded-full border border-white/5">
                                 <span className="text-zinc-600">D</span> {figure.profundidade_cm || '-'}<small className="text-[8px] ml-0.5 opacity-50">cm</small>
                             </div>
                         </div>
@@ -310,7 +310,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                                     onClick={() => !isCampanha && setSelectedFinishOverride(opt.id)}
                                     disabled={isCampanha && opt.id !== 'estilizado'}
                                     className={clsx(
-                                        "relative flex flex-col items-center justify-center aspect-[1/1.1] p-2 rounded-2xl border-2 transition-all duration-300 text-center group",
+                                        "relative flex flex-col items-center justify-center aspect-[1/1] p-1.5 rounded-2xl border-2 transition-all duration-300 text-center group",
                                         selectedFinish === opt.id
                                             ? `${opt.border} bg-zinc-900/80 ring-1 ring-white/20 scale-[1.02] shadow-2xl`
                                             : "border-transparent bg-zinc-900/40 opacity-50 hover:opacity-100 hover:bg-zinc-900/60",

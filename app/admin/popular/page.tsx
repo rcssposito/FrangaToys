@@ -355,7 +355,7 @@ export default function PopularFiguresPage() {
 
                         {/* Action Link */}
                         <a
-                            href={`/figura/${fig.id}`}
+                            href={`/figura/${fig.slug || fig.id}`}
                             target="_blank"
                             className="p-3 bg-zinc-800 hover:bg-orange-600 rounded-2xl text-white transition-all shadow-lg active:scale-90"
                             title="Ver na Vitrine"

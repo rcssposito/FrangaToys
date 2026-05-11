@@ -19,6 +19,7 @@ export async function GET() {
                 nome, 
                 imagem_url, 
                 views, 
+                slug,
                 studios(nome), 
                 series(nome, categorias(nome)),
                 figuras_meta(resina_kg, horas_impressao, horas_pintura)
