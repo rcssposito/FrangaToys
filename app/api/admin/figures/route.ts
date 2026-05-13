@@ -3,6 +3,8 @@ import { NextResponse, NextRequest } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 const checkAuth = async () => {
     const supabaseClient = await createClient();
     const { data: { user }, error } = await supabaseClient.auth.getUser();
@@ -239,10 +241,21 @@ export async function PUT(req: Request) {
             escala: rawMeta.escala,
             is_campanha: rawMeta.is_campanha,
             is_campanha_active: rawMeta.is_campanha_active,
-            // Regra de Ouro: Se a campanha estiver inativa, os valores promocionais DEVEM ser 0
-            desconto_campanha: rawMeta.is_campanha_active ? rawMeta.desconto_campanha : 0,
-            preco_fixo_campanha: rawMeta.is_campanha_active ? rawMeta.preco_fixo_campanha : 0
+            desconto_campanha: rawMeta.desconto_campanha,
+            preco_fixo_campanha: rawMeta.preco_fixo_campanha
         };
+
+        // Regra de Ouro: Se a campanha for explicitamente desativada (is_campanha_active === false), 
+        // ou se a peça for removida da gestão de campanha (is_campanha === false),
+        // ZERAMOS os valores promocionais.
+        if (rawMeta.is_campanha_active === false || rawMeta.is_campanha === false) {
+            meta.desconto_campanha = 0;
+            meta.preco_fixo_campanha = 0;
+        }
+
+        // Limpa campos undefined para evitar sobrescrever com NULL via upsert 
+        // (PostgREST ignora campos ausentes, preservando o valor atual no DB)
+        Object.keys(meta).forEach(key => meta[key] === undefined && delete meta[key]);
 
         // SMART SCALING LOGIC
         // SMART SCALING LOGIC (Non-Destructive)
