@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { sendTelegramAlert } from '@/lib/telegram';
 
 // LISTAR VENDAS (Histórico)
 export async function GET() {
@@ -176,6 +177,26 @@ export async function POST(req: Request) {
             .select();
 
         if (insertError) throw insertError;
+        
+        // --- TELEGRAM ALERT ---
+        try {
+            const itemsList = carrinho.map((item: any) => `• ${item.quantidade}x ${item.nome} (R$ ${item.valor_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`).join('\n');
+            const totalVenda = carrinho.reduce((sum: number, item: any) => sum + (item.valor_final * item.quantidade), 0) + (Number(valor_frete) || 0);
+            
+            const telegramMsg = `🛠 *VENDA MANUAL REGISTRADA!*\n` +
+                `_(Registrada via Admin)_\n\n` +
+                `👤 *Cliente:* ${cliente_nome}\n` +
+                `📱 *WhatsApp:* ${cliente_contato}\n` +
+                `💰 *Valor Total:* R$ ${totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
+                `🚚 *Entrega:* ${metodo_entrega === 'retirada' ? 'Retirada no Ateliê' : 'Envio via Frete'}\n\n` +
+                `📦 *Itens:*\n${itemsList}\n\n` +
+                `👤 *Vendedor:* ${vendedor || 'Admin'}\n\n` +
+                `🔗 [Ver no Kanban Administrativo](${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/admin/kanban)`;
+
+            await sendTelegramAlert(telegramMsg);
+        } catch (alertError) {
+            console.error('Error preparing/sending Telegram alert:', alertError);
+        }
 
         return NextResponse.json(insertedData);
     } catch (error: any) {

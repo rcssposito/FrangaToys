@@ -108,21 +108,33 @@ export const MobileCard = ({ figure, className }: MobileCardProps) => {
                             >
                                 Detalhes
                             </div>
-                            <button
-                                className={clsx(
-                                    "flex-1 text-white text-xs py-2 rounded font-medium text-center transition-colors shadow-sm flex items-center justify-center gap-1",
-                                    isInCart(figure.id)
-                                        ? "bg-green-600 hover:bg-green-700"
-                                        : "bg-orange-600/90 hover:bg-orange-600"
-                                )}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                    isInCart(figure.id) ? removeFromCart(figure.id) : addToCart(figure);
-                                }}
-                            >
-                                {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar"}
-                            </button>
+                            {figure.is_merchant ? (
+                                <button
+                                    className={clsx(
+                                        "flex-1 text-white text-xs py-2 rounded font-medium text-center transition-colors shadow-sm flex items-center justify-center gap-1",
+                                        isInCart(figure.id)
+                                            ? "bg-green-600 hover:bg-green-700"
+                                            : "bg-orange-600/90 hover:bg-orange-600"
+                                    )}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        isInCart(figure.id) ? removeFromCart(figure.id) : addToCart(figure);
+                                    }}
+                                >
+                                    {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar"}
+                                </button>
+                            ) : (
+                                <a
+                                    href={`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5511959737551'}&text=${encodeURIComponent(`Olá! Tenho interesse na figura ${figure.nome}. Poderia me passar mais informações?`)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="flex-1 text-white text-[10px] py-2 rounded font-black text-center transition-colors shadow-sm bg-emerald-600 hover:bg-emerald-700 flex items-center justify-center uppercase tracking-tight"
+                                >
+                                    Falar Ateliê
+                                </a>
+                            )}
                         </div>
                     </div>
 

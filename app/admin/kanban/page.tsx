@@ -49,7 +49,23 @@ export default function KanbanPage() {
         try {
             const res = await fetch('/api/admin/kanban');
             const data = await res.json();
-            if (res.ok) setSales(data);
+            if (res.ok) {
+                // Ordenar por data (mais antigos primeiro para produção)
+                // Usando fallback para evitar NaN caso a data seja inválida
+                // Adicionando desempate por ID para vendas do mesmo dia (já que a hora está zerada no banco)
+                const sorted = [...data].sort((a, b) => {
+                    const dateA = a.data_venda ? new Date(a.data_venda).getTime() : 0;
+                    const dateB = b.data_venda ? new Date(b.data_venda).getTime() : 0;
+                    
+                    if (dateA !== dateB) {
+                        return dateA - dateB; // Mais antigos primeiro
+                    }
+                    
+                    // Se a data for exatamente igual (ex: 2026-05-08 00:00:00), desempata pelo ID (ID menor = mais antigo)
+                    return (a.id || 0) - (b.id || 0);
+                });
+                setSales(sorted);
+            }
         } catch (err) {
             toast.error('Erro ao carregar fila de produção');
         } finally {
@@ -152,7 +168,7 @@ export default function KanbanPage() {
                         return (
                             <div
                                 key={col.id}
-                                className={`flex-shrink-0 w-[340px] flex flex-col rounded-3xl border backdrop-blur-2xl ${col.color} transition-all duration-300 shadow-xl overflow-hidden`}
+                                className={`flex-shrink-0 w-[280px] lg:w-[310px] xl:w-[340px] flex flex-col rounded-3xl border backdrop-blur-2xl ${col.color} transition-all duration-300 shadow-xl overflow-hidden`}
                                 onDragOver={handleDragOver}
                                 onDragLeave={handleDragLeave}
                                 onDrop={(e) => handleDrop(e, col.id)}
@@ -183,7 +199,7 @@ export default function KanbanPage() {
                                             draggable
                                             onDragStart={(e) => handleDragStart(e, task.id)}
                                             onDragEnd={handleDragEnd}
-                                            className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-3 cursor-grab active:cursor-grabbing hover:border-blue-500/50 hover:bg-zinc-900/80 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)] hover:-translate-y-1 transition-all duration-300 group relative shadow-lg"
+                                            className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-2.5 sm:p-3 cursor-grab active:cursor-grabbing hover:border-blue-500/50 hover:bg-zinc-900/80 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)] hover:-translate-y-1 transition-all duration-300 group relative shadow-lg"
                                         >
                                             <div className="flex gap-3">
                                                 <div className="w-16 h-16 rounded-xl bg-zinc-950 border border-zinc-800 flex-shrink-0 overflow-hidden relative shadow-inner">

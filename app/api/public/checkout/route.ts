@@ -176,8 +176,11 @@ export async function POST(req: NextRequest) {
             `📦 *Itens:*\n${itemSummary}\n\n` +
             `🔗 [Ver no Kanban Administrativo](${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/admin/kanban)`;
 
-        // Non-blocking call
-        sendTelegramAlert(telegramMsg).catch((e: any) => console.error('Telegram background alert failed:', e));
+        try {
+            await sendTelegramAlert(telegramMsg);
+        } catch (e) {
+            console.error('Telegram background alert failed:', e);
+        }
 
         return NextResponse.json({
             success: true,

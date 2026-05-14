@@ -152,21 +152,33 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                                 </div>
                             </div>
 
-                            <button
-                                className={clsx(
-                                    "w-full font-bold py-3 rounded-md transition-colors shadow-lg active:scale-95 pointer-events-auto",
-                                    isInCart(figure.id)
-                                        ? "bg-green-600 hover:bg-green-700 text-white"
-                                        : "bg-[#ea580c] hover:bg-[#c2410c] text-white"
-                                )}
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    isInCart(figure.id) ? setIsCartOpen(true) : addToCart(figure);
-                                }}
-                            >
-                                {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar ao Carrinho"}
-                            </button>
+                            {figure.is_merchant ? (
+                                <button
+                                    className={clsx(
+                                        "w-full font-bold py-3 rounded-md transition-colors shadow-lg active:scale-95 pointer-events-auto",
+                                        isInCart(figure.id)
+                                            ? "bg-green-600 hover:bg-green-700 text-white"
+                                            : "bg-[#ea580c] hover:bg-[#c2410c] text-white"
+                                    )}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        isInCart(figure.id) ? setIsCartOpen(true) : addToCart(figure);
+                                    }}
+                                >
+                                    {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar ao Carrinho"}
+                                </button>
+                            ) : (
+                                <a
+                                    href={`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5511959737551'}&text=${encodeURIComponent(`Olá! Tenho interesse na figura ${figure.nome}. Poderia me passar mais informações?`)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-full font-bold py-3 rounded-md transition-colors shadow-lg active:scale-95 pointer-events-auto bg-emerald-600 hover:bg-emerald-700 text-white text-center"
+                                >
+                                    Falar com o Ateliê
+                                </a>
+                            )}
 
                         </div>
 

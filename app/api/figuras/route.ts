@@ -56,7 +56,8 @@ export async function GET(req: NextRequest) {
                 nome,
                 logo_url,
                 instagram_handle,
-                social_url
+                social_url,
+                merchant
             ),
             ${metaJoin}(
                 altura_cm,
@@ -170,7 +171,8 @@ export async function GET(req: NextRequest) {
                 is_campanha: meta?.is_campanha_active || !!meta?.preco_fixo_campanha || !!meta?.desconto_campanha,
                 is_campanha_active: meta?.is_campanha_active || false,
                 desconto_campanha: meta?.desconto_campanha || 0,
-                preco_fixo_campanha: meta?.preco_fixo_campanha || 0
+                preco_fixo_campanha: meta?.preco_fixo_campanha || 0,
+                is_merchant: studioData?.merchant ?? false
             };
         });
 

@@ -63,7 +63,7 @@ export default async function FiguraPage({ params }: Props) {
                 categorias ( nome )
             ),
             figuras_meta ( * ),
-            studios ( nome )
+            studios ( nome, merchant )
         `);
 
     if (isNumeric) {
@@ -124,7 +124,8 @@ export default async function FiguraPage({ params }: Props) {
         is_campanha_active: metaData?.is_campanha_active,
         desconto_campanha: metaData?.desconto_campanha,
         preco_fixo_campanha: metaData?.preco_fixo_campanha,
-        tem_pintura_real: figure.tem_pintura_real
+        tem_pintura_real: figure.tem_pintura_real,
+        is_merchant: (figure as any).studios?.merchant ?? false
     };
 
     return (

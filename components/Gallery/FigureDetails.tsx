@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ShoppingCart, ExternalLink, Sparkles, Instagram, Clock, Truck, ShieldCheck, 
     Share2, Paintbrush, Palette, Crown, CheckCircle2, X, HelpCircle, Info, 
-    Maximize2, ArrowLeft, Tag 
+    Maximize2, ArrowLeft, Tag, MessageCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -363,22 +363,34 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
 
                     {/* Actions */}
                     <div className="flex flex-col sm:flex-row items-center gap-4 mt-4 relative">
-                        <button
-                            className={clsx(
-                                "flex-1 flex items-center justify-center gap-3 w-full px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-500 shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-[0.98] relative z-10",
-                                isInCart(figure.id)
-                                    ? "bg-emerald-500 text-black hover:bg-emerald-400"
-                                    : "bg-white text-black hover:bg-blue-500 hover:text-white"
-                            )}
-                            onClick={() => isInCart(figure.id) ? setIsCartOpen(true) : addToCart(figure, selectedFinish)}
-                        >
-                            {isInCart(figure.id) ? "No Carrinho ✓" : (
-                                <>
-                                    <ShoppingCart size={18} />
-                                    Adicionar ao Carrinho
-                                </>
-                            )}
-                        </button>
+                        {figure.is_merchant ? (
+                            <button
+                                className={clsx(
+                                    "flex-1 flex items-center justify-center gap-3 w-full px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-500 shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-[0.98] relative z-10",
+                                    isInCart(figure.id)
+                                        ? "bg-emerald-500 text-black hover:bg-emerald-400"
+                                        : "bg-white text-black hover:bg-blue-500 hover:text-white"
+                                )}
+                                onClick={() => isInCart(figure.id) ? setIsCartOpen(true) : addToCart(figure, selectedFinish)}
+                            >
+                                {isInCart(figure.id) ? "No Carrinho ✓" : (
+                                    <>
+                                        <ShoppingCart size={18} />
+                                        Adicionar ao Carrinho
+                                    </>
+                                )}
+                            </button>
+                        ) : (
+                            <a
+                                href={`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5511959737551'}&text=${encodeURIComponent(`Olá! Tenho interesse na figura ${figure.nome} (${selectedFinish}). Poderia me passar mais informações?`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 flex items-center justify-center gap-3 w-full px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-500 shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-[0.98] relative z-10 bg-emerald-600 text-white hover:bg-emerald-500"
+                            >
+                                <MessageCircle size={18} />
+                                Falar com o Ateliê
+                            </a>
+                        )}
 
                         {figure.tem_pintura_real && (
                             <a

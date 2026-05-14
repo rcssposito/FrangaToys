@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { Truck, Flame, Settings, Instagram } from 'lucide-react';
+import { Truck, Flame, Settings, Instagram, LibraryBig, Palette } from 'lucide-react';
 import ThemeToggle from '@/components/common/ThemeToggle';
 import { CartIndicator } from '@/components/Cart/CartIndicator';
 import { useCart } from '@/context/CartContext';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
+
 
 export default function Header() {
   const { setIsCartOpen } = useCart();
@@ -20,20 +21,26 @@ export default function Header() {
   return (
     <header className="w-full">
       {/* Desktop Header */}
-      <div className="hidden sm:flex items-center justify-center relative py-4 sm:py-8 px-4 max-w-[95%] mx-auto">
-        <Link href="/" className="hover:opacity-80 transition-opacity">
+      <div className="hidden sm:flex items-center justify-between relative py-4 sm:py-8 px-4 max-w-[95%] mx-auto">
+        {/* Left Spacer */}
+        <div className="flex-1 flex items-center gap-4">
+        </div>
+
+        {/* Logo Center */}
+        <Link href="/" className="hover:opacity-80 transition-opacity flex-shrink-0">
           <img
             src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
             alt="Franga Toys Logo"
-            className="h-24 md:h-32 object-contain"
+            className="h-20 md:h-28 object-contain"
           />
         </Link>
 
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-4 md:gap-6">
+        {/* Right Menu */}
+        <div className="flex-1 flex items-center justify-end gap-4 md:gap-6">
           <Link
             href="/rastreio"
             className={clsx(
-              "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group",
+              "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group whitespace-nowrap",
               pathname === '/rastreio' ? "text-orange-400" : "text-orange-500 hover:text-orange-400"
             )}
             title="Rastrear meu Pedido"
@@ -42,12 +49,12 @@ export default function Header() {
             <span className="hidden lg:inline">Rastrear</span>
           </Link>
 
-          <div className="h-4 w-px bg-[var(--card-border)]" />
+          <div className="h-4 w-px bg-zinc-800/50 hidden md:block" />
 
           <Link
             href="/campanha"
             className={clsx(
-              "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group",
+              "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group whitespace-nowrap",
               pathname === '/campanha' ? "text-purple-400" : "text-purple-500 hover:text-purple-400"
             )}
           >
@@ -55,19 +62,25 @@ export default function Header() {
             <span className="hidden lg:inline">Promoções</span>
           </Link>
 
-          <div className="h-4 w-px bg-[var(--card-border)]" />
+          <div className="h-4 w-px bg-zinc-800/50 hidden md:block" />
 
           <Link
             href="/parceiros"
             className={clsx(
-              "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group",
-              pathname === '/parceiros' ? "text-blue-500" : "text-[var(--text-muted)] hover:text-blue-500"
+              "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group whitespace-nowrap",
+              pathname === '/parceiros'
+                ? "text-blue-500"
+                : "text-[var(--text-muted)] hover:text-blue-500"
             )}
           >
-            <div className={clsx(
-              "w-1.5 h-1.5 rounded-full bg-blue-500",
-              pathname === '/parceiros' ? "animate-none" : "group-hover:animate-ping"
-            )} />
+            <Palette
+              size={18}
+              className={clsx(
+                pathname === '/parceiros'
+                  ? "text-blue-500"
+                  : "group-hover:text-blue-500"
+              )}
+            />
             <span className="hidden lg:inline">Estúdios</span>
           </Link>
 
@@ -81,16 +94,14 @@ export default function Header() {
             <Instagram size={20} />
           </a>
 
-          <div className="h-4 w-px bg-[var(--card-border)]" />
+          <div className="h-4 w-px bg-zinc-800/50" />
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <ThemeToggle />
-
             <CartIndicator
               onClick={() => setIsCartOpen(true)}
               className="hover:bg-zinc-900/10 dark:hover:bg-zinc-800/50 px-3 py-2 rounded-lg"
             />
-
             <Link
               href="/admin/figures"
               className="p-2 text-[var(--text-muted)] hover:text-orange-500 transition-colors"

@@ -7,22 +7,25 @@
 
 :root {
   --background: #f1f3f5;
-  /* Darkened background for softer light mode */
   --foreground: #343a40;
-  /* Muted Lead Gray */
   --card-bg: #f8f9fa;
-  /* Using previous background as card bg to break pure white */
   --card-border: rgba(0, 0, 0, 0.08);
   --input-bg: #f8f9fa;
   --input-border: rgba(0, 0, 0, 0.1);
   --muted-bg: #e9ecef;
-  /* Soft Muted Gray */
   --text-muted: #6c757d;
   --accent-orange: #f97316;
   --accent-emerald: #10b981;
   --accent-fuchsia: #d946ef;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+}
+
+/* MacBook Pro 16" scale adjustment */
+@media (min-width: 1400px) and (max-width: 1800px) {
+  html {
+    font-size: 15px; 
+  }
 }
 
 [data-theme='dark'] {

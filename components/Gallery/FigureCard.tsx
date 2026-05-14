@@ -174,7 +174,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
 
                         <div className="flex-1 px-4 sm:px-6 flex flex-col justify-center gap-4 sm:gap-6">
                             {/* Dimensions Table */}
-                            <div className="grid grid-cols-3 gap-1 sm:gap-2 bg-zinc-900/50 backdrop-blur-md border border-zinc-800/50 p-2 sm:p-3 rounded-xl sm:rounded-2xl overflow-hidden">
+                            <div className="grid grid-cols-3 gap-1 bg-zinc-900/50 backdrop-blur-md border border-zinc-800/50 p-2 rounded-xl overflow-hidden">
                                 <div className="flex flex-col items-center">
                                     <span className="text-[8px] sm:text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Altura</span>
                                     <span className="text-sm sm:text-sm font-black text-white">{figure.altura_cm || '-'}<small className="text-[10px] sm:text-[10px] text-zinc-600 ml-0.5">cm</small></span>
@@ -254,11 +254,17 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                             </div>
                         </div>
 
-                        {/* Order Button (Visual Only since parent is a Link) */}
-                        <div className="p-4 sm:p-6 pt-0">
-                            <div className="w-full flex items-center justify-center gap-2 bg-white text-black py-4 sm:py-3.5 rounded-xl text-xs sm:text-[11px] font-black uppercase tracking-[0.2em] group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-[0_20px_40px_rgba(0,0,0,0.6)]">
-                                Detalhes Completos <ChevronRight size={16} />
-                            </div>
+                        {/* Order Button */}
+                        <div className="p-3 sm:p-4 pt-0">
+                            {figure.is_merchant ? (
+                                <div className="w-full flex items-center justify-center gap-2 bg-white text-black py-4 sm:py-3.5 rounded-xl text-xs sm:text-[11px] font-black uppercase tracking-[0.2em] group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-[0_20px_40px_rgba(0,0,0,0.6)]">
+                                    Detalhes Completos <ChevronRight size={16} />
+                                </div>
+                            ) : (
+                                <div className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white py-4 sm:py-3.5 rounded-xl text-xs sm:text-[11px] font-black uppercase tracking-[0.2em] group-hover:bg-emerald-500 transition-all duration-300 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+                                    Falar com o Ateliê <ChevronRight size={16} />
+                                </div>
+                            )}
                         </div>
                     </Link>
                 </div>
