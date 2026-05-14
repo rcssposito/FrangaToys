@@ -1,6 +1,7 @@
 'use client';
 
-import { X, Trash2, Send, ChevronLeft, User, Phone, MessageSquare, ChevronRight } from 'lucide-react';
+import { X, Trash2, Send, ChevronLeft, User, Phone, MessageSquare, ChevronRight, Truck, MapPin, CreditCard, QrCode, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
@@ -17,9 +18,22 @@ export const CartDrawer = () => {
     
     const onClose = () => setIsCartOpen(false);
     const drawerRef = useRef<HTMLDivElement>(null);
-    const [step, setStep] = useState<'cart' | 'checkout'>('cart');
+    const router = useRouter();
+    const [step, setStep] = useState<'cart' | 'shipping' | 'payment' | 'checkout'>('cart');
     const [nome, setNome] = useState('');
+    const [contato, setContato] = useState('');
     const [observacoes, setObservacoes] = useState('');
+    
+    // Shipping States
+    const [metodoEntrega, setMetodoEntrega] = useState<'retirada' | 'envio'>('retirada');
+    const [cep, setCep] = useState('');
+    const [isCalculatingFrete, setIsCalculatingFrete] = useState(false);
+    const [freteOptions, setFreteOptions] = useState<any[]>([]);
+    const [selectedFrete, setSelectedFrete] = useState<any | null>(null);
+
+    // Payment States
+    const [metodoPagamento, setMetodoPagamento] = useState<'pix' | 'card'>('pix');
+    const [isProcessing, setIsProcessing] = useState(false);
 
     // Salesperson selection state
     const [vendedores, setVendedores] = useState<{ id: number; nome: string; telefone: string }[]>([]);
@@ -41,12 +55,35 @@ export const CartDrawer = () => {
         }
     }, [step]);
 
+    const [hasSentLead, setHasSentLead] = useState(false);
+    
+    // Send lead notification when contact info is filled
+    useEffect(() => {
+        if (nome.length > 3 && contato.length >= 10 && !hasSentLead && step === 'checkout') {
+            const timer = setTimeout(() => {
+                fetch('/api/public/lead', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        nome, 
+                        contato, 
+                        itemsCount: items.length,
+                        total: calculateTotal()
+                    })
+                });
+                setHasSentLead(true);
+            }, 2000); // Wait 2s to make sure they finished typing
+            return () => clearTimeout(timer);
+        }
+    }, [nome, contato, step, hasSentLead, items.length]);
+
     // Reset step when closed
     useEffect(() => {
         if (!isOpen) {
             setTimeout(() => {
                 setStep('cart');
                 setSelectedVendedorId('');
+                setHasSentLead(false);
             }, 300);
         }
     }, [isOpen]);
@@ -63,8 +100,23 @@ export const CartDrawer = () => {
     // }, [isOpen, onClose]);
 
     const formatPrice = (val?: number) => {
-        if (!val) return 'Sob consulta';
+        if (val === undefined || val === null) return 'Sob consulta';
         return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    const calculateSubtotal = () => {
+        return items.reduce((acc, item) => {
+            const price = item.precos?.[item.finish || 'estilizado'] || 0;
+            return acc + (price * (item.quantity || 1));
+        }, 0);
+    };
+
+    const calculateTotal = () => {
+        let total = calculateSubtotal();
+        if (metodoEntrega === 'envio' && selectedFrete) {
+            total += Number(selectedFrete.Valor);
+        }
+        return total;
     };
 
     const getFinishLabel = (finish: string) => {
@@ -75,45 +127,80 @@ export const CartDrawer = () => {
         }
     };
 
-    const handleCheckout = () => {
-        if (items.length === 0) return;
-        if (!nome) {
-            toast.error('Por favor, preencha o seu nome!');
+    const handleFetchShipping = async () => {
+        if (cep.length < 8) {
+            toast.error('Informe um CEP válido');
             return;
         }
 
-        let msg = `*NOVO PEDIDO DE ORÇAMENTO*\n\n`;
-        msg += `*Cliente:* ${nome}\n`;
-        if (observacoes) msg += `*Observações:* ${observacoes}\n\n`;
-        msg += `------------------------\n\n`;
-        msg += `*ITENS SOLICITADOS:*\n\n`;
+        setIsCalculatingFrete(true);
+        try {
+            const res = await fetch('/api/public/shipping/quote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sCepDestino: cep })
+            });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+            setFreteOptions(data);
+            if (data.length > 0) setSelectedFrete(data[0]);
+        } catch (error: any) {
+            console.error('--- SHIPPING API ERROR ---');
+            console.error('Message:', error.message);
+            console.error('Stack:', error.stack);
+            toast.error(error.message || 'Erro ao consultar frete');
+        } finally {
+            setIsCalculatingFrete(false);
+        }
+    };
 
-        const selectedVendedor = vendedores.find(v => v.id === Number(selectedVendedorId));
-        if (selectedVendedor) {
-            msg += `*Atendimento por:* ${selectedVendedor.nome}\n`;
+    const handleCheckout = async () => {
+        if (items.length === 0) return;
+        if (!nome || !contato) {
+            toast.error('Preencha seu nome e contato!');
+            return;
         }
 
-        items.forEach((item, index) => {
-            const isOffer = (item as any).is_campanha || (item as any).is_campanha_active || (item as any).preco_fixo_campanha || (item as any).desconto_campanha;
-            msg += `*${index + 1}. ${item.nome}${isOffer ? ' (OFERTA 🔥)' : ''}*\n`;
-            msg += `   Quantidade: ${item.quantity}\n`;
-            msg += `   Acabamento: ${getFinishLabel(item.finish)}\n`;
-            if (item.categoria) msg += `   Categoria: ${item.categoria}\n`;
-            if (item.studio) msg += `   Estúdio: ${item.studio}\n`;
-            msg += `\n`;
-        });
-        msg += `------------------------\n`;
-        msg += `*Total de itens:* ${totalItems}`;
+        setIsProcessing(true);
+        try {
+            const res = await fetch('/api/public/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    items: items.map(i => ({
+                        id: i.id,
+                        nome: i.nome,
+                        quantity: i.quantity,
+                        finish: i.finish,
+                        price: i.precos?.[i.finish || 'estilizado'] || 0
+                    })),
+                    cliente_nome: nome,
+                    cliente_contato: contato,
+                    metodo_entrega: metodoEntrega,
+                    valor_frete: metodoEntrega === 'envio' ? selectedFrete?.Valor : 0,
+                    metodo_pagamento: metodoPagamento,
+                    observacoes,
+                    vendedor_id: selectedVendedorId
+                })
+            });
 
-        const targetPhone = selectedVendedor ? selectedVendedor.telefone : '5511959737551';
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
 
-        if (!selectedVendedor) {
-            msg += `*Atendimento:* Loja / Sem preferência\n`;
+            toast.success('Pedido registrado com sucesso!');
+            clearCart();
+            onClose();
+
+            if (data.payment_url) {
+                window.location.href = data.payment_url;
+            } else {
+                router.push(`/checkout/success?token=${data.access_token}`);
+            }
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao processar pedido');
+        } finally {
+            setIsProcessing(false);
         }
-
-        const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`;
-        window.open(url, '_blank');
-        onClose();
     };
 
     return (
@@ -144,7 +231,7 @@ export const CartDrawer = () => {
                             {step === 'cart' ? (
                                 <div>
                                     <h2 className="text-xl font-black text-white uppercase tracking-tighter">
-                                        Seu Orçamento
+                                        Seu Carrinho
                                     </h2>
                                     <p className="text-xs font-bold text-zinc-500 tracking-widest uppercase mt-0.5">
                                         {totalItems} {totalItems === 1 ? 'item' : 'itens'} adicionados
@@ -296,6 +383,119 @@ export const CartDrawer = () => {
                                             ))
                                         )}
                                     </motion.div>
+                                ) : step === 'shipping' ? (
+                                    <motion.div
+                                        key="shipping-step"
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: 20 }}
+                                        className="space-y-6"
+                                    >
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button
+                                                onClick={() => setMetodoEntrega('retirada')}
+                                                className={`p-4 rounded-3xl border flex flex-col items-center gap-2 transition-all ${metodoEntrega === 'retirada' ? 'bg-orange-500/10 border-orange-500 text-orange-500' : 'bg-zinc-900 border-zinc-800 text-zinc-500'}`}
+                                            >
+                                                <MapPin size={24} />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">Retirada</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setMetodoEntrega('envio')}
+                                                className={`p-4 rounded-3xl border flex flex-col items-center gap-2 transition-all ${metodoEntrega === 'envio' ? 'bg-blue-500/10 border-blue-500 text-blue-500' : 'bg-zinc-900 border-zinc-800 text-zinc-500'}`}
+                                            >
+                                                <Truck size={24} />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">Envio</span>
+                                            </button>
+                                        </div>
+
+                                        {metodoEntrega === 'retirada' ? (
+                                            <div className="bg-zinc-900 border border-zinc-800 p-5 rounded-3xl space-y-3">
+                                                <h4 className="text-xs font-black text-white uppercase tracking-widest">Ateliê Franga Toys</h4>
+                                                <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">
+                                                    Rua Catanduvas do Sul - Jardim Primavera<br />
+                                                    São Paulo - SP
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={cep}
+                                                        onChange={(e) => setCep(e.target.value.replace(/\D/g, '').substring(0, 8))}
+                                                        placeholder="CEP de Destino"
+                                                        className="flex-1 bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-sm"
+                                                    />
+                                                    <button
+                                                        onClick={handleFetchShipping}
+                                                        disabled={isCalculatingFrete || cep.length < 8}
+                                                        className="bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 text-white px-6 rounded-2xl font-black transition-all active:scale-95 flex items-center justify-center"
+                                                    >
+                                                        {isCalculatingFrete ? <Loader2 size={18} className="animate-spin" /> : <ChevronRight size={18} />}
+                                                    </button>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    {freteOptions.map((opt, idx) => (
+                                                        <button
+                                                            key={idx}
+                                                            onClick={() => setSelectedFrete(opt)}
+                                                            className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${selectedFrete?.Codigo === opt.Codigo ? 'bg-blue-500/10 border-blue-500' : 'bg-zinc-900 border-zinc-800'}`}
+                                                        >
+                                                            <div className="text-left">
+                                                                <p className="text-[10px] font-black text-white uppercase tracking-tight">{opt.Empresa} - {opt.Nome}</p>
+                                                                <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Prazo: {opt.PrazoEntrega} dias</p>
+                                                            </div>
+                                                            <span className="text-xs font-black text-white">{formatPrice(opt.Valor)}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                ) : step === 'payment' ? (
+                                    <motion.div
+                                        key="payment-step"
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: 20 }}
+                                        className="space-y-6"
+                                    >
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button
+                                                onClick={() => setMetodoPagamento('pix')}
+                                                className={`p-4 rounded-3xl border flex flex-col items-center gap-2 transition-all ${metodoPagamento === 'pix' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : 'bg-zinc-900 border-zinc-800 text-zinc-500'}`}
+                                            >
+                                                <QrCode size={24} />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">PIX (Desconto)</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setMetodoPagamento('card')}
+                                                className={`p-4 rounded-3xl border flex flex-col items-center gap-2 transition-all ${metodoPagamento === 'card' ? 'bg-blue-500/10 border-blue-500 text-blue-500' : 'bg-zinc-900 border-zinc-800 text-zinc-500'}`}
+                                            >
+                                                <CreditCard size={24} />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">Cartão de Crédito (Até 12x)</span>
+                                            </button>
+                                        </div>
+
+                                        <div className="bg-zinc-900 border border-zinc-800 p-5 rounded-3xl space-y-3">
+                                            {metodoPagamento === 'pix' ? (
+                                                <>
+                                                    <h4 className="text-xs font-black text-emerald-400 uppercase tracking-widest">Pagamento via PIX</h4>
+                                                    <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">
+                                                        O valor exibido já inclui o desconto de pagamento à vista. Após finalizar, você receberá a chave PIX para pagamento.
+                                                    </p>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <h4 className="text-xs font-black text-blue-400 uppercase tracking-widest">Cartão de Crédito</h4>
+                                                    <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">
+                                                        Pagamento processado via Mercado Pago. Aceitamos todas as bandeiras em até 12x.
+                                                    </p>
+                                                </>
+                                            )}
+                                        </div>
+                                    </motion.div>
                                 ) : (
                                     <motion.div
                                         key="checkout-step"
@@ -304,14 +504,6 @@ export const CartDrawer = () => {
                                         exit={{ opacity: 0, x: 20 }}
                                         className="space-y-6 pt-2"
                                     >
-                                        <div className="bg-blue-500/5 border border-blue-500/20 p-5 rounded-3xl flex flex-col gap-3">
-                                            <h3 className="font-black text-white tracking-tight uppercase tracking-widest text-xs">Atenção ao prazo</h3>
-                                            <p className="text-xs font-medium tracking-tight text-zinc-400 leading-relaxed">
-                                                Por ser um processo de criação manual e artesanal, o prazo mínimo de entrega é de 30 dias após pagamento.<br /><br />
-                                                As cores podem variar levemente conforme o monitor e o processo de pintura física.
-                                            </p>
-                                        </div>
-
                                         <div className="space-y-4">
                                             <div className="space-y-2 focus-within:text-blue-500 transition-colors">
                                                 <label className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 ml-1 text-zinc-600">
@@ -322,21 +514,34 @@ export const CartDrawer = () => {
                                                     value={nome}
                                                     onChange={(e) => setNome(e.target.value)}
                                                     placeholder="Como gosta de ser chamado"
-                                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-bold placeholder-zinc-700 text-sm"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-sm"
                                                 />
                                             </div>
 
                                             <div className="space-y-2 focus-within:text-blue-500 transition-colors">
                                                 <label className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 ml-1 text-zinc-600">
-                                                    <Phone size={12} /> Consultor (Opcional)
+                                                    <Phone size={12} /> WhatsApp (com DDD)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={contato}
+                                                    onChange={(e) => setContato(e.target.value.replace(/\D/g, ''))}
+                                                    placeholder="11999999999"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-sm"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-2 focus-within:text-blue-500 transition-colors">
+                                                <label className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 ml-1 text-zinc-600">
+                                                    <User size={12} /> Consultor (Opcional)
                                                 </label>
                                                 <div className="relative">
                                                      <select
                                                         value={selectedVendedorId}
                                                         onChange={(e) => setSelectedVendedorId(e.target.value === '' ? '' : Number(e.target.value))}
-                                                        className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-bold appearance-none text-sm cursor-pointer"
+                                                        className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold appearance-none text-sm cursor-pointer"
                                                     >
-                                                        <option value="">Atendimento Franga Toys</option>
+                                                        <option value="">Atendimento Geral</option>
                                                         {vendedores.map(v => (
                                                             <option key={v.id} value={v.id}>{v.nome}</option>
                                                         ))}
@@ -346,13 +551,13 @@ export const CartDrawer = () => {
 
                                             <div className="space-y-2 focus-within:text-blue-500 transition-colors">
                                                 <label className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 ml-1 text-zinc-600">
-                                                    <MessageSquare size={12} /> Detalhes Extras
+                                                    <MessageSquare size={12} /> Observações
                                                 </label>
                                                 <textarea
                                                     value={observacoes}
                                                     onChange={(e) => setObservacoes(e.target.value)}
                                                     placeholder="Algum detalhe específico?"
-                                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-bold placeholder-zinc-700 min-h-[120px] resize-none text-sm"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 min-h-[100px] resize-none text-sm"
                                                 />
                                             </div>
                                         </div>
@@ -364,13 +569,30 @@ export const CartDrawer = () => {
                         {/* Footer */}
                         {items.length > 0 && (
                             <div className="p-6 border-t border-zinc-800 bg-black/40 backdrop-blur-md space-y-4">
+                                <div className="space-y-2 mb-4">
+                                    <div className="flex justify-between items-center text-zinc-500 text-[10px] font-black uppercase tracking-widest">
+                                        <span>Subtotal</span>
+                                        <span>{formatPrice(calculateSubtotal())}</span>
+                                    </div>
+                                    {metodoEntrega === 'envio' && selectedFrete && (
+                                        <div className="flex justify-between items-center text-zinc-500 text-[10px] font-black uppercase tracking-widest">
+                                            <span>Frete ({selectedFrete.Empresa})</span>
+                                            <span>{formatPrice(selectedFrete.Valor)}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center text-white text-sm font-black uppercase tracking-widest border-t border-zinc-800 pt-2">
+                                        <span>Total</span>
+                                        <span className="text-orange-500">{formatPrice(calculateTotal())}</span>
+                                    </div>
+                                </div>
+
                                 {step === 'cart' ? (
                                     <>
                                         <button
-                                            onClick={() => setStep('checkout')}
-                                            className="w-full bg-white text-black font-black uppercase tracking-[0.2em] py-5 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-[0_15px_40px_rgba(255,255,255,0.1)] active:scale-[0.98] text-xs hover:bg-blue-500 hover:text-white"
+                                            onClick={() => setStep('shipping')}
+                                            className="w-full bg-white text-black font-black uppercase tracking-[0.2em] py-5 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-[0_15px_40px_rgba(255,255,255,0.1)] active:scale-[0.98] text-xs hover:bg-orange-500 hover:text-white"
                                         >
-                                            Checkout <ChevronRight size={16} />
+                                            Escolher Entrega <ChevronRight size={16} />
                                         </button>
                                         <button
                                             onClick={clearCart}
@@ -379,14 +601,35 @@ export const CartDrawer = () => {
                                             Limpar lista
                                         </button>
                                     </>
+                                ) : step === 'shipping' ? (
+                                    <button
+                                        onClick={() => setStep('payment')}
+                                        disabled={metodoEntrega === 'envio' && !selectedFrete}
+                                        className="w-full bg-white text-black font-black uppercase tracking-[0.2em] py-5 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-[0_15px_40px_rgba(255,255,255,0.1)] active:scale-[0.98] text-xs hover:bg-blue-500 hover:text-white disabled:bg-zinc-800 disabled:text-zinc-600"
+                                    >
+                                        Escolher Pagamento <ChevronRight size={16} />
+                                    </button>
+                                ) : step === 'payment' ? (
+                                    <button
+                                        onClick={() => setStep('checkout')}
+                                        className="w-full bg-white text-black font-black uppercase tracking-[0.2em] py-5 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-[0_15px_40px_rgba(255,255,255,0.1)] active:scale-[0.98] text-xs hover:bg-emerald-500 hover:text-white"
+                                    >
+                                        Seus Dados <ChevronRight size={16} />
+                                    </button>
                                 ) : (
                                     <button
                                         onClick={handleCheckout}
-                                        disabled={!nome}
-                                        className="w-full bg-[#25D366] hover:bg-[#128C7E] disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-black uppercase tracking-[0.2em] py-5 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-[0_15px_40px_rgba(37,211,102,0.2)] active:scale-[0.98] text-xs"
+                                        disabled={!nome || !contato || isProcessing}
+                                        className="w-full bg-orange-600 hover:bg-orange-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-black uppercase tracking-[0.2em] py-5 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-[0_15px_40px_rgba(234,88,12,0.2)] active:scale-[0.98] text-xs"
                                     >
-                                        <Send size={18} />
-                                        Enviar para WhatsApp
+                                        {isProcessing ? (
+                                            <Loader2 size={18} className="animate-spin" />
+                                        ) : (
+                                            <>
+                                                {metodoPagamento === 'card' ? <CreditCard size={18} /> : <QrCode size={18} />}
+                                                Finalizar Compra
+                                            </>
+                                        )}
                                     </button>
                                 )}
                             </div>

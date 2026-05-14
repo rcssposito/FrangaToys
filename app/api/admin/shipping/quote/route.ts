@@ -7,7 +7,7 @@ export async function POST(req: Request) {
         const { sCepDestino, nVlPeso, nVlComprimento, nVlAltura, nVlLargura } = body;
 
         const sCepOrigem = process.env.NEXT_PUBLIC_CEP_ORIGEM;
-        const token = process.env.MELHORENVIO_TOKEN;
+        const token = process.env.MELHORENVIO_TOKEN || process.env.Franga;
 
         if (!sCepOrigem || !token) {
             console.error('Configuração ausente:', { hasCepOrigem: !!sCepOrigem, hasToken: !!token });

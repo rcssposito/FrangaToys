@@ -20,7 +20,7 @@ export const CartIndicator = ({ onClick, className }: CartIndicatorProps) => {
                 "relative p-2 rounded-full hover:bg-[var(--input-bg)] transition-colors text-[var(--foreground)]",
                 className
             )}
-            aria-label="Ver Orçamento"
+            aria-label="Ver Carrinho"
         >
             <ShoppingCart size={24} className="text-current" />
             <AnimatePresence>

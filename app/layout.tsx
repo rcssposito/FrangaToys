@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     template: '%s | Franga Toys',
     default: 'Franga Toys | Pintura em Impressão 3D',
   },
-  description: 'Figures 3D pintadas à mão. Peças únicas para colecionadores. Sob encomenda. Orçamentos via DM ou no site.',
+  description: 'Figures 3D pintadas à mão. Peças únicas para colecionadores. Sob encomenda. Compre direto pelo site.',
   keywords: ['action figures', 'impressão 3d', 'pintura à mão', 'colecionáveis', 'anime', 'marvel', 'dc', 'customização', 'franga toys'],
   openGraph: {
     title: 'Franga Toys | Pintura em Impressão 3D',

@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // Supabase joins can return an array even for 1-to-1 if not specified
     const series = Array.isArray(figure.series) ? figure.series[0] : (figure.series as any);
     const title = `${figure.nome} | Franga Toys`;
-    const description = `Confira os detalhes de ${figure.nome} ${series?.nome ? `da série ${series.nome}` : ''}. Faça seu orçamento de figuras 3D!`;
+    const description = `Confira os detalhes de ${figure.nome} ${series?.nome ? `da série ${series.nome}` : ''}. Compre figuras 3D exclusivas!`;
     
     return {
         title,

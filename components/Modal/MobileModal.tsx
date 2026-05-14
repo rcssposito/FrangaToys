@@ -169,7 +169,7 @@ export const MobileModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIn
                     onClick={() => isInCart(figure.id) ? setIsCartOpen(true) : handleAddToCart()}
                 >
                     <ExternalLink size={20} strokeWidth={2.5} />
-                    {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar ao Orçamento"}
+                    {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar ao Carrinho"}
                 </button>
             </div>
         </div>

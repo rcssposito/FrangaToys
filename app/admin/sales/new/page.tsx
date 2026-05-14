@@ -1100,10 +1100,10 @@ export default function NewSalePage() {
                                         <button
                                             type="button"
                                             onClick={() => setShowPaymentOptions(true)}
-                                            disabled={!isMounted ? true : (submitting || cart.length === 0)}
+                                            disabled={!isMounted || submitting || cart.length === 0}
                                             className="w-full font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm active:scale-[0.98] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:shadow-none disabled:cursor-not-allowed uppercase tracking-widest"
                                         >
-                                            {paymentMethod === 'pix' ? 'Confirmar e Gerar PIX' : 'Confirmar e Gerar Link MP'}
+                                            Confirmar e Gerar Pedido
                                         </button>
                                     </>
                                 ) : (

@@ -52,18 +52,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const addToCart = (figure: FiguraDTO, finish: 'estilizado' | 'colorido' | 'premium' = 'estilizado') => {
         if (items.some(i => i.id === figure.id)) {
-            toast.error('Figura já está no orçamento!');
+            toast.error('Figura já está no carrinho!');
             setIsCartOpen(true);
             return;
         }
         setItems(prev => [...prev, { ...figure, addedAt: Date.now(), quantity: 1, finish }]);
-        toast.success('Adicionado ao orçamento!');
+        toast.success('Adicionado ao carrinho!');
         setIsCartOpen(true);
     };
 
     const removeFromCart = (figureId: number) => {
         setItems(prev => prev.filter(i => i.id !== figureId));
-        toast.info('Removido do orçamento.');
+        toast.info('Removido do carrinho.');
     };
 
     const updateQuantity = (figureId: number, quantity: number) => {
@@ -77,7 +77,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const clearCart = () => {
         setItems([]);
-        toast.info('Orçamento limpo.');
+        toast.info('Carrinho limpo.');
     };
 
     const isInCart = (figureId: number) => items.some(i => i.id === figureId);

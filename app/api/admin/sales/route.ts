@@ -177,19 +177,6 @@ export async function POST(req: Request) {
 
         if (insertError) throw insertError;
 
-        // 4. DEDUZIR ESTOQUE DE RESINA
-        if (totalResinaConsumida > 0) {
-            const novoEstoque = Math.max(0, (settings.estoque_resina_kg || 0) - totalResinaConsumida);
-
-            const { error: stockError } = await supabase
-                .from('pricing_params')
-                .update({ estoque_resina_kg: novoEstoque })
-                .eq('id', 1);
-
-            if (stockError) console.error('Falha ao deduzir estoque de resina:', stockError);
-            else console.log(`Estoque de resina atualizado: -${totalResinaConsumida.toFixed(3)}kg. Novo saldo: ${novoEstoque.toFixed(3)}kg`);
-        }
-
         return NextResponse.json(insertedData);
     } catch (error: any) {
         console.error('Sales POST Batch API Crash:', error);

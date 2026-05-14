@@ -9,7 +9,11 @@ import imageKitLoader from '@/lib/image-loader';
 import { useCart } from '@/context/CartContext';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, Share2, Paintbrush, Palette, Crown, CheckCircle2, X, HelpCircle, Info, Sparkles, Maximize2, ArrowLeft, Tag, Instagram } from 'lucide-react';
+import { 
+    ShoppingCart, ExternalLink, Sparkles, Instagram, Clock, Truck, ShieldCheck, 
+    Share2, Paintbrush, Palette, Crown, CheckCircle2, X, HelpCircle, Info, 
+    Maximize2, ArrowLeft, Tag 
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ImageMagnifier } from './ImageMagnifier';
@@ -368,10 +372,10 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                             )}
                             onClick={() => isInCart(figure.id) ? setIsCartOpen(true) : addToCart(figure, selectedFinish)}
                         >
-                            {isInCart(figure.id) ? "No Orçamento ✓" : (
+                            {isInCart(figure.id) ? "No Carrinho ✓" : (
                                 <>
-                                    <ExternalLink size={18} />
-                                    Adicionar ao Orçamento
+                                    <ShoppingCart size={18} />
+                                    Adicionar ao Carrinho
                                 </>
                             )}
                         </button>

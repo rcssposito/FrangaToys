@@ -21,7 +21,7 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
     const imageUrl = getOptimizedImageUrl(figure.imagem_url);
 
     const buildBudgetLink = () => {
-        const msg = `Olá! Quero orçamento da figura: ${figure.nome}${figure.categoria ? ` (${figure.categoria})` : ''}.`;
+        const msg = `Olá! Tenho interesse na figura: ${figure.nome}${figure.categoria ? ` (${figure.categoria})` : ''}.`;
         return `https://wa.me/5511959737551?text=${encodeURIComponent(msg)}`;
     };
 
@@ -165,7 +165,7 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                                     isInCart(figure.id) ? setIsCartOpen(true) : addToCart(figure);
                                 }}
                             >
-                                {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar ao Orçamento"}
+                                {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar ao Carrinho"}
                             </button>
 
                         </div>

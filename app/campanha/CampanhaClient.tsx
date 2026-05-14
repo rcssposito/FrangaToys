@@ -127,7 +127,7 @@ export default function CampanhaClient() {
                           : "bg-zinc-800 text-zinc-500 cursor-not-allowed pointer-events-none"
                       )}
                     >
-                      {item.disponivel ? "Fazer Orçamento" : "Indisponível"}
+                      {item.disponivel ? "Adicionar ao Carrinho" : "Indisponível"}
                     </Link>
                 </div>
                 </div>

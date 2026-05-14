@@ -19,16 +19,17 @@ export async function GET() {
         // Fetch display names for vendors
         const { data: users } = await supabase
             .from('admin_users')
-            .select('email, nome');
+            .select('id, email, nome');
 
         const userMap = (users || []).reduce((acc: any, u) => {
+            acc[u.id] = u.nome;
             acc[u.email.toLowerCase()] = u.nome;
             return acc;
         }, {});
 
         const formatted = kanbanData.map(s => ({
             ...s,
-            vendedor_nome: userMap[(s.vendedor || '').toLowerCase()] || s.vendedor || 'Ateliê'
+            vendedor_nome: userMap[s.vendedor] || userMap[(s.vendedor || '').toLowerCase()] || 'Ateliê'
         }));
 
         return NextResponse.json(formatted);

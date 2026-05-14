@@ -44,7 +44,7 @@ export const ImageModal = ({ figure, isOpen, onClose, onNext, onPrev, currentInd
     if (!isOpen || !figure) return null;
 
     const buildBudgetLink = () => {
-        const msg = `Olá! Quero orçamento da figura: ${figure.nome}${figure.categoria ? ` (${figure.categoria})` : ''}.`;
+        const msg = `Olá! Tenho interesse na figura: ${figure.nome}${figure.categoria ? ` (${figure.categoria})` : ''}.`;
         return `https://wa.me/5511959737551?text=${encodeURIComponent(msg)}`;
     };
 
@@ -115,7 +115,7 @@ export const ImageModal = ({ figure, isOpen, onClose, onNext, onPrev, currentInd
                             className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-lg font-medium transition-transform active:scale-95 whitespace-nowrap"
                         >
                             <ExternalLink size={18} />
-                            Pedir Orçamento
+                            Tenho Interesse
                         </a>
                     </div>
                     <div className="absolute -top-3 right-4 bg-zinc-800 text-xs px-2 py-0.5 rounded text-zinc-400">
