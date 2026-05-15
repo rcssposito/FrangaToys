@@ -97,6 +97,7 @@ export default async function FiguraPage({ params }: Props) {
     const prices = settings && metaData ? calculateFigurePrices(metaData, settings) : undefined;
 
     const seriesData = Array.isArray(figure.series) ? figure.series[0] : (figure.series as any);
+    const studioData = Array.isArray((figure as any).studios) ? (figure as any).studios[0] : (figure as any).studios;
 
     const figureDto = {
         id: figure.id,
@@ -105,7 +106,7 @@ export default async function FiguraPage({ params }: Props) {
         disponivel: figure.disponivel,
         serie: seriesData?.nome,
         categoria: seriesData?.categorias?.nome || (seriesData as any)?.categorias?.[0]?.nome,
-        studio: (figure as any).studios?.nome,
+        studio: studioData?.nome,
         altura_cm: metaData?.altura_cm,
         largura_cm: metaData?.largura_cm,
         profundidade_cm: metaData?.profundidade_cm,
@@ -125,7 +126,7 @@ export default async function FiguraPage({ params }: Props) {
         desconto_campanha: metaData?.desconto_campanha,
         preco_fixo_campanha: metaData?.preco_fixo_campanha,
         tem_pintura_real: figure.tem_pintura_real,
-        is_merchant: (figure as any).studios?.merchant ?? false
+        is_merchant: studioData?.merchant ?? false
     };
 
     return (

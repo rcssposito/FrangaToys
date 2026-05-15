@@ -108,7 +108,7 @@ export const MobileCard = ({ figure, className }: MobileCardProps) => {
                             >
                                 Detalhes
                             </div>
-                            {figure.is_merchant ? (
+                            {(figure.is_merchant || figure.is_campanha) ? (
                                 <button
                                     className={clsx(
                                         "flex-1 text-white text-xs py-2 rounded font-medium text-center transition-colors shadow-sm flex items-center justify-center gap-1",

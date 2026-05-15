@@ -23,7 +23,7 @@ export default async function FigureModalPage({ params }: Props) {
                 categorias ( nome )
             ),
             figuras_meta ( * ),
-            studios ( nome )
+            studios ( nome, merchant )
         `);
 
     if (isNumeric) {
@@ -51,15 +51,18 @@ export default async function FigureModalPage({ params }: Props) {
     // Dynamic price calculation
     const metaData = Array.isArray(figure.figuras_meta) ? figure.figuras_meta[0] : figure.figuras_meta;
     const prices = settings && metaData ? calculateFigurePrices(metaData, settings) : undefined;
+    
+    const seriesData = Array.isArray(figure.series) ? figure.series[0] : (figure.series as any);
+    const studioData = Array.isArray((figure as any).studios) ? (figure as any).studios[0] : (figure as any).studios;
 
     const figureDto = {
         id: figure.id,
         nome: figure.nome,
         imagem_url: figure.imagem_url,
         disponivel: figure.disponivel,
-        serie: (figure.series as any)?.nome,
-        categoria: (figure.series as any)?.categorias?.[0]?.nome || (figure.series as any)?.categorias?.nome,
-        studio: (figure as any).studios?.nome,
+        serie: seriesData?.nome,
+        categoria: seriesData?.categorias?.nome || (seriesData as any)?.categorias?.[0]?.nome,
+        studio: studioData?.nome,
         altura_cm: metaData?.altura_cm,
         largura_cm: metaData?.largura_cm,
         profundidade_cm: metaData?.profundidade_cm,
@@ -77,7 +80,8 @@ export default async function FigureModalPage({ params }: Props) {
         is_campanha_active: metaData?.is_campanha_active,
         desconto_campanha: metaData?.desconto_campanha,
         preco_fixo_campanha: metaData?.preco_fixo_campanha,
-        tem_pintura_real: figure.tem_pintura_real
+        tem_pintura_real: figure.tem_pintura_real,
+        is_merchant: studioData?.merchant ?? false
     };
 
     return <InterceptedModal figure={figureDto as any} />;

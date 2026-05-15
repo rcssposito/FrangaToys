@@ -363,7 +363,7 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
 
                     {/* Actions */}
                     <div className="flex flex-col sm:flex-row items-center gap-4 mt-4 relative">
-                        {figure.is_merchant ? (
+                        {(figure.is_merchant || isCampanha) ? (
                             <button
                                 className={clsx(
                                     "flex-1 flex items-center justify-center gap-3 w-full px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-500 shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-[0.98] relative z-10",

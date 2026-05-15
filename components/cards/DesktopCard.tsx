@@ -152,7 +152,7 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                                 </div>
                             </div>
 
-                            {figure.is_merchant ? (
+                            {(figure.is_merchant || figure.is_campanha) ? (
                                 <button
                                     className={clsx(
                                         "w-full font-bold py-3 rounded-md transition-colors shadow-lg active:scale-95 pointer-events-auto",
