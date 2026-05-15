@@ -341,14 +341,14 @@ export default function CampaignManager() {
                                         <div className="flex flex-col gap-2 mt-2">
                                             <div className="flex gap-6">
                                                 <label className="flex items-center gap-2 cursor-pointer">
-                                                    <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Destaque</span>
+                                                    <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Na Oferta</span>
                                                     <div className="relative">
                                                         <input
                                                             type="checkbox"
                                                             className="sr-only peer"
-                                                            checked={f.is_campanha_active}
+                                                            checked={f.is_campanha}
                                                             disabled={!canEdit || savingId === f.id}
-                                                            onChange={(e) => handleSave(f, { is_campanha_active: e.target.checked })}
+                                                            onChange={(e) => handleSave(f, { is_campanha: e.target.checked })}
                                                         />
                                                         <div className="w-8 h-4 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-purple-500 disabled:opacity-50"></div>
                                                     </div>
@@ -360,9 +360,9 @@ export default function CampaignManager() {
                                                         <input
                                                             type="checkbox"
                                                             className="sr-only peer"
-                                                            checked={f.disponivel}
+                                                            checked={f.is_campanha_active}
                                                             disabled={!canEdit || savingId === f.id}
-                                                            onChange={(e) => handleSave(f, { disponivel: e.target.checked })}
+                                                            onChange={(e) => handleSave(f, { is_campanha_active: e.target.checked })}
                                                         />
                                                         <div className="w-8 h-4 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-green-500 disabled:opacity-50"></div>
                                                     </div>

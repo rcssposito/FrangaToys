@@ -74,14 +74,14 @@ export default function CampanhaClient() {
                 key={item.id}
                 className={clsx(
                   "group relative rounded-2xl border overflow-hidden transition-all duration-500",
-                  item.disponivel 
+                  item.is_campanha_active 
                     ? "bg-zinc-900/40 border-white/5 hover:border-purple-500/50 hover:shadow-[0_0_30px_rgba(168,85,247,0.1)]"
                     : "bg-zinc-950/80 border-white/5 opacity-75 grayscale hover:grayscale-0"
                 )}
                 >
                 <Link 
-                  href={item.disponivel ? `/figura/${item.slug || item.id}` : '#'}
-                  onClick={(e) => !item.disponivel && e.preventDefault()}
+                  href={item.is_campanha_active ? `/figura/${item.slug || item.id}` : '#'}
+                  onClick={(e) => !item.is_campanha_active && e.preventDefault()}
                   className="block relative w-full aspect-[4/5] bg-zinc-950 flex items-center justify-center overflow-hidden cursor-pointer"
                 >
                     <div className="relative w-full h-full">
@@ -100,7 +100,7 @@ export default function CampanhaClient() {
                     OFERTA
                     </div>
 
-                    {!item.disponivel && (
+                    {!item.is_campanha_active && (
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[2px] z-10">
                             <div className="bg-red-600 text-white font-black text-xl md:text-2xl uppercase tracking-[0.3em] px-8 py-3 rounded-xl shadow-2xl rotate-[-15deg] border-2 border-red-400/50">
                                 ESGOTADO
@@ -118,16 +118,16 @@ export default function CampanhaClient() {
                     </div>
                     
                     <Link
-                      href={item.disponivel ? `/figura/${item.slug || item.id}` : '#'}
-                      onClick={(e) => !item.disponivel && e.preventDefault()}
+                      href={item.is_campanha_active ? `/figura/${item.slug || item.id}` : '#'}
+                      onClick={(e) => !item.is_campanha_active && e.preventDefault()}
                       className={clsx(
                         "w-full text-center text-[10px] sm:text-xs font-black uppercase tracking-widest py-3 rounded-xl transition-colors duration-300 block",
-                        item.disponivel 
+                        item.is_campanha_active 
                           ? "bg-white/5 hover:bg-purple-600 text-white" 
                           : "bg-zinc-800 text-zinc-500 cursor-not-allowed pointer-events-none"
                       )}
                     >
-                      {item.disponivel ? "Adicionar ao Carrinho" : "Indisponível"}
+                      {item.is_campanha_active ? "Adicionar ao Carrinho" : "Indisponível"}
                     </Link>
                 </div>
                 </div>

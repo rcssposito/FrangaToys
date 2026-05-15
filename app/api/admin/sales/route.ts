@@ -118,6 +118,15 @@ export async function POST(req: Request) {
                 continue; // Pular item se houver erro ou usar valores default
             }
 
+            // Remover da campanha para evitar venda duplicada com desconto, mas mantê-la na vitrine
+            if (meta.is_campanha_active) {
+                await supabase.from('figuras_meta').update({ 
+                    is_campanha_active: false,
+                    preco_fixo_campanha: 0,
+                    desconto_campanha: 0
+                }).eq('figura_id', item.id);
+            }
+
             // Cálculo do custo (apenas resina + horas de impressão conforme regra de negócio)
             const custo_resina_raw = (meta.resina_kg || 0) * (settings.custo_resina_kg || 0);
             const custo_impressao_raw = (meta.horas_impressao || 0) * (settings.custo_h_impressao || 0);
