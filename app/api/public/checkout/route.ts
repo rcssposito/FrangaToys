@@ -77,12 +77,10 @@ export async function POST(req: NextRequest) {
 
             const metaData = meta || {};
             
-            // Remover da campanha para evitar venda duplicada com desconto, mas mantê-la na vitrine
+            // Remover da campanha para evitar venda duplicada com desconto, mas mantê-la na vitrine (e mantendo os preços para histórico na tela de esgotado)
             if (metaData.is_campanha_active) {
                 await supabase.from('figuras_meta').update({ 
-                    is_campanha_active: false,
-                    preco_fixo_campanha: 0,
-                    desconto_campanha: 0
+                    is_campanha_active: false
                 }).eq('figura_id', item.id);
             }
 

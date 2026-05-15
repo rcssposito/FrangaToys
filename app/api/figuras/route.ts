@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
         }
 
         if (isCampanhaActive) {
-            query = query.eq('figuras_meta.is_campanha_active', true);
+            query = query.eq('figuras_meta.is_campanha', true);
         }
 
         // --- Sorting ---
@@ -168,7 +168,7 @@ export async function GET(req: NextRequest) {
                 horas_impressao: meta?.horas_impressao || null,
                 horas_pintura: meta?.horas_pintura || null,
                 precos: precos,
-                is_campanha: meta?.is_campanha_active || !!meta?.preco_fixo_campanha || !!meta?.desconto_campanha,
+                is_campanha: meta?.is_campanha || false,
                 is_campanha_active: meta?.is_campanha_active || false,
                 desconto_campanha: meta?.desconto_campanha || 0,
                 preco_fixo_campanha: meta?.preco_fixo_campanha || 0,

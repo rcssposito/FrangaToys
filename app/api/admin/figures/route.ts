@@ -245,10 +245,9 @@ export async function PUT(req: Request) {
             preco_fixo_campanha: rawMeta.preco_fixo_campanha
         };
 
-        // Regra de Ouro: Se a campanha for explicitamente desativada (is_campanha_active === false), 
-        // ou se a peça for removida da gestão de campanha (is_campanha === false),
-        // ZERAMOS os valores promocionais.
-        if (rawMeta.is_campanha_active === false || rawMeta.is_campanha === false) {
+        // Regra de Ouro: Se a peça for removida da gestão de campanha (is_campanha === false),
+        // ZERAMOS os valores promocionais. Se for apenas desativada (is_campanha_active === false), os preços permanecem para exibir no "Esgotado".
+        if (rawMeta.is_campanha === false) {
             meta.desconto_campanha = 0;
             meta.preco_fixo_campanha = 0;
         }

@@ -103,9 +103,9 @@ export default function CampaignManager() {
             id: f.id,
             is_campanha: isInCampaign,
             is_campanha_active: isActivating,
-            // Regra de Ouro: Se a campanha for desativada ou removida, zera os valores promocionais
-            desconto_campanha: (!isActivating || !isInCampaign) ? 0 : (updates.desconto_campanha !== undefined ? Number(updates.desconto_campanha) : f.desconto_campanha),
-            preco_fixo_campanha: (!isActivating || !isInCampaign) ? 0 : (updates.preco_fixo_campanha !== undefined ? Number(updates.preco_fixo_campanha) : f.preco_fixo_campanha),
+            // Regra de Ouro: Se a campanha for removida, zera os valores promocionais
+            desconto_campanha: (!isInCampaign) ? 0 : (updates.desconto_campanha !== undefined ? Number(updates.desconto_campanha) : f.desconto_campanha),
+            preco_fixo_campanha: (!isInCampaign) ? 0 : (updates.preco_fixo_campanha !== undefined ? Number(updates.preco_fixo_campanha) : f.preco_fixo_campanha),
             disponivel: updates.disponivel !== undefined ? updates.disponivel : f.disponivel,
         };
 
