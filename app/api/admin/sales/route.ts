@@ -66,16 +66,18 @@ export async function POST(req: Request) {
 
         // --- MOTOR DE AUTO-CRM (POST) ---
         let final_cliente_id = cliente_id;
+        let final_cliente_nome = cliente_nome;
         if (!final_cliente_id && cliente_contato && cliente_contato.trim() !== '') {
             // 1. Tentar localizar por telefone
             const { data: existing } = await supabase
                 .from('clientes')
-                .select('id')
+                .select('id, nome')
                 .eq('telefone', cliente_contato)
                 .maybeSingle();
             
             if (existing) {
                 final_cliente_id = existing.id;
+                if (existing.nome) final_cliente_nome = existing.nome;
             } else if (cliente_nome) {
                 // 2. Criar novo se não existir
                 const { data: novo } = await supabase
@@ -154,7 +156,7 @@ export async function POST(req: Request) {
 
             salesToInsert.push({
                 figura_id: item.id,
-                cliente_nome,
+                cliente_nome: final_cliente_nome,
                 cliente_contato,
                 canal_venda,
                 vendedor,
@@ -222,18 +224,20 @@ export async function PATCH(req: Request) {
 
         // --- MOTOR DE AUTO-CRM (PATCH) ---
         let final_cliente_id = cliente_id;
+        let final_cliente_nome = cliente_nome;
         
         // Se não temos um ID mas temos o contato, tentamos vincular ou criar
         if (!final_cliente_id && cliente_contato && cliente_contato.trim() !== '') {
             // 1. Tentar localizar por telefone exato
             const { data: existing } = await supabase
                 .from('clientes')
-                .select('id')
+                .select('id, nome')
                 .eq('telefone', cliente_contato)
                 .maybeSingle();
             
             if (existing) {
                 final_cliente_id = existing.id;
+                if (existing.nome) final_cliente_nome = existing.nome;
             } else if (cliente_nome) {
                 // 2. Criar novo se não existir
                 const { data: novo } = await supabase
@@ -287,7 +291,7 @@ export async function PATCH(req: Request) {
         const { data, error } = await supabase
             .from('vendas')
             .update({
-                cliente_nome,
+                cliente_nome: final_cliente_nome,
                 cliente_contato,
                 canal_venda,
                 vendedor,

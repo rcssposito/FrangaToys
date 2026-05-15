@@ -28,16 +28,18 @@ export async function POST(req: NextRequest) {
 
         // --- AUTO-CRM ---
         let cliente_id: string | null = null;
+        let final_cliente_nome = cliente_nome;
         const sanitizedPhone = cliente_contato.replace(/\D/g, '');
         
         const { data: existing } = await supabase
             .from('clientes')
-            .select('id')
+            .select('id, nome')
             .eq('telefone', sanitizedPhone)
             .maybeSingle();
         
         if (existing) {
             cliente_id = existing.id;
+            if (existing.nome) final_cliente_nome = existing.nome;
         } else {
             const { data: novo, error: clientError } = await supabase
                 .from('clientes')
@@ -94,7 +96,7 @@ export async function POST(req: NextRequest) {
 
             salesToInsert.push({
                 figura_id: Number(item.id), // Garante que é integer
-                cliente_nome,
+                cliente_nome: final_cliente_nome,
                 cliente_contato,
                 canal_venda: 'Vitrine Web',
                 vendedor: vendedor_id ? String(vendedor_id) : null,
