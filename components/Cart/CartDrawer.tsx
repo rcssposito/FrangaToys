@@ -104,10 +104,16 @@ export const CartDrawer = () => {
         return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     };
 
+    const getItemPrice = (item: any) => {
+        const finishKey = item.finish || 'estilizado';
+        const isPix = metodoPagamento === 'pix';
+        const priceKey = isPix ? `pix_${finishKey}` : finishKey;
+        return item.precos?.[priceKey] || item.precos?.[finishKey] || 0;
+    };
+
     const calculateSubtotal = () => {
         return items.reduce((acc, item) => {
-            const price = item.precos?.[item.finish || 'estilizado'] || 0;
-            return acc + (price * (item.quantity || 1));
+            return acc + (getItemPrice(item) * (item.quantity || 1));
         }, 0);
     };
 
@@ -172,7 +178,7 @@ export const CartDrawer = () => {
                         nome: i.nome,
                         quantity: i.quantity,
                         finish: i.finish,
-                        price: i.precos?.[i.finish || 'estilizado'] || 0
+                        price: getItemPrice(i)
                     })),
                     cliente_nome: nome,
                     cliente_contato: contato,
@@ -351,7 +357,7 @@ export const CartDrawer = () => {
                                                                     </div>
                                                                 )}
                                                                 <div className="text-xs font-black text-white tracking-tighter">
-                                                                    {formatPrice(item.precos?.[item.finish || 'estilizado'])}
+                                                                    {formatPrice(getItemPrice(item))}
                                                                 </div>
                                                             </div>
                                                         </div>
