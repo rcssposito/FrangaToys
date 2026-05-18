@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
+import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { calculateFigurePrices } from '@/lib/pricing';
 
 export async function GET() {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'sales', 'pricing', 'orcamento']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         // 1. Fetch settings for pricing calculation
         const { data: settings } = await supabase
             .from('pricing_params')

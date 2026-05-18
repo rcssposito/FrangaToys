@@ -1,29 +1,20 @@
 
 import { NextResponse, NextRequest } from 'next/server';
+import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-const checkAuth = async () => {
-    const supabaseClient = await createClient();
-    const { data: { user }, error } = await supabaseClient.auth.getUser();
-    if (error || !user || !user.email) return null;
 
-    const { data: adminUser } = await supabase
-        .from('admin_users')
-        .select('id, email, roles')
-        .eq('email', user.email)
-        .single();
-
-    if (!adminUser) return null;
-    return adminUser;
-};
 
 
 // LISTAR FIGURAS + METADADOS
 export async function GET(req: NextRequest) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'pricing', 'orcamento']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const { searchParams } = new URL(req.url);
         const search = searchParams.get('search') || '';
         const categoria_id = searchParams.get('categoria_id');
@@ -179,7 +170,9 @@ export async function GET(req: NextRequest) {
 // ATUALIZAR FIGURA (METADATA)
 export async function PUT(req: Request) {
     try {
-        const session = await checkAuth();
+    const sessionOrResponse = await requireRoles(['admin', 'pricing', 'orcamento']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         if (!session || !session.roles || (!session.roles.includes('admin') && !session.roles.includes('pricing'))) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
@@ -338,7 +331,9 @@ export async function PUT(req: Request) {
 // DELETAR FIGURA
 export async function DELETE(req: Request) {
     try {
-        const session = await checkAuth();
+    const sessionOrResponse = await requireRoles(['admin', 'pricing', 'orcamento']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         if (!session || !session.roles || (!session.roles.includes('admin') && !session.roles.includes('pricing'))) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }

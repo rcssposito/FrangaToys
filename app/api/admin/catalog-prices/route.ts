@@ -1,11 +1,15 @@
 
 import { NextResponse } from 'next/server';
+import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'pricing', 'orcamento']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const { searchParams } = new URL(req.url);
         const search = searchParams.get('search');
 

@@ -1,10 +1,14 @@
 
 import { NextResponse } from 'next/server';
+import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 // LER CONFIGURAÇÕES
 export async function GET() {
     try {
+    const sessionOrResponse = await requireRoles(['admin']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         let { data, error } = await supabase
             .from('pricing_params')
             .select('*')
@@ -48,6 +52,9 @@ export async function GET() {
 // ATUALIZAR CONFIGURAÇÕES
 export async function PUT(req: Request) {
     try {
+    const sessionOrResponse = await requireRoles(['admin']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const body = await req.json();
 
         // Validação básica

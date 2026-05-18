@@ -1,11 +1,15 @@
 
 import { NextResponse } from 'next/server';
+import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { sendTelegramAlert } from '@/lib/telegram';
 
 // LISTAR VENDAS (Histórico)
 export async function GET() {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const { data: sales, error } = await supabase
             .from('vendas')
             .select(`
@@ -44,6 +48,9 @@ export async function GET() {
 // REGISTRAR VENDA (SUPORTA CARRINHO / MÚLTIPLOS ITENS)
 export async function POST(req: Request) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const body = await req.json();
         const {
             carrinho, // Array de { id, nome, quantidade, valor_final, resina_kg }
@@ -239,6 +246,9 @@ export async function POST(req: Request) {
 // ATUALIZAR VENDA (Edição Básica e Atribuição de Pintor)
 export async function PATCH(req: Request) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const body = await req.json();
         const { id, cliente_nome, cliente_contato, canal_venda, vendedor, status, observacao, pintura_freelancer, pintor_nome, cliente_id, metodo_entrega } = body;
 
@@ -340,6 +350,9 @@ export async function PATCH(req: Request) {
 // DELETAR VENDA
 export async function DELETE(req: Request) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const body = await req.json();
         const id = body.id;
 

@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 // GET: Listar cupons
 export async function GET() {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'sales']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const { data, error } = await supabase
             .from('cupoms_desconto')
             .select('*')
@@ -19,6 +23,9 @@ export async function GET() {
 // POST: Criar cupom
 export async function POST(req: NextRequest) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'sales']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const body = await req.json();
         const { codigo, tipo, valor, usos_restantes, data_validade, ativo, valor_minimo, desconto_maximo } = body;
 

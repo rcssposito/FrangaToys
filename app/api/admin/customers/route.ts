@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
+import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 // LISTAR CLIENTES / BUSCA RÁPIDA
 export async function GET(req: Request) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const { searchParams } = new URL(req.url);
         const query = searchParams.get('q'); // Para autocomplete
 
@@ -58,6 +62,9 @@ export async function GET(req: Request) {
 // CRIAR CLIENTE
 export async function POST(req: Request) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const body = await req.json();
         const { nome, telefone, instagram, notas } = body;
 
@@ -82,6 +89,9 @@ export async function POST(req: Request) {
 // ATUALIZAR CLIENTE
 export async function PATCH(req: Request) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const body = await req.json();
         const { id, nome, telefone, instagram, notas } = body;
 

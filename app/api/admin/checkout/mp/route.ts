@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
+import { requireRoles } from '@/lib/server-auth';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 
 export async function POST(req: Request) {
     try {
+    const sessionOrResponse = await requireRoles(['admin']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const body = await req.json();
         console.log("PAYLOAD RECEBIDO MP:", JSON.stringify(body, null, 2));
 

@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
+import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(req: Request) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'finance', 'sales']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const { searchParams } = new URL(req.url);
         const month = searchParams.get('month'); // YYYY-MM
 

@@ -1,10 +1,14 @@
 
 import { NextResponse } from 'next/server';
+import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 // UPDATE STUDIO
 export async function PUT(req: Request) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'pricing']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const body = await req.json();
         const { id, custo_mensal, qtd_display, qualidade, observacao, logo_url, instagram_handle, social_url, ativo, merchant } = body;
 
@@ -41,6 +45,9 @@ export async function PUT(req: Request) {
 // CREATE STUDIO
 export async function POST(req: Request) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'pricing']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const body = await req.json();
 
         const { nome, custo_mensal, qtd_display, qualidade, observacao, logo_url, instagram_handle, social_url, ativo, merchant } = body;
@@ -85,6 +92,9 @@ export async function POST(req: Request) {
 // DELETE STUDIO
 export async function DELETE(req: Request) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'pricing']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
 

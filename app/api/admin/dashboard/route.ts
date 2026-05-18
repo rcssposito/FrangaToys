@@ -1,9 +1,13 @@
 
 import { NextResponse } from 'next/server';
+import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 export async function GET(req: Request) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'sales', 'pricing', 'finance', 'orcamento', 'production', 'painter']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const { searchParams } = new URL(req.url);
         const startDateParam = searchParams.get('startDate');
         const endDateParam = searchParams.get('endDate');
@@ -234,7 +238,7 @@ export async function GET(req: Request) {
             // --- Seller Aggregation ---
             // @ts-ignore
             const rawVendedor = (sale.vendedor || '').toLowerCase();
-            const sellerName = rawVendedor ? (userMap[rawVendedor] || rawVendedor) : 'Site / Desconhecido';
+            const sellerName = rawVendedor ? (userMap[rawVendedor] || rawVendedor) : 'FrangaToys';
             
             if (!sellerSalesMap[sellerName]) {
                 sellerSalesMap[sellerName] = { revenue: 0, qty: 0, figures: [] };

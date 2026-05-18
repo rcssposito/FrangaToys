@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'sales']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const { id } = await params;
         const body = await req.json();
         const { codigo, tipo, valor, usos_restantes, data_validade, ativo, valor_minimo, desconto_maximo } = body;
@@ -35,6 +39,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'sales']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const { id } = await params;
         const { error } = await supabase
             .from('cupoms_desconto')

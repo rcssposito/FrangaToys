@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
+import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 // LER TAREFAS DO KANBAN
 // Retorna todas as vendas ativas (Não concluídas)
 export async function GET() {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'sales', 'production']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const { data: kanbanData, error } = await supabase
             .from('vendas')
             .select(`
@@ -41,6 +45,9 @@ export async function GET() {
 // ATUALIZAR STATUS NO KANBAN COM AUTOMAÇÃO DE RESINA
 export async function PATCH(req: Request) {
     try {
+    const sessionOrResponse = await requireRoles(['admin', 'sales', 'production']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         const { id, status: newStatus } = await req.json();
 
         if (!id || !newStatus) {

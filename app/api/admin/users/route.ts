@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireRoles } from '@/lib/server-auth';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import bcrypt from 'bcryptjs';
@@ -9,28 +10,14 @@ interface Session {
     roles?: string[];
 }
 
-const checkAuth = async (): Promise<Session | null> => {
-    const supabase = await createClient();
-    const { data: { user }, error } = await supabase.auth.getUser();
 
-    if (error || !user || !user.email) return null;
-
-    // Fetch roles from admin_users
-    const { data: adminUser } = await supabaseAdmin
-        .from('admin_users')
-        .select('id, email, roles')
-        .eq('email', user.email)
-        .single();
-
-    if (!adminUser) return null;
-
-    return adminUser;
-};
 
 // LISTAR USUÁRIOS
 export async function GET() {
     try {
-        const session = await checkAuth();
+    const sessionOrResponse = await requireRoles(['admin']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         if (!session || !session.roles || (!session.roles.includes('admin') && !session.roles.includes('finance'))) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
@@ -51,7 +38,9 @@ export async function GET() {
 // CRIAR USUÁRIO
 export async function POST(req: Request) {
     try {
-        const session = await checkAuth();
+    const sessionOrResponse = await requireRoles(['admin']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         if (!session || !session.roles || !session.roles.includes('admin')) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
@@ -116,7 +105,9 @@ export async function POST(req: Request) {
 // DELETAR USUÁRIO
 export async function DELETE(req: Request) {
     try {
-        const session = await checkAuth();
+    const sessionOrResponse = await requireRoles(['admin']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         if (!session || !session.roles || !session.roles.includes('admin')) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
@@ -161,7 +152,9 @@ export async function DELETE(req: Request) {
 // ATUALIZAR USUÁRIO (PUT)
 export async function PUT(req: Request) {
     try {
-        const session = await checkAuth();
+    const sessionOrResponse = await requireRoles(['admin']);
+    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
         if (!session || !session.roles || !session.roles.includes('admin')) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
