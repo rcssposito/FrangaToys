@@ -24,6 +24,12 @@ export const CartDrawer = () => {
     const [contato, setContato] = useState('');
     const [observacoes, setObservacoes] = useState('');
     
+    // Coupon States
+    const [cupomCodigo, setCupomCodigo] = useState('');
+    const [cupomAplicado, setCupomAplicado] = useState<any>(null);
+    const [cupomErro, setCupomErro] = useState('');
+    const [isValidatingCupom, setIsValidatingCupom] = useState(false);
+    
     // Shipping States
     const [metodoEntrega, setMetodoEntrega] = useState<'retirada' | 'envio'>('retirada');
     const [cep, setCep] = useState('');
@@ -117,12 +123,32 @@ export const CartDrawer = () => {
         }, 0);
     };
 
+    const calculateDesconto = () => {
+        if (!cupomAplicado) return 0;
+        
+        let totalElegivel = 0;
+        items.forEach(item => {
+            const isCampanha = (item as any).is_campanha || (item as any).is_campanha_active;
+            if (!isCampanha) {
+                totalElegivel += getItemPrice(item) * (item.quantity || 1);
+            }
+        });
+
+        if (totalElegivel === 0) return 0;
+
+        if (cupomAplicado.tipo === 'porcentagem') {
+            return totalElegivel * (cupomAplicado.valor / 100);
+        } else {
+            return Math.min(cupomAplicado.valor, totalElegivel);
+        }
+    };
+
     const calculateTotal = () => {
-        let total = calculateSubtotal();
+        let total = calculateSubtotal() - calculateDesconto();
         if (metodoEntrega === 'envio' && selectedFrete) {
             total += Number(selectedFrete.Valor);
         }
-        return total;
+        return Math.max(0, total); // Ensure total is never negative
     };
 
     const getFinishLabel = (finish: string) => {
@@ -160,6 +186,38 @@ export const CartDrawer = () => {
         }
     };
 
+    const handleApplyCoupon = async () => {
+        if (!cupomCodigo.trim()) return;
+        setIsValidatingCupom(true);
+        setCupomErro('');
+        try {
+            const res = await fetch('/api/public/checkout/coupon', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ codigo: cupomCodigo })
+            });
+            const data = await res.json();
+            if (data.error) {
+                setCupomErro(data.error);
+                setCupomAplicado(null);
+            } else {
+                setCupomAplicado(data.cupom);
+                setCupomErro('');
+                toast.success(`Cupom ${data.cupom.codigo} aplicado!`);
+            }
+        } catch (error: any) {
+            setCupomErro('Erro ao validar cupom');
+        } finally {
+            setIsValidatingCupom(false);
+        }
+    };
+    
+    const handleRemoveCoupon = () => {
+        setCupomAplicado(null);
+        setCupomCodigo('');
+        setCupomErro('');
+    };
+
     const handleCheckout = async () => {
         if (items.length === 0) return;
         if (!nome || !contato) {
@@ -186,7 +244,8 @@ export const CartDrawer = () => {
                     valor_frete: metodoEntrega === 'envio' ? selectedFrete?.Valor : 0,
                     metodo_pagamento: metodoPagamento,
                     observacoes,
-                    vendedor_id: selectedVendedorId
+                    vendedor_id: selectedVendedorId,
+                    cupom_codigo: cupomAplicado?.codigo
                 })
             });
 
@@ -575,11 +634,55 @@ export const CartDrawer = () => {
                         {/* Footer */}
                         {items.length > 0 && (
                             <div className="p-6 border-t border-zinc-800 bg-black/40 backdrop-blur-md space-y-4">
+                                {step === 'cart' && (
+                                    <div className="space-y-2 mb-2">
+                                        <div className="flex gap-2">
+                                            <input 
+                                                type="text" 
+                                                placeholder="Cupom de Desconto" 
+                                                value={cupomCodigo}
+                                                onChange={(e) => setCupomCodigo(e.target.value.toUpperCase())}
+                                                disabled={!!cupomAplicado}
+                                                className="flex-1 bg-black border border-zinc-800 text-white rounded-xl px-4 py-2 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-xs uppercase"
+                                            />
+                                            {!cupomAplicado ? (
+                                                <button 
+                                                    onClick={handleApplyCoupon}
+                                                    disabled={isValidatingCupom || !cupomCodigo.trim()}
+                                                    className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white px-4 rounded-xl font-black transition-all text-xs"
+                                                >
+                                                    {isValidatingCupom ? <Loader2 size={14} className="animate-spin" /> : 'Aplicar'}
+                                                </button>
+                                            ) : (
+                                                <button 
+                                                    onClick={handleRemoveCoupon}
+                                                    className="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-4 rounded-xl font-black transition-all text-xs"
+                                                >
+                                                    Remover
+                                                </button>
+                                            )}
+                                        </div>
+                                        {cupomErro && <p className="text-red-500 text-[9px] font-bold uppercase tracking-widest px-1">{cupomErro}</p>}
+                                        {cupomAplicado && (
+                                            <p className="text-emerald-500 text-[9px] font-bold uppercase tracking-widest px-1">
+                                                Cupom {cupomAplicado.codigo} aplicado! 
+                                                {items.some(i => (i as any).is_campanha || (i as any).is_campanha_active) && ' (Itens em campanha não recebem desconto)'}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
                                 <div className="space-y-2 mb-4">
                                     <div className="flex justify-between items-center text-zinc-500 text-[10px] font-black uppercase tracking-widest">
                                         <span>Subtotal</span>
                                         <span>{formatPrice(calculateSubtotal())}</span>
                                     </div>
+                                    {cupomAplicado && calculateDesconto() > 0 && (
+                                        <div className="flex justify-between items-center text-emerald-500 text-[10px] font-black uppercase tracking-widest">
+                                            <span>Desconto ({cupomAplicado.codigo})</span>
+                                            <span>- {formatPrice(calculateDesconto())}</span>
+                                        </div>
+                                    )}
                                     {metodoEntrega === 'envio' && selectedFrete && (
                                         <div className="flex justify-between items-center text-zinc-500 text-[10px] font-black uppercase tracking-widest">
                                             <span>Frete ({selectedFrete.Empresa})</span>

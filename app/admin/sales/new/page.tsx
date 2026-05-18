@@ -66,6 +66,12 @@ export default function NewSalePage() {
     const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit'>('pix');
     const [completedSaleData, setCompletedSaleData] = useState<{ id: number, access_token?: string, link_pagamento: string | null, total: number, method: 'pix' | 'credit' } | null>(null);
 
+    // Coupon States
+    const [cupomCodigo, setCupomCodigo] = useState('');
+    const [cupomAplicado, setCupomAplicado] = useState<any>(null);
+    const [cupomErro, setCupomErro] = useState('');
+    const [isValidatingCupom, setIsValidatingCupom] = useState(false);
+
     const [isMounted, setIsMounted] = useState(false);
 
     // CRM / Clientes States
@@ -247,7 +253,17 @@ export default function NewSalePage() {
         setCart(cart.map(i => i.id === id ? { ...i, valor_final: price } : i));
     };
 
-    const totalCartSum = cart.reduce((acc, i) => acc + (i.valor_final || 0), 0);
+    const getDescontoTotal = () => {
+        if (!cupomAplicado) return 0;
+        let totalElegivel = 0;
+        cart.forEach(item => { if (!item.is_campanha) totalElegivel += item.valor_final; });
+        if (totalElegivel === 0) return 0;
+        if (cupomAplicado.tipo === 'porcentagem') return totalElegivel * (cupomAplicado.valor / 100);
+        return Math.min(cupomAplicado.valor, totalElegivel);
+    };
+
+    const descontoDaVenda = getDescontoTotal();
+    const totalCartSum = cart.reduce((acc, i) => acc + (i.valor_final || 0), 0) - descontoDaVenda;
     const taxaMarkup = settings?.taxa_cartao || 1.15;
     
     // Para fins de comissão e lucro real, se for crédito, removemos a taxa do cartão do montante
@@ -313,6 +329,32 @@ export default function NewSalePage() {
         }
     };
 
+    const handleApplyCoupon = async () => {
+        if (!cupomCodigo.trim()) return;
+        setIsValidatingCupom(true);
+        setCupomErro('');
+        try {
+            const res = await fetch('/api/public/checkout/coupon', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ codigo: cupomCodigo })
+            });
+            const data = await res.json();
+            if (data.error) {
+                setCupomErro(data.error);
+                setCupomAplicado(null);
+            } else {
+                setCupomAplicado(data.cupom);
+                setCupomErro('');
+                toast.success(`Cupom ${data.cupom.codigo} aplicado!`);
+            }
+        } catch (error: any) {
+            setCupomErro('Erro ao validar cupom');
+        } finally {
+            setIsValidatingCupom(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (cart.length === 0) {
@@ -347,13 +389,23 @@ export default function NewSalePage() {
                 }
             }
 
+            const cartComDesconto = cart.map(item => {
+                if (cupomAplicado && !item.is_campanha && descontoDaVenda > 0) {
+                    const totalElegivel = cart.filter(i => !i.is_campanha).reduce((acc, i) => acc + i.valor_final, 0);
+                    const proporcao = item.valor_final / totalElegivel;
+                    const itemDesconto = descontoDaVenda * proporcao;
+                    return { ...item, valor_final: Number((item.valor_final - itemDesconto).toFixed(2)) };
+                }
+                return item;
+            });
+
             // Se for crédito, primeiro criamos a Sessão no Mercado Pago
             if (paymentMethod === 'credit') {
                 const mpRes = await fetch('/api/admin/checkout/mp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        carrinho: cart.map(i => ({
+                        carrinho: cartComDesconto.map(i => ({
                             ...i,
                             valor_final: i.valor_final
                         })),
@@ -375,7 +427,7 @@ export default function NewSalePage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    carrinho: cart.map(i => {
+                    carrinho: cartComDesconto.map(i => {
                         const isOutros = i.studio === 'Outros';
                         const valorFinalItem = i.valor_final;
                         
@@ -399,7 +451,8 @@ export default function NewSalePage() {
                     link_pagamento: mpLink,
                     checkout_id: checkoutId,
                     cliente_id: finalClienteId,
-                    metodo_entrega: metodoEntrega
+                    metodo_entrega: metodoEntrega,
+                    cupom_codigo: cupomAplicado?.codigo
                 }),
             });
 
@@ -425,13 +478,16 @@ export default function NewSalePage() {
             if (observacao) msg += `*Obs:* ${observacao}\n`;
             msg += `\n*📦 ITENS VENDIDOS:*\n`;
 
-            cart.forEach(item => {
+            cartComDesconto.forEach(item => {
                 const isOutros = item.studio === 'Outros';
                 const precoItem = item.valor_final;
                 msg += `👉 ${item.quantidade}x ${item.Figura} - R$ ${precoItem.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
             });
 
             msg += `\n*💰 RESUMO FINANCEIRO:*\n`;
+            if (descontoDaVenda > 0) {
+                msg += `🏷️ *Cupom Aplicado:* ${cupomAplicado.codigo} (-R$ ${descontoDaVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})\n`;
+            }
             msg += `Bruto (${paymentMethod === 'credit' ? 'Cartão' : 'PIX'}): R$ ${totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
             msg += `Custo Estimado: R$ ${totalCustoProducao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
             if (totalFreelancer > 0) msg += `Pintor: R$ ${totalFreelancer.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
@@ -575,6 +631,8 @@ export default function NewSalePage() {
                                 setClienteContato('');
                                 setObservacao('');
                                 setShowPaymentOptions(false);
+                                setCupomAplicado(null);
+                                setCupomCodigo('');
                             }}
                             className="w-full bg-transparent hover:text-white text-zinc-500 font-bold py-3 mt-2 flex items-center justify-center transition-colors uppercase text-xs"
                         >
@@ -791,10 +849,44 @@ export default function NewSalePage() {
 
                             {cart.length > 0 && (
                                 <div className="p-5 bg-zinc-950/80 border-t border-zinc-800/80 flex flex-col gap-2.5 text-sm shadow-inner relative">
-                                    <div className="flex justify-between items-center text-zinc-400 font-bold border-b border-zinc-800/50 pb-2 mb-1">
-                                        <span>Valor Bruto:</span>
-                                        <span className="text-zinc-200 uppercase text-[10px] tracking-widest bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">R$ {totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    <div className="flex gap-2 mb-2 items-center">
+                                        <input 
+                                            type="text" 
+                                            placeholder="Cupom de Desconto" 
+                                            value={cupomCodigo}
+                                            onChange={(e) => setCupomCodigo(e.target.value.toUpperCase())}
+                                            disabled={!!cupomAplicado}
+                                            className="bg-zinc-900 border border-zinc-800 text-white rounded-xl px-3 py-1.5 outline-none focus:border-cyan-500 transition-all font-bold placeholder-zinc-700 text-xs uppercase w-40"
+                                        />
+                                        {!cupomAplicado ? (
+                                            <button 
+                                                onClick={handleApplyCoupon}
+                                                disabled={isValidatingCupom || !cupomCodigo.trim()}
+                                                className="bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-black px-3 py-1.5 rounded-xl font-black transition-all text-xs"
+                                            >
+                                                {isValidatingCupom ? <Loader2 size={14} className="animate-spin" /> : 'Aplicar'}
+                                            </button>
+                                        ) : (
+                                            <button 
+                                                onClick={() => { setCupomAplicado(null); setCupomCodigo(''); setCupomErro(''); }}
+                                                className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-3 py-1.5 rounded-xl font-black transition-all text-xs"
+                                            >
+                                                Remover
+                                            </button>
+                                        )}
+                                        {cupomErro && <span className="text-red-500 text-[10px] font-bold uppercase tracking-widest">{cupomErro}</span>}
+                                        {cupomAplicado && <span className="text-emerald-500 text-[10px] font-bold uppercase tracking-widest">Ativo</span>}
                                     </div>
+                                    <div className="flex justify-between items-center text-zinc-400 font-bold border-b border-zinc-800/50 pb-2 mb-1">
+                                        <span>Subtotal Produtos:</span>
+                                        <span className="text-zinc-200 uppercase text-[10px] tracking-widest bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">R$ {(totalCartSum + descontoDaVenda).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    </div>
+                                    {descontoDaVenda > 0 && (
+                                        <div className="flex justify-between items-center text-emerald-400 font-bold text-xs border-b border-zinc-800/50 pb-2 mb-1">
+                                            <span>(-) Desconto ({cupomAplicado?.codigo}):</span>
+                                            <span>- R$ {descontoDaVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    )}
                                     {metodoEntrega === 'envio' && freteSomar > 0 && (
                                         <div className="flex justify-between items-center text-cyan-400 font-bold text-xs border-b border-zinc-800/50 pb-2 mb-1">
                                             <span title="Custo de Envio (Correios/Transportadora)">(+) Valor do Frete (Envio):</span>

@@ -57,7 +57,8 @@ export async function POST(req: Request) {
             observacao,
             valor_frete,
             cliente_id, // Novo campo para CRM
-            metodo_entrega // Novo campo para logística
+            metodo_entrega, // Novo campo para logística
+            cupom_codigo // Novo campo para cupons
         } = body;
 
         if (!carrinho || !Array.isArray(carrinho) || carrinho.length === 0) {
@@ -102,6 +103,21 @@ export async function POST(req: Request) {
             .single();
 
         if (settingsError) throw new Error('Falha ao obter parâmetros de precificação');
+
+        let cupom_ativo = null;
+        if (cupom_codigo) {
+            const { data: cupom } = await supabase
+                .from('cupoms_desconto')
+                .select('*')
+                .eq('codigo', cupom_codigo)
+                .maybeSingle();
+            
+            if (cupom && cupom.ativo && (cupom.usos_restantes === null || cupom.usos_restantes > 0)) {
+                if (!cupom.data_validade || new Date(cupom.data_validade) >= new Date()) {
+                    cupom_ativo = cupom;
+                }
+            }
+        }
 
         let totalResinaConsumida = 0;
         const salesToInsert = [];
@@ -186,6 +202,12 @@ export async function POST(req: Request) {
             .select();
 
         if (insertError) throw insertError;
+
+        if (cupom_ativo && cupom_ativo.usos_restantes !== null) {
+            await supabase.from('cupoms_desconto')
+                .update({ usos_restantes: cupom_ativo.usos_restantes - 1 })
+                .eq('id', cupom_ativo.id);
+        }
         
         // --- TELEGRAM ALERT ---
         try {

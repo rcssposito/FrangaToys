@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
             valor_frete,
             metodo_pagamento, // 'pix' ou 'card'
             vendedor_id, // Opcional
-            observacoes
+            observacoes,
+            cupom_codigo // Opcional
         } = body;
 
         if (!items || !Array.isArray(items) || items.length === 0) {
@@ -24,6 +25,55 @@ export async function POST(req: NextRequest) {
 
         if (!cliente_nome || !cliente_contato) {
             return NextResponse.json({ error: 'Dados do cliente incompletos' }, { status: 400 });
+        }
+
+        // --- VALIDATE COUPON ---
+        let cupom_ativo: any = null;
+        if (cupom_codigo) {
+            const upperCodigo = cupom_codigo.trim().toUpperCase();
+            const { data: cupom } = await supabase
+                .from('cupoms_desconto')
+                .select('*')
+                .eq('codigo', upperCodigo)
+                .maybeSingle();
+            
+            if (cupom && cupom.ativo && (cupom.usos_restantes === null || cupom.usos_restantes > 0)) {
+                if (!cupom.data_validade || new Date(cupom.data_validade) >= new Date()) {
+                    cupom_ativo = cupom;
+                }
+            }
+            if (!cupom_ativo) {
+                return NextResponse.json({ error: 'Cupom inválido, expirado ou inativo' }, { status: 400 });
+            }
+        }
+
+        // --- FETCH METADATA FOR ALL ITEMS UFRONT ---
+        const itemIds = items.map(i => i.id);
+        const { data: metas } = await supabase.from('figuras_meta').select('*').in('figura_id', itemIds);
+        const metaMap = new Map();
+        if (metas) metas.forEach(m => metaMap.set(m.figura_id, m));
+
+        // --- CALCULATE ELIGIBLE DISCOUNT ---
+        let totalElegivel = 0;
+        let totalBruto = 0;
+        for (const item of items) {
+            const itemTotalPrice = item.price * item.quantity;
+            totalBruto += itemTotalPrice;
+            
+            const meta = metaMap.get(item.id) || {};
+            const isCampanha = meta.is_campanha_active; 
+            if (!isCampanha) {
+                totalElegivel += itemTotalPrice;
+            }
+        }
+
+        let descontoTotal = 0;
+        if (cupom_ativo && totalElegivel > 0) {
+            if (cupom_ativo.tipo === 'porcentagem') {
+                descontoTotal = totalElegivel * (Number(cupom_ativo.valor) / 100);
+            } else {
+                descontoTotal = Math.min(Number(cupom_ativo.valor), totalElegivel);
+            }
         }
 
         // --- AUTO-CRM ---
@@ -69,17 +119,12 @@ export async function POST(req: NextRequest) {
         const access_token = randomUUID(); // UUID obrigatório para a coluna access_token
         
         const salesToInsert = [];
+        let valorTotalFinalVenda = 0;
 
         for (const item of items) {
-            const { data: meta } = await supabase
-                .from('figuras_meta')
-                .select('*')
-                .eq('figura_id', item.id)
-                .maybeSingle();
-
-            const metaData = meta || {};
+            const metaData = metaMap.get(item.id) || {};
             
-            // Remover da campanha para evitar venda duplicada com desconto, mas mantê-la na vitrine (e mantendo os preços para histórico na tela de esgotado)
+            // Remover da campanha para evitar venda duplicada com desconto, mas mantê-la na vitrine
             if (metaData.is_campanha_active) {
                 await supabase.from('figuras_meta').update({ 
                     is_campanha_active: false
@@ -92,21 +137,39 @@ export async function POST(req: NextRequest) {
             const custo_unitario_real = Math.ceil(custo_resina_raw + custo_impressao_raw);
             const custo_total_real = custo_unitario_real * item.quantity;
 
-            const lucro_real = item.price - custo_total_real;
+            // Apply Discount for this specific item row
+            let itemTotalPrice = item.price * item.quantity;
+            let itemDesconto = 0;
+            const isCampanha = metaData.is_campanha_active;
+
+            if (cupom_ativo && !isCampanha && totalElegivel > 0) {
+                const proporcao = itemTotalPrice / totalElegivel;
+                itemDesconto = descontoTotal * proporcao;
+            }
+
+            const valorFinalComDesconto = itemTotalPrice - itemDesconto;
+            const lucro_real = valorFinalComDesconto - custo_total_real;
+            
+            valorTotalFinalVenda += valorFinalComDesconto;
+
+            let observacaoFinal = `[Acabamento: ${item.finish}] ${observacoes || ''}`;
+            if (itemDesconto > 0) {
+                observacaoFinal += ` (Desconto Cupom ${cupom_ativo.codigo}: -R$ ${itemDesconto.toFixed(2)})`;
+            }
 
             salesToInsert.push({
-                figura_id: Number(item.id), // Garante que é integer
+                figura_id: Number(item.id),
                 cliente_nome: final_cliente_nome,
                 cliente_contato,
                 canal_venda: 'Vitrine Web',
                 vendedor: vendedor_id ? String(vendedor_id) : null,
-                valor_venda_final: item.price,
+                valor_venda_final: valorFinalComDesconto,
                 valor_frete: salesToInsert.length === 0 ? (Number(valor_frete) || 0) : 0,
                 custo_producao_snapshot: custo_total_real,
                 lucro_real,
                 status: 'Aguardando Pagamento',
                 quantidade: item.quantity,
-                observacao: `[Acabamento: ${item.finish}] ${observacoes || ''}`,
+                observacao: observacaoFinal.trim(),
                 checkout_id,
                 access_token,
                 cliente_id,
@@ -126,17 +189,39 @@ export async function POST(req: NextRequest) {
             throw new Error(`Erro ao registrar pedido no banco: ${insertError.message}`);
         }
 
+        // Decrement coupon uses
+        if (cupom_ativo && cupom_ativo.usos_restantes !== null) {
+            await supabase.from('cupoms_desconto')
+                .update({ usos_restantes: cupom_ativo.usos_restantes - 1 })
+                .eq('id', cupom_ativo.id);
+        }
+
         // --- PAYMENT INTEGRATION ---
         let payment_url = null;
         let preference_id = null;
 
         if (metodo_pagamento === 'card') {
-            const mpItems = items.map(i => ({
-                id: String(i.id),
-                title: `${i.nome} [${i.finish}]`,
-                quantity: i.quantity,
-                unit_price: Number((i.price / i.quantity).toFixed(2))
-            }));
+            const mpItems = items.map(i => {
+                const metaData = metaMap.get(i.id) || {};
+                const isCampanha = metaData.is_campanha_active;
+                let itemTotalPrice = i.price * i.quantity;
+                let itemDesconto = 0;
+                
+                if (cupom_ativo && !isCampanha && totalElegivel > 0) {
+                    const proporcao = itemTotalPrice / totalElegivel;
+                    itemDesconto = descontoTotal * proporcao;
+                }
+
+                const finalItemTotalPrice = itemTotalPrice - itemDesconto;
+                const unitPrice = finalItemTotalPrice / i.quantity;
+
+                return {
+                    id: String(i.id),
+                    title: `${i.nome} [${i.finish}]`,
+                    quantity: i.quantity,
+                    unit_price: Number(unitPrice.toFixed(2))
+                };
+            });
 
             if (Number(valor_frete) > 0) {
                 mpItems.push({
@@ -172,14 +257,19 @@ export async function POST(req: NextRequest) {
         }
 
         // --- TELEGRAM ALERT ---
-        const totalVenda = items.reduce((acc, i) => acc + (i.price || 0), 0) + (Number(valor_frete) || 0);
+        const totalVendaComFrete = valorTotalFinalVenda + (Number(valor_frete) || 0);
         const itemSummary = items.map(i => `• ${i.quantity}x ${i.nome} (${i.finish})`).join('\n');
         
-        const telegramMsg = `🛒 *NOVO PEDIDO GERADO!*\n` +
+        let telegramMsg = `🛒 *NOVO PEDIDO GERADO!*\n` +
             `_(Aguardando Pagamento)_\n\n` +
             `👤 *Cliente:* ${cliente_nome}\n` +
-            `📱 *WhatsApp:* ${cliente_contato}\n` +
-            `💰 *Valor Total:* R$ ${totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
+            `📱 *WhatsApp:* ${cliente_contato}\n`;
+            
+        if (descontoTotal > 0) {
+            telegramMsg += `🏷️ *Cupom Aplicado:* ${cupom_ativo.codigo} (-R$ ${descontoTotal.toFixed(2)})\n`;
+        }
+            
+        telegramMsg += `💰 *Valor Total:* R$ ${totalVendaComFrete.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
             `💳 *Pagamento:* ${metodo_pagamento.toUpperCase()}\n` +
             `🚚 *Entrega:* ${metodo_entrega === 'retirada' ? 'Retirada no Ateliê' : 'Envio via Frete'}\n\n` +
             `📦 *Itens:*\n${itemSummary}\n\n` +
