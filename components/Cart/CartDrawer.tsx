@@ -137,7 +137,11 @@ export const CartDrawer = () => {
         if (totalElegivel === 0) return 0;
 
         if (cupomAplicado.tipo === 'porcentagem') {
-            return totalElegivel * (cupomAplicado.valor / 100);
+            let desconto = totalElegivel * (cupomAplicado.valor / 100);
+            if (cupomAplicado.desconto_maximo) {
+                desconto = Math.min(desconto, cupomAplicado.desconto_maximo);
+            }
+            return desconto;
         } else {
             return Math.min(cupomAplicado.valor, totalElegivel);
         }
@@ -201,9 +205,24 @@ export const CartDrawer = () => {
                 setCupomErro(data.error);
                 setCupomAplicado(null);
             } else {
-                setCupomAplicado(data.cupom);
-                setCupomErro('');
-                toast.success(`Cupom ${data.cupom.codigo} aplicado!`);
+                const cupom = data.cupom;
+                // Validação imediata no frontend
+                let totalElegivelAtual = 0;
+                items.forEach(item => { 
+                    const isCampanha = (item as any).is_campanha || (item as any).is_campanha_active;
+                    if (!isCampanha) {
+                        totalElegivelAtual += getItemPrice(item) * (item.quantity || 1); 
+                    }
+                });
+
+                if (cupom.valor_minimo && totalElegivelAtual < cupom.valor_minimo) {
+                    setCupomErro(`Este cupom exige compras acima de R$ ${cupom.valor_minimo.toFixed(2)} em produtos elegíveis.`);
+                    setCupomAplicado(null);
+                } else {
+                    setCupomAplicado(cupom);
+                    setCupomErro('');
+                    toast.success(`Cupom ${cupom.codigo} aplicado!`);
+                }
             }
         } catch (error: any) {
             setCupomErro('Erro ao validar cupom');

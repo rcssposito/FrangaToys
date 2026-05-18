@@ -48,6 +48,33 @@ export default async function FigureModalPage({ params }: Props) {
         notFound();
     }
 
+    let crossSellFigure = null;
+    if (figure.serie_id) {
+        const { data: crossSellData } = await supabase
+            .from('figuras')
+            .select(`
+                id, nome, imagem_url, slug, disponivel,
+                figuras_meta ( is_campanha_active, preco_fixo_campanha )
+            `)
+            .eq('serie_id', figure.serie_id)
+            .neq('id', figure.id)
+            .eq('disponivel', true)
+            .limit(20);
+            
+        if (crossSellData && crossSellData.length > 0) {
+            const randomIndex = Math.floor(Math.random() * crossSellData.length);
+            const selectedCrossSell = crossSellData[randomIndex];
+            const csMeta = Array.isArray(selectedCrossSell.figuras_meta) ? selectedCrossSell.figuras_meta[0] : selectedCrossSell.figuras_meta;
+            crossSellFigure = {
+                id: selectedCrossSell.id,
+                nome: selectedCrossSell.nome,
+                imagem_url: selectedCrossSell.imagem_url,
+                slug: selectedCrossSell.slug || selectedCrossSell.id.toString(),
+                is_campanha: csMeta?.is_campanha_active || !!csMeta?.preco_fixo_campanha
+            };
+        }
+    }
+
     // Dynamic price calculation
     const metaData = Array.isArray(figure.figuras_meta) ? figure.figuras_meta[0] : figure.figuras_meta;
     const prices = settings && metaData ? calculateFigurePrices(metaData, settings) : undefined;
@@ -84,5 +111,5 @@ export default async function FigureModalPage({ params }: Props) {
         is_merchant: studioData?.merchant ?? false
     };
 
-    return <InterceptedModal figure={figureDto as any} />;
+    return <InterceptedModal figure={figureDto as any} crossSell={crossSellFigure} />;
 }

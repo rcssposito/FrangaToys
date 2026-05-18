@@ -12,6 +12,8 @@ interface Cupom {
     valor: number;
     usos_restantes: number | null;
     data_validade: string | null;
+    valor_minimo: number | null;
+    desconto_maximo: number | null;
     ativo: boolean;
     criado_em: string;
 }
@@ -29,6 +31,8 @@ export default function AdminCouponsPage() {
     const [valor, setValor] = useState('');
     const [usosRestantes, setUsosRestantes] = useState('');
     const [dataValidade, setDataValidade] = useState('');
+    const [valorMinimo, setValorMinimo] = useState('');
+    const [descontoMaximo, setDescontoMaximo] = useState('');
     const [ativo, setAtivo] = useState(true);
 
     const router = useRouter();
@@ -59,6 +63,8 @@ export default function AdminCouponsPage() {
             setValor(cupom.valor.toString());
             setUsosRestantes(cupom.usos_restantes ? cupom.usos_restantes.toString() : '');
             setDataValidade(cupom.data_validade ? new Date(cupom.data_validade).toISOString().slice(0, 16) : '');
+            setValorMinimo(cupom.valor_minimo ? cupom.valor_minimo.toString() : '');
+            setDescontoMaximo(cupom.desconto_maximo ? cupom.desconto_maximo.toString() : '');
             setAtivo(cupom.ativo);
         } else {
             setEditingCupom(null);
@@ -67,6 +73,8 @@ export default function AdminCouponsPage() {
             setValor('');
             setUsosRestantes('');
             setDataValidade('');
+            setValorMinimo('');
+            setDescontoMaximo('');
             setAtivo(true);
         }
         setIsModalOpen(true);
@@ -83,6 +91,8 @@ export default function AdminCouponsPage() {
                 valor: Number(valor),
                 usos_restantes: usosRestantes ? Number(usosRestantes) : null,
                 data_validade: dataValidade ? new Date(dataValidade).toISOString() : null,
+                valor_minimo: valorMinimo ? Number(valorMinimo) : null,
+                desconto_maximo: descontoMaximo ? Number(descontoMaximo) : null,
                 ativo
             };
 
@@ -284,6 +294,34 @@ export default function AdminCouponsPage() {
                                         value={dataValidade}
                                         onChange={(e) => setDataValidade(e.target.value)}
                                         className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold text-sm [color-scheme:dark]"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Valor Mínimo (R$ Opcional)</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={valorMinimo}
+                                        onChange={(e) => setValorMinimo(e.target.value)}
+                                        placeholder="Ex: 100.00"
+                                        className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Teto Máximo (R$ Opcional)</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={descontoMaximo}
+                                        onChange={(e) => setDescontoMaximo(e.target.value)}
+                                        placeholder="Ex: 50.00"
+                                        disabled={tipo !== 'porcentagem'}
+                                        className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 disabled:opacity-50"
                                     />
                                 </div>
                             </div>

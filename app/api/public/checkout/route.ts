@@ -69,10 +69,19 @@ export async function POST(req: NextRequest) {
 
         let descontoTotal = 0;
         if (cupom_ativo && totalElegivel > 0) {
-            if (cupom_ativo.tipo === 'porcentagem') {
-                descontoTotal = totalElegivel * (Number(cupom_ativo.valor) / 100);
+            // Regra do Valor Mínimo
+            if (!cupom_ativo.valor_minimo || totalElegivel >= Number(cupom_ativo.valor_minimo)) {
+                if (cupom_ativo.tipo === 'porcentagem') {
+                    descontoTotal = totalElegivel * (Number(cupom_ativo.valor) / 100);
+                    // Teto de desconto
+                    if (cupom_ativo.desconto_maximo) {
+                        descontoTotal = Math.min(descontoTotal, Number(cupom_ativo.desconto_maximo));
+                    }
+                } else {
+                    descontoTotal = Math.min(Number(cupom_ativo.valor), totalElegivel);
+                }
             } else {
-                descontoTotal = Math.min(Number(cupom_ativo.valor), totalElegivel);
+                return NextResponse.json({ error: `Este cupom exige compras acima de R$ ${Number(cupom_ativo.valor_minimo).toFixed(2)} em produtos elegíveis.` }, { status: 400 });
             }
         }
 

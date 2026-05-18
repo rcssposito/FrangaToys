@@ -9,9 +9,16 @@ import { useQueryClient } from '@tanstack/react-query';
 
 interface InterceptedModalProps {
     figure: FiguraDTO;
+    crossSell?: {
+        id: number;
+        nome: string;
+        imagem_url: string;
+        slug: string;
+        is_campanha: boolean;
+    } | null;
 }
 
-export function InterceptedModal({ figure }: InterceptedModalProps) {
+export function InterceptedModal({ figure, crossSell }: InterceptedModalProps) {
     const router = useRouter();
     const queryClient = useQueryClient();
     const [isMounted, setIsMounted] = useState(false);
@@ -121,7 +128,7 @@ export function InterceptedModal({ figure }: InterceptedModalProps) {
                     </button>
                 )}
 
-                <FigureDetails figure={figure} />
+                <FigureDetails figure={figure} crossSell={crossSell} />
             </div>
         </div>
     );

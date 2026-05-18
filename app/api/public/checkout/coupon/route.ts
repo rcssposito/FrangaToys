@@ -47,7 +47,9 @@ export async function POST(req: NextRequest) {
             cupom: {
                 codigo: cupom.codigo,
                 tipo: cupom.tipo,
-                valor: Number(cupom.valor)
+                valor: Number(cupom.valor),
+                valor_minimo: cupom.valor_minimo ? Number(cupom.valor_minimo) : null,
+                desconto_maximo: cupom.desconto_maximo ? Number(cupom.desconto_maximo) : null
             }
         });
 

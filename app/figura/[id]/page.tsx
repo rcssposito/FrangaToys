@@ -93,6 +93,33 @@ export default async function FiguraPage({ params }: Props) {
         notFound();
     }
 
+    let crossSellFigure = null;
+    if (figure.serie_id) {
+        const { data: crossSellData } = await supabase
+            .from('figuras')
+            .select(`
+                id, nome, imagem_url, slug, disponivel,
+                figuras_meta ( is_campanha_active, preco_fixo_campanha )
+            `)
+            .eq('serie_id', figure.serie_id)
+            .neq('id', figure.id)
+            .eq('disponivel', true)
+            .limit(20);
+            
+        if (crossSellData && crossSellData.length > 0) {
+            const randomIndex = Math.floor(Math.random() * crossSellData.length);
+            const selectedCrossSell = crossSellData[randomIndex];
+            const csMeta = Array.isArray(selectedCrossSell.figuras_meta) ? selectedCrossSell.figuras_meta[0] : selectedCrossSell.figuras_meta;
+            crossSellFigure = {
+                id: selectedCrossSell.id,
+                nome: selectedCrossSell.nome,
+                imagem_url: selectedCrossSell.imagem_url,
+                slug: selectedCrossSell.slug || selectedCrossSell.id.toString(),
+                is_campanha: csMeta?.is_campanha_active || !!csMeta?.preco_fixo_campanha
+            };
+        }
+    }
+
     const metaData = Array.isArray(figure.figuras_meta) ? figure.figuras_meta[0] : figure.figuras_meta;
     const prices = settings && metaData ? calculateFigurePrices(metaData, settings) : undefined;
 
@@ -142,7 +169,7 @@ export default async function FiguraPage({ params }: Props) {
                 </Link>
 
                 <div className="bg-zinc-900/30 rounded-3xl p-4 sm:p-10 border border-white/5 relative overflow-hidden">
-                    <FigureDetails key={figureDto.id} figure={figureDto as any} />
+                    <FigureDetails key={figureDto.id} figure={figureDto as any} crossSell={crossSellFigure} />
                 </div>
             </div>
         </div>

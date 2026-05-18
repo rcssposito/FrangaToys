@@ -22,7 +22,9 @@ import {
     X as CloseIcon,
     Save,
     Copy,
-    Check
+    Check,
+    Gift,
+    Wand2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePermission } from '@/hooks/usePermission';
@@ -50,6 +52,16 @@ export default function CustomersPage() {
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
     const [isCopying, setIsCopying] = useState(false);
+
+    // Coupon Gift States
+    const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
+    const [giftCustomer, setGiftCustomer] = useState<Customer | null>(null);
+    const [giftTipo, setGiftTipo] = useState<'porcentagem' | 'fixo'>('porcentagem');
+    const [giftValor, setGiftValor] = useState('');
+    const [giftMinimo, setGiftMinimo] = useState('');
+    const [giftMaximo, setGiftMaximo] = useState('');
+    const [isGeneratingGift, setIsGeneratingGift] = useState(false);
+    const [generatedCoupon, setGeneratedCoupon] = useState('');
 
     const fetchCustomers = async () => {
         setLoading(true);
@@ -99,6 +111,69 @@ export default function CustomersPage() {
         } finally {
             setIsUpdating(false);
         }
+    };
+
+    const handleGenerateGiftCoupon = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!giftCustomer || isGeneratingGift) return;
+
+        setIsGeneratingGift(true);
+        try {
+            // Gera um código único ex: JOAO15-8A2F
+            const prefix = giftCustomer.nome.split(' ')[0].toUpperCase().replace(/[^A-Z]/g, '').substring(0, 5);
+            const valStr = giftTipo === 'porcentagem' ? giftValor : 'OFF';
+            const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+            const codigoUnico = `${prefix}${valStr}-${randomSuffix}`;
+
+            const payload = {
+                codigo: codigoUnico,
+                tipo: giftTipo,
+                valor: Number(giftValor),
+                usos_restantes: 1, // Exclusivo para 1 uso
+                data_validade: null,
+                valor_minimo: giftMinimo ? Number(giftMinimo) : null,
+                desconto_maximo: giftMaximo ? Number(giftMaximo) : null,
+                ativo: true
+            };
+
+            const res = await fetch('/api/admin/coupons', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+
+            setGeneratedCoupon(codigoUnico);
+            toast.success('Cupom exclusivo gerado com sucesso!');
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao gerar cupom');
+        } finally {
+            setIsGeneratingGift(false);
+        }
+    };
+
+    const sendWhatsAppGift = () => {
+        if (!giftCustomer || !generatedCoupon) return;
+        const phone = giftCustomer.telefone.replace(/\D/g, '');
+        const emoji = String.fromCodePoint(0x1F381);
+        const percentOrReal = giftTipo === 'porcentagem' ? `${giftValor}%` : `R$ ${giftValor}`;
+        const condicaoMinima = giftMinimo ? ` (em compras acima de R$ ${giftMinimo})` : '';
+        const msg = `Olá, ${giftCustomer.nome.split(' ')[0]}!\n\nVi que faz um tempo que não conversamos. Preparei um presente exclusivo para você ${emoji}\n\nUse o cupom *${generatedCoupon}* na nossa loja e ganhe *${percentOrReal} de desconto*${condicaoMinima}!\n\nAcesse: https://frangatoys.com.br`;
+        
+        window.open(`https://api.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(msg)}`, '_blank');
+        setIsGiftModalOpen(false);
+    };
+
+    const openGiftModal = (customer: Customer) => {
+        setGiftCustomer(customer);
+        setGiftTipo('porcentagem');
+        setGiftValor('10');
+        setGiftMinimo('');
+        setGiftMaximo('');
+        setGeneratedCoupon('');
+        setIsGiftModalOpen(true);
     };
 
     // Cálculos de Métricas em Tempo Real - Protegidos contra erros de tipo
@@ -353,6 +428,13 @@ export default function CustomersPage() {
                                                     Vendas
                                                 </button>
                                                 <button 
+                                                    onClick={() => openGiftModal(customer)}
+                                                    className="p-2.5 bg-purple-500/10 hover:bg-purple-500 text-purple-500 hover:text-white rounded-xl border border-purple-500/20 transition-all active:scale-95"
+                                                    title="Presentear com Cupom Exclusivo"
+                                                >
+                                                    <Gift size={14} />
+                                                </button>
+                                                <button 
                                                     onClick={() => {
                                                         setSelectedCustomer(customer);
                                                         setIsEditModalOpen(true);
@@ -444,6 +526,118 @@ export default function CustomersPage() {
                                 Salvar Alterações
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Gift Coupon Modal */}
+            {isGiftModalOpen && giftCustomer && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-zinc-950 border border-purple-500/30 w-full max-w-lg rounded-[2.5rem] p-8 shadow-[0_0_50px_rgba(168,85,247,0.1)] relative animate-in zoom-in-95 duration-200">
+                        <button 
+                            onClick={() => setIsGiftModalOpen(false)}
+                            className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors"
+                        >
+                            <CloseIcon size={24} />
+                        </button>
+
+                        <div className="mb-8">
+                            <div className="w-16 h-16 bg-purple-500/10 border border-purple-500/20 rounded-2xl flex items-center justify-center text-purple-500 mb-4 shadow-inner">
+                                <Gift size={32} />
+                            </div>
+                            <h2 className="text-2xl font-black tracking-tighter uppercase italic text-white">
+                                Presentear <span className="text-purple-500">{giftCustomer.nome.split(' ')[0]}</span>
+                            </h2>
+                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">Crie um cupom de uso único para este cliente</p>
+                        </div>
+
+                        {!generatedCoupon ? (
+                            <form onSubmit={handleGenerateGiftCoupon} className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Tipo de Desconto</label>
+                                        <select
+                                            value={giftTipo}
+                                            onChange={(e) => setGiftTipo(e.target.value as any)}
+                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-purple-500 transition-all font-bold appearance-none cursor-pointer text-sm"
+                                        >
+                                            <option value="porcentagem">Porcentagem (%)</option>
+                                            <option value="fixo">Valor Fixo (R$)</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Valor</label>
+                                        <input
+                                            required
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={giftValor}
+                                            onChange={(e) => setGiftValor(e.target.value)}
+                                            placeholder="Ex: 10"
+                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-purple-500 transition-all font-bold placeholder-zinc-700"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Compra Mínima (Opcional)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={giftMinimo}
+                                            onChange={(e) => setGiftMinimo(e.target.value)}
+                                            placeholder="Ex: 100.00"
+                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-purple-500 transition-all font-bold placeholder-zinc-700 text-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Teto Máximo (Opcional)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={giftMaximo}
+                                            onChange={(e) => setGiftMaximo(e.target.value)}
+                                            placeholder="Ex: 50.00"
+                                            disabled={giftTipo !== 'porcentagem'}
+                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-purple-500 transition-all font-bold placeholder-zinc-700 disabled:opacity-50 text-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={isGeneratingGift}
+                                    className="w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50 uppercase tracking-widest shadow-lg shadow-purple-500/20"
+                                >
+                                    {isGeneratingGift ? <Loader2 size={18} className="animate-spin" /> : <Wand2 size={18} />}
+                                    Gerar Cupom Mágico
+                                </button>
+                            </form>
+                        ) : (
+                            <div className="space-y-6 text-center animate-in zoom-in-95 duration-500">
+                                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6">
+                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-2">Cupom Gerado e Ativo!</p>
+                                    <p className="text-3xl font-black text-white tracking-widest">{generatedCoupon}</p>
+                                </div>
+                                <button
+                                    onClick={sendWhatsAppGift}
+                                    className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-black font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] uppercase tracking-widest shadow-lg shadow-[#25D366]/20"
+                                >
+                                    <MessageCircle size={18} />
+                                    Enviar no WhatsApp
+                                </button>
+                                <button
+                                    onClick={() => setIsGiftModalOpen(false)}
+                                    className="w-full text-[10px] text-zinc-500 uppercase font-black tracking-widest hover:text-white"
+                                >
+                                    Fechar
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

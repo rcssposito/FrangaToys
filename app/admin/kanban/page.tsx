@@ -100,6 +100,9 @@ export default function KanbanPage() {
         if (!saleId) return;
 
         const previousSales = [...sales];
+        const prevTask = previousSales.find(s => s.id.toString() === saleId);
+        if (prevTask?.status === toStatus) return; // Não faz nada se soltou na mesma coluna
+
         setSales(prev => prev.map(s => s.id.toString() === saleId ? { ...s, status: toStatus } : s));
 
         try {
@@ -109,6 +112,37 @@ export default function KanbanPage() {
                 body: JSON.stringify({ id: Number(saleId), status: toStatus })
             });
             if (!res.ok) throw new Error('Failed');
+
+            // Find the task to get customer details
+            const task = prevTask || previousSales.find(s => s.id.toString() === saleId);
+            if (task && prevTask?.status !== toStatus && toStatus !== 'Aguardando Pagamento') {
+                const clientWhatsApp = (task.cliente_contato || '').replace(/\D/g, '');
+                
+                if (clientWhatsApp && clientWhatsApp.length >= 10) {
+                    let msg = '';
+                    if (toStatus === 'Fila de Impressão') msg = `Olá, ${task.cliente_nome.trim()}! Seu ${task.figuras.nome} acabou de entrar na nossa fila de impressão! 🚀`;
+                    else if (toStatus === 'Imprimindo') msg = `Olá, ${task.cliente_nome.trim()}! Nossas máquinas já começaram a imprimir o seu ${task.figuras.nome}! 🏭`;
+                    else if (toStatus === 'Lavagem e Cura') msg = `A impressão concluiu, ${task.cliente_nome.trim()}! Seu ${task.figuras.nome} agora está no pós processamento. 💧`;
+                    else if (toStatus === 'Pintura Secagem') msg = `Saindo do forno! Seu ${task.figuras.nome} agora está na fase de pintura e acabamento. 🎨`;
+                    
+                    if (msg) {
+                        toast.success(`Movido para ${toStatus}`, {
+                            action: {
+                                label: 'Avisar Cliente no WhatsApp',
+                                onClick: () => {
+                                    const waLink = `https://api.whatsapp.com/send?phone=55${clientWhatsApp}&text=${encodeURIComponent(msg)}`;
+                                    window.open(waLink, '_blank');
+                                }
+                            },
+                            duration: 8000 // Mantém na tela por 8 segundos
+                        });
+                    } else {
+                        toast.success(`Status atualizado para ${toStatus}`);
+                    }
+                } else {
+                    toast.success(`Status atualizado para ${toStatus}`);
+                }
+            }
         } catch (err) {
             toast.error('Erro ao atualizar status logístico');
             setSales(previousSales);

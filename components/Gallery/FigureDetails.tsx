@@ -9,10 +9,11 @@ import imageKitLoader from '@/lib/image-loader';
 import { useCart } from '@/context/CartContext';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    ShoppingCart, ExternalLink, Sparkles, Instagram, Clock, Truck, ShieldCheck, 
-    Share2, Paintbrush, Palette, Crown, CheckCircle2, X, HelpCircle, Info, 
-    Maximize2, ArrowLeft, Tag, MessageCircle
+import {
+    ShoppingCart, ExternalLink, Sparkles, Instagram, Clock, Truck, ShieldCheck,
+    Share2, Paintbrush, Palette, Crown, CheckCircle2, X, HelpCircle, Info,
+    Maximize2, ArrowLeft, Tag, MessageCircle,
+    ChevronRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -20,9 +21,16 @@ import { ImageMagnifier } from './ImageMagnifier';
 
 interface FigureDetailsProps {
     figure: FiguraDTO;
+    crossSell?: {
+        id: number;
+        nome: string;
+        imagem_url: string;
+        slug: string;
+        is_campanha: boolean;
+    } | null;
 }
 
-export function FigureDetails({ figure }: FigureDetailsProps) {
+export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
     const router = useRouter();
     const { addToCart, removeFromCart, isInCart, setIsCartOpen } = useCart();
     // Verificação de campanha super agressiva (Lê da raiz, do objeto precos e por assinatura de valor)
@@ -412,9 +420,45 @@ export function FigureDetails({ figure }: FigureDetailsProps) {
                         >
                             <Share2 size={24} className="group-hover:rotate-12 transition-transform" />
                         </button>
-
-                        {/* Close Button removed as it was redundant */}
                     </div>
+
+                    {/* Cross-Sell Section */}
+                    {crossSell && (
+                        <div className="mt-8 pt-6 border-t border-white/5 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            <div className="flex items-center gap-2 mb-4">
+                                <Sparkles size={16} className="text-orange-500" />
+                                <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Compre Junto</h4>
+                            </div>
+                            <div
+                                onClick={() => router.push(`/figura/${crossSell.slug}?ref=cross_sell`)}
+                                className="group flex items-center gap-4 bg-zinc-900/40 hover:bg-zinc-900/80 border border-white/5 hover:border-orange-500/30 p-3 rounded-2xl cursor-pointer transition-all duration-300"
+                            >
+                                <div className="relative w-16 h-16 bg-black rounded-xl overflow-hidden shadow-inner flex-shrink-0">
+                                    <Image
+                                        loader={imageKitLoader}
+                                        src={getOptimizedImageUrl(crossSell.imagem_url)}
+                                        alt={crossSell.nome}
+                                        fill
+                                        className="object-contain p-1 group-hover:scale-110 transition-transform duration-500"
+                                        sizes="64px"
+                                    />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    {crossSell.is_campanha && (
+                                        <span className="inline-block text-[8px] bg-purple-600 text-white font-black px-1.5 py-0.5 rounded-sm uppercase tracking-widest mb-1 shadow-lg shadow-purple-600/20">
+                                            Em Oferta
+                                        </span>
+                                    )}
+                                    <h5 className="text-sm font-black text-white truncate group-hover:text-orange-500 transition-colors">
+                                        {crossSell.nome}
+                                    </h5>
+                                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-0.5">
+                                        Ver Detalhes <ChevronRight size={10} className="inline -mt-0.5" />
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

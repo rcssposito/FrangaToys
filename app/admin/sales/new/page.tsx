@@ -258,7 +258,17 @@ export default function NewSalePage() {
         let totalElegivel = 0;
         cart.forEach(item => { if (!item.is_campanha) totalElegivel += item.valor_final; });
         if (totalElegivel === 0) return 0;
-        if (cupomAplicado.tipo === 'porcentagem') return totalElegivel * (cupomAplicado.valor / 100);
+        
+        // Verifica valor minimo
+        if (cupomAplicado.valor_minimo && totalElegivel < cupomAplicado.valor_minimo) return 0;
+
+        if (cupomAplicado.tipo === 'porcentagem') {
+            let desconto = totalElegivel * (cupomAplicado.valor / 100);
+            if (cupomAplicado.desconto_maximo) {
+                desconto = Math.min(desconto, cupomAplicado.desconto_maximo);
+            }
+            return desconto;
+        }
         return Math.min(cupomAplicado.valor, totalElegivel);
     };
 
@@ -344,9 +354,19 @@ export default function NewSalePage() {
                 setCupomErro(data.error);
                 setCupomAplicado(null);
             } else {
-                setCupomAplicado(data.cupom);
-                setCupomErro('');
-                toast.success(`Cupom ${data.cupom.codigo} aplicado!`);
+                const cupom = data.cupom;
+                // Validação imediata do valor mínimo no frontend
+                let totalElegivelAtual = 0;
+                cart.forEach(item => { if (!item.is_campanha) totalElegivelAtual += item.valor_final; });
+
+                if (cupom.valor_minimo && totalElegivelAtual < cupom.valor_minimo) {
+                    setCupomErro(`Este cupom exige compras acima de R$ ${cupom.valor_minimo.toFixed(2)} em produtos elegíveis.`);
+                    setCupomAplicado(null);
+                } else {
+                    setCupomAplicado(cupom);
+                    setCupomErro('');
+                    toast.success(`Cupom ${cupom.codigo} aplicado!`);
+                }
             }
         } catch (error: any) {
             setCupomErro('Erro ao validar cupom');

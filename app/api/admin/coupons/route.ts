@@ -20,7 +20,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { codigo, tipo, valor, usos_restantes, data_validade, ativo } = body;
+        const { codigo, tipo, valor, usos_restantes, data_validade, ativo, valor_minimo, desconto_maximo } = body;
 
         const { data, error } = await supabase
             .from('cupoms_desconto')
@@ -30,6 +30,8 @@ export async function POST(req: NextRequest) {
                 valor: Number(valor),
                 usos_restantes: usos_restantes ? Number(usos_restantes) : null,
                 data_validade: data_validade || null,
+                valor_minimo: valor_minimo ? Number(valor_minimo) : null,
+                desconto_maximo: desconto_maximo ? Number(desconto_maximo) : null,
                 ativo: ativo ?? true
             }])
             .select()
