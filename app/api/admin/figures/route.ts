@@ -173,8 +173,7 @@ export async function PUT(req: Request) {
     const sessionOrResponse = await requireRoles(['admin', 'pricing', 'orcamento']);
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
-        , { status: 403 });
-        }
+        
 
         const body = await req.json();
         const { id, nome, serie, imagem_url, disponivel, tem_extras, tem_pintura_real, sinonimos, ...rawMeta } = body;
@@ -333,8 +332,7 @@ export async function DELETE(req: Request) {
     const sessionOrResponse = await requireRoles(['admin', 'pricing', 'orcamento']);
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
-        , { status: 403 });
-        }
+        
 
         const { id } = await req.json();
         if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 });
