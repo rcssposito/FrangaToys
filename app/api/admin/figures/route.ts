@@ -173,8 +173,7 @@ export async function PUT(req: Request) {
     const sessionOrResponse = await requireRoles(['admin', 'pricing', 'orcamento']);
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
-        if (!session || !session.roles || (!session.roles.includes('admin') && !session.roles.includes('pricing'))) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        , { status: 403 });
         }
 
         const body = await req.json();
@@ -334,8 +333,7 @@ export async function DELETE(req: Request) {
     const sessionOrResponse = await requireRoles(['admin', 'pricing', 'orcamento']);
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
-        if (!session || !session.roles || (!session.roles.includes('admin') && !session.roles.includes('pricing'))) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        , { status: 403 });
         }
 
         const { id } = await req.json();

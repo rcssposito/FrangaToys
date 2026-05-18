@@ -4,23 +4,11 @@ import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import bcrypt from 'bcryptjs';
 
-interface Session {
-    id: number;
-    email: string;
-    roles?: string[];
-}
-
-
-
 // LISTAR USUÁRIOS
 export async function GET() {
     try {
-    const sessionOrResponse = await requireRoles(['admin']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
-
-        if (!session || !session.roles || (!session.roles.includes('admin') && !session.roles.includes('finance'))) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-        }
+        const sessionOrResponse = await requireRoles(['admin']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const { data: users, error } = await supabaseAdmin
             .from('admin_users')
@@ -38,12 +26,8 @@ export async function GET() {
 // CRIAR USUÁRIO
 export async function POST(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
-
-        if (!session || !session.roles || !session.roles.includes('admin')) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-        }
+        const sessionOrResponse = await requireRoles(['admin']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const { email, roles, nome, telefone } = await req.json();
 
@@ -105,12 +89,8 @@ export async function POST(req: Request) {
 // DELETAR USUÁRIO
 export async function DELETE(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
-
-        if (!session || !session.roles || !session.roles.includes('admin')) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-        }
+        const sessionOrResponse = await requireRoles(['admin']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const { id } = await req.json();
 
@@ -129,20 +109,6 @@ export async function DELETE(req: Request) {
 
         if (error) throw error;
 
-        // Try Delete from Auth (Best effort, as we don't store UUID yet)
-        if (userToDelete?.email) {
-            // Find user by email
-            // This is expensive, better to store UUID. For now, list users by email? 
-            // Admin API does not have getUserByEmail easily exposed in JS client without listUser.
-            // Actually `listUsers` works.
-            // But simpler: just accept that manual cleanup might be needed or ignore it.
-            // OR: Since we are migrating, we can assume new users created via this API will have sync issues on delete unless we match email.
-
-            // Let's trying to find and delete from Auth to be clean.
-            // But `deleteUser` needs ID.
-            // Skipping Auth deletion for now to avoid complexity, assuming admins can manage users in Supabase Auth Dashboard if desync occurs.
-        }
-
         return NextResponse.json({ success: true });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
@@ -152,12 +118,8 @@ export async function DELETE(req: Request) {
 // ATUALIZAR USUÁRIO (PUT)
 export async function PUT(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
-
-        if (!session || !session.roles || !session.roles.includes('admin')) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-        }
+        const sessionOrResponse = await requireRoles(['admin']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const { email, roles, nome, telefone } = await req.json();
 
