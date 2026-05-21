@@ -27,13 +27,23 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Dados do cliente incompletos' }, { status: 400 });
         }
 
+        // --- FETCH METADATA AND FIGURES FOR ALL ITEMS UPFRONT ---
+        const itemIds = items.map(i => Number(i.id));
+        const { data: metas } = await supabase.from('figuras_meta').select('*').in('figura_id', itemIds);
+        const metaMap = new Map();
+        if (metas) metas.forEach(m => metaMap.set(m.figura_id, m));
+
+        const { data: figurasDb } = await supabase.from('figuras').select('id, serie_id').in('id', itemIds);
+        const figureMap = new Map();
+        if (figurasDb) figurasDb.forEach(f => figureMap.set(f.id, f));
+
         // --- VALIDATE COUPON ---
         let cupom_ativo: any = null;
         if (cupom_codigo) {
             const upperCodigo = cupom_codigo.trim().toUpperCase();
             const { data: cupom } = await supabase
                 .from('cupoms_desconto')
-                .select('*')
+                .select('*, series(nome)')
                 .eq('codigo', upperCodigo)
                 .maybeSingle();
             
@@ -45,13 +55,37 @@ export async function POST(req: NextRequest) {
             if (!cupom_ativo) {
                 return NextResponse.json({ error: 'Cupom inválido, expirado ou inativo' }, { status: 400 });
             }
-        }
 
-        // --- FETCH METADATA FOR ALL ITEMS UFRONT ---
-        const itemIds = items.map(i => i.id);
-        const { data: metas } = await supabase.from('figuras_meta').select('*').in('figura_id', itemIds);
-        const metaMap = new Map();
-        if (metas) metas.forEach(m => metaMap.set(m.figura_id, m));
+            // Series restriction validation
+            if (cupom_ativo.serie_id) {
+                const requiredSerieId = cupom_ativo.serie_id;
+                const requiredSerieNome = cupom_ativo.series?.nome || 'série selecionada';
+
+                // Check if any items belong to the series
+                const itemsInSeries = items.filter(item => {
+                    const fig = figureMap.get(Number(item.id));
+                    return fig && fig.serie_id === requiredSerieId;
+                });
+
+                if (itemsInSeries.length === 0) {
+                    return NextResponse.json({ 
+                        error: `Este cupom é válido apenas para produtos da série ${requiredSerieNome}.` 
+                    }, { status: 400 });
+                }
+
+                // Check if all items in the series are in active campaigns
+                const eligibleItemsInSeries = itemsInSeries.filter(item => {
+                    const meta = metaMap.get(Number(item.id)) || {};
+                    return !meta.is_campanha_active;
+                });
+
+                if (eligibleItemsInSeries.length === 0) {
+                    return NextResponse.json({ 
+                        error: `Os produtos da série ${requiredSerieNome} no carrinho já estão em promoção e não aceitam cupom.` 
+                    }, { status: 400 });
+                }
+            }
+        }
 
         // --- CALCULATE ELIGIBLE DISCOUNT ---
         let totalElegivel = 0;
@@ -60,11 +94,21 @@ export async function POST(req: NextRequest) {
             const itemTotalPrice = item.price * item.quantity;
             totalBruto += itemTotalPrice;
             
-            const meta = metaMap.get(item.id) || {};
-            const isCampanha = meta.is_campanha_active; 
-            if (!isCampanha) {
+            const meta = metaMap.get(Number(item.id)) || {};
+            const isCampanha = meta.is_campanha_active;
+            
+            const fig = figureMap.get(Number(item.id)) || {};
+            const isSerieEligible = !cupom_ativo || !cupom_ativo.serie_id || fig.serie_id === cupom_ativo.serie_id;
+
+            if (!isCampanha && isSerieEligible) {
                 totalElegivel += itemTotalPrice;
             }
+        }
+
+        if (cupom_ativo && totalElegivel === 0) {
+            return NextResponse.json({ 
+                error: 'Nenhum produto no carrinho é elegível para este cupom (produtos em promoção não aceitam cupom).' 
+            }, { status: 400 });
         }
 
         let descontoTotal = 0;
@@ -131,13 +175,13 @@ export async function POST(req: NextRequest) {
         let valorTotalFinalVenda = 0;
 
         for (const item of items) {
-            const metaData = metaMap.get(item.id) || {};
+            const metaData = metaMap.get(Number(item.id)) || {};
             
             // Remover da campanha para evitar venda duplicada com desconto, mas mantê-la na vitrine
             if (metaData.is_campanha_active) {
                 await supabase.from('figuras_meta').update({ 
                     is_campanha_active: false
-                }).eq('figura_id', item.id);
+                }).eq('figura_id', Number(item.id));
             }
 
             // Snapshot calculation (Logic from admin/sales)
@@ -151,7 +195,10 @@ export async function POST(req: NextRequest) {
             let itemDesconto = 0;
             const isCampanha = metaData.is_campanha_active;
 
-            if (cupom_ativo && !isCampanha && totalElegivel > 0) {
+            const fig = figureMap.get(Number(item.id)) || {};
+            const isSerieEligible = !cupom_ativo || !cupom_ativo.serie_id || fig.serie_id === cupom_ativo.serie_id;
+
+            if (cupom_ativo && !isCampanha && isSerieEligible && totalElegivel > 0) {
                 const proporcao = itemTotalPrice / totalElegivel;
                 itemDesconto = descontoTotal * proporcao;
             }
@@ -211,12 +258,15 @@ export async function POST(req: NextRequest) {
 
         if (metodo_pagamento === 'card') {
             const mpItems = items.map(i => {
-                const metaData = metaMap.get(i.id) || {};
+                const metaData = metaMap.get(Number(i.id)) || {};
                 const isCampanha = metaData.is_campanha_active;
                 let itemTotalPrice = i.price * i.quantity;
                 let itemDesconto = 0;
                 
-                if (cupom_ativo && !isCampanha && totalElegivel > 0) {
+                const fig = figureMap.get(Number(i.id)) || {};
+                const isSerieEligible = !cupom_ativo || !cupom_ativo.serie_id || fig.serie_id === cupom_ativo.serie_id;
+
+                if (cupom_ativo && !isCampanha && isSerieEligible && totalElegivel > 0) {
                     const proporcao = itemTotalPrice / totalElegivel;
                     itemDesconto = descontoTotal * proporcao;
                 }

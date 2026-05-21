@@ -195,7 +195,7 @@ export default function AdminDashboard() {
                     <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-1.5">{data.name || label}</p>
                     <p className="text-zinc-100 font-black text-sm tracking-tight flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.4)]"></span>
-                        {formatter ? formatter(safeValue) : safeValue} {suffix}
+                        {formatter ? formatter(safeValue, data.name || label, payload[0]) : `${safeValue} ${suffix}`}
                     </p>
                 </div>
             );

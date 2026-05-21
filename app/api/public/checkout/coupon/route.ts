@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
         const { data: cupom, error } = await supabase
             .from('cupoms_desconto')
-            .select('*')
+            .select('*, series(nome)')
             .eq('codigo', upperCodigo)
             .maybeSingle();
 
@@ -49,7 +49,9 @@ export async function POST(req: NextRequest) {
                 tipo: cupom.tipo,
                 valor: Number(cupom.valor),
                 valor_minimo: cupom.valor_minimo ? Number(cupom.valor_minimo) : null,
-                desconto_maximo: cupom.desconto_maximo ? Number(cupom.desconto_maximo) : null
+                desconto_maximo: cupom.desconto_maximo ? Number(cupom.desconto_maximo) : null,
+                serie_id: cupom.serie_id,
+                serie_nome: cupom.series?.nome || null
             }
         });
 

@@ -16,10 +16,13 @@ interface Cupom {
     desconto_maximo: number | null;
     ativo: boolean;
     criado_em: string;
+    serie_id?: number | null;
+    series?: { nome: string } | null;
 }
 
 export default function AdminCouponsPage() {
     const [cupons, setCupons] = useState<Cupom[]>([]);
+    const [series, setSeries] = useState<{ id: number; nome: string }[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCupom, setEditingCupom] = useState<Cupom | null>(null);
@@ -33,6 +36,7 @@ export default function AdminCouponsPage() {
     const [dataValidade, setDataValidade] = useState('');
     const [valorMinimo, setValorMinimo] = useState('');
     const [descontoMaximo, setDescontoMaximo] = useState('');
+    const [serieId, setSerieId] = useState('');
     const [ativo, setAtivo] = useState(true);
 
     const router = useRouter();
@@ -51,8 +55,21 @@ export default function AdminCouponsPage() {
         }
     };
 
+    const fetchSeries = async () => {
+        try {
+            const res = await fetch('/api/admin/series');
+            if (res.ok) {
+                const data = await res.json();
+                setSeries(data);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar séries:', error);
+        }
+    };
+
     useEffect(() => {
         fetchCupons();
+        fetchSeries();
     }, []);
 
     const openModal = (cupom?: Cupom) => {
@@ -65,6 +82,7 @@ export default function AdminCouponsPage() {
             setDataValidade(cupom.data_validade ? new Date(cupom.data_validade).toISOString().slice(0, 16) : '');
             setValorMinimo(cupom.valor_minimo ? cupom.valor_minimo.toString() : '');
             setDescontoMaximo(cupom.desconto_maximo ? cupom.desconto_maximo.toString() : '');
+            setSerieId(cupom.serie_id ? cupom.serie_id.toString() : '');
             setAtivo(cupom.ativo);
         } else {
             setEditingCupom(null);
@@ -75,6 +93,7 @@ export default function AdminCouponsPage() {
             setDataValidade('');
             setValorMinimo('');
             setDescontoMaximo('');
+            setSerieId('');
             setAtivo(true);
         }
         setIsModalOpen(true);
@@ -93,6 +112,7 @@ export default function AdminCouponsPage() {
                 data_validade: dataValidade ? new Date(dataValidade).toISOString() : null,
                 valor_minimo: valorMinimo ? Number(valorMinimo) : null,
                 desconto_maximo: descontoMaximo ? Number(descontoMaximo) : null,
+                serie_id: serieId ? Number(serieId) : null,
                 ativo
             };
 
@@ -186,6 +206,11 @@ export default function AdminCouponsPage() {
                                         </div>
                                         <p className="text-zinc-400 font-medium text-xs">
                                             {cupom.tipo === 'porcentagem' ? `${cupom.valor}% de desconto` : `R$ ${cupom.valor.toFixed(2)} de desconto`}
+                                            {cupom.series?.nome && (
+                                                <span className="block mt-1 text-blue-400 font-bold">
+                                                    Série: {cupom.series.nome}
+                                                </span>
+                                            )}
                                         </p>
                                     </div>
                                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -246,6 +271,20 @@ export default function AdminCouponsPage() {
                                     placeholder="Ex: PROMO10"
                                     className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 uppercase"
                                 />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Restrição de Série</label>
+                                <select
+                                    value={serieId}
+                                    onChange={(e) => setSerieId(e.target.value)}
+                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold appearance-none cursor-pointer"
+                                >
+                                    <option value="">Qualquer Série (Sem restrição)</option>
+                                    {series.map(s => (
+                                        <option key={s.id} value={s.id}>{s.nome}</option>
+                                    ))}
+                                </select>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">

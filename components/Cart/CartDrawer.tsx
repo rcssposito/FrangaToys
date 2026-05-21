@@ -129,12 +129,18 @@ export const CartDrawer = () => {
         let totalElegivel = 0;
         items.forEach(item => {
             const isCampanha = (item as any).is_campanha || (item as any).is_campanha_active;
-            if (!isCampanha) {
+            const isSerieEligible = !cupomAplicado.serie_id || item.serie_id === cupomAplicado.serie_id;
+            if (!isCampanha && isSerieEligible) {
                 totalElegivel += getItemPrice(item) * (item.quantity || 1);
             }
         });
 
         if (totalElegivel === 0) return 0;
+
+        // Verify minimum value condition dynamically
+        if (cupomAplicado.valor_minimo && totalElegivel < cupomAplicado.valor_minimo) {
+            return 0;
+        }
 
         if (cupomAplicado.tipo === 'porcentagem') {
             let desconto = totalElegivel * (cupomAplicado.valor / 100);
@@ -206,16 +212,43 @@ export const CartDrawer = () => {
                 setCupomAplicado(null);
             } else {
                 const cupom = data.cupom;
+                
                 // Validação imediata no frontend
+                if (cupom.serie_id) {
+                    const requiredSerieId = cupom.serie_id;
+                    const requiredSerieNome = cupom.serie_nome || 'série específica';
+                    
+                    const itemsInSeries = items.filter(item => item.serie_id === requiredSerieId);
+                    if (itemsInSeries.length === 0) {
+                        setCupomErro(`Este cupom é válido apenas para produtos da série ${requiredSerieNome}.`);
+                        setCupomAplicado(null);
+                        return;
+                    }
+                    
+                    const eligibleItemsInSeries = itemsInSeries.filter(item => {
+                        const isCampanha = (item as any).is_campanha || (item as any).is_campanha_active;
+                        return !isCampanha;
+                    });
+                    if (eligibleItemsInSeries.length === 0) {
+                        setCupomErro(`Os produtos da série ${requiredSerieNome} no carrinho já estão em promoção e não aceitam cupom.`);
+                        setCupomAplicado(null);
+                        return;
+                    }
+                }
+
                 let totalElegivelAtual = 0;
                 items.forEach(item => { 
                     const isCampanha = (item as any).is_campanha || (item as any).is_campanha_active;
-                    if (!isCampanha) {
+                    const isSerieEligible = !cupom.serie_id || item.serie_id === cupom.serie_id;
+                    if (!isCampanha && isSerieEligible) {
                         totalElegivelAtual += getItemPrice(item) * (item.quantity || 1); 
                     }
                 });
 
-                if (cupom.valor_minimo && totalElegivelAtual < cupom.valor_minimo) {
+                if (totalElegivelAtual === 0) {
+                    setCupomErro('Nenhum produto no carrinho é elegível para este cupom (produtos em promoção não aceitam cupom).');
+                    setCupomAplicado(null);
+                } else if (cupom.valor_minimo && totalElegivelAtual < cupom.valor_minimo) {
                     setCupomErro(`Este cupom exige compras acima de R$ ${cupom.valor_minimo.toFixed(2)} em produtos elegíveis.`);
                     setCupomAplicado(null);
                 } else {
@@ -683,9 +716,15 @@ export const CartDrawer = () => {
                                         </div>
                                         {cupomErro && <p className="text-red-500 text-[9px] font-bold uppercase tracking-widest px-1">{cupomErro}</p>}
                                         {cupomAplicado && (
-                                            <p className="text-emerald-500 text-[9px] font-bold uppercase tracking-widest px-1">
-                                                Cupom {cupomAplicado.codigo} aplicado! 
-                                                {items.some(i => (i as any).is_campanha || (i as any).is_campanha_active) && ' (Itens em campanha não recebem desconto)'}
+                                            <p className={`${calculateDesconto() === 0 ? 'text-red-500' : 'text-emerald-500'} text-[9px] font-bold uppercase tracking-widest px-1`}>
+                                                {calculateDesconto() === 0 ? (
+                                                    `Cupom ${cupomAplicado.codigo} aplicado, mas os requisitos de valor mínimo ou elegibilidade de série não foram atendidos.`
+                                                ) : (
+                                                    <>
+                                                        Cupom {cupomAplicado.codigo} aplicado! 
+                                                        {items.some(i => (i as any).is_campanha || (i as any).is_campanha_active) && ' (Itens em campanha não recebem desconto)'}
+                                                    </>
+                                                )}
                                             </p>
                                         )}
                                     </div>

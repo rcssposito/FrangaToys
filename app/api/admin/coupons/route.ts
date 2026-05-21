@@ -10,7 +10,7 @@ export async function GET() {
 
         const { data, error } = await supabase
             .from('cupoms_desconto')
-            .select('*')
+            .select('*, series(nome)')
             .order('criado_em', { ascending: false });
 
         if (error) throw error;
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();
-        const { codigo, tipo, valor, usos_restantes, data_validade, ativo, valor_minimo, desconto_maximo } = body;
+        const { codigo, tipo, valor, usos_restantes, data_validade, ativo, valor_minimo, desconto_maximo, serie_id } = body;
 
         const { data, error } = await supabase
             .from('cupoms_desconto')
@@ -39,9 +39,10 @@ export async function POST(req: NextRequest) {
                 data_validade: data_validade || null,
                 valor_minimo: valor_minimo ? Number(valor_minimo) : null,
                 desconto_maximo: desconto_maximo ? Number(desconto_maximo) : null,
+                serie_id: serie_id ? Number(serie_id) : null,
                 ativo: ativo ?? true
             }])
-            .select()
+            .select('*, series(nome)')
             .single();
 
         if (error) throw error;

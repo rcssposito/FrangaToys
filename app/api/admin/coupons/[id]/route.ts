@@ -9,7 +9,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
         const { id } = await params;
         const body = await req.json();
-        const { codigo, tipo, valor, usos_restantes, data_validade, ativo, valor_minimo, desconto_maximo } = body;
+        const { codigo, tipo, valor, usos_restantes, data_validade, ativo, valor_minimo, desconto_maximo, serie_id } = body;
 
         const { data, error } = await supabase
             .from('cupoms_desconto')
@@ -21,10 +21,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
                 data_validade: data_validade || null,
                 valor_minimo: valor_minimo ? Number(valor_minimo) : null,
                 desconto_maximo: desconto_maximo ? Number(desconto_maximo) : null,
+                serie_id: serie_id ? Number(serie_id) : null,
                 ativo: ativo ?? true
             })
             .eq('id', id)
-            .select()
+            .select('*, series(nome)')
             .single();
 
         if (error) throw error;

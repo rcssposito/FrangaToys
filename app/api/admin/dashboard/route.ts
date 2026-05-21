@@ -240,11 +240,13 @@ export async function GET(req: Request) {
             const rawVendedor = (sale.vendedor || '').toLowerCase();
             const sellerName = rawVendedor ? (userMap[rawVendedor] || rawVendedor) : 'FrangaToys';
             
-            if (!sellerSalesMap[sellerName]) {
-                sellerSalesMap[sellerName] = { revenue: 0, qty: 0, figures: [] };
+            if ((sale.valor_venda_final || 0) > 0) {
+                if (!sellerSalesMap[sellerName]) {
+                    sellerSalesMap[sellerName] = { revenue: 0, qty: 0, figures: [] };
+                }
+                sellerSalesMap[sellerName].revenue += (sale.valor_venda_final || 0);
+                sellerSalesMap[sellerName].qty += (sale.quantidade || 1);
             }
-            sellerSalesMap[sellerName].revenue += (sale.valor_venda_final || 0);
-            sellerSalesMap[sellerName].qty += (sale.quantidade || 1);
 
             if (!studioSalesMap[studioName]) {
                 studioSalesMap[studioName] = { revenue: 0, profit: 0, itemsSold: 0 };
@@ -256,13 +258,15 @@ export async function GET(req: Request) {
             if (figure) {
                 const key = figure.id;
 
-                sellerSalesMap[sellerName].figures.push({
-                    id: figure.id,
-                    name: figure.nome,
-                    price: sale.valor_venda_final || 0,
-                    qty: sale.quantidade || 1,
-                    date: sale.data_venda
-                });
+                if ((sale.valor_venda_final || 0) > 0 && sellerSalesMap[sellerName]) {
+                    sellerSalesMap[sellerName].figures.push({
+                        id: figure.id,
+                        name: figure.nome,
+                        price: sale.valor_venda_final || 0,
+                        qty: sale.quantidade || 1,
+                        date: sale.data_venda
+                    });
+                }
 
                 if (!productSalesMap[key]) {
                     productSalesMap[key] = {
