@@ -88,6 +88,7 @@ export default async function FigureModalPage({ params }: Props) {
         imagem_url: figure.imagem_url,
         disponivel: figure.disponivel,
         serie: seriesData?.nome,
+        serie_id: figure.serie_id,
         categoria: seriesData?.categorias?.nome || (seriesData as any)?.categorias?.[0]?.nome,
         studio: studioData?.nome,
         altura_cm: metaData?.altura_cm,
