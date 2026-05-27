@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useMemo, Suspense, useEffect } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { DesktopFilters } from '@/components/Filters/DesktopFilters';
 import { MobileFilters } from '@/components/Filters/MobileFilters';
 import { GalleryGrid } from '@/components/Gallery/GalleryGrid';
@@ -23,14 +23,58 @@ const CATEGORIES = ['Anime', 'Games', 'Marvel', 'DC', 'Random'];
 
 function HomeContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const qParam = searchParams.get('q');
+  const categoriaParam = searchParams.get('categoria');
   const studioParam = searchParams.get('studioIds');
   const showAllParam = searchParams.get('incluirNaoVendaveis');
+  const sortParam = searchParams.get('sort');
 
   const [filters, setFilters] = useState<FilterState>({
+    q: qParam || undefined,
+    categoria: categoriaParam || undefined,
     studioIds: studioParam || undefined,
     incluirNaoVendaveis: showAllParam || undefined,
-    sort: 'newest'
+    sort: sortParam || 'newest'
   });
+
+  // Sync state changes to URL query parameters
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filters.q) params.set('q', filters.q);
+    if (filters.categoria) params.set('categoria', filters.categoria);
+    if (filters.studioIds) params.set('studioIds', filters.studioIds);
+    if (filters.incluirNaoVendaveis) params.set('incluirNaoVendaveis', filters.incluirNaoVendaveis);
+    if (filters.sort && filters.sort !== 'newest') params.set('sort', filters.sort);
+
+    const queryString = params.toString();
+    const target = queryString ? `${pathname}?${queryString}` : pathname;
+    router.replace(target, { scroll: false });
+  }, [filters, pathname, router]);
+
+  // Sync URL changes back to state (e.g. back/forward navigation)
+  useEffect(() => {
+    const q = searchParams.get('q') || undefined;
+    const categoria = searchParams.get('categoria') || undefined;
+    const studioIds = searchParams.get('studioIds') || undefined;
+    const incluirNaoVendaveis = searchParams.get('incluirNaoVendaveis') || undefined;
+    const sort = searchParams.get('sort') || 'newest';
+
+    setFilters(prev => {
+      if (
+        prev.q === q &&
+        prev.categoria === categoria &&
+        prev.studioIds === studioIds &&
+        prev.incluirNaoVendaveis === incluirNaoVendaveis &&
+        prev.sort === sort
+      ) {
+        return prev;
+      }
+      return { q, categoria, studioIds, incluirNaoVendaveis, sort };
+    });
+  }, [searchParams]);
   
   const { setIsCartOpen } = useCart();
 

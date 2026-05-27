@@ -90,7 +90,29 @@ export async function GET(req: NextRequest) {
 
         if (filters.q) {
             const term = filters.q;
-            query = query.or(`nome.ilike.%${term}%,sinonimos.ilike.%${term}%`);
+            
+            // Search matching series and studios in parallel
+            const [seriesRes, studiosRes] = await Promise.all([
+                supabase.from('series').select('id').ilike('nome', `%${term}%`),
+                supabase.from('studios').select('id').ilike('nome', `%${term}%`)
+            ]);
+
+            const seriesIds = seriesRes.data?.map((s: any) => s.id) || [];
+            const studioIds = studiosRes.data?.map((st: any) => st.id) || [];
+
+            let orConditions = [
+                `nome.ilike.%${term}%`,
+                `sinonimos.ilike.%${term}%`
+            ];
+
+            if (seriesIds.length > 0) {
+                orConditions.push(`serie_id.in.(${seriesIds.join(',')})`);
+            }
+            if (studioIds.length > 0) {
+                orConditions.push(`studio_id.in.(${studioIds.join(',')})`);
+            }
+
+            query = query.or(orConditions.join(','));
         }
 
         if (isCampanhaActive) {
