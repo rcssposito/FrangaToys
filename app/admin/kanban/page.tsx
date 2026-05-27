@@ -27,6 +27,7 @@ interface Sale {
     metodo_entrega?: string;
     valor_venda_final?: number;
     status_pagamento?: string;
+    valor_pago_parcial?: number;
 }
 
 const COLUMNS = [
@@ -42,6 +43,10 @@ export default function KanbanPage() {
     const [sales, setSales] = useState<Sale[]>([]);
     const [loading, setLoading] = useState(true);
     const { hasRole } = usePermission();
+    
+    // States for inline partial payment editing
+    const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
+    const [inputValorParcial, setInputValorParcial] = useState<string>('');
 
     useEffect(() => {
         fetchTasks();
@@ -175,7 +180,7 @@ export default function KanbanPage() {
         const newStatus = currentStatus === 'Pago' ? 'Pendente/Incompleto' : 'Pago';
         
         // Optimistic update
-        setSales(prev => prev.map(s => s.id === saleId ? { ...s, status_pagamento: newStatus } : s));
+        setSales(prev => prev.map(s => s.id === saleId ? { ...s, status_pagamento: newStatus, valor_pago_parcial: newStatus === 'Pago' ? s.valor_venda_final : 0 } : s));
 
         try {
             const res = await fetch('/api/admin/kanban', {
@@ -189,6 +194,39 @@ export default function KanbanPage() {
             toast.error('Erro ao atualizar status de pagamento');
             // Revert state on error
             setSales(prev => prev.map(s => s.id === saleId ? { ...s, status_pagamento: currentStatus } : s));
+        }
+    };
+
+    const savePartialPayment = async (saleId: number, originalValue: number | undefined) => {
+        const val = inputValorParcial.trim() === '' ? 0 : Number(inputValorParcial.replace(',', '.'));
+        if (isNaN(val) || val < 0) {
+            toast.error('Informe um valor numérico válido.');
+            return;
+        }
+
+        const total = originalValue || 0;
+        let newStatus = 'Pendente/Incompleto';
+        if (val >= total) {
+            newStatus = 'Pago';
+        } else if (val > 0) {
+            newStatus = 'Parcial';
+        }
+
+        // Optimistic update
+        setSales(prev => prev.map(s => s.id === saleId ? { ...s, valor_pago_parcial: val, status_pagamento: newStatus } : s));
+        setEditingSaleId(null);
+
+        try {
+            const res = await fetch('/api/admin/kanban', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: saleId, valor_pago_parcial: val })
+            });
+            if (!res.ok) throw new Error();
+            toast.success('Valor de pagamento atualizado!');
+        } catch (err) {
+            toast.error('Erro ao atualizar pagamento parcial');
+            fetchTasks();
         }
     };
 
@@ -335,17 +373,77 @@ export default function KanbanPage() {
                                                         R$ {Number(task.valor_venda_final).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                     </span>
                                                 )}
-                                                <button
-                                                    onClick={() => togglePaymentStatus(task.id, task.status_pagamento)}
-                                                    className={`flex items-center gap-1.5 text-[10px] font-black px-3 py-1 rounded-lg border transition-all active:scale-95 shadow-sm ${
-                                                        task.status_pagamento === 'Pago'
-                                                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                                                        : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500'
-                                                    }`}
-                                                >
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${task.status_pagamento === 'Pago' ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.6)]'}`} />
-                                                    {task.status_pagamento === 'Pago' ? 'PAGO' : 'PENDENTE'}
-                                                </button>
+                                                {editingSaleId === task.id ? (
+                                                    <div className="flex items-center gap-1.5 bg-zinc-950 p-1 border border-zinc-800 rounded-lg w-full mt-2 animate-in slide-in-from-top-1 duration-150">
+                                                        <span className="text-[9px] font-black text-zinc-500 pl-1">R$</span>
+                                                        <input
+                                                            type="text"
+                                                            value={inputValorParcial}
+                                                            onChange={(e) => setInputValorParcial(e.target.value)}
+                                                            placeholder="Valor pago"
+                                                            className="bg-transparent text-xs font-black text-blue-400 outline-none w-20 py-0.5"
+                                                            autoFocus
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') savePartialPayment(task.id, task.valor_venda_final);
+                                                                if (e.key === 'Escape') setEditingSaleId(null);
+                                                            }}
+                                                        />
+                                                        <button
+                                                            onClick={() => savePartialPayment(task.id, task.valor_venda_final)}
+                                                            className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-black text-[9px] font-black rounded"
+                                                        >
+                                                            OK
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setInputValorParcial(String(task.valor_venda_final || 0));
+                                                                // Use setTimeout to ensure the state update is registered before saving
+                                                                setTimeout(() => {
+                                                                    savePartialPayment(task.id, task.valor_venda_final);
+                                                                }, 0);
+                                                            }}
+                                                            className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-black rounded"
+                                                            title="Confirmar pagamento total"
+                                                        >
+                                                            Quitar
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setEditingSaleId(null)}
+                                                            className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-[9px] font-black rounded"
+                                                        >
+                                                            X
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingSaleId(task.id);
+                                                            setInputValorParcial(task.valor_pago_parcial !== undefined && task.valor_pago_parcial !== null ? String(task.valor_pago_parcial) : '');
+                                                        }}
+                                                        title="Editar pagamento/sinal"
+                                                        className={`flex items-center gap-1.5 text-[10px] font-black px-3 py-1 rounded-lg border transition-all active:scale-95 shadow-sm ${
+                                                            task.status_pagamento === 'Pago'
+                                                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                                                            : task.status_pagamento === 'Parcial'
+                                                            ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20'
+                                                            : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500 hover:bg-yellow-500/20'
+                                                        }`}
+                                                    >
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${
+                                                            task.status_pagamento === 'Pago'
+                                                            ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]'
+                                                            : task.status_pagamento === 'Parcial'
+                                                            ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]'
+                                                            : 'bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.6)]'
+                                                        }`} />
+                                                        {task.status_pagamento === 'Pago'
+                                                            ? 'PAGO'
+                                                            : task.status_pagamento === 'Parcial'
+                                                            ? `SINAL: R$ ${Number(task.valor_pago_parcial).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                                                            : 'PENDENTE'
+                                                        }
+                                                    </button>
+                                                )}
                                                 {task.pintura_freelancer && (
                                                     <span className="flex items-center gap-1.5 text-[10px] font-black px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-lg text-purple-400 shadow-sm" title="Exige pintura terceirizada">
                                                         <Paintbrush size={10} /> TERCEIRIZADA

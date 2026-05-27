@@ -48,14 +48,14 @@ export async function PATCH(req: Request) {
     const sessionOrResponse = await requireRoles(['admin', 'sales', 'production']);
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
-        const { id, status: newStatus, status_pagamento: newStatusPagamento } = await req.json();
+        const { id, status: newStatus, status_pagamento: newStatusPagamento, valor_pago_parcial: newValorPagoParcial } = await req.json();
 
         if (!id) {
             return NextResponse.json({ error: 'ID é obrigatório' }, { status: 400 });
         }
 
-        if (newStatus === undefined && newStatusPagamento === undefined) {
-            return NextResponse.json({ error: 'Status ou Status de Pagamento é obrigatório' }, { status: 400 });
+        if (newStatus === undefined && newStatusPagamento === undefined && newValorPagoParcial === undefined) {
+            return NextResponse.json({ error: 'Status, Status de Pagamento ou Valor Pago Parcial é obrigatório' }, { status: 400 });
         }
 
         // 1. Executar automação de resina se o status logístico mudou
@@ -109,10 +109,35 @@ export async function PATCH(req: Request) {
             }
         }
 
+        let calculatedStatusPagamento = newStatusPagamento;
+
+        if (newValorPagoParcial !== undefined) {
+            // Buscar valor total da venda para calcular o status de pagamento
+            const { data: saleData, error: saleError } = await supabase
+                .from('vendas')
+                .select('valor_venda_final')
+                .eq('id', id)
+                .single();
+
+            if (saleError || !saleData) throw new Error('Venda não encontrada para cálculo de pagamento');
+
+            const total = Number(saleData.valor_venda_final) || 0;
+            const paid = Number(newValorPagoParcial) || 0;
+
+            if (paid >= total) {
+                calculatedStatusPagamento = 'Pago';
+            } else if (paid > 0) {
+                calculatedStatusPagamento = 'Parcial';
+            } else {
+                calculatedStatusPagamento = 'Pendente/Incompleto';
+            }
+        }
+
         // 4. Salvar novas propriedades da venda
         const updateFields: any = {};
         if (newStatus !== undefined) updateFields.status = newStatus;
-        if (newStatusPagamento !== undefined) updateFields.status_pagamento = newStatusPagamento;
+        if (calculatedStatusPagamento !== undefined) updateFields.status_pagamento = calculatedStatusPagamento;
+        if (newValorPagoParcial !== undefined) updateFields.valor_pago_parcial = newValorPagoParcial;
 
         const { data, error } = await supabase
             .from('vendas')
