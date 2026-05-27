@@ -25,6 +25,8 @@ interface Sale {
         studios: { nome: string } | { nome: string }[];
     };
     metodo_entrega?: string;
+    valor_venda_final?: number;
+    status_pagamento?: string;
 }
 
 const COLUMNS = [
@@ -169,6 +171,27 @@ export default function KanbanPage() {
         }
     };
 
+    const togglePaymentStatus = async (saleId: number, currentStatus: string | undefined) => {
+        const newStatus = currentStatus === 'Pago' ? 'Pendente/Incompleto' : 'Pago';
+        
+        // Optimistic update
+        setSales(prev => prev.map(s => s.id === saleId ? { ...s, status_pagamento: newStatus } : s));
+
+        try {
+            const res = await fetch('/api/admin/kanban', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: saleId, status_pagamento: newStatus })
+            });
+            if (!res.ok) throw new Error();
+            toast.success(`Pagamento atualizado para ${newStatus === 'Pago' ? 'Pago' : 'Pendente'}`);
+        } catch (err) {
+            toast.error('Erro ao atualizar status de pagamento');
+            // Revert state on error
+            setSales(prev => prev.map(s => s.id === saleId ? { ...s, status_pagamento: currentStatus } : s));
+        }
+    };
+
     return (
         <div className="min-h-screen bg-black text-white p-4 md:p-8 flex flex-col transition-colors duration-300 relative overflow-hidden">
             {/* Background UV/Water Blobs for Scifi Theme */}
@@ -216,6 +239,12 @@ export default function KanbanPage() {
                                         </div>
                                         <span className="bg-zinc-900 px-3 py-1 rounded-full text-xs font-black text-zinc-400 border border-zinc-800 shadow-inner">
                                             {columnTasks.length}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between mt-1 px-1">
+                                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Total Fila:</span>
+                                        <span className="text-[11px] font-black text-emerald-400">
+                                            R$ {columnTasks.reduce((sum, t) => sum + (Number(t.valor_venda_final) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                         </span>
                                     </div>
                                 </div>
@@ -301,6 +330,22 @@ export default function KanbanPage() {
                                                 <span className="text-[10px] font-black px-3 py-1 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-300 shadow-inner">
                                                     QTD: {task.quantidade}x
                                                 </span>
+                                                {task.valor_venda_final !== undefined && (
+                                                    <span className="text-[10px] font-black px-3 py-1 bg-zinc-950 border border-zinc-800 rounded-lg text-emerald-400 shadow-inner">
+                                                        R$ {Number(task.valor_venda_final).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </span>
+                                                )}
+                                                <button
+                                                    onClick={() => togglePaymentStatus(task.id, task.status_pagamento)}
+                                                    className={`flex items-center gap-1.5 text-[10px] font-black px-3 py-1 rounded-lg border transition-all active:scale-95 shadow-sm ${
+                                                        task.status_pagamento === 'Pago'
+                                                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                                                        : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500'
+                                                    }`}
+                                                >
+                                                    <div className={`w-1.5 h-1.5 rounded-full ${task.status_pagamento === 'Pago' ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.6)]'}`} />
+                                                    {task.status_pagamento === 'Pago' ? 'PAGO' : 'PENDENTE'}
+                                                </button>
                                                 {task.pintura_freelancer && (
                                                     <span className="flex items-center gap-1.5 text-[10px] font-black px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-lg text-purple-400 shadow-sm" title="Exige pintura terceirizada">
                                                         <Paintbrush size={10} /> TERCEIRIZADA
