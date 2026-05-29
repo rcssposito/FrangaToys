@@ -39,7 +39,7 @@ function SuccessContent() {
                 // Generate PIX payload if it was a PIX order
                 if (data.metodo_pagamento === 'pix' || !data.link_pagamento) {
                     const total = data.items.reduce((acc: number, item: any) => acc + (item.valor_venda_final || 0), 0) + (data.valor_frete || 0);
-                    const payload = generatePixPayload("43687871886", "Renan C S Sposito", total);
+                    const payload = generatePixPayload("43687871886", "Rodrigo Casagrande Sposito", total);
                     setPixPayload(payload);
                 }
             } catch (err: any) {

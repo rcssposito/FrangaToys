@@ -23,6 +23,10 @@ export async function GET(req: NextRequest) {
                 quantidade,
                 figura_id,
                 metodo_entrega,
+                status_pagamento,
+                valor_venda_final,
+                valor_pago_parcial,
+                valor_frete,
                 figuras (
                     nome,
                     imagem_url,
@@ -75,7 +79,11 @@ export async function GET(req: NextRequest) {
                 studio: s.figuras?.studios?.nome
             },
             quantidade: s.quantidade,
-            metodo_entrega: s.metodo_entrega
+            metodo_entrega: s.metodo_entrega,
+            status_pagamento: s.status_pagamento,
+            valor_venda_final: s.valor_venda_final,
+            valor_pago_parcial: s.valor_pago_parcial,
+            valor_frete: s.valor_frete
         }));
 
         return NextResponse.json({ items: formatted });

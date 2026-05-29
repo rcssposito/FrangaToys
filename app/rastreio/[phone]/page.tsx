@@ -3,12 +3,137 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw, ShoppingBag, Copy, QrCode, Check } from 'lucide-react';
 import { OrderTracker } from '@/components/OrderTracker';
 import Image from 'next/image';
 import imageKitLoader from '@/lib/image-loader';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { generatePixPayload } from '@/lib/pix';
+
+function PixPaymentWidget({ order }: { order: any }) {
+    const [copied, setCopied] = useState(false);
+    const [pixPayload, setPixPayload] = useState('');
+
+    const finalVal = Number(order.valor_venda_final) || 0;
+    const freteVal = Number(order.valor_frete) || 0;
+    const pagoVal = Number(order.valor_pago_parcial) || 0;
+    const total = finalVal + freteVal;
+    const remaining = Math.max(0, total - pagoVal);
+
+    useEffect(() => {
+        if (remaining > 0) {
+            // Chave CPF do Rodrigo, nome Rodrigo Casagrande Sposito
+            const payload = generatePixPayload("43687871886", "Rodrigo Casagrande Sposito", remaining);
+            setPixPayload(payload);
+        }
+    }, [remaining]);
+
+    const copyPix = () => {
+        if (!pixPayload) return;
+        navigator.clipboard.writeText(pixPayload);
+        setCopied(true);
+        toast.success('Chave PIX copiada!');
+        setTimeout(() => setCopied(false), 3000);
+    };
+
+    if (remaining <= 0) return null;
+
+    return (
+        <div className="mt-6 bg-zinc-950/80 border border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6 shadow-lg backdrop-blur-sm relative overflow-hidden">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500">
+                        <QrCode size={20} />
+                    </div>
+                    <div>
+                        <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400">Pagamento Pendente (PIX)</h4>
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Pague com PIX para liberar o envio da sua figura</p>
+                    </div>
+                </div>
+                
+                <div className="text-right">
+                    <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                        {order.status_pagamento === 'Parcial' ? 'PAGAMENTO PARCIAL' : 'AGUARDANDO PAGAMENTO'}
+                    </span>
+                </div>
+            </div>
+
+            {/* Financial summary and QR Code */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                {/* QR Code and Copy Area */}
+                <div className="lg:col-span-7 flex flex-col sm:flex-row items-center gap-6 w-full min-w-0">
+                    <div className="bg-white p-3 rounded-2xl shrink-0 shadow-xl border border-white/10">
+                        <img 
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(pixPayload)}`} 
+                            alt="PIX QR Code" 
+                            className="w-32 h-32"
+                        />
+                    </div>
+                    
+                    <div className="space-y-3 w-full min-w-0">
+                        <p className="text-[10px] text-zinc-500 font-black uppercase tracking-wider text-center sm:text-left">
+                            Escaneie o QR Code ao lado ou copie a chave Pix abaixo:
+                        </p>
+                        
+                        {/* Caixa de código Pix com overflow hidden e estilo elegante */}
+                        <div className="w-full bg-zinc-900/60 border border-zinc-800 p-3 rounded-2xl overflow-hidden text-ellipsis whitespace-nowrap text-[9px] font-mono text-zinc-500 shadow-inner">
+                            {pixPayload}
+                        </div>
+
+                        {/* Botão de cópia destacado */}
+                        <button 
+                            onClick={copyPix}
+                            className="w-full bg-orange-500 hover:bg-orange-400 text-black text-[10px] font-black py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-widest shadow-lg shadow-orange-500/10"
+                        >
+                            {copied ? (
+                                <>
+                                    <Check size={14} strokeWidth={3} />
+                                    Código Copiado!
+                                </>
+                            ) : (
+                                <>
+                                    <Copy size={14} />
+                                    Copiar Código Pix
+                                    </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Values Summary Card */}
+                <div className="lg:col-span-5 bg-zinc-900/30 border border-zinc-800/60 rounded-2xl p-5 space-y-3 w-full">
+                    <div className="flex justify-between text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                        <span>Valor do Item:</span>
+                        <span>R$ {finalVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    {freteVal > 0 && (
+                        <div className="flex justify-between text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                            <span>Frete:</span>
+                            <span>R$ {freteVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                    )}
+                    <div className="h-[1px] bg-zinc-800/80 my-2" />
+                    <div className="flex justify-between text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                        <span>Custo Total:</span>
+                        <span>R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    {pagoVal > 0 && (
+                        <div className="flex justify-between text-xs font-bold text-emerald-400 uppercase tracking-widest">
+                            <span>Já Pago (Sinal):</span>
+                            <span>R$ {pagoVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                    )}
+                    <div className="flex justify-between text-base font-black tracking-tight text-white border-t border-zinc-800/60 pt-3">
+                        <span className="uppercase text-xs tracking-wider text-orange-500 self-center">Valor a Pagar:</span>
+                        <span className="text-orange-500 text-xl font-black">R$ {remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function CustomerDashboard() {
     const params = useParams();
@@ -136,6 +261,16 @@ export default function CustomerDashboard() {
                                     <div className="pt-4 border-t border-zinc-800/50">
                                         <OrderTracker status={order.status} />
                                     </div>
+
+                                    {/* Seção de Pagamento PIX */}
+                                    {((order.status_pagamento === 'Pendente' ||
+                                       order.status_pagamento === 'Pendente/Incompleto' || 
+                                       order.status_pagamento === 'Aguardando Pagamento' || 
+                                       order.status_pagamento === 'Parcial' ||
+                                       order.status === 'Aguardando Pagamento') && 
+                                      order.status !== 'Cancelada') && (
+                                        <PixPaymentWidget order={order} />
+                                    )}
                                 </div>
                             </div>
                         ))
