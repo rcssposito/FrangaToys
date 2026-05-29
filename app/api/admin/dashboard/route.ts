@@ -216,7 +216,7 @@ export async function GET(req: Request) {
         const productSalesMap: { [key: string]: { id: number, name: string, studio: string, revenue: number, qty: number } } = {};
         const categorySalesMap: { [key: string]: number } = {};
         const seriesSalesMap: { [key: string]: { value: number, category: string, studios: { [key: string]: number } } } = {};
-        const sellerSalesMap: { [key: string]: { revenue: number, qty: number, figures: any[] } } = {};
+        const sellerSalesMap: { [key: string]: { revenue: number, qty: number, commission: number, figures: any[] } } = {};
         const customerSalesMap: { [key: string]: { revenue: number, count: number } } = {};
 
         sales.forEach(sale => {
@@ -242,10 +242,11 @@ export async function GET(req: Request) {
             
             if ((sale.valor_venda_final || 0) > 0) {
                 if (!sellerSalesMap[sellerName]) {
-                    sellerSalesMap[sellerName] = { revenue: 0, qty: 0, figures: [] };
+                    sellerSalesMap[sellerName] = { revenue: 0, qty: 0, commission: 0, figures: [] };
                 }
                 sellerSalesMap[sellerName].revenue += (sale.valor_venda_final || 0);
                 sellerSalesMap[sellerName].qty += (sale.quantidade || 1);
+                sellerSalesMap[sellerName].commission += (sale.comissao_vendedor || 0);
             }
 
             if (!studioSalesMap[studioName]) {
@@ -264,7 +265,8 @@ export async function GET(req: Request) {
                         name: figure.nome,
                         price: sale.valor_venda_final || 0,
                         qty: sale.quantidade || 1,
-                        date: sale.data_venda
+                        date: sale.data_venda,
+                        commission: sale.comissao_vendedor || 0
                     });
                 }
 
@@ -581,6 +583,7 @@ export async function GET(req: Request) {
                 name,
                 value: data.revenue,
                 qty: data.qty,
+                commission: data.commission,
                 figures: enrichedFigures
             };
         }).sort((a, b) => b.value - a.value);

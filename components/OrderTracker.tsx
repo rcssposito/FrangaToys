@@ -12,7 +12,7 @@ const STAGES = [
     { id: 'Aguardando Pagamento', label: 'Pagamento', icon: Clock },
     { id: 'Fila de Impressão', label: 'Na Fila', icon: Zap },
     { id: 'Imprimindo', label: 'Impressão', icon: Activity },
-    { id: 'Lavagem e Cura', label: 'Cura', icon: Box },
+    { id: 'Lavagem e Cura', label: 'Polimento', icon: Box },
     { id: 'Pintura Secagem', label: 'Pintura', icon: Paintbrush },
     { id: 'Pronto p/ Entrega', label: 'Envio', icon: Truck },
 ];

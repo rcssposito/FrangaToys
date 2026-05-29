@@ -1,8 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, DollarSign, Box, Activity, Store, Maximize2, X, ArrowUpRight, ArrowDownRight, Clock, Tag, Layers, Ruler, ImageIcon, ExternalLink, Droplet, Printer, Eye, EyeOff } from 'lucide-react';
+import Link from 'next/link';
+import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, DollarSign, Box, Activity, Store, Maximize2, X, ArrowUpRight, ArrowDownRight, Clock, Tag, Layers, Ruler, ImageIcon, ExternalLink, Droplet, Printer, Eye, EyeOff, BarChart3, Trophy } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { toast } from 'sonner';
@@ -19,6 +19,7 @@ export default function AdminDashboard() {
     const [drillDownSeries, setDrillDownSeries] = useState<string | null>(null);
     const [drillDownPriceBucket, setDrillDownPriceBucket] = useState<string | null>(null);
     const [drillDownSeller, setDrillDownSeller] = useState<string | null>(null);
+    const [sellerViewMode, setSellerViewMode] = useState<'chart' | 'list'>('chart');
     const [seriesFilter, setSeriesFilter] = useState<string>('all');
     const [previewImage, setPreviewImage] = useState<{ url: string, nome: string } | null>(null);
     const [hideValues, setHideValues] = useState<boolean>(false);
@@ -731,41 +732,150 @@ export default function AdminDashboard() {
                             </div>
                         );
                     } else {
+                        const totalRevenue = sellerData.value;
+                        const totalComm = sellerData.commission || 0;
+                        const totalQty = sellerData.qty || 0;
+                        const avgTicket = sellerData.figures.length > 0 ? (totalRevenue / sellerData.figures.length) : 0;
+
                         ChartComponent = (
-                            <div className="w-full h-full overflow-auto pr-2 custom-scrollbar">
+                            <div className="w-full h-full overflow-auto pr-2 custom-scrollbar flex flex-col gap-6 animate-in fade-in duration-500">
+                                {/* KPIs Cards */}
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+                                    <div className="bg-zinc-900/50 border border-zinc-800/50 p-4 rounded-xl shadow-sm">
+                                        <div className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Faturamento</div>
+                                        <div className="text-lg font-black text-emerald-500 font-mono mt-1">
+                                            {hideValues ? "R$ ••••" : `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                                        </div>
+                                    </div>
+                                    <div className="bg-zinc-900/50 border border-zinc-800/50 p-4 rounded-xl shadow-sm">
+                                        <div className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Comissão</div>
+                                        <div className="text-lg font-black text-amber-500 font-mono mt-1">
+                                            {hideValues ? "R$ ••••" : `R$ ${totalComm.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                                        </div>
+                                    </div>
+                                    <div className="bg-zinc-900/50 border border-zinc-800/50 p-4 rounded-xl shadow-sm">
+                                        <div className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Peças Vendidas</div>
+                                        <div className="text-lg font-black text-blue-500 font-mono mt-1">{totalQty} unid.</div>
+                                    </div>
+                                    <div className="bg-zinc-900/50 border border-zinc-800/50 p-4 rounded-xl shadow-sm">
+                                        <div className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Ticket Médio</div>
+                                        <div className="text-lg font-black text-purple-400 font-mono mt-1">
+                                            {hideValues ? "R$ ••••" : `R$ ${avgTicket.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="text-[10px] font-black uppercase tracking-widest bg-[var(--input-bg)] text-[var(--text-muted)] sticky top-0 backdrop-blur-md border-b border-[var(--card-border)]">
+                                            <tr>
+                                                <th className="px-6 py-4">ID</th>
+                                                <th className="px-6 py-4">Modelo (Clique p/ ver)</th>
+                                                <th className="px-6 py-4">Data Venda</th>
+                                                <th className="px-6 py-4 text-right">Comissão</th>
+                                                <th className="px-6 py-4 text-right">Preço</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[var(--card-border)]">
+                                            {sellerData.figures.map((f: any, idx: number) => (
+                                                <tr key={idx} className="hover:bg-[var(--input-bg)] transition-colors group">
+                                                    <td className="px-6 py-4 text-[var(--text-muted)] font-black text-xs">#{f.id}</td>
+                                                    <td className="px-6 py-4">
+                                                        <button
+                                                            onClick={() => {
+                                                                if (f.image_url) {
+                                                                    setPreviewImage({ url: f.image_url, nome: f.name });
+                                                                } else {
+                                                                    toast.info('Sem imagem cadastrada');
+                                                                }
+                                                            }}
+                                                            className={`flex items-center gap-3 font-black text-[var(--foreground)] tracking-tight hover:text-orange-500 transition-colors text-left ${!f.image_url ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        >
+                                                            {f.name}
+                                                            {f.image_url && <ExternalLink size={14} className="text-[var(--text-muted)] group-hover:text-orange-500 transition-colors" />}
+                                                        </button>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-[var(--text-muted)] font-medium">
+                                                        {new Date(f.date).toLocaleDateString('pt-BR')}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right text-amber-500 font-bold tracking-tighter">
+                                                        {hideValues ? "R$ ••••" : `R$ ${(f.commission || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right text-emerald-500 font-black text-base tracking-tighter">
+                                                        {hideValues ? "R$ ••••" : `R$ ${f.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        );
+                    }
+                } else {
+                    chartData = data.charts.salesBySeller || [];
+                    title = "Vendas por Vendedor";
+                    if (sellerViewMode === 'chart') {
+                        ChartComponent = (
+                            <div className="w-full h-full flex flex-col pt-4">
+                                <p className="text-[var(--text-muted)] text-[10px] font-black uppercase tracking-widest mb-6 text-center bg-[var(--input-bg)] py-2 rounded-full w-fit mx-auto px-6 border border-[var(--card-border)]">Clique na barra para ver os detalhes da venda</p>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={chartData} margin={{ left: 0, bottom: 40 }} layout="vertical">
+                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" horizontal={false} />
+                                        <XAxis type="number" hide />
+                                        <YAxis dataKey="name" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 700 }} width={140} axisLine={false} tickLine={false} />
+                                        <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number, name: string, payload: any) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | ${(payload?.payload?.qty || 0)} unid.`} />} cursor={{ fill: 'var(--input-bg)' }} />
+                                        <Bar dataKey="value" radius={[0, 6, 6, 0]} onClick={(data) => setDrillDownSeller(data?.name || null)} className="cursor-pointer">
+                                            {chartData.map((_e: any, index: number) => (
+                                                <Cell
+                                                    key={`cell-${index}`}
+                                                    fill="#10b981"
+                                                    className="hover:opacity-80 transition-all cursor-pointer"
+                                                    onClick={() => setDrillDownSeller(_e.name || null)}
+                                                />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        );
+                    } else {
+                        ChartComponent = (
+                            <div className="w-full h-full overflow-auto pr-2 custom-scrollbar animate-in fade-in duration-500">
+                                <p className="text-[var(--text-muted)] text-[10px] font-black uppercase tracking-widest mb-6 text-center bg-[var(--input-bg)] py-2 rounded-full w-fit mx-auto px-6 border border-[var(--card-border)]">Clique no vendedor para ver os detalhes da venda</p>
                                 <table className="w-full text-sm text-left">
-                                    <thead className="text-[10px] font-black uppercase tracking-widest bg-[var(--input-bg)] text-[var(--text-muted)] sticky top-0 backdrop-blur-md border-b border-[var(--card-border)]">
+                                    <thead className="text-[10px] uppercase bg-zinc-900/50 text-zinc-500 font-black tracking-widest border-b border-zinc-800/50 sticky top-0 backdrop-blur-md">
                                         <tr>
-                                            <th className="px-6 py-4">ID</th>
-                                            <th className="px-6 py-4">Modelo (Clique p/ ver)</th>
-                                            <th className="px-6 py-4">Data Venda</th>
-                                            <th className="px-6 py-4 text-right">Preço</th>
+                                            <th className="px-6 py-4 w-16 text-center">Pos</th>
+                                            <th className="px-6 py-4">Vendedor</th>
+                                            <th className="px-6 py-4 text-right">Qtd Vendida</th>
+                                            <th className="px-6 py-4 text-right">Comissão Acumulada</th>
+                                            <th className="px-6 py-4 text-right">Faturamento</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-[var(--card-border)]">
-                                        {sellerData.figures.map((f: any, idx: number) => (
-                                            <tr key={idx} className="hover:bg-[var(--input-bg)] transition-colors group">
-                                                <td className="px-6 py-4 text-[var(--text-muted)] font-black text-xs">#{f.id}</td>
+                                    <tbody className="divide-y divide-zinc-800/50">
+                                        {chartData.map((s: any, i: number) => (
+                                            <tr key={i} className="hover:bg-zinc-800/40 transition-colors group cursor-pointer" onClick={() => setDrillDownSeller(s.name)}>
+                                                <td className="px-6 py-4 text-center font-black">
+                                                     {i === 0 ? <span className="text-lg">🥇</span> :
+                                                      i === 1 ? <span className="text-lg">🥈</span> :
+                                                      i === 2 ? <span className="text-lg">🥉</span> :
+                                                      <span className="text-xs text-zinc-500 font-mono">#{i + 1}</span>}
+                                                </td>
                                                 <td className="px-6 py-4">
-                                                    <button
-                                                        onClick={() => {
-                                                            if (f.image_url) {
-                                                                setPreviewImage({ url: f.image_url, nome: f.name });
-                                                            } else {
-                                                                toast.info('Sem imagem cadastrada');
-                                                            }
-                                                        }}
-                                                        className={`flex items-center gap-3 font-black text-[var(--foreground)] tracking-tight hover:text-orange-500 transition-colors text-left ${!f.image_url ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                    >
-                                                        {f.name}
-                                                        {f.image_url && <ExternalLink size={14} className="text-[var(--text-muted)] group-hover:text-orange-500 transition-colors" />}
-                                                    </button>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-400 flex items-center justify-center font-black uppercase tracking-wider shrink-0 shadow-inner group-hover:border-emerald-500/30 group-hover:text-emerald-400 transition-all duration-300">
+                                                            {getInitials(s.name)}
+                                                        </div>
+                                                        <span className="font-bold text-zinc-300 group-hover:text-emerald-400 transition-colors uppercase tracking-tight">{s.name}</span>
+                                                    </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-[var(--text-muted)] font-medium">
-                                                    {new Date(f.date).toLocaleDateString('pt-BR')}
+                                                <td className="px-6 py-4 text-right text-zinc-500 font-bold">{s.qty}</td>
+                                                <td className="px-6 py-4 text-right font-black text-amber-500 font-mono tracking-tighter">
+                                                    {hideValues ? "R$ ••••" : `R$ ${(s.commission || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                                                 </td>
-                                                <td className="px-6 py-4 text-right text-emerald-500 font-black text-base tracking-tighter">
-                                                    R$ {f.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                <td className="px-6 py-4 text-right font-black text-emerald-500 font-mono tracking-tighter">
+                                                    {hideValues ? "R$ ••••" : `R$ ${s.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                                                 </td>
                                             </tr>
                                         ))}
@@ -774,32 +884,6 @@ export default function AdminDashboard() {
                             </div>
                         );
                     }
-                } else {
-                    chartData = data.charts.salesBySeller || [];
-                    title = "Vendas por Vendedor";
-                    ChartComponent = (
-                        <div className="w-full h-full flex flex-col pt-4">
-                            <p className="text-[var(--text-muted)] text-[10px] font-black uppercase tracking-widest mb-6 text-center bg-[var(--input-bg)] py-2 rounded-full w-fit mx-auto px-6 border border-[var(--card-border)]">Clique na barra para ver os detalhes da venda</p>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={chartData} margin={{ left: 0, bottom: 40 }} layout="vertical">
-                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" horizontal={false} />
-                                    <XAxis type="number" hide />
-                                    <YAxis dataKey="name" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 700 }} width={140} axisLine={false} tickLine={false} />
-                                    <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number, name: string, payload: any) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | ${(payload?.payload?.qty || 0)} unid.`} />} cursor={{ fill: 'var(--input-bg)' }} />
-                                    <Bar dataKey="value" radius={[0, 6, 6, 0]} onClick={(data) => setDrillDownSeller(data?.name || null)} className="cursor-pointer">
-                                        {chartData.map((_e: any, index: number) => (
-                                            <Cell
-                                                key={`cell-${index}`}
-                                                fill="#10b981"
-                                                className="hover:opacity-80 transition-all cursor-pointer"
-                                                onClick={() => setDrillDownSeller(_e.name || null)}
-                                            />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    );
                 }
                 break;
 
@@ -1177,22 +1261,102 @@ export default function AdminDashboard() {
                             <Users size={22} className="text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                             Vendas por Vendedor
                         </h2>
-                        <button onClick={() => setExpandedChart('salesBySeller')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] text-zinc-500 hover:text-emerald-400" title="Expandir">
-                            <Maximize2 size={18} />
-                        </button>
+                        
+                        <div className="flex items-center gap-2">
+                            {/* Toggle Controls */}
+                            <div className="flex bg-zinc-900 border border-zinc-800 rounded-xl p-0.5 shadow-inner">
+                                <button
+                                    onClick={() => setSellerViewMode('chart')}
+                                    className={`p-2 rounded-lg transition-all ${sellerViewMode === 'chart' ? 'bg-zinc-800 text-emerald-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                    title="Visualizar em Gráfico"
+                                >
+                                    <BarChart3 size={16} />
+                                </button>
+                                <button
+                                    onClick={() => setSellerViewMode('list')}
+                                    className={`p-2 rounded-lg transition-all ${sellerViewMode === 'list' ? 'bg-zinc-800 text-emerald-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                    title="Visualizar em Ranking"
+                                >
+                                    <Trophy size={16} />
+                                </button>
+                            </div>
+
+                            <button onClick={() => setExpandedChart('salesBySeller')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] text-zinc-500 hover:text-emerald-400" title="Expandir">
+                                <Maximize2 size={18} />
+                            </button>
+                        </div>
                     </div>
+                    
                     <div className="flex-1 w-full min-h-[600px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data?.charts?.salesBySeller?.slice(0, 10) || []} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="1 10" stroke="var(--card-border)" strokeOpacity={0.15} horizontal={false} vertical={true} />
-                                <XAxis type="number" hide />
-                                <YAxis dataKey="name" type="category" tick={{ fill: '#71717a', fontSize: 11, fontWeight: 700 }} width={120} axisLine={false} tickLine={false} />
-                                <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number, name: string, payload: any) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | ${(payload?.payload?.qty || 0)} unid.`} />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
-                                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                                    {(data?.charts?.salesBySeller?.slice(0, 10) || []).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#10b981" />)}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+                        {sellerViewMode === 'chart' ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={data?.charts?.salesBySeller?.slice(0, 10) || []} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 20 }}>
+                                    <CartesianGrid strokeDasharray="1 10" stroke="var(--card-border)" strokeOpacity={0.15} horizontal={false} vertical={true} />
+                                    <XAxis type="number" hide />
+                                    <YAxis dataKey="name" type="category" tick={{ fill: '#71717a', fontSize: 11, fontWeight: 700 }} width={120} axisLine={false} tickLine={false} />
+                                    <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number, name: string, payload: any) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | ${(payload?.payload?.qty || 0)} unid.`} />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
+                                    <Bar dataKey="value" radius={[0, 4, 4, 0]} className="cursor-pointer" onClick={(bdata) => setDrillDownSeller(bdata?.name || null)}>
+                                        {(data?.charts?.salesBySeller?.slice(0, 10) || []).map((_e: any, index: number) => (
+                                            <Cell
+                                                key={`cell-${index}`}
+                                                fill="#10b981"
+                                                className="hover:opacity-80 transition-all cursor-pointer"
+                                                onClick={() => setDrillDownSeller(_e.name || null)}
+                                            />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="overflow-x-auto w-full">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="text-[10px] uppercase bg-zinc-900/50 text-zinc-500 font-black tracking-widest border-b border-zinc-800/50">
+                                        <tr>
+                                            <th className="px-4 py-3 w-16 text-center">Pos</th>
+                                            <th className="px-4 py-3">Vendedor</th>
+                                            <th className="px-4 py-3 text-right">Qtd</th>
+                                            <th className="px-4 py-3 text-right">Comissão</th>
+                                            <th className="px-4 py-3 text-right">Faturamento</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-800/50">
+                                        {data?.charts?.salesBySeller?.length > 0 ? (
+                                            data.charts.salesBySeller.slice(0, 10).map((s: any, i: number) => (
+                                                <tr key={i} className="hover:bg-zinc-800/40 transition-colors group cursor-pointer" onClick={() => setDrillDownSeller(s.name)}>
+                                                    <td className="px-4 py-4 text-center font-black">
+                                                         {i === 0 ? <span className="text-lg">🥇</span> :
+                                                          i === 1 ? <span className="text-lg">🥈</span> :
+                                                          i === 2 ? <span className="text-lg">🥉</span> :
+                                                          <span className="text-xs text-zinc-500 font-mono">#{i + 1}</span>}
+                                                    </td>
+                                                    <td className="px-4 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-400 flex items-center justify-center font-black uppercase tracking-wider shrink-0 shadow-inner group-hover:border-emerald-500/30 group-hover:text-emerald-400 transition-all duration-300">
+                                                                {getInitials(s.name)}
+                                                            </div>
+                                                            <span className="font-bold text-zinc-300 group-hover:text-emerald-400 transition-colors uppercase tracking-tight">{s.name}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-4 text-right text-zinc-500 font-bold">{s.qty}</td>
+                                                    <td className="px-4 py-4 text-right font-black text-amber-500 font-mono tracking-tighter">
+                                                        {hideValues ? "R$ ••••" : `R$ ${(s.commission || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                                                    </td>
+                                                    <td className="px-4 py-4 text-right font-black text-emerald-500 font-mono tracking-tighter">
+                                                        {hideValues ? "R$ ••••" : `R$ ${s.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={5} className="px-4 py-10 text-center text-zinc-600 font-bold">
+                                                    Nenhum vendedor encontrado.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 </div>
 
