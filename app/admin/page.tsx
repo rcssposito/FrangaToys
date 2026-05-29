@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, DollarSign, Box, Activity, Store, Maximize2, X, ArrowUpRight, ArrowDownRight, Clock, Tag, Layers, Ruler, ImageIcon, ExternalLink, Droplet, Printer } from 'lucide-react';
+import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, DollarSign, Box, Activity, Store, Maximize2, X, ArrowUpRight, ArrowDownRight, Clock, Tag, Layers, Ruler, ImageIcon, ExternalLink, Droplet, Printer, Eye, EyeOff } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { toast } from 'sonner';
@@ -21,6 +21,15 @@ export default function AdminDashboard() {
     const [drillDownSeller, setDrillDownSeller] = useState<string | null>(null);
     const [seriesFilter, setSeriesFilter] = useState<string>('all');
     const [previewImage, setPreviewImage] = useState<{ url: string, nome: string } | null>(null);
+    const [hideValues, setHideValues] = useState<boolean>(false);
+
+    const getInitials = (name: string) => {
+        const clean = (name || '').trim().replace(/\s+/g, ' ');
+        if (!clean) return '';
+        const parts = clean.split(' ');
+        if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    };
 
     // Fetch Dashboard Data
     useEffect(() => {
@@ -872,6 +881,17 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="flex flex-col md:flex-row gap-4 items-end md:items-center w-full xl:w-auto">
+                        <button
+                            onClick={() => setHideValues(prev => !prev)}
+                            className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 hover:bg-emerald-500/5 text-zinc-400 hover:text-emerald-400 px-5 py-2.5 rounded-2xl transition-all shadow-xl active:scale-95"
+                            title={hideValues ? "Mostrar valores" : "Modo Print (Ocultar valores)"}
+                        >
+                            {hideValues ? <Eye size={18} className="text-emerald-400" /> : <EyeOff size={18} />}
+                            <span className="text-[10px] font-black uppercase tracking-widest">
+                                {hideValues ? "Mostrar Valores" : "Modo Print"}
+                            </span>
+                        </button>
+
                         <Link 
                             href="/api/admin/reports/executive" 
                             target="_blank"
@@ -926,7 +946,7 @@ export default function AdminDashboard() {
                                     <p className="text-3xl font-black text-zinc-100 tracking-tighter">
                                         {loading ? (
                                             <span className="w-16 h-8 bg-zinc-800 animate-pulse rounded block"></span>
-                                        ) : kpi.value}
+                                        ) : (kpi.restricted && hideValues ? "R$ ••••" : kpi.value)}
                                     </p>
                                 </div>
                             </div>
@@ -1020,9 +1040,9 @@ export default function AdminDashboard() {
                                                 <td className="px-6 py-4 text-right text-zinc-100 font-black">{p.qty}</td>
                                                 {canViewFinance && (
                                                     <td className="px-6 py-4 text-right font-black text-emerald-500 font-mono tracking-tighter">
-                                                        R$ {p.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        {hideValues ? "R$ ••••" : `R$ ${p.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                                                     </td>
-                                                )}
+                                                 )}
                                             </tr>
                                         ))
                                     ) : (
@@ -1043,11 +1063,20 @@ export default function AdminDashboard() {
                                 <Users size={18} className="text-emerald-500" />
                                 Clientes VIP (Ranking)
                             </h3>
+                            <button
+                                onClick={() => setHideValues(prev => !prev)}
+                                className="flex items-center gap-1.5 px-3.5 py-2 text-[9px] font-black uppercase tracking-widest bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-xl transition-all text-zinc-400 hover:text-white active:scale-95 shadow-sm"
+                                title={hideValues ? "Mostrar valores" : "Modo Print (Ocultar valores)"}
+                            >
+                                {hideValues ? <Eye size={12} className="text-emerald-400" /> : <EyeOff size={12} />}
+                                <span>{hideValues ? "Mostrar Valores" : "Modo Print"}</span>
+                            </button>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left">
                                 <thead className="text-[10px] uppercase bg-zinc-900/50 text-zinc-500 font-black tracking-widest">
                                     <tr>
+                                        <th className="px-6 py-4 w-16 text-center">Pos</th>
                                         <th className="px-6 py-4">Cliente</th>
                                         <th className="px-6 py-4 text-right">Pedidos</th>
                                         <th className="px-6 py-4 text-right">Total Investido</th>
@@ -1057,16 +1086,29 @@ export default function AdminDashboard() {
                                     {data?.lists?.topCustomers?.length > 0 ? (
                                         data.lists.topCustomers.map((c: any, i: number) => (
                                             <tr key={i} className="hover:bg-zinc-800/40 transition-colors group">
-                                                <td className="px-6 py-4 font-bold text-zinc-300 group-hover:text-emerald-400 transition-colors uppercase tracking-tight">{c.name}</td>
+                                                <td className="px-6 py-4 text-center font-black">
+                                                     {i === 0 ? <span className="text-lg">🥇</span> :
+                                                      i === 1 ? <span className="text-lg">🥈</span> :
+                                                      i === 2 ? <span className="text-lg">🥉</span> :
+                                                      <span className="text-xs text-zinc-500 font-mono">#{i + 1}</span>}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-400 flex items-center justify-center font-black uppercase tracking-wider shrink-0 shadow-inner group-hover:border-emerald-500/30 group-hover:text-emerald-400 transition-all duration-300">
+                                                            {getInitials(c.name)}
+                                                        </div>
+                                                        <span className="font-bold text-zinc-300 group-hover:text-emerald-400 transition-colors uppercase tracking-tight">{c.name}</span>
+                                                    </div>
+                                                </td>
                                                 <td className="px-6 py-4 text-right text-zinc-500 font-bold">{c.count}</td>
                                                 <td className="px-6 py-4 text-right font-black text-emerald-500 font-mono tracking-tighter">
-                                                    R$ {c.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    {hideValues ? "R$ ••••" : `R$ ${c.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                                                 </td>
                                             </tr>
-                                        ))
+                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={3} className="px-6 py-10 text-center text-zinc-600 font-bold">
+                                            <td colSpan={4} className="px-6 py-10 text-center text-zinc-600 font-bold">
                                                 Dados insuficientes.
                                             </td>
                                         </tr>
@@ -1103,7 +1145,7 @@ export default function AdminDashboard() {
                                                 <td className="px-6 py-4 font-bold text-zinc-200 truncate max-w-[200px] group-hover:text-blue-400 transition-colors tracking-tight">{a.product}</td>
                                                 {canViewFinance && (
                                                     <td className="px-6 py-4 text-right font-black text-emerald-500 font-mono tracking-tighter">
-                                                        R$ {a.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        {hideValues ? "R$ ••••" : `R$ ${a.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                                                     </td>
                                                 )}
                                                 <td className="px-6 py-4 text-right">
