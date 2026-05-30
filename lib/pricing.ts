@@ -71,6 +71,9 @@ export function calculateFigurePrices(meta: FigureMeta, settings: PricingParams)
             pixEstilizado = roundTo5(pixEstilizado * factor);
             pixColorido = roundTo5(pixColorido * factor);
             pixPremium = roundTo5(pixPremium * factor);
+        } else {
+            // Se estiver sem valor de desconto ou preço fixo, é pra usar o custo de produção
+            pixEstilizado = custoProducao;
         }
     }
 

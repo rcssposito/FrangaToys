@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
@@ -7,8 +6,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'pricing', 'orcamento']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+        const sessionOrResponse = await requireRoles(['admin', 'pricing', 'orcamento']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const { searchParams } = new URL(req.url);
         const search = searchParams.get('search');
@@ -76,10 +75,12 @@ export async function GET(req: Request) {
                 // Aplicação de Campanha (Regra: Apenas Estilizado muda)
                 const isCampanha = meta.is_campanha_active || !!meta.preco_fixo_campanha;
                 if (isCampanha) {
-                    if (meta.preco_fixo_campanha) {
+                    if (meta.preco_fixo_campanha && meta.preco_fixo_campanha > 0) {
                         estilizadoFinal = meta.preco_fixo_campanha;
-                    } else if (meta.desconto_campanha) {
+                    } else if (meta.desconto_campanha && meta.desconto_campanha > 0) {
                         estilizadoFinal = Math.round(estilizadoFinal * (1 - (meta.desconto_campanha / 100)));
+                    } else {
+                        estilizadoFinal = custoProducao;
                     }
                 }
 
@@ -119,7 +120,10 @@ export async function GET(req: Request) {
                     horas_pintura,
                     altura_cm,
                     largura_cm,
-                    profundidade_cm
+                    profundidade_cm,
+                    is_campanha_active,
+                    desconto_campanha,
+                    preco_fixo_campanha
                 )
             `)
             .order('nome', { ascending: true })
@@ -154,10 +158,12 @@ export async function GET(req: Request) {
             // Aplicação de Campanha (Regra: Apenas Estilizado muda)
             const isCampanha = meta.is_campanha_active || !!meta.preco_fixo_campanha;
             if (isCampanha) {
-                if (meta.preco_fixo_campanha) {
+                if (meta.preco_fixo_campanha && meta.preco_fixo_campanha > 0) {
                     estilizadoFinal = meta.preco_fixo_campanha;
-                } else if (meta.desconto_campanha) {
+                } else if (meta.desconto_campanha && meta.desconto_campanha > 0) {
                     estilizadoFinal = Math.round(estilizadoFinal * (1 - (meta.desconto_campanha / 100)));
+                } else {
+                    estilizadoFinal = custoProducao;
                 }
             }
 
