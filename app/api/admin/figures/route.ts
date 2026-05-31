@@ -365,6 +365,14 @@ export async function DELETE(req: Request) {
         
         if (errorVendas) console.error('Erro ao desvincular vendas:', errorVendas);
 
+        // 2.5 Deletar Histórico de Analytics
+        const { error: errorAnalytics } = await supabase
+            .from('figuras_analytics')
+            .delete()
+            .eq('figura_id', id);
+        
+        if (errorAnalytics) console.error('Erro ao deletar analytics:', errorAnalytics);
+
         // 3. Deletar Metadados
         const { error: errorMeta } = await supabase
             .from('figuras_meta')
