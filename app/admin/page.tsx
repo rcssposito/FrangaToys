@@ -135,6 +135,17 @@ export default function AdminDashboard() {
             bg: 'bg-green-500/10',
             restricted: true
         },
+        // 1.5 Outstanding (A Receber)
+        {
+            title: 'A Receber',
+            value: data ? `R$ ${(data.kpis.totalOutstanding || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-',
+            trend: data?.kpis?.trends?.outstanding,
+            comparisonLabel: data?.kpis?.comparisonLabel || 'vs. anterior',
+            icon: Clock,
+            color: 'text-yellow-500',
+            bg: 'bg-yellow-500/10',
+            restricted: true
+        },
         // 2. Profit
         {
             title: 'Lucro Total',
@@ -1011,7 +1022,7 @@ export default function AdminDashboard() {
                     </div>
                 </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-10">
                     {kpis.map((kpi: any, idx) => {
                         if (kpi.restricted && !canViewFinance) return null;
                         return (

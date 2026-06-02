@@ -170,11 +170,18 @@ export async function GET(req: Request) {
         // --- KPI Calculation & Trends ---
         const calculateKPIs = (data: any[]) => {
             const paidSales = data.filter(s => (s.valor_venda_final || 0) > 0);
+            const totalOutstanding = data.reduce((acc, s) => {
+                if (s.status_pagamento === 'Pago') return acc;
+                const totalVenda = (s.valor_venda_final || 0) + (s.valor_frete || 0);
+                const pago = s.valor_pago_parcial || 0;
+                return acc + Math.max(0, totalVenda - pago);
+            }, 0);
             return {
                 revenue: data.reduce((acc, s) => acc + (s.valor_venda_final || 0) + (s.valor_frete || 0), 0),
                 profit: data.reduce((acc, s) => acc + (s.lucro_real || 0), 0),
                 paidSalesCount: paidSales.length,
                 totalItems: data.reduce((acc, s) => acc + (s.quantidade || 1), 0),
+                outstanding: totalOutstanding,
             };
         };
 
@@ -193,7 +200,8 @@ export async function GET(req: Request) {
             revenue: calculateTrend(currentKPIs.revenue, previousKPIs.revenue),
             profit: calculateTrend(currentKPIs.profit, previousKPIs.profit),
             paidSalesCount: calculateTrend(currentKPIs.paidSalesCount, previousKPIs.paidSalesCount),
-            totalItems: calculateTrend(currentKPIs.totalItems, previousKPIs.totalItems)
+            totalItems: calculateTrend(currentKPIs.totalItems, previousKPIs.totalItems),
+            outstanding: calculateTrend(currentKPIs.outstanding, previousKPIs.outstanding)
         };
 
         // --- Financial Ratios ---
@@ -604,7 +612,8 @@ export async function GET(req: Request) {
                 revenueCoverage,
                 resinStock,
                 resinRequired: totalResinRequired,
-                comparisonLabel
+                comparisonLabel,
+                totalOutstanding: currentKPIs.outstanding
             },
             charts: {
                 revenueByStudio,
