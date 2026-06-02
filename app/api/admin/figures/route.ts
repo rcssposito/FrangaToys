@@ -15,6 +15,12 @@ export async function GET(req: NextRequest) {
     const sessionOrResponse = await requireRoles(['admin', 'pricing', 'orcamento']);
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
+        const { data: settings } = await supabase
+            .from('pricing_params')
+            .select('*')
+            .eq('id', 1)
+            .single();
+
         const { searchParams } = new URL(req.url);
         const search = searchParams.get('search') || '';
         const categoria_id = searchParams.get('categoria_id');
@@ -123,6 +129,11 @@ export async function GET(req: NextRequest) {
             const meta = metas.find((m: any) => m.is_campanha || m.is_campanha_active || m.preco_fixo_campanha > 0 || m.desconto_campanha > 0) || metas[0] || {};
             const cat = getCategory(item);
 
+            const custoProducao = settings ? Math.ceil(
+                ((meta.resina_kg || 0) * (settings.custo_resina_kg || 0)) +
+                ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0))
+            ) : 0;
+
             return {
                 id: item.id,
                 nome: item.nome,
@@ -147,6 +158,7 @@ export async function GET(req: NextRequest) {
                 is_campanha_active: meta.is_campanha_active || false,
                 desconto_campanha: meta.desconto_campanha || 0,
                 preco_fixo_campanha: meta.preco_fixo_campanha || 0,
+                custo_producao: custoProducao,
             };
         });
 

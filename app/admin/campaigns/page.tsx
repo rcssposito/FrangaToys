@@ -14,6 +14,7 @@ interface CampaignFigure {
     desconto_campanha: number;
     preco_fixo_campanha: number;
     disponivel: boolean;
+    custo_producao?: number;
 }
 
 export default function CampaignManager() {
@@ -385,12 +386,12 @@ export default function CampaignManager() {
                                                 />
                                             </div>
 
-                                            <div className="flex items-center gap-2 bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--input-border)] flex-1">
+                                            <div className="flex items-center gap-2 bg-[var(--input-bg)] p-1.5 rounded-lg border border-[var(--input-border)] flex-1" title={f.custo_producao ? `Custo de Produção (Preço sugerido): R$ ${f.custo_producao.toFixed(2)}` : undefined}>
                                                 <span className="text-[10px] font-black uppercase text-[var(--text-muted)] pl-1 whitespace-nowrap">Fixo R$</span>
                                                 <input
                                                     type="number"
                                                     value={localValues[f.id]?.preco_fixo_campanha ?? (f.preco_fixo_campanha || '')}
-                                                    placeholder="0.00"
+                                                    placeholder={f.custo_producao ? f.custo_producao.toFixed(2) : "0.00"}
                                                     disabled={!canEdit || savingId === f.id}
                                                     onChange={(e) => {
                                                         const val = e.target.value;
