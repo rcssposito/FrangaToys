@@ -363,6 +363,28 @@ export default function KanbanPage() {
                                                     >
                                                         <ExternalLink size={16} />
                                                     </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            const cleanPhone = (task.cliente_contato || '').replace(/\D/g, '');
+                                                            const trackingIdentifier = task.access_token || cleanPhone;
+                                                            if (!cleanPhone) {
+                                                                toast.error('Cliente sem telefone cadastrado');
+                                                                return;
+                                                            }
+                                                            const urlBase = window.location.origin;
+                                                            const link = `${urlBase}/rastreio/${trackingIdentifier}`;
+                                                            const msg = `Olá, ${task.cliente_nome.trim()}!\n\nAcompanhe a produção do seu pedido em tempo real diretamente pelo nosso site:\n👉 ${link}\n\n(Lá você consegue ver se a peça está imprimindo, em acabamento, pintura ou se já foi enviada!). Qualquer dúvida, estou por aqui!`;
+                                                            
+                                                            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                                                            const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+                                                            const waLink = `${baseUrl}?phone=55${cleanPhone}&text=${encodeURIComponent(msg)}`;
+                                                            window.open(waLink, '_blank');
+                                                        }}
+                                                        title="Enviar Rastreio via WhatsApp"
+                                                        className="p-2 bg-zinc-900 text-zinc-500 hover:text-emerald-500 border border-zinc-800 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center"
+                                                    >
+                                                        <MessageCircle size={16} />
+                                                    </button>
                                                 </div>
                                             </div>
 
