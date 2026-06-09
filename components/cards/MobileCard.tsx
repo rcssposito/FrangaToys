@@ -126,7 +126,7 @@ export const MobileCard = ({ figure, className }: MobileCardProps) => {
                                 </button>
                             ) : (
                                 <a
-                                    href={`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5511959737551'}&text=${encodeURIComponent(`Olá! Tenho interesse na figura ${figure.nome}. Poderia me passar mais informações?`)}`}
+                                    href={`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5511988781670'}&text=${encodeURIComponent(`Olá! Tenho interesse na figura ${figure.nome}. Poderia me passar mais informações?`)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={(e) => e.stopPropagation()}

@@ -487,7 +487,7 @@ export default function NewSalePage() {
             toast.success('Venda registrada com sucesso!');
 
             // Gerar Link do WhatsApp para notificar a nova venda
-            const numeroDestino = '5511959737551'; // O número da loja/dono
+            const numeroDestino = '5511988781670'; // O número da loja/dono
             let msg = `*🚀 NOVA VENDA REGISTRADA E ENVIADA PARA A FILA (KANBAN) 🚀*\n\n`;
             msg += `*Vendedor:* ${vendedorSelecionado || user?.email}\n`;
             msg += `*Cliente:* ${cliente} ${clienteContato ? `(${clienteContato})` : ''}\n`;
@@ -514,7 +514,10 @@ export default function NewSalePage() {
             if (totalComissao > 0) msg += `Comissão: R$ ${totalComissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
             msg += `\n*✅ LUCRO LÍQUIDO:* R$ ${lucroEstimado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
 
-            const waLink = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(msg)}`;
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const waLink = isMobile
+                ? `https://wa.me/${numeroDestino}?text=${encodeURIComponent(msg)}`
+                : `https://web.whatsapp.com/send?phone=${numeroDestino}&text=${encodeURIComponent(msg)}`;
 
             // Tenta abrir numa nova aba
             window.open(waLink, '_blank');

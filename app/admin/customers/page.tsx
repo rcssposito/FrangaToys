@@ -162,7 +162,9 @@ export default function CustomersPage() {
         const condicaoMinima = giftMinimo ? ` (em compras acima de R$ ${giftMinimo})` : '';
         const msg = `Olá, ${giftCustomer.nome.split(' ')[0]}!\n\nVi que faz um tempo que não conversamos. Preparei um presente exclusivo para você ${emoji}\n\nUse o cupom *${generatedCoupon}* na nossa loja e ganhe *${percentOrReal} de desconto*${condicaoMinima}!\n\nAcesse: https://frangatoys.com.br`;
         
-        window.open(`https://api.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(msg)}`, '_blank');
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+        window.open(`${baseUrl}?phone=55${phone}&text=${encodeURIComponent(msg)}`, '_blank');
         setIsGiftModalOpen(false);
     };
 
@@ -377,8 +379,17 @@ export default function CustomersPage() {
                                                 <div className="flex flex-col">
                                                     <span className="font-bold text-zinc-100 group-hover:text-white transition-colors">{customer.nome}</span>
                                                     <a 
-                                                        href={`https://wa.me/${customer.telefone.replace(/\D/g, '')}`} 
-                                                        target="_blank"
+                                                        href="#"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            const cleanPhone = customer.telefone.replace(/\D/g, '');
+                                                            const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+                                                            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                                                            const url = isMobile 
+                                                                ? `https://wa.me/${phoneWithCountry}`
+                                                                : `https://web.whatsapp.com/send?phone=${phoneWithCountry}`;
+                                                            window.open(url, '_blank');
+                                                        }}
                                                         className="text-[11px] font-mono text-zinc-500 flex items-center gap-1 hover:text-emerald-400 transition-colors"
                                                     >
                                                         <MessageCircle size={12} />

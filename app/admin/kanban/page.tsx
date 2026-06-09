@@ -137,7 +137,9 @@ export default function KanbanPage() {
                             action: {
                                 label: 'Avisar Cliente no WhatsApp',
                                 onClick: () => {
-                                    const waLink = `https://api.whatsapp.com/send?phone=55${clientWhatsApp}&text=${encodeURIComponent(msg)}`;
+                                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                                    const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+                                    const waLink = `${baseUrl}?phone=55${clientWhatsApp}&text=${encodeURIComponent(msg)}`;
                                     window.open(waLink, '_blank');
                                 }
                             },

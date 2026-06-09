@@ -45,7 +45,7 @@ export const ImageModal = ({ figure, isOpen, onClose, onNext, onPrev, currentInd
 
     const buildBudgetLink = () => {
         const msg = `Olá! Tenho interesse na figura: ${figure.nome}${figure.categoria ? ` (${figure.categoria})` : ''}.`;
-        return `https://wa.me/5511959737551?text=${encodeURIComponent(msg)}`;
+        return `https://wa.me/5511988781670?text=${encodeURIComponent(msg)}`;
     };
 
     return (

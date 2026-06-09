@@ -281,7 +281,7 @@ export default function CustomerDashboard() {
                 <div className="bg-orange-500/5 border border-orange-500/10 rounded-3xl p-6 text-center">
                     <p className="text-zinc-500 text-xs font-medium">
                         Dúvidas sobre o status ou envio? 
-                        <a href="https://wa.me/5511959737551" className="text-orange-500 font-bold ml-1 hover:underline">Fale com o Ateliê no WhatsApp</a>
+                        <a href="https://wa.me/5511988781670" className="text-orange-500 font-bold ml-1 hover:underline">Fale com o Ateliê no WhatsApp</a>
                     </p>
                 </div>
             </div>

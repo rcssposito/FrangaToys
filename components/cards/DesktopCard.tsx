@@ -22,7 +22,7 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
 
     const buildBudgetLink = () => {
         const msg = `Olá! Tenho interesse na figura: ${figure.nome}${figure.categoria ? ` (${figure.categoria})` : ''}.`;
-        return `https://wa.me/5511959737551?text=${encodeURIComponent(msg)}`;
+        return `https://wa.me/5511988781670?text=${encodeURIComponent(msg)}`;
     };
 
     const handleFlip = (e: React.MouseEvent) => {
@@ -170,7 +170,7 @@ export const DesktopCard = ({ figure }: FigureCardProps) => {
                                 </button>
                             ) : (
                                 <a
-                                    href={`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5511959737551'}&text=${encodeURIComponent(`Olá! Tenho interesse na figura ${figure.nome}. Poderia me passar mais informações?`)}`}
+                                    href={`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5511988781670'}&text=${encodeURIComponent(`Olá! Tenho interesse na figura ${figure.nome}. Poderia me passar mais informações?`)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={(e) => e.stopPropagation()}

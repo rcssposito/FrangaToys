@@ -174,7 +174,7 @@ function SuccessContent() {
                     <button 
                         onClick={() => {
                             const msg = `Olá! Acabei de fazer o pedido #${order.checkout_id} e gostaria de informar o pagamento / tirar dúvidas.`;
-                            window.open(`https://wa.me/5511959737551?text=${encodeURIComponent(msg)}`, '_blank');
+                            window.open(`https://wa.me/5511988781670?text=${encodeURIComponent(msg)}`, '_blank');
                         }}
                         className="bg-[#25D366] hover:bg-[#128C7E] text-white p-5 rounded-3xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-lg active:scale-95"
                     >
