@@ -385,8 +385,53 @@ export default function KanbanPage() {
                                                     >
                                                         <MessageCircle size={16} />
                                                     </button>
-                                                </div>
                                             </div>
+                                            </div>
+
+                                            {/* Prazo Limite do Pedido */}
+                                            {(() => {
+                                                if (!task.data_venda) return null;
+                                                const dataVenda = new Date(task.data_venda);
+                                                const deadlineDate = new Date(dataVenda);
+                                                deadlineDate.setDate(deadlineDate.getDate() + 45);
+                                                
+                                                const today = new Date();
+                                                const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                                                const deadlineDateOnly = new Date(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate());
+                                                const diffTime = deadlineDateOnly.getTime() - todayDateOnly.getTime();
+                                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                                
+                                                const formattedDeadline = deadlineDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                                                
+                                                let badgeClass = 'bg-zinc-950 border-zinc-800 text-zinc-400';
+                                                let label = `Prazo: ${formattedDeadline} (${diffDays}d)`;
+                                                
+                                                if (diffDays < 0) {
+                                                    badgeClass = 'bg-red-500/10 border-red-500/30 text-red-400 font-black';
+                                                    label = `Atrasado ${Math.abs(diffDays)}d (${formattedDeadline})`;
+                                                } else if (diffDays <= 7) {
+                                                    badgeClass = 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400 font-black';
+                                                    label = `Urgente: ${diffDays}d (${formattedDeadline})`;
+                                                } else if (diffDays <= 15) {
+                                                    badgeClass = 'bg-orange-500/10 border-orange-500/30 text-orange-400';
+                                                    label = `${diffDays}d restando (${formattedDeadline})`;
+                                                } else {
+                                                    badgeClass = 'bg-zinc-950/50 border-zinc-800/80 text-zinc-500';
+                                                    label = `${diffDays}d restando (${formattedDeadline})`;
+                                                }
+                                                
+                                                return (
+                                                    <div className="mt-3 flex items-center">
+                                                        <span 
+                                                            className={`text-[9px] font-black px-2 py-0.5 rounded border shadow-inner flex items-center gap-1.5 ${badgeClass}`}
+                                                            title={`Data limite de entrega (45 dias): ${deadlineDate.toLocaleDateString('pt-BR')}`}
+                                                        >
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse shrink-0" />
+                                                            {label}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })()}
 
                                             <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-zinc-800/50">
                                                 <span className="text-[10px] font-black px-3 py-1 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-300 shadow-inner">

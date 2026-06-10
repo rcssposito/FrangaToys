@@ -486,42 +486,6 @@ export default function NewSalePage() {
 
             toast.success('Venda registrada com sucesso!');
 
-            // Gerar Link do WhatsApp para notificar a nova venda
-            const numeroDestino = '5511988781670'; // O número da loja/dono
-            let msg = `*🚀 NOVA VENDA REGISTRADA E ENVIADA PARA A FILA (KANBAN) 🚀*\n\n`;
-            msg += `*Vendedor:* ${vendedorSelecionado || user?.email}\n`;
-            msg += `*Cliente:* ${cliente} ${clienteContato ? `(${clienteContato})` : ''}\n`;
-            msg += `*Data:* ${dataVenda.split('-').reverse().join('/')}\n`;
-            msg += `*Canal:* ${canal}\n`;
-            msg += `*Pintura:* ${pinturaFreelancer && pintorNome ? `Terceirizada (${pintorNome.split(' ')[0]})` : 'Interna'}\n`;
-            msg += `*Entrega:* ${metodoEntrega === 'retirada' ? 'Retirada na Loja/Ateliê' : `Frete (Valor: R$ ${freteSomar.toFixed(2)})`}\n`;
-            if (observacao) msg += `*Obs:* ${observacao}\n`;
-            msg += `\n*📦 ITENS VENDIDOS:*\n`;
-
-            cartComDesconto.forEach(item => {
-                const isOutros = item.studio === 'Outros';
-                const precoItem = item.valor_final;
-                msg += `👉 ${item.quantidade}x ${item.Figura} - R$ ${precoItem.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
-            });
-
-            msg += `\n*💰 RESUMO FINANCEIRO:*\n`;
-            if (descontoDaVenda > 0) {
-                msg += `🏷️ *Cupom Aplicado:* ${cupomAplicado.codigo} (-R$ ${descontoDaVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})\n`;
-            }
-            msg += `Bruto (${paymentMethod === 'credit' ? 'Cartão' : 'PIX'}): R$ ${totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
-            msg += `Custo Estimado: R$ ${totalCustoProducao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
-            if (totalFreelancer > 0) msg += `Pintor: R$ ${totalFreelancer.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
-            if (totalComissao > 0) msg += `Comissão: R$ ${totalComissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
-            msg += `\n*✅ LUCRO LÍQUIDO:* R$ ${lucroEstimado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
-
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            const waLink = isMobile
-                ? `https://wa.me/${numeroDestino}?text=${encodeURIComponent(msg)}`
-                : `https://web.whatsapp.com/send?phone=${numeroDestino}&text=${encodeURIComponent(msg)}`;
-
-            // Tenta abrir numa nova aba
-            window.open(waLink, '_blank');
-
             // Exibe a UI de sucesso localmente com botão do recibo:
             setCompletedSaleData({
                 id: firstSaleId,
