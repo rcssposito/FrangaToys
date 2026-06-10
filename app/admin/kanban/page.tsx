@@ -537,7 +537,9 @@ export default function KanbanPage() {
                                                             const entregaStr = task.metodo_entrega === 'envio' ? 'postagem' : 'retirada';
                                                             const emojis = String.fromCodePoint(0x1F423, 0x2728, 0x1F680);
                                                             const msg = `Olá, ${task.cliente_nome.trim()}!\nSeu ${task.figuras.nome} ficou pronto e já está pronto para ${entregaStr}!\nQualquer dúvida, estou por aqui! ${emojis}`;
-                                                            const waLink = `https://api.whatsapp.com/send?phone=55${clientWhatsApp}&text=${encodeURIComponent(msg)}`;
+                                                            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                                                            const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+                                                            const waLink = `${baseUrl}?phone=55${clientWhatsApp}&text=${encodeURIComponent(msg)}`;
                                                             window.open(waLink, '_blank');
                                                         }}
                                                         className="w-full bg-emerald-600 hover:bg-emerald-500 text-black text-[10px] font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 uppercase tracking-widest"
