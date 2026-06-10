@@ -104,7 +104,7 @@ export async function GET(
             return payload + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
         }
 
-        const pixPayload = generatePixPayload("43687871886", "Renan C S Sposito", valorTotalReal);
+        const pixPayload = generatePixPayload("contato@frangatoys.com.br", "Rodrigo Casagrande Sposito", valorTotalReal);
         const originUrl = sale.link_pagamento ? sale.link_pagamento : pixPayload;
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(originUrl)}`;
         const formatMoney = (val: number) => val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

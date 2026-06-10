@@ -23,8 +23,8 @@ function PixPaymentWidget({ order }: { order: any }) {
 
     useEffect(() => {
         if (remaining > 0) {
-            // Chave CPF do Rodrigo, nome Rodrigo Casagrande Sposito
-            const payload = generatePixPayload("43687871886", "Rodrigo Casagrande Sposito", remaining);
+            // Chave E-mail da loja, nome Rodrigo Casagrande Sposito
+            const payload = generatePixPayload("contato@frangatoys.com.br", "Rodrigo Casagrande Sposito", remaining);
             setPixPayload(payload);
         }
     }, [remaining]);

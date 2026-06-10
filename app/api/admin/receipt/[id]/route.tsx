@@ -96,7 +96,7 @@ export async function GET(
             return payload + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
         }
 
-        const pixPayload = generatePixPayload("43687871886", "Renan C S Sposito", valorTotalReal);
+        const pixPayload = generatePixPayload("contato@frangatoys.com.br", "Rodrigo Casagrande Sposito", valorTotalReal);
 
         // Se tiver Link Pagamento (Mercado Pago), gera QRCode da URL. Se não, gera Payload do PIX.
         const originUrl = sale.link_pagamento ? sale.link_pagamento : pixPayload;
