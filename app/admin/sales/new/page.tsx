@@ -1142,7 +1142,9 @@ export default function NewSalePage() {
                                                             <span className={`text-[9px] uppercase font-black tracking-wide ${color}`}>
                                                                 {displayCompany} {displayName}
                                                             </span>
-                                                            <span className="text-[10px] text-zinc-500 font-medium">({quote.PrazoEntrega} dias)</span>
+                                                            <span className="text-[10px] text-zinc-500 font-medium">
+                                                                ({quote.PrazoEntrega === 0 ? 'Retirada' : `${quote.PrazoEntrega} ${quote.PrazoEntrega === 1 ? 'dia' : 'dias'}`})
+                                                            </span>
                                                             <span className="text-sm font-bold text-zinc-200">R$ {quote.Valor}</span>
                                                         </button>
                                                     );

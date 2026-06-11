@@ -561,7 +561,11 @@ export const CartDrawer = () => {
                                                         >
                                                             <div className="text-left">
                                                                 <p className="text-[10px] font-black text-white uppercase tracking-tight">{opt.Empresa} - {opt.Nome}</p>
-                                                                <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Prazo: {opt.PrazoEntrega} dias</p>
+                                                                <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">
+                                                                    {opt.PrazoEntrega === 0 
+                                                                        ? 'Retirada sob agendamento' 
+                                                                        : `Prazo: ${opt.PrazoEntrega} ${opt.PrazoEntrega === 1 ? 'dia' : 'dias'}`}
+                                                                </p>
                                                             </div>
                                                             <span className="text-xs font-black text-white">{formatPrice(opt.Valor)}</span>
                                                         </button>
