@@ -81,6 +81,14 @@ export async function calculateShipping(params: ShippingQuoteParams): Promise<Sh
         const cleanDestCep = sCepDestino.replace(/\D/g, '');
         const cleanOrigemCep = sCepOrigem.replace(/\D/g, '');
 
+        localQuotes.push({
+            Codigo: 'debug_ceps',
+            Valor: 0,
+            PrazoEntrega: 0,
+            Nome: `CEP Dest: ${cleanDestCep} | CEP Origem: ${cleanOrigemCep}`,
+            Empresa: 'Franga Toys Debug'
+        });
+
         // Obter coordenadas do destino via AwesomeAPI
         const destGeocodeRes = await fetch(`https://cep.awesomeapi.com.br/json/${cleanDestCep}`, {
             headers: {
@@ -108,14 +116,52 @@ export async function calculateShipping(params: ShippingQuoteParams): Promise<Sh
                         if (originData.lat && originData.lng) {
                             originLat = parseFloat(originData.lat);
                             originLng = parseFloat(originData.lng);
+                            localQuotes.push({
+                                Codigo: 'debug_origin_coords',
+                                Valor: 0,
+                                PrazoEntrega: 0,
+                                Nome: `Origem resolved: ${originLng}, ${originLat}`,
+                                Empresa: 'Franga Toys Debug'
+                            });
                         }
+                    } else {
+                        localQuotes.push({
+                            Codigo: 'debug_origin_fail',
+                            Valor: originGeocodeRes.status,
+                            PrazoEntrega: 0,
+                            Nome: `Origem API fail status: ${originGeocodeRes.status}`,
+                            Empresa: 'Franga Toys Debug'
+                        });
                     }
-                } catch (origemErr) {
-                    // Ignora e usa coordenadas mockadas de backup
+                } catch (origemErr: any) {
+                    localQuotes.push({
+                        Codigo: 'debug_origin_error',
+                        Valor: 0,
+                        PrazoEntrega: 0,
+                        Nome: `Origem catch: ${origemErr.message}`,
+                        Empresa: 'Franga Toys Debug'
+                    });
                 }
+
+                localQuotes.push({
+                    Codigo: 'debug_dest_coords',
+                    Valor: 0,
+                    PrazoEntrega: 0,
+                    Nome: `Dest resolved: ${destLng}, ${destLat}`,
+                    Empresa: 'Franga Toys Debug'
+                });
 
                 // Obter distância de direção real via OSRM API (grátis)
                 const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${originLng},${originLat};${destLng},${destLat}?overview=false`;
+                
+                localQuotes.push({
+                    Codigo: 'debug_osrm_url',
+                    Valor: 0,
+                    PrazoEntrega: 0,
+                    Nome: `OSRM URL: ${osrmUrl}`,
+                    Empresa: 'Franga Toys Debug'
+                });
+
                 const routeRes = await fetch(osrmUrl, {
                     headers: {
                         'User-Agent': 'FrangaToys/1.0 (contato@frangatoys.com.br)'
@@ -126,6 +172,14 @@ export async function calculateShipping(params: ShippingQuoteParams): Promise<Sh
                     const routeData = await routeRes.json();
                     if (routeData.code === 'Ok' && routeData.routes?.length > 0) {
                         const distanceKm = routeData.routes[0].distance / 1000;
+
+                        localQuotes.push({
+                            Codigo: 'debug_distance',
+                            Valor: Number(distanceKm.toFixed(2)),
+                            PrazoEntrega: 0,
+                            Nome: `Distancia calculada: ${distanceKm.toFixed(2)} km`,
+                            Empresa: 'Franga Toys Debug'
+                        });
 
                         // Limite de 35km para entrega local de carro
                         if (distanceKm <= 35) {
@@ -142,12 +196,51 @@ export async function calculateShipping(params: ShippingQuoteParams): Promise<Sh
                                 Empresa: 'Franga Toys'
                             });
                         }
+                    } else {
+                        localQuotes.push({
+                            Codigo: 'debug_osrm_route_error',
+                            Valor: 0,
+                            PrazoEntrega: 0,
+                            Nome: `OSRM route error: ${routeData.code}`,
+                            Empresa: 'Franga Toys Debug'
+                        });
                     }
+                } else {
+                    localQuotes.push({
+                        Codigo: 'debug_osrm_http_error',
+                        Valor: routeRes.status,
+                        PrazoEntrega: 0,
+                        Nome: `OSRM HTTP status: ${routeRes.status}`,
+                        Empresa: 'Franga Toys Debug'
+                    });
                 }
+            } else {
+                localQuotes.push({
+                    Codigo: 'debug_dest_nan',
+                    Valor: 0,
+                    PrazoEntrega: 0,
+                    Nome: `Dest coords NaN: ${destLat}, ${destLng}`,
+                    Empresa: 'Franga Toys Debug'
+                });
             }
+        } else {
+            localQuotes.push({
+                Codigo: 'debug_dest_geocode_fail',
+                Valor: destGeocodeRes.status,
+                PrazoEntrega: 0,
+                Nome: `Dest Geocode fail status: ${destGeocodeRes.status}`,
+                Empresa: 'Franga Toys Debug'
+            });
         }
-    } catch (localErr) {
+    } catch (localErr: any) {
         console.error('Erro ao calcular frete de carro local:', localErr);
+        localQuotes.push({
+            Codigo: 'debug_catch_error',
+            Valor: 0,
+            PrazoEntrega: 0,
+            Nome: `General catch: ${localErr.message || String(localErr)}`,
+            Empresa: 'Franga Toys Debug'
+        });
     }
 
     return [...localQuotes, ...quotes];
