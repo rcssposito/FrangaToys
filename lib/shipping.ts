@@ -82,7 +82,11 @@ export async function calculateShipping(params: ShippingQuoteParams): Promise<Sh
         const cleanOrigemCep = sCepOrigem.replace(/\D/g, '');
 
         // Obter coordenadas do destino via AwesomeAPI
-        const destGeocodeRes = await fetch(`https://cep.awesomeapi.com.br/json/${cleanDestCep}`);
+        const destGeocodeRes = await fetch(`https://cep.awesomeapi.com.br/json/${cleanDestCep}`, {
+            headers: {
+                'User-Agent': 'FrangaToys/1.0 (contato@frangatoys.com.br)'
+            }
+        });
         if (destGeocodeRes.ok) {
             const destData = await destGeocodeRes.json();
             const destLat = parseFloat(destData.lat);
@@ -94,7 +98,11 @@ export async function calculateShipping(params: ShippingQuoteParams): Promise<Sh
                 let originLng = -46.6799967;
 
                 try {
-                    const originGeocodeRes = await fetch(`https://cep.awesomeapi.com.br/json/${cleanOrigemCep}`);
+                    const originGeocodeRes = await fetch(`https://cep.awesomeapi.com.br/json/${cleanOrigemCep}`, {
+                        headers: {
+                            'User-Agent': 'FrangaToys/1.0 (contato@frangatoys.com.br)'
+                        }
+                    });
                     if (originGeocodeRes.ok) {
                         const originData = await originGeocodeRes.json();
                         if (originData.lat && originData.lng) {
@@ -107,26 +115,28 @@ export async function calculateShipping(params: ShippingQuoteParams): Promise<Sh
                 }
 
                 // Obter distância de direção real via OSRM API (grátis)
-                const osrmUrl = `http://router.project-osrm.org/route/v1/driving/${originLng},${originLat};${destLng},${destLat}?overview=false`;
-                const routeRes = await fetch(osrmUrl);
+                const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${originLng},${originLat};${destLng},${destLat}?overview=false`;
+                const routeRes = await fetch(osrmUrl, {
+                    headers: {
+                        'User-Agent': 'FrangaToys/1.0 (contato@frangatoys.com.br)'
+                    }
+                });
 
                 if (routeRes.ok) {
                     const routeData = await routeRes.json();
                     if (routeData.code === 'Ok' && routeData.routes?.length > 0) {
                         const distanceKm = routeData.routes[0].distance / 1000;
-                        const durationMin = routeData.routes[0].duration / 60;
 
                         // Limite de 35km para entrega local de carro
                         if (distanceKm <= 35) {
-                            // Racional Uber: R$ 5,00 base + R$ 2,20 por KM + R$ 0,20 por minuto de trânsito
+                            // Racional: R$ 5,00 base + R$ 2,20 por KM
                             const taxaBase = 5.00;
                             const valorPorKm = 2.20;
-                            const valorPorMinuto = 0.20;
-                            const totalUber = taxaBase + (distanceKm * valorPorKm) + (durationMin * valorPorMinuto);
+                            const totalCarro = taxaBase + (distanceKm * valorPorKm);
 
                             localQuotes.push({
                                 Codigo: 'entrega_local',
-                                Valor: Number(totalUber.toFixed(2)),
+                                Valor: Number(totalCarro.toFixed(2)),
                                 PrazoEntrega: 1, // Geralmente entregue 1 dia após a conclusão da peça
                                 Nome: 'Entrega de Carro (Local)',
                                 Empresa: 'Franga Toys'
