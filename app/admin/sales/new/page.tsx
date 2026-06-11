@@ -309,6 +309,23 @@ export default function NewSalePage() {
 
         setIsCalculatingShipping(true);
         try {
+            // Geolocalização no cliente (browser) para evitar erro 429 de IP compartilhado na nuvem
+            let destLat: number | undefined;
+            let destLng: number | undefined;
+            try {
+                const cleanCep = cepDestino.replace(/\D/g, '');
+                const geoRes = await fetch(`https://cep.awesomeapi.com.br/json/${cleanCep}`);
+                if (geoRes.ok) {
+                    const geoData = await geoRes.json();
+                    if (geoData.lat && geoData.lng) {
+                        destLat = parseFloat(geoData.lat);
+                        destLng = parseFloat(geoData.lng);
+                    }
+                }
+            } catch (geoErr) {
+                console.error('Erro de geolocalização no cliente (admin):', geoErr);
+            }
+
             // Volume Simples (Somando cubagem simulada)
             const nVlPeso = cart.reduce((acc, i) => acc + ((i.resina_kg || 0.1) * i.quantidade), 0);
             const nVlComprimento = Math.max(...cart.map(i => i.profundidade_cm || 15));
@@ -323,7 +340,9 @@ export default function NewSalePage() {
                     nVlPeso,
                     nVlComprimento,
                     nVlAltura,
-                    nVlLargura
+                    nVlLargura,
+                    destLat,
+                    destLng
                 })
             });
 

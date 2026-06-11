@@ -177,10 +177,31 @@ export const CartDrawer = () => {
 
         setIsCalculatingFrete(true);
         try {
+            // Geolocalização no cliente (browser) para evitar erro 429 de IP compartilhado na nuvem
+            let destLat: number | undefined;
+            let destLng: number | undefined;
+            try {
+                const cleanCep = cep.replace(/\D/g, '');
+                const geoRes = await fetch(`https://cep.awesomeapi.com.br/json/${cleanCep}`);
+                if (geoRes.ok) {
+                    const geoData = await geoRes.json();
+                    if (geoData.lat && geoData.lng) {
+                        destLat = parseFloat(geoData.lat);
+                        destLng = parseFloat(geoData.lng);
+                    }
+                }
+            } catch (geoErr) {
+                console.error('Erro de geolocalização no cliente:', geoErr);
+            }
+
             const res = await fetch('/api/public/shipping/quote', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sCepDestino: cep })
+                body: JSON.stringify({ 
+                    sCepDestino: cep,
+                    destLat,
+                    destLng
+                })
             });
             const data = await res.json();
             if (data.error) throw new Error(data.error);

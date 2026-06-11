@@ -8,6 +8,9 @@ export interface ShippingQuoteParams {
     nVlComprimento?: number;
     nVlAltura?: number;
     nVlLargura?: number;
+    destLat?: number;
+    destLng?: number;
+    debug?: boolean;
 }
 
 export interface ShippingService {
@@ -81,166 +84,119 @@ export async function calculateShipping(params: ShippingQuoteParams): Promise<Sh
         const cleanDestCep = sCepDestino.replace(/\D/g, '');
         const cleanOrigemCep = sCepOrigem.replace(/\D/g, '');
 
-        localQuotes.push({
-            Codigo: 'debug_ceps',
-            Valor: 0,
-            PrazoEntrega: 0,
-            Nome: `CEP Dest: ${cleanDestCep} | CEP Origem: ${cleanOrigemCep}`,
-            Empresa: 'Franga Toys Debug'
-        });
-
-        // Obter coordenadas do destino via AwesomeAPI
-        const destGeocodeRes = await fetch(`https://cep.awesomeapi.com.br/json/${cleanDestCep}`, {
-            headers: {
-                'User-Agent': 'FrangaToys/1.0 (contato@frangatoys.com.br)'
+        const isDebug = !!params.debug;
+        const addDebugQuote = (codigo: string, valor: number, nome: string) => {
+            if (isDebug) {
+                localQuotes.push({
+                    Codigo: codigo,
+                    Valor: valor,
+                    PrazoEntrega: 0,
+                    Nome: nome,
+                    Empresa: 'Franga Toys Debug'
+                });
             }
-        });
-        if (destGeocodeRes.ok) {
-            const destData = await destGeocodeRes.json();
-            const destLat = parseFloat(destData.lat);
-            const destLng = parseFloat(destData.lng);
+        };
 
-            if (!isNaN(destLat) && !isNaN(destLng)) {
-                // Obter coordenadas do ateliê (Origem). Padrão para Jardim Primavera, SP se falhar
-                let originLat = -23.4888303;
-                let originLng = -46.6799967;
+        addDebugQuote('debug_ceps', 0, `CEP Dest: ${cleanDestCep} | CEP Origem: ${cleanOrigemCep}`);
 
-                try {
-                    const originGeocodeRes = await fetch(`https://cep.awesomeapi.com.br/json/${cleanOrigemCep}`, {
-                        headers: {
-                            'User-Agent': 'FrangaToys/1.0 (contato@frangatoys.com.br)'
-                        }
-                    });
-                    if (originGeocodeRes.ok) {
-                        const originData = await originGeocodeRes.json();
-                        if (originData.lat && originData.lng) {
-                            originLat = parseFloat(originData.lat);
-                            originLng = parseFloat(originData.lng);
-                            localQuotes.push({
-                                Codigo: 'debug_origin_coords',
-                                Valor: 0,
-                                PrazoEntrega: 0,
-                                Nome: `Origem resolved: ${originLng}, ${originLat}`,
-                                Empresa: 'Franga Toys Debug'
-                            });
-                        }
-                    } else {
-                        localQuotes.push({
-                            Codigo: 'debug_origin_fail',
-                            Valor: originGeocodeRes.status,
-                            PrazoEntrega: 0,
-                            Nome: `Origem API fail status: ${originGeocodeRes.status}`,
-                            Empresa: 'Franga Toys Debug'
-                        });
-                    }
-                } catch (origemErr: any) {
-                    localQuotes.push({
-                        Codigo: 'debug_origin_error',
-                        Valor: 0,
-                        PrazoEntrega: 0,
-                        Nome: `Origem catch: ${origemErr.message}`,
-                        Empresa: 'Franga Toys Debug'
-                    });
+        let destLat = params.destLat;
+        let destLng = params.destLng;
+
+        if (destLat === undefined || destLng === undefined || isNaN(destLat) || isNaN(destLng)) {
+            // Obter coordenadas do destino via AwesomeAPI (Fallback no servidor)
+            const destGeocodeRes = await fetch(`https://cep.awesomeapi.com.br/json/${cleanDestCep}`, {
+                headers: {
+                    'User-Agent': 'FrangaToys/1.0 (contato@frangatoys.com.br)'
                 }
+            });
+            if (destGeocodeRes.ok) {
+                const destData = await destGeocodeRes.json();
+                destLat = parseFloat(destData.lat);
+                destLng = parseFloat(destData.lng);
+                addDebugQuote('debug_dest_geocode_success', 0, `Dest resolved on server: ${destLng}, ${destLat}`);
+            } else {
+                addDebugQuote('debug_dest_geocode_fail', destGeocodeRes.status, `Dest Geocode fail status: ${destGeocodeRes.status}`);
+            }
+        } else {
+            addDebugQuote('debug_dest_passed', 0, `Coords passadas pelo cliente: ${destLng}, ${destLat}`);
+        }
 
-                localQuotes.push({
-                    Codigo: 'debug_dest_coords',
-                    Valor: 0,
-                    PrazoEntrega: 0,
-                    Nome: `Dest resolved: ${destLng}, ${destLat}`,
-                    Empresa: 'Franga Toys Debug'
-                });
+        if (destLat !== undefined && destLng !== undefined && !isNaN(destLat) && !isNaN(destLng)) {
+            // Obter coordenadas do ateliê (Origem). Padrão para Jardim Primavera, SP se falhar
+            let originLat = -23.4888303;
+            let originLng = -46.6799967;
 
-                // Obter distância de direção real via OSRM API (grátis)
-                const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${originLng},${originLat};${destLng},${destLat}?overview=false`;
-                
-                localQuotes.push({
-                    Codigo: 'debug_osrm_url',
-                    Valor: 0,
-                    PrazoEntrega: 0,
-                    Nome: `OSRM URL: ${osrmUrl}`,
-                    Empresa: 'Franga Toys Debug'
-                });
-
-                const routeRes = await fetch(osrmUrl, {
+            try {
+                const originGeocodeRes = await fetch(`https://cep.awesomeapi.com.br/json/${cleanOrigemCep}`, {
                     headers: {
                         'User-Agent': 'FrangaToys/1.0 (contato@frangatoys.com.br)'
                     }
                 });
+                if (originGeocodeRes.ok) {
+                    const originData = await originGeocodeRes.json();
+                    if (originData.lat && originData.lng) {
+                        originLat = parseFloat(originData.lat);
+                        originLng = parseFloat(originData.lng);
+                        addDebugQuote('debug_origin_coords', 0, `Origem resolved: ${originLng}, ${originLat}`);
+                    }
+                } else {
+                    addDebugQuote('debug_origin_fail', originGeocodeRes.status, `Origem API fail status: ${originGeocodeRes.status}`);
+                }
+            } catch (origemErr: any) {
+                addDebugQuote('debug_origin_error', 0, `Origem catch: ${origemErr.message}`);
+            }
 
-                if (routeRes.ok) {
-                    const routeData = await routeRes.json();
-                    if (routeData.code === 'Ok' && routeData.routes?.length > 0) {
-                        const distanceKm = routeData.routes[0].distance / 1000;
+            // Obter distância de direção real via OSRM API (grátis)
+            const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${originLng},${originLat};${destLng},${destLat}?overview=false`;
+            addDebugQuote('debug_osrm_url', 0, `OSRM URL: ${osrmUrl}`);
+
+            const routeRes = await fetch(osrmUrl, {
+                headers: {
+                    'User-Agent': 'FrangaToys/1.0 (contato@frangatoys.com.br)'
+                }
+            });
+
+            if (routeRes.ok) {
+                const routeData = await routeRes.json();
+                if (routeData.code === 'Ok' && routeData.routes?.length > 0) {
+                    const distanceKm = routeData.routes[0].distance / 1000;
+                    addDebugQuote('debug_distance', Number(distanceKm.toFixed(2)), `Distancia calculada: ${distanceKm.toFixed(2)} km`);
+
+                    // Limite de 35km para entrega local de carro
+                    if (distanceKm <= 35) {
+                        // Racional: R$ 5,00 base + R$ 2,20 por KM
+                        const taxaBase = 5.00;
+                        const valorPorKm = 2.20;
+                        const totalCarro = taxaBase + (distanceKm * valorPorKm);
 
                         localQuotes.push({
-                            Codigo: 'debug_distance',
-                            Valor: Number(distanceKm.toFixed(2)),
-                            PrazoEntrega: 0,
-                            Nome: `Distancia calculada: ${distanceKm.toFixed(2)} km`,
-                            Empresa: 'Franga Toys Debug'
-                        });
-
-                        // Limite de 35km para entrega local de carro
-                        if (distanceKm <= 35) {
-                            // Racional: R$ 5,00 base + R$ 2,20 por KM
-                            const taxaBase = 5.00;
-                            const valorPorKm = 2.20;
-                            const totalCarro = taxaBase + (distanceKm * valorPorKm);
-
-                            localQuotes.push({
-                                Codigo: 'entrega_local',
-                                Valor: Number(totalCarro.toFixed(2)),
-                                PrazoEntrega: 1, // Geralmente entregue 1 dia após a conclusão da peça
-                                Nome: 'Entrega de Carro (Local)',
-                                Empresa: 'Franga Toys'
-                            });
-                        }
-                    } else {
-                        localQuotes.push({
-                            Codigo: 'debug_osrm_route_error',
-                            Valor: 0,
-                            PrazoEntrega: 0,
-                            Nome: `OSRM route error: ${routeData.code}`,
-                            Empresa: 'Franga Toys Debug'
+                            Codigo: 'entrega_local',
+                            Valor: Number(totalCarro.toFixed(2)),
+                            PrazoEntrega: 1, // Geralmente entregue 1 dia após a conclusão da peça
+                            Nome: 'Entrega de Carro (Local)',
+                            Empresa: 'Franga Toys'
                         });
                     }
                 } else {
-                    localQuotes.push({
-                        Codigo: 'debug_osrm_http_error',
-                        Valor: routeRes.status,
-                        PrazoEntrega: 0,
-                        Nome: `OSRM HTTP status: ${routeRes.status}`,
-                        Empresa: 'Franga Toys Debug'
-                    });
+                    addDebugQuote('debug_osrm_route_error', 0, `OSRM route error: ${routeData.code}`);
                 }
             } else {
-                localQuotes.push({
-                    Codigo: 'debug_dest_nan',
-                    Valor: 0,
-                    PrazoEntrega: 0,
-                    Nome: `Dest coords NaN: ${destLat}, ${destLng}`,
-                    Empresa: 'Franga Toys Debug'
-                });
+                addDebugQuote('debug_osrm_http_error', routeRes.status, `OSRM HTTP status: ${routeRes.status}`);
             }
         } else {
-            localQuotes.push({
-                Codigo: 'debug_dest_geocode_fail',
-                Valor: destGeocodeRes.status,
-                PrazoEntrega: 0,
-                Nome: `Dest Geocode fail status: ${destGeocodeRes.status}`,
-                Empresa: 'Franga Toys Debug'
-            });
+            addDebugQuote('debug_dest_coords_invalid', 0, `Dest coords invalidas ou ausentes`);
         }
     } catch (localErr: any) {
         console.error('Erro ao calcular frete de carro local:', localErr);
-        localQuotes.push({
-            Codigo: 'debug_catch_error',
-            Valor: 0,
-            PrazoEntrega: 0,
-            Nome: `General catch: ${localErr.message || String(localErr)}`,
-            Empresa: 'Franga Toys Debug'
-        });
+        if (params.debug) {
+            localQuotes.push({
+                Codigo: 'debug_catch_error',
+                Valor: 0,
+                PrazoEntrega: 0,
+                Nome: `General catch: ${localErr.message || String(localErr)}`,
+                Empresa: 'Franga Toys Debug'
+            });
+        }
     }
 
     return [...localQuotes, ...quotes];

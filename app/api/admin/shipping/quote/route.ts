@@ -8,7 +8,7 @@ export async function POST(req: Request) {
         if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();
-        const { sCepDestino, nVlPeso, nVlComprimento, nVlAltura, nVlLargura } = body;
+        const { sCepDestino, nVlPeso, nVlComprimento, nVlAltura, nVlLargura, destLat, destLng, debug } = body;
 
         if (!sCepDestino) {
             return NextResponse.json({ error: 'CEP de destino não informado' }, { status: 400 });
@@ -19,7 +19,10 @@ export async function POST(req: Request) {
             nVlPeso,
             nVlComprimento,
             nVlAltura,
-            nVlLargura
+            nVlLargura,
+            destLat,
+            destLng,
+            debug
         });
 
         return NextResponse.json(formatted);
