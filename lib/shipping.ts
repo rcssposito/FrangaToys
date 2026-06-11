@@ -162,8 +162,8 @@ export async function calculateShipping(params: ShippingQuoteParams): Promise<Sh
                     const distanceKm = routeData.routes[0].distance / 1000;
                     addDebugQuote('debug_distance', Number(distanceKm.toFixed(2)), `Distancia calculada: ${distanceKm.toFixed(2)} km`);
 
-                    // Limite de 35km para entrega local de carro
-                    if (distanceKm <= 35) {
+                    // Limite de 50km para entrega local
+                    if (distanceKm <= 50) {
                         // Racional: R$ 5,00 base + R$ 2,20 por KM
                         const taxaBase = 5.00;
                         const valorPorKm = 2.20;
@@ -173,7 +173,7 @@ export async function calculateShipping(params: ShippingQuoteParams): Promise<Sh
                             Codigo: 'entrega_local',
                             Valor: Number(totalCarro.toFixed(2)),
                             PrazoEntrega: 1, // Geralmente entregue 1 dia após a conclusão da peça
-                            Nome: 'Entrega de Carro (Local)',
+                            Nome: 'Entrega da Loja',
                             Empresa: 'Franga Toys'
                         });
                     }
