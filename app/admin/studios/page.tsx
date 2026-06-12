@@ -2,7 +2,28 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { ArrowLeft, Save, DollarSign, Star, Box, Loader2, Trash, Plus, Instagram, Globe, ExternalLink, Search, ImageIcon, Sparkles, ShoppingBag } from 'lucide-react';
+import { 
+    ArrowLeft, 
+    Save, 
+    DollarSign, 
+    Star, 
+    Box, 
+    Loader2, 
+    Trash, 
+    Plus, 
+    Instagram, 
+    Globe, 
+    ExternalLink, 
+    Search, 
+    ImageIcon, 
+    Sparkles, 
+    ShoppingBag,
+    Settings,
+    TrendingUp,
+    Percent,
+    ChevronDown,
+    MessageSquare
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import { useRouter } from 'next/navigation';
@@ -21,7 +42,15 @@ interface Studio {
     social_url?: string;
     ativo?: boolean;
     merchant?: boolean;
-    figuras?: { count: number }[];
+    total_figuras?: number;
+    total_vendas?: number;
+    total_itens?: number;
+    receita_bruta?: number;
+    lucro_liquido?: number;
+    figuras_vendidas?: number;
+    conversao_acervo?: number;
+    margem_lucro?: number;
+    ticket_medio?: number;
 }
 
 export default function StudiosPage() {
@@ -31,11 +60,13 @@ export default function StudiosPage() {
     const [isAdding, setIsAdding] = useState(false);
     const [newStudioName, setNewStudioName] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [sortBy, setSortBy] = useState<'receita_bruta' | 'lucro_liquido' | 'total_figuras' | 'custo_mensal' | 'nome'>('receita_bruta');
+    const [expandedStudioIds, setExpandedStudioIds] = useState<Record<number, boolean>>({});
+    
     const { hasRole, user } = usePermission();
     const canEdit = hasRole('admin') || hasRole('pricing');
     const router = useRouter();
 
-    // ... (efeitos permanecem os mesmos)
     useEffect(() => {
         if (!loading && user && !canEdit) {
             toast.error('Acesso negado');
@@ -51,7 +82,7 @@ export default function StudiosPage() {
 
     const fetchStudios = async () => {
         try {
-            const res = await fetch('/api/estudios?incluirInativos=true', { cache: 'no-store' });
+            const res = await fetch('/api/admin/studios', { cache: 'no-store' });
             const data = await res.json();
             if (res.ok) setStudios(data);
         } catch (error) {
@@ -128,7 +159,20 @@ export default function StudiosPage() {
         setStudios(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
     };
 
-    const filteredStudios = studios.filter(s => s.nome.toLowerCase().includes(searchTerm.toLowerCase()));
+    const toggleExpand = (id: number) => {
+        setExpandedStudioIds(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    const filteredAndSortedStudios = studios
+        .filter(s => s.nome.toLowerCase().includes(searchTerm.toLowerCase()))
+        .sort((a, b) => {
+            if (sortBy === 'nome') {
+                return a.nome.localeCompare(b.nome);
+            }
+            const valA = Number(a[sortBy]) || 0;
+            const valB = Number(b[sortBy]) || 0;
+            return valB - valA; // Descending for metrics and costs
+        });
 
     return (
         <div className="min-h-screen bg-black text-zinc-100 p-4 md:p-8 relative overflow-x-hidden">
@@ -144,20 +188,38 @@ export default function StudiosPage() {
                         </Link>
                         <div>
                             <h1 className="text-4xl font-black tracking-tighter text-white">Estúdios <span className="text-blue-500">Parceiros</span></h1>
-                            <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-1 opacity-80">Gestão de Branding, Custos e Acervo.</p>
+                            <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-1 opacity-80">Gestão de Branding, Custos e BI.</p>
                         </div>
                     </div>
 
-                    {/* Search Bar */}
-                    <div className="relative group max-w-sm w-full">
-                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-blue-500 transition-colors" />
-                        <input
-                            type="text"
-                            placeholder="Buscar estúdio..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full bg-zinc-950/60 border border-zinc-900 focus:border-blue-500/50 p-3.5 pl-12 rounded-2xl outline-none text-sm transition-all shadow-inner font-medium text-zinc-300"
-                        />
+                    {/* Search & Sort Controls */}
+                    <div className="flex flex-col sm:flex-row gap-4 w-full max-w-xl">
+                        {/* Search Bar */}
+                        <div className="relative group flex-1">
+                            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-blue-500 transition-colors" />
+                            <input
+                                type="text"
+                                placeholder="Buscar estúdio..."
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                className="w-full bg-zinc-950/60 border border-zinc-900 focus:border-blue-500/50 p-3.5 pl-12 rounded-2xl outline-none text-sm transition-all shadow-inner font-medium text-zinc-300"
+                            />
+                        </div>
+                        {/* Sort Selector */}
+                        <div className="relative group min-w-[180px]">
+                            <select
+                                value={sortBy}
+                                onChange={e => setSortBy(e.target.value as any)}
+                                className="w-full bg-zinc-950/60 border border-zinc-900 focus:border-blue-500/50 p-3.5 pr-10 rounded-2xl outline-none text-sm transition-all shadow-inner font-medium text-zinc-300 appearance-none cursor-pointer"
+                            >
+                                <option value="receita_bruta" className="bg-zinc-950">Faturamento Bruto</option>
+                                <option value="lucro_liquido" className="bg-zinc-950">Lucro Líquido Real</option>
+                                <option value="total_figuras" className="bg-zinc-950">Tamanho do Acervo</option>
+                                <option value="custo_mensal" className="bg-zinc-950">Custo Mensal</option>
+                                <option value="nome" className="bg-zinc-950">Nome do Estúdio</option>
+                            </select>
+                            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+                        </div>
                     </div>
                 </div>
 
@@ -198,7 +260,7 @@ export default function StudiosPage() {
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Acervo Ativo</p>
                                 <h3 className="text-2xl font-black text-white tracking-tighter">
-                                    {studios.filter(s => s.merchant).reduce((acc, s) => acc + (s.figuras?.[0]?.count || 0), 0)} 
+                                    {studios.filter(s => s.merchant).reduce((acc, s) => acc + (s.total_figuras || 0), 0)} 
                                     <span className="text-sm font-bold text-zinc-600 ml-1">figuras</span>
                                 </h3>
                             </div>
@@ -230,172 +292,330 @@ export default function StudiosPage() {
                             </div>
                         )}
 
-                        {filteredStudios.map(studio => (
-                            <div key={studio.id} className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/50 rounded-[2.5rem] p-8 shadow-2xl flex flex-col gap-6 relative group hover:border-blue-500/20 transition-all duration-500">
-                                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                
-                                <div className={clsx("flex justify-between items-center transition-opacity duration-500", !studio.ativo && "opacity-40")}>
-                                    <div className="flex items-center gap-4">
-                                        <div className="relative w-14 h-14 rounded-2xl bg-zinc-950 border border-zinc-800 overflow-hidden flex items-center justify-center shadow-inner group-hover:border-blue-500/30 transition-all">
-                                            {studio.logo_url ? (
-                                                <img src={studio.logo_url} alt={studio.nome} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="font-black text-xl text-zinc-700">{studio.nome.slice(0, 2).toUpperCase()}</div>
-                                            )}
-                                            {!studio.ativo && <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-[8px] font-black uppercase text-white/50 tracking-widest">OFF</div>}
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <div className="font-black text-lg tracking-tight text-white line-clamp-2 leading-tight flex items-center gap-2">
-                                                {studio.nome}
-                                            </div>
-                                            <div className="flex gap-2 mt-1">
-                                                {studio.instagram_handle && (
-                                                    <a href={`https://instagram.com/${studio.instagram_handle.replace('@', '')}`} target="_blank" className="text-zinc-600 hover:text-pink-500 transition-colors">
-                                                        <Instagram size={14} />
-                                                    </a>
+                        {filteredAndSortedStudios.map(studio => {
+                            const isExpanded = !!expandedStudioIds[studio.id];
+                            
+                            const revenue = studio.receita_bruta || 0;
+                            const profit = studio.lucro_liquido || 0;
+                            const salesCount = studio.total_vendas || 0;
+                            
+                            let healthLabel = 'Sem Vendas';
+                            let healthColor = 'border-zinc-800 text-zinc-500 bg-zinc-900/10 shadow-[0_0_10px_rgba(113,113,122,0.05)]';
+                            
+                            if (salesCount > 0) {
+                                if (profit > 1000) {
+                                    healthLabel = 'Altamente Lucrativo';
+                                    healthColor = 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)]';
+                                } else if (profit > 0) {
+                                    healthLabel = 'Lucrativo';
+                                    healthColor = 'border-emerald-600/20 text-emerald-500 bg-emerald-600/5 shadow-[0_0_10px_rgba(16,185,129,0.05)]';
+                                } else if (profit === 0) {
+                                    healthLabel = 'Break-even';
+                                    healthColor = 'border-blue-500/20 text-blue-400 bg-blue-500/5';
+                                } else {
+                                    healthLabel = 'Operando em Prejuízo';
+                                    healthColor = 'border-rose-500/30 text-rose-400 bg-rose-500/10 shadow-[0_0_15px_rgba(244,63,94,0.15)]';
+                                }
+                            }
+
+                            return (
+                                <div key={studio.id} className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/50 rounded-[2.5rem] p-8 shadow-2xl flex flex-col gap-6 relative group hover:border-blue-500/20 transition-all duration-500">
+                                    <div className={clsx(
+                                        "absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-t-[2.5rem]",
+                                        profit < 0 && salesCount > 0 && "via-rose-500/20"
+                                    )} />
+                                    
+                                    <div className={clsx("flex justify-between items-start transition-all duration-500", !studio.ativo && "opacity-45")}>
+                                        <div className="flex items-center gap-4">
+                                            <div className="relative w-14 h-14 rounded-2xl bg-zinc-950 border border-zinc-800 overflow-hidden flex items-center justify-center shadow-inner group-hover:border-blue-500/30 transition-all">
+                                                {studio.logo_url ? (
+                                                    <img src={studio.logo_url} alt={studio.nome} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="font-black text-xl text-zinc-700 bg-gradient-to-br from-zinc-900 to-zinc-950 w-full h-full flex items-center justify-center">
+                                                        {studio.nome.slice(0, 2).toUpperCase()}
+                                                    </div>
                                                 )}
-                                                {studio.social_url && (
-                                                    <a href={studio.social_url} target="_blank" className="text-zinc-600 hover:text-blue-400 transition-colors">
-                                                        <Globe size={14} />
-                                                    </a>
-                                                )}
+                                                {!studio.ativo && <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-[8px] font-black uppercase text-white/50 tracking-widest">OFF</div>}
+                                            </div>
+                                            
+                                            <div className="flex flex-col">
+                                                <div className="font-black text-lg tracking-tight text-white leading-tight flex items-center gap-2 max-w-[180px] break-words">
+                                                    {studio.nome}
+                                                </div>
+                                                <div className="flex gap-2 mt-1.5">
+                                                    {studio.instagram_handle && (
+                                                        <a href={`https://instagram.com/${studio.instagram_handle.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="p-1 bg-zinc-950/50 rounded-lg text-zinc-500 hover:text-pink-500 transition-colors border border-zinc-800/30">
+                                                            <Instagram size={12} />
+                                                        </a>
+                                                    )}
+                                                    {studio.social_url && (
+                                                        <a href={studio.social_url} target="_blank" rel="noopener noreferrer" className="p-1 bg-zinc-950/50 rounded-lg text-zinc-500 hover:text-blue-400 transition-colors border border-zinc-800/30">
+                                                            <Globe size={12} />
+                                                        </a>
+                                                    )}
+                                                    {studio.observacao && (
+                                                        <div className="p-1 bg-zinc-950/50 rounded-lg text-zinc-500 border border-zinc-800/30 group/obs relative cursor-help" title={studio.observacao}>
+                                                            <MessageSquare size={12} />
+                                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/obs:block bg-zinc-950 text-zinc-300 text-[10px] p-2 rounded-lg border border-zinc-800 w-48 shadow-2xl z-50 text-center font-medium normal-case tracking-normal">
+                                                                {studio.observacao}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="flex gap-2 items-center">
-                                        {/* Merchant Toggle (Venda/Vitrine) */}
-                                        <button 
-                                            onClick={() => {
-                                                const newVal = !studio.merchant;
-                                                handleChange(studio.id, 'merchant', newVal);
-                                                handleUpdate({ ...studio, merchant: newVal });
-                                            }}
-                                            className={clsx(
-                                                "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 border",
-                                                studio.merchant 
-                                                    ? "bg-purple-500/10 border-purple-500/40 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.2)]" 
-                                                    : "bg-zinc-900 border-zinc-800 text-zinc-700"
-                                            )}
-                                            title={studio.merchant ? "Desativar TODAS as figuras deste estúdio na vitrine" : "Ativar TODAS as figuras deste estúdio na vitrine"}
-                                        >
-                                            <ShoppingBag size={18} />
-                                        </button>
 
-                                        <div className="h-4 w-px bg-zinc-800 mx-1" />
-
-                                        {/* Status Toggle (Custo/Operação) */}
-                                        <button 
-                                            onClick={() => {
-                                                const newVal = !studio.ativo;
-                                                handleChange(studio.id, 'ativo', newVal);
-                                                handleUpdate({ ...studio, ativo: newVal });
-                                            }}
-                                            className={clsx(
-                                                "w-11 h-6 rounded-full p-1 transition-all duration-300 relative",
-                                                studio.ativo ? "bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.4)]" : "bg-zinc-800"
-                                            )}
-                                            title={studio.ativo ? "Ativo: Gerando Custo" : "Inativo: Operação Pausada"}
-                                        >
-                                            <div className={clsx(
-                                                "w-4 h-4 bg-white rounded-full transition-all duration-300 shadow-md",
-                                                studio.ativo ? "translate-x-5" : "translate-x-0"
-                                            )} />
-                                        </button>
-                                        
-                                        <div className="h-6 w-px bg-zinc-800 mx-1" />
-                                        
-                                        {saving === studio.id && <Loader2 size={16} className="text-blue-500 animate-spin" />}
-                                        <button onClick={() => handleDelete(studio.id, studio.figuras?.[0]?.count || 0)} className="text-zinc-700 hover:text-red-500 transition-colors p-2 bg-black/40 rounded-xl border border-zinc-800/50 hover:border-red-500/20">
-                                            <Trash size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    {/* Qualidade */}
-                                    <div className="bg-zinc-950/30 border border-zinc-800/30 rounded-3xl p-4 flex flex-col items-center justify-center gap-1 shadow-inner relative group/stat hover:bg-zinc-950/50 transition-colors">
-                                        <label className="text-[9px] font-black tracking-widest uppercase text-zinc-600 absolute top-3 left-4">Nível</label>
-                                        <div className="flex items-center gap-1 mt-4">
-                                            <select
-                                                value={studio.qualidade || 5}
-                                                onChange={(e) => handleChange(studio.id, 'qualidade', parseInt(e.target.value))}
-                                                onBlur={() => handleUpdate(studio)}
-                                                className="bg-transparent border-none outline-none text-amber-500 font-black text-2xl cursor-pointer appearance-none text-right hover:text-amber-400 transition-colors"
+                                        <div className="flex items-center gap-1.5">
+                                            {/* Merchant Toggle */}
+                                            <button 
+                                                onClick={() => {
+                                                    const newVal = !studio.merchant;
+                                                    handleChange(studio.id, 'merchant', newVal);
+                                                    handleUpdate({ ...studio, merchant: newVal });
+                                                }}
+                                                className={clsx(
+                                                    "w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 border cursor-pointer",
+                                                    studio.merchant 
+                                                        ? "bg-purple-500/10 border-purple-500/40 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.15)]" 
+                                                        : "bg-zinc-950 border-zinc-900 text-zinc-600 hover:text-zinc-400"
+                                                )}
+                                                title={studio.merchant ? "Vitrine Ativa (Figuras Visíveis)" : "Vitrine Inativa (Figuras Ocultas)"}
                                             >
-                                                {[1, 2, 3, 4, 5].map(n => <option key={n} value={n} className="bg-zinc-900">{n}</option>)}
-                                            </select>
-                                            <Star size={18} className="text-amber-500 mb-0.5 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]" fill="currentColor" />
+                                                <ShoppingBag size={15} />
+                                            </button>
+
+                                            {/* Active Switch Toggle */}
+                                            <button 
+                                                onClick={() => {
+                                                    const newVal = !studio.ativo;
+                                                    handleChange(studio.id, 'ativo', newVal);
+                                                    handleUpdate({ ...studio, ativo: newVal });
+                                                }}
+                                                className={clsx(
+                                                    "w-10 h-6 rounded-full p-0.5 transition-all duration-300 relative border border-transparent cursor-pointer",
+                                                    studio.ativo ? "bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.3)]" : "bg-zinc-900 border-zinc-800"
+                                                )}
+                                                title={studio.ativo ? "Operação Ativa (Gerando Custos)" : "Operação Pausada"}
+                                            >
+                                                <div className={clsx(
+                                                    "w-4 h-4 bg-white rounded-full transition-all duration-300 shadow-md",
+                                                    studio.ativo ? "translate-x-4" : "translate-x-0"
+                                                )} />
+                                            </button>
+
+                                            {/* Settings Expand Button */}
+                                            <button 
+                                                onClick={() => toggleExpand(studio.id)}
+                                                className={clsx(
+                                                    "w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 border cursor-pointer",
+                                                    isExpanded 
+                                                        ? "bg-blue-500/10 border-blue-500/40 text-blue-400" 
+                                                        : "bg-zinc-950 border-zinc-900 text-zinc-600 hover:text-zinc-400"
+                                                )}
+                                                title="Configurações e Links"
+                                            >
+                                                <Settings size={15} />
+                                            </button>
+
+                                            {saving === studio.id ? (
+                                                <div className="w-9 h-9 flex items-center justify-center"><Loader2 size={15} className="text-blue-500 animate-spin" /></div>
+                                            ) : (
+                                                <button 
+                                                    onClick={() => handleDelete(studio.id, studio.total_figuras || 0)} 
+                                                    className="text-zinc-600 hover:text-red-500 transition-colors p-2 bg-zinc-950 border border-zinc-900 hover:border-red-500/20 rounded-xl cursor-pointer"
+                                                    title="Remover Estúdio"
+                                                >
+                                                    <Trash size={15} />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
-                                    {/* Acervo */}
-                                    <Link 
-                                        href={`/admin/figures?studio=${studio.id}`}
-                                        className="bg-zinc-950/30 border border-zinc-800/30 rounded-3xl p-4 flex flex-col items-center justify-center gap-1 shadow-inner relative group/stat hover:bg-blue-500/5 transition-all border-dashed hover:border-blue-400/30"
-                                    >
-                                        <label className="text-[9px] font-black tracking-widest uppercase text-zinc-600 absolute top-3 left-4">Acervo</label>
-                                        <div className="flex items-center gap-2 mt-4 text-zinc-200 group-hover/stat:text-blue-400 transition-colors">
-                                            <span className="font-black text-2xl tracking-tighter">
-                                                {studio.figuras?.[0]?.count || 0}
+
+                                    {/* Financial Health Pill */}
+                                    {salesCount > 0 && (
+                                        <div className={clsx(
+                                            "w-full py-1.5 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest text-center transition-all",
+                                            healthColor
+                                        )}>
+                                            {healthLabel}
+                                        </div>
+                                    )}
+
+                                    {/* Metrics Grid */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {/* Faturamento */}
+                                        <div className="bg-zinc-950/45 border border-zinc-900/60 rounded-3xl p-4 flex flex-col justify-between min-h-[90px] shadow-inner relative hover:bg-zinc-950/70 transition-colors group/metric">
+                                            <span className="text-[8px] font-black tracking-widest uppercase text-zinc-600 flex items-center gap-1.5">
+                                                <TrendingUp size={10} className="text-zinc-500" /> FATURAMENTO
                                             </span>
-                                            <ExternalLink size={14} className="opacity-0 group-hover/stat:opacity-100 transition-opacity" />
+                                            <div className="mt-2.5">
+                                                <div className="font-black text-lg tracking-tighter text-white">
+                                                    R$ {revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </div>
+                                                <div className="text-[9px] font-bold text-zinc-500 mt-0.5">
+                                                    {salesCount} vendas ({studio.total_itens || 0} pçs)
+                                                </div>
+                                            </div>
                                         </div>
-                                    </Link>
-                                </div>
 
-                                {/* Branding Inputs (Expandable or always visible subtle links) */}
-                                <div className="space-y-3 pt-2">
-                                    <div className="flex items-center gap-3 bg-black/40 p-1.5 rounded-2xl border border-zinc-800/50 transition-colors group-focus-within:border-blue-500/20">
-                                        <div className="p-2 bg-zinc-900 rounded-xl text-zinc-600"><ImageIcon size={14} /></div>
-                                        <input
-                                            type="text"
-                                            placeholder="URL do Logo"
-                                            value={studio.logo_url || ''}
-                                            onChange={e => handleChange(studio.id, 'logo_url', e.target.value)}
-                                            onBlur={() => handleUpdate(studio)}
-                                            className="bg-transparent text-[11px] font-medium outline-none text-zinc-400 flex-1 placeholder:text-zinc-700"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-3 bg-black/40 p-1.5 rounded-2xl border border-zinc-800/50 transition-colors group-focus-within:border-pink-500/20">
-                                        <div className="p-2 bg-zinc-900 rounded-xl text-zinc-600"><Instagram size={14} /></div>
-                                        <input
-                                            type="text"
-                                            placeholder="@instagram"
-                                            value={studio.instagram_handle || ''}
-                                            onChange={e => handleChange(studio.id, 'instagram_handle', e.target.value)}
-                                            onBlur={() => handleUpdate(studio)}
-                                            className="bg-transparent text-[11px] font-medium outline-none text-zinc-400 flex-1 placeholder:text-zinc-700"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-3 bg-black/40 p-1.5 rounded-2xl border border-zinc-800/50 transition-colors group-focus-within:border-blue-500/20">
-                                        <div className="p-2 bg-zinc-900 rounded-xl text-zinc-600"><Globe size={14} /></div>
-                                        <input
-                                            type="text"
-                                            placeholder="https://site.com"
-                                            value={studio.social_url || ''}
-                                            onChange={e => handleChange(studio.id, 'social_url', e.target.value)}
-                                            onBlur={() => handleUpdate(studio)}
-                                            className="bg-transparent text-[11px] font-medium outline-none text-zinc-400 flex-1 placeholder:text-zinc-700"
-                                        />
-                                    </div>
-                                </div>
+                                        {/* Lucro Real */}
+                                        <div className="bg-zinc-950/45 border border-zinc-900/60 rounded-3xl p-4 flex flex-col justify-between min-h-[90px] shadow-inner relative hover:bg-zinc-950/70 transition-colors group/metric">
+                                            <span className="text-[8px] font-black tracking-widest uppercase text-zinc-600 flex items-center gap-1.5">
+                                                <DollarSign size={10} className="text-zinc-500" /> LUCRO REAL
+                                            </span>
+                                            <div className="mt-2.5">
+                                                <div className={clsx(
+                                                    "font-black text-lg tracking-tighter",
+                                                    profit > 0 ? "text-emerald-400" : profit < 0 ? "text-rose-500" : "text-white"
+                                                )}>
+                                                    R$ {profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </div>
+                                                <div className="text-[9px] font-bold text-zinc-500 mt-0.5 flex items-center gap-1">
+                                                    <Percent size={8} /> {(studio.margem_lucro || 0).toFixed(1)}% margem
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                {/* Despesa Mensal */}
-                                <div className="mt-2 bg-zinc-950/40 p-4 rounded-3xl border border-zinc-800/30 border-dashed group-hover:border-emerald-500/20 transition-all">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Custo Operacional</span>
-                                        <DollarSign size={14} className="text-emerald-600 opacity-50" />
+                                        {/* Acervo */}
+                                        <Link 
+                                            href={`/admin/figures?studio=${studio.id}`}
+                                            className="bg-zinc-950/45 border border-zinc-900/60 rounded-3xl p-4 flex flex-col justify-between min-h-[90px] shadow-inner relative hover:bg-blue-500/[0.03] hover:border-blue-500/20 transition-all group/metric"
+                                        >
+                                            <span className="text-[8px] font-black tracking-widest uppercase text-zinc-600 flex items-center justify-between">
+                                                <span className="flex items-center gap-1.5"><Box size={10} className="text-zinc-500" /> ACERVO & GIRO</span>
+                                                <ExternalLink size={10} className="opacity-0 group-hover/metric:opacity-100 text-blue-400 transition-opacity" />
+                                            </span>
+                                            <div className="mt-2.5">
+                                                <div className="font-black text-lg tracking-tighter text-zinc-200 group-hover/metric:text-blue-400 transition-colors">
+                                                    {studio.total_figuras || 0} figures
+                                                </div>
+                                                <div className="text-[9px] font-bold text-zinc-500 mt-0.5">
+                                                    {(studio.conversao_acervo || 0).toFixed(1)}% giro catálogo
+                                                </div>
+                                            </div>
+                                        </Link>
+
+                                        {/* Qualidade */}
+                                        <div className="bg-zinc-950/45 border border-zinc-900/60 rounded-3xl p-4 flex flex-col justify-between min-h-[90px] shadow-inner relative hover:bg-zinc-950/70 transition-colors group/metric">
+                                            <span className="text-[8px] font-black tracking-widest uppercase text-zinc-600 flex items-center justify-between">
+                                                <span className="flex items-center gap-1.5"><Star size={10} className="text-zinc-500" /> NÍVEL & TICKET</span>
+                                            </span>
+                                            <div className="mt-1 flex justify-between items-end">
+                                                <div className="flex items-center gap-0.5">
+                                                    <select
+                                                        value={studio.qualidade || 5}
+                                                        onChange={(e) => handleChange(studio.id, 'qualidade', parseInt(e.target.value))}
+                                                        onBlur={() => handleUpdate(studio)}
+                                                        className="bg-transparent border-none outline-none text-amber-500 font-black text-lg cursor-pointer appearance-none text-right hover:text-amber-400 transition-colors py-0"
+                                                    >
+                                                        {[1, 2, 3, 4, 5].map(n => <option key={n} value={n} className="bg-zinc-950">{n}</option>)}
+                                                    </select>
+                                                    <Star size={13} className="text-amber-500 mb-1 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]" fill="currentColor" />
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-[9px] font-bold text-zinc-500">Avg Ticket</div>
+                                                    <div className="font-black text-xs text-zinc-300">
+                                                        R$ {(studio.ticket_medio || 0).toFixed(0)}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <input
-                                        type="number"
-                                        value={studio.custo_mensal ?? ''}
-                                        onChange={(e) => handleChange(studio.id, 'custo_mensal', e.target.value === '' ? '' : parseFloat(e.target.value))}
-                                        onBlur={() => handleUpdate(studio)}
-                                        className="bg-transparent text-xl font-black text-emerald-400 outline-none w-full tracking-tighter"
-                                        placeholder="0.00"
-                                    />
+
+                                    {/* Collapsible Edit Panel */}
+                                    {isExpanded && (
+                                        <div className="space-y-4 pt-3 border-t border-zinc-900/85 animate-[fadeIn_0.2s_ease-out]">
+                                            <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Configurações do Estúdio</h4>
+                                            
+                                            <div className="grid grid-cols-1 gap-3">
+                                                {/* Logo URL */}
+                                                <div className="flex items-center gap-3 bg-black/40 p-2 rounded-2xl border border-zinc-900 transition-colors focus-within:border-blue-500/30">
+                                                    <div className="p-2 bg-zinc-900 rounded-xl text-zinc-600"><ImageIcon size={14} /></div>
+                                                    <div className="flex-1 flex flex-col">
+                                                        <label className="text-[8px] font-bold text-zinc-600 uppercase">URL do Logo</label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="https://..."
+                                                            value={studio.logo_url || ''}
+                                                            onChange={e => handleChange(studio.id, 'logo_url', e.target.value)}
+                                                            onBlur={() => handleUpdate(studio)}
+                                                            className="bg-transparent text-xs font-semibold outline-none text-zinc-300 placeholder:text-zinc-700 w-full mt-0.5"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Instagram */}
+                                                <div className="flex items-center gap-3 bg-black/40 p-2 rounded-2xl border border-zinc-900 transition-colors focus-within:border-pink-500/30">
+                                                    <div className="p-2 bg-zinc-900 rounded-xl text-zinc-600"><Instagram size={14} /></div>
+                                                    <div className="flex-1 flex flex-col">
+                                                        <label className="text-[8px] font-bold text-zinc-600 uppercase">Instagram</label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="@handle"
+                                                            value={studio.instagram_handle || ''}
+                                                            onChange={e => handleChange(studio.id, 'instagram_handle', e.target.value)}
+                                                            onBlur={() => handleUpdate(studio)}
+                                                            className="bg-transparent text-xs font-semibold outline-none text-zinc-300 placeholder:text-zinc-700 w-full mt-0.5"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Site URL */}
+                                                <div className="flex items-center gap-3 bg-black/40 p-2 rounded-2xl border border-zinc-900 transition-colors focus-within:border-blue-500/30">
+                                                    <div className="p-2 bg-zinc-900 rounded-xl text-zinc-600"><Globe size={14} /></div>
+                                                    <div className="flex-1 flex flex-col">
+                                                        <label className="text-[8px] font-bold text-zinc-600 uppercase">Website</label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="https://site.com"
+                                                            value={studio.social_url || ''}
+                                                            onChange={e => handleChange(studio.id, 'social_url', e.target.value)}
+                                                            onBlur={() => handleUpdate(studio)}
+                                                            className="bg-transparent text-xs font-semibold outline-none text-zinc-300 placeholder:text-zinc-700 w-full mt-0.5"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Observações */}
+                                                <div className="flex items-start gap-3 bg-black/40 p-2.5 rounded-2xl border border-zinc-900 transition-colors focus-within:border-blue-500/30">
+                                                    <div className="p-2 bg-zinc-900 rounded-xl text-zinc-600 mt-1"><MessageSquare size={14} /></div>
+                                                    <div className="flex-1 flex flex-col">
+                                                        <label className="text-[8px] font-bold text-zinc-600 uppercase">Observações / Anotações</label>
+                                                        <textarea
+                                                            placeholder="Notas de licenciamento, suporte, prazos de entrega..."
+                                                            value={studio.observacao || ''}
+                                                            onChange={e => handleChange(studio.id, 'observacao', e.target.value)}
+                                                            onBlur={() => handleUpdate(studio)}
+                                                            rows={2}
+                                                            className="bg-transparent text-xs font-semibold outline-none text-zinc-300 placeholder:text-zinc-700 w-full mt-1.5 resize-none scrollbar-none"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Custo Operacional */}
+                                    <div className="bg-zinc-950/40 p-4 rounded-3xl border border-zinc-900/60 border-dashed group-hover:border-emerald-500/20 transition-all mt-auto">
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">CUSTO OPERACIONAL MENSAL</span>
+                                            <DollarSign size={13} className="text-emerald-600 opacity-60 animate-pulse" />
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-zinc-500 font-extrabold text-sm">R$</span>
+                                            <input
+                                                type="number"
+                                                value={studio.custo_mensal ?? ''}
+                                                onChange={(e) => handleChange(studio.id, 'custo_mensal', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                                                onBlur={() => handleUpdate(studio)}
+                                                className="bg-transparent text-xl font-black text-emerald-400 outline-none w-full tracking-tighter py-0"
+                                                placeholder="0,00"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>

@@ -1,13 +1,131 @@
-
 import { NextResponse } from 'next/server';
 import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
+// GET ALL STUDIOS WITH PERFORMANCE METRICS (ADMIN ONLY)
+export async function GET(req: Request) {
+    try {
+        const sessionOrResponse = await requireRoles(['admin', 'pricing']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
+        // Fetch all studios with their figure IDs
+        const { data: studios, error: studiosError } = await supabase
+            .from('studios')
+            .select('*, figuras(id)');
+
+        if (studiosError) throw studiosError;
+
+        // Fetch all sales of the current year that are not Cancelado
+        const currentYear = new Date().getFullYear();
+        const startOfYear = new Date(currentYear, 0, 1).toISOString();
+        const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59, 999).toISOString();
+
+        const { data: sales, error: salesError } = await supabase
+            .from('vendas')
+            .select('figura_id, quantidade, valor_venda_final, lucro_real, status')
+            .neq('status', 'Cancelado')
+            .gte('data_venda', startOfYear)
+            .lte('data_venda', endOfYear);
+
+        if (salesError) throw salesError;
+
+        // Map figure_id to studio_id
+        const figureToStudioMap = new Map<number, number>();
+        studios?.forEach((s: any) => {
+            if (s.figuras) {
+                s.figuras.forEach((f: any) => {
+                    figureToStudioMap.set(f.id, s.id);
+                });
+            }
+        });
+
+        // Initialize metrics for each studio
+        const metricsMap = new Map<number, {
+            total_vendas: number;
+            total_itens: number;
+            receita_bruta: number;
+            lucro_liquido: number;
+            figuras_vendidas_unicas: Set<number>;
+        }>();
+
+        studios?.forEach((s: any) => {
+            metricsMap.set(s.id, {
+                total_vendas: 0,
+                total_itens: 0,
+                receita_bruta: 0,
+                lucro_liquido: 0,
+                figuras_vendidas_unicas: new Set<number>()
+            });
+        });
+
+        // Populate metrics with sales data
+        sales?.forEach((sale: any) => {
+            const studioId = figureToStudioMap.get(sale.figura_id);
+            if (studioId !== undefined) {
+                const m = metricsMap.get(studioId);
+                if (m) {
+                    m.total_vendas += 1;
+                    m.total_itens += (Number(sale.quantidade) || 1);
+                    m.receita_bruta += (Number(sale.valor_venda_final) || 0);
+                    m.lucro_liquido += (Number(sale.lucro_real) || 0);
+                    m.figuras_vendidas_unicas.add(sale.figura_id);
+                }
+            }
+        });
+
+        // Enriched studios object
+        const enrichedStudios = studios?.map((s: any) => {
+            const m = metricsMap.get(s.id) || {
+                total_vendas: 0,
+                total_itens: 0,
+                receita_bruta: 0,
+                lucro_liquido: 0,
+                figuras_vendidas_unicas: new Set<number>()
+            };
+
+            const total_figuras = s.figuras?.length || 0;
+            const figuras_vendidas = m.figuras_vendidas_unicas.size;
+            const conversao_acervo = total_figuras > 0 ? (figuras_vendidas / total_figuras) * 100 : 0;
+            const margem_lucro = m.receita_bruta > 0 ? (m.lucro_liquido / m.receita_bruta) * 100 : 0;
+            const ticket_medio = m.total_itens > 0 ? m.receita_bruta / m.total_itens : 0;
+
+            // Clean up original figures array to avoid bloated response payload
+            const { figuras, ...rest } = s;
+
+            return {
+                ...rest,
+                total_figuras,
+                total_vendas: m.total_vendas,
+                total_itens: m.total_itens,
+                receita_bruta: m.receita_bruta,
+                lucro_liquido: m.lucro_liquido,
+                figuras_vendidas,
+                conversao_acervo,
+                margem_lucro,
+                ticket_medio
+            };
+        });
+
+        // Default sort: gross revenue descending, then name ascending
+        enrichedStudios?.sort((a: any, b: any) => {
+            if (b.receita_bruta !== a.receita_bruta) {
+                return b.receita_bruta - a.receita_bruta;
+            }
+            return a.nome.localeCompare(b.nome);
+        });
+
+        return NextResponse.json(enrichedStudios || []);
+    } catch (error: any) {
+        console.error('GET Admin Studios API Error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
 // UPDATE STUDIO
 export async function PUT(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'pricing']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+        const sessionOrResponse = await requireRoles(['admin', 'pricing']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();
         const { id, custo_mensal, qtd_display, qualidade, observacao, logo_url, instagram_handle, social_url, ativo, merchant } = body;
@@ -45,11 +163,10 @@ export async function PUT(req: Request) {
 // CREATE STUDIO
 export async function POST(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'pricing']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+        const sessionOrResponse = await requireRoles(['admin', 'pricing']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();
-
         const { nome, custo_mensal, qtd_display, qualidade, observacao, logo_url, instagram_handle, social_url, ativo, merchant } = body;
 
         if (!nome) return NextResponse.json({ error: 'Nome required' }, { status: 400 });
@@ -92,8 +209,8 @@ export async function POST(req: Request) {
 // DELETE STUDIO
 export async function DELETE(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'pricing']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+        const sessionOrResponse = await requireRoles(['admin', 'pricing']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
