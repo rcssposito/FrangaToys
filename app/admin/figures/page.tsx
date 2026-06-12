@@ -33,6 +33,9 @@ interface Figure {
     is_campanha_active?: boolean;
     desconto_campanha?: number;
     preco_fixo_campanha?: number;
+    vendas_count?: number;
+    faturamento_gerado?: number;
+    badge_desempenho?: 'Estrela' | 'Lento' | 'Encalhado';
 }
 
 interface PricingSettings {
@@ -54,13 +57,37 @@ const FigureMobileCard = ({
     return (
         <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl p-4 shadow-sm flex flex-col gap-3">
             {/* Cabecalho */}
-            <div className="flex gap-3">
-                <div className="flex-1">
-                    <h3 onClick={() => f.imagem_url && setPreviewImage({ url: f.imagem_url, nome: f.nome })} className="text-sm font-bold text-orange-500 cursor-pointer">{f.nome}</h3>
+            <div className="flex gap-3 justify-between items-start">
+                <div className="flex-1 min-w-0">
+                    <h3 onClick={() => f.imagem_url && setPreviewImage({ url: f.imagem_url, nome: f.nome })} className="text-sm font-bold text-orange-500 cursor-pointer hover:underline truncate" title={f.nome}>{f.nome}</h3>
                     <div className="text-xs text-[var(--text-muted)] mt-0.5">{f.categoria} - {f.serie}</div>
                     <span className="font-mono text-[10px] bg-[var(--input-bg)] text-[var(--text-muted)] px-2 py-0.5 rounded-sm border border-[var(--input-border)] mt-2 inline-block">
                         SKU: {f.codigo || '--'}
                     </span>
+                </div>
+
+                {/* Desempenho de Vendas */}
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                    {f.badge_desempenho === 'Estrela' && (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/10 border border-amber-500/30 text-amber-500 flex items-center gap-0.5 shadow-[0_0_8px_rgba(245,158,11,0.15)] animate-pulse">
+                            ★ Estrela ({f.vendas_count} pçs)
+                        </span>
+                    )}
+                    {f.badge_desempenho === 'Lento' && (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-500/10 border border-blue-500/30 text-blue-400">
+                            🔄 Lento ({f.vendas_count} pçs)
+                        </span>
+                    )}
+                    {f.badge_desempenho === 'Encalhado' && (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-zinc-950 border border-zinc-900/60 text-zinc-600">
+                            ❄️ Encalhado
+                        </span>
+                    )}
+                    {f.faturamento_gerado && f.faturamento_gerado > 0 ? (
+                        <span className="text-[10px] font-black text-emerald-500">
+                            R$ {f.faturamento_gerado.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                        </span>
+                    ) : null}
                 </div>
             </div>
 
@@ -619,6 +646,7 @@ function DataGridContent() {
                             <thead className="bg-[var(--background)] sticky top-0 z-10">
                                 <tr className="text-[var(--text-muted)] text-[10px] uppercase font-bold tracking-widest border-b border-[var(--card-border)]">
                                     <th className="pl-4 pr-2 py-4 w-full min-w-[350px]">Figura</th>
+                                    <th className="px-3 py-4 text-center">Vendas (Ano)</th>
                                     <th className="px-3 py-4 text-center">Sinônimos / Tags</th>
                                     <th className="px-3 py-4 text-center">SKU</th>
                                     <th className="px-3 py-4 text-center">Escala (%)</th>
@@ -649,6 +677,32 @@ function DataGridContent() {
                                                         {f.nome}
                                                     </h3>
                                                     <div className="text-xs text-[var(--text-muted)] truncate max-w-[340px]">{f.categoria} - {f.serie}</div>
+                                                </div>
+                                            </td>
+
+                                            {/* Vendas (Ano) */}
+                                            <td className="px-3 py-4 text-center">
+                                                <div className="flex flex-col items-center justify-center gap-1">
+                                                    {f.badge_desempenho === 'Estrela' && (
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/10 border border-amber-500/30 text-amber-500 flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.15)] animate-pulse">
+                                                            ★ Estrela ({f.vendas_count} pçs)
+                                                        </span>
+                                                    )}
+                                                    {f.badge_desempenho === 'Lento' && (
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/10 border border-blue-500/30 text-blue-400">
+                                                            🔄 Lento ({f.vendas_count} pçs)
+                                                        </span>
+                                                    )}
+                                                    {f.badge_desempenho === 'Encalhado' && (
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-zinc-950 border border-zinc-900/60 text-zinc-600">
+                                                            ❄️ Encalhado
+                                                        </span>
+                                                    )}
+                                                    {f.faturamento_gerado && f.faturamento_gerado > 0 ? (
+                                                        <span className="text-[11px] font-black text-emerald-400">
+                                                            R$ {f.faturamento_gerado.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                                                        </span>
+                                                    ) : null}
                                                 </div>
                                             </td>
 

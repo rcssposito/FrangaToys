@@ -168,6 +168,55 @@ export async function GET(req: NextRequest) {
             // Cap to 'limit' so the UI doesn't break if we fetched 1000 and 500 were missing price
             formatted = formatted.slice(0, limit);
         }
+        // Aggregate sales for the current year to calculate popularity and gross faturamento
+        try {
+            const currentYear = new Date().getFullYear();
+            const startOfYear = new Date(currentYear, 0, 1).toISOString();
+            const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59, 999).toISOString();
+
+            const { data: sales, error: salesError } = await supabase
+                .from('vendas')
+                .select('figura_id, quantidade, valor_venda_final')
+                .neq('status', 'Cancelado')
+                .gte('data_venda', startOfYear)
+                .lte('data_venda', endOfYear);
+
+            if (salesError) {
+                console.error('Error fetching sales for catalog BI metrics:', salesError);
+            } else {
+                // Map figure_id -> { count, faturamento }
+                const figureSalesMap = new Map<number, { count: number, faturamento: number }>();
+                sales?.forEach((sale: any) => {
+                    if (sale.figura_id) {
+                        const s = figureSalesMap.get(sale.figura_id) || { count: 0, faturamento: 0 };
+                        s.count += (Number(sale.quantidade) || 1);
+                        s.faturamento += (Number(sale.valor_venda_final) || 0);
+                        figureSalesMap.set(sale.figura_id, s);
+                    }
+                });
+
+                // Attach to formatted items
+                formatted = formatted.map((f: any) => {
+                    const stats = figureSalesMap.get(f.id) || { count: 0, faturamento: 0 };
+                    
+                    let badge_desempenho = 'Encalhado';
+                    if (stats.count >= 5) {
+                        badge_desempenho = 'Estrela';
+                    } else if (stats.count > 0) {
+                        badge_desempenho = 'Lento';
+                    }
+
+                    return {
+                        ...f,
+                        vendas_count: stats.count,
+                        faturamento_gerado: stats.faturamento,
+                        badge_desempenho
+                    };
+                });
+            }
+        } catch (biError) {
+            console.error('Critical failure in figures BI aggregation:', biError);
+        }
 
         const nextCursor = data.length === dbLimit ? page + 1 : undefined;
 
