@@ -31,13 +31,15 @@ function HomeContent() {
   const studioParam = searchParams.get('studioIds');
   const showAllParam = searchParams.get('incluirNaoVendaveis');
   const sortParam = searchParams.get('sort');
+  const priceRangeParam = searchParams.get('priceRange');
 
   const [filters, setFilters] = useState<FilterState>({
     q: qParam || undefined,
     categoria: categoriaParam || undefined,
     studioIds: studioParam || undefined,
     incluirNaoVendaveis: showAllParam || undefined,
-    sort: sortParam || 'newest'
+    sort: sortParam || 'newest',
+    priceRange: priceRangeParam || undefined
   });
 
   // Sync state changes to URL query parameters
@@ -48,6 +50,7 @@ function HomeContent() {
     if (filters.studioIds) params.set('studioIds', filters.studioIds);
     if (filters.incluirNaoVendaveis) params.set('incluirNaoVendaveis', filters.incluirNaoVendaveis);
     if (filters.sort && filters.sort !== 'newest') params.set('sort', filters.sort);
+    if (filters.priceRange) params.set('priceRange', filters.priceRange);
 
     const queryString = params.toString();
     const target = queryString ? `${pathname}?${queryString}` : pathname;
@@ -61,6 +64,7 @@ function HomeContent() {
     const studioIds = searchParams.get('studioIds') || undefined;
     const incluirNaoVendaveis = searchParams.get('incluirNaoVendaveis') || undefined;
     const sort = searchParams.get('sort') || 'newest';
+    const priceRange = searchParams.get('priceRange') || undefined;
 
     setFilters(prev => {
       if (
@@ -68,29 +72,30 @@ function HomeContent() {
         prev.categoria === categoria &&
         prev.studioIds === studioIds &&
         prev.incluirNaoVendaveis === incluirNaoVendaveis &&
-        prev.sort === sort
+        prev.sort === sort &&
+        prev.priceRange === priceRange
       ) {
         return prev;
       }
-      return { q, categoria, studioIds, incluirNaoVendaveis, sort };
+      return { q, categoria, studioIds, incluirNaoVendaveis, sort, priceRange };
     });
   }, [searchParams]);
-  
+
   const { setIsCartOpen } = useCart();
 
   // Tanstack Query Hook
   const {
-      data,
-      fetchNextPage,
-      hasNextPage,
-      isFetchingNextPage,
-      isLoading,
-      isError
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError
   } = useFiguras(filters);
 
   // Extract stats from result
   const totalCount = data?.pages[0]?.total || 0;
-  
+
   const handleSortChange = (newSort: string) => {
     setFilters(prev => ({ ...prev, sort: newSort }));
   };
@@ -114,56 +119,9 @@ function HomeContent() {
             filters={filters}
             onChange={setFilters}
             categories={CATEGORIES}
+            totalCount={totalCount}
+            isLoading={isLoading}
           />
-        </div>
-
-        {/* Stats & Sort Bar (Luxury Refinement) */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 px-4 sm:px-0">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-               <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.6)] animate-pulse" />
-            </div>
-            <div className="flex flex-col">
-               <span className="text-[10px] font-black text-zinc-300 uppercase tracking-[0.3em] leading-tight">
-                  {isLoading ? 'Sintonizando...' : `${totalCount} Peças no Acervo`}
-               </span>
-               {!isLoading && totalCount > 0 && (
-                 <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest hidden sm:block">
-                    Manifestando a realidade digital
-                 </span>
-               )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 bg-zinc-900/40 backdrop-blur-md border border-white/5 p-1 rounded-full shadow-xl">
-             <button 
-                onClick={() => handleSortChange('newest')}
-                className={clsx(
-                  "flex items-center gap-2 px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all",
-                  filters.sort === 'newest' ? "bg-white text-black shadow-lg" : "text-zinc-500 hover:text-zinc-300"
-                )}
-             >
-                <Sparkles size={12} /> Novidades
-             </button>
-             <button 
-                onClick={() => handleSortChange('name_asc')}
-                className={clsx(
-                  "flex items-center gap-2 px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all",
-                  filters.sort === 'name_asc' ? "bg-white text-black shadow-lg" : "text-zinc-500 hover:text-zinc-300"
-                )}
-             >
-                <MoveUp size={12} /> A-Z
-             </button>
-             <button 
-                onClick={() => handleSortChange('name_desc')}
-                className={clsx(
-                  "flex items-center gap-2 px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all",
-                  filters.sort === 'name_desc' ? "bg-white text-black shadow-lg" : "text-zinc-500 hover:text-zinc-300"
-                )}
-             >
-                <MoveDown size={12} /> Z-A
-             </button>
-          </div>
         </div>
 
         {/* Dynamic Grid Expansion */}
@@ -175,7 +133,7 @@ function HomeContent() {
             isFetchingNextPage={isFetchingNextPage}
             hasNextPage={hasNextPage}
             fetchNextPage={fetchNextPage}
-            onClearFilters={() => setFilters({ ...filters, q: undefined, categoria: undefined, studioIds: undefined, sort: 'newest' })}
+            onClearFilters={() => setFilters({ ...filters, q: undefined, categoria: undefined, studioIds: undefined, sort: 'newest', priceRange: undefined })}
           />
         </div>
 

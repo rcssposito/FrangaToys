@@ -513,17 +513,16 @@ function DataGridContent() {
     };
 
     const calculatePrices = (f: Figure) => {
-        if (!settings) return { basic: 0, premium: 0 };
+        if (!settings) return { basic: 0, premium: 0, twoD: 0, basicCredito: 0, premiumCredito: 0, twoDCredito: 0 };
 
         const h_imp = Number(f.horas_impressao);
         const res_kg = Number(f.resina_kg);
         const h_pint = Number(f.horas_pintura);
 
-        // Custo Estilizado: Pintura fixa de 20 minutos (0.33h)
+        // Custo Sem Pintura: Apenas produção, sem tempo de pintura
         const custoBaseEstilizado =
             (h_imp * settings.custo_h_impressao) +
-            (res_kg * settings.custo_resina_kg) +
-            (0.33 * settings.custo_h_pintura);
+            (res_kg * settings.custo_resina_kg);
 
         const custoBase =
             (h_imp * settings.custo_h_impressao) +
@@ -535,15 +534,14 @@ function DataGridContent() {
 
         const mEstilizado = settings.margem_pobre || 1.15;
         const mColorido = settings.margem_basica || 1.30;
-        const mTwoD = settings.margem_premium || 1.60;
 
         return {
             basic: roundTo5(custoBaseEstilizado * mEstilizado),
             premium: roundTo5(custoBase * mColorido),
-            twoD: roundTo5(custoBase * mTwoD),
+            twoD: 0,
             basicCredito: roundTo5(custoBaseEstilizado * mEstilizado * (settings.taxa_cartao || 1.15)),
             premiumCredito: roundTo5(custoBase * mColorido * (settings.taxa_cartao || 1.15)),
-            twoDCredito: roundTo5(custoBase * mTwoD * (settings.taxa_cartao || 1.15))
+            twoDCredito: 0
         };
     };
 
@@ -657,9 +655,8 @@ function DataGridContent() {
                                     <th className="px-3 py-4 text-center uppercase">Merchant</th>
                                     <th className="px-3 py-4 text-center uppercase">Extras</th>
                                     <th className="px-3 py-4 text-center uppercase">Real</th>
-                                    <th className="px-4 py-4 text-center text-zinc-400 group-hover:text-zinc-200 transition-colors"><div className="flex flex-col"><span>ESTILIZADO</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
+                                    <th className="px-4 py-4 text-center text-zinc-400 group-hover:text-zinc-200 transition-colors"><div className="flex flex-col"><span>SEM PINTURA</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
                                     <th className="px-4 py-4 text-center text-zinc-400 group-hover:text-zinc-200 transition-colors"><div className="flex flex-col"><span>COLORIDO</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
-                                    <th className="px-4 py-4 text-center text-orange-500"><div className="flex flex-col"><span>2D (LUXO)</span><span className="text-[9px] text-orange-600 mt-0.5 uppercase tracking-tighter font-black">PIX (-15%)</span></div></th>
                                     <th className="px-4 py-4 w-[120px] text-right">AÇÕES</th>
                                 </tr>
                             </thead>
@@ -858,13 +855,6 @@ function DataGridContent() {
                                                 <div className="flex flex-col items-center justify-center">
                                                     <div className="text-[13px] font-black text-blue-400 whitespace-nowrap">R$ {prices.premiumCredito}</div>
                                                     <div className="text-[10px] font-bold text-[var(--text-muted)]">PIX R$ {prices.premium}</div>
-                                                </div>
-                                            </td>
-
-                                            <td className="px-4 py-4 text-center bg-orange-500/5">
-                                                <div className="flex flex-col items-center justify-center">
-                                                    <div className="text-[15px] font-black text-orange-500 whitespace-nowrap drop-shadow-sm">R$ {prices.twoDCredito}</div>
-                                                    <div className="text-[10px] font-black text-orange-600">PIX R$ {prices.twoD}</div>
                                                 </div>
                                             </td>
 

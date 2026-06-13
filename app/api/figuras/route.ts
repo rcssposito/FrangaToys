@@ -77,6 +77,36 @@ export async function GET(req: NextRequest) {
             query = query.is('disponivel', true);
         }
 
+        // --- Price Range Filtering (Unified with storefront tiers) ---
+        if (filters.priceRange) {
+            const { data: allMeta, error: metaError } = await supabase
+                .from('figuras')
+                .select('id, figuras_meta(resina_kg, horas_impressao, horas_pintura, is_campanha_active, desconto_campanha, preco_fixo_campanha)');
+            
+            if (metaError) throw metaError;
+
+            if (allMeta && settings) {
+                const parts = filters.priceRange.split('-');
+                const min = parseFloat(parts[0]);
+                const max = parts[1] === '+' || parts[1] === '' ? Infinity : parseFloat(parts[1]);
+                
+                const matchedIds = allMeta.filter(item => {
+                    const metaList = item.figuras_meta;
+                    const meta = Array.isArray(metaList) ? metaList[0] : metaList;
+                    if (!meta) return false;
+                    
+                    const prices = calculateFigurePrices(meta as any, settings as any);
+                    const p = prices.colorido; // Colored price (Colorido)
+                    return p >= min && p < max;
+                }).map(item => item.id);
+
+                if (matchedIds.length === 0) {
+                    return NextResponse.json({ items: [], total: 0 });
+                }
+                query = query.in('id', matchedIds);
+            }
+        }
+
         if (filters.studioIds) {
             const ids = filters.studioIds.split(',').map(Number).filter(n => !isNaN(n));
             if (ids.length > 0) {

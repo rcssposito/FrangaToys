@@ -522,31 +522,24 @@ export async function GET(req: Request) {
                     figures: validItems.sort((a, b) => b.price - a.price)
                 }];
             } else {
-                // Divide the range into 4 buckets
-                const range = maxPrice - minPrice;
-                let step = Math.ceil(range / 4);
-
-                // Round step to a "cleaner" number (e.g., nearest 50, 100, 500)
-                if (step > 1000) step = Math.ceil(step / 500) * 500;
-                else if (step > 500) step = Math.ceil(step / 100) * 100;
-                else if (step > 100) step = Math.ceil(step / 50) * 50;
-                else step = Math.ceil(step / 10) * 10;
-
-                // Create Bucket definitions
+                // Customized distribution buckets (5 tiers: 0-400, 400-700, 700-1200, 1200-1800, 1800+)
                 const buckets = [
-                    { min: 0, max: step, name: `R$ 0 - ${step}`, figures: [] as any[] },
-                    { min: step, max: step * 2, name: `R$ ${step} - ${step * 2}`, figures: [] as any[] },
-                    { min: step * 2, max: step * 3, name: `R$ ${step * 2} - ${step * 3}`, figures: [] as any[] },
-                    { min: step * 3, max: Infinity, name: `R$ ${step * 3}+`, figures: [] as any[] }
+                    { min: 0, max: 400, name: "R$ 0 - 400", figures: [] as any[] },
+                    { min: 400, max: 700, name: "R$ 400 - 700", figures: [] as any[] },
+                    { min: 700, max: 1200, name: "R$ 700 - 1200", figures: [] as any[] },
+                    { min: 1200, max: 1800, name: "R$ 1200 - 1800", figures: [] as any[] },
+                    { min: 1800, max: Infinity, name: "R$ 1800+", figures: [] as any[] }
                 ];
 
                 // Assign prices to buckets
                 validItems.forEach(item => {
                     const p = item.price;
-                    if (p < buckets[0].max) buckets[0].figures.push(item);
-                    else if (p < buckets[1].max) buckets[1].figures.push(item);
-                    else if (p < buckets[2].max) buckets[2].figures.push(item);
-                    else buckets[3].figures.push(item);
+                    for (const bucket of buckets) {
+                        if (p >= bucket.min && p < bucket.max) {
+                            bucket.figures.push(item);
+                            break;
+                        }
+                    }
                 });
 
                 priceDistribution = buckets.map(b => ({

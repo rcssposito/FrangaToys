@@ -78,22 +78,20 @@ export async function GET(
             ((meta.resina_kg || 0) * (settings?.custo_resina_kg || 250)) +
             ((meta.horas_impressao || 0) * (settings?.custo_h_impressao || 1));
 
-        // Regra Estilizado: Pintura fixa de 20 minutos (0.33h)
-        const custoBaseEstilizado = custoBaseProducao + (0.33 * custoHPintura);
+        // Regra Sem Pintura: Apenas produção, sem custo de pintura
+        const custoBaseEstilizado = custoBaseProducao;
         
-        // Regra Padrão (Colorido / 2D): Usa horas reais de pintura
+        // Regra Padrão (Colorido): Usa horas reais de pintura
         const custoBasePadrao = custoBaseProducao + ((meta.horas_pintura || 0) * custoHPintura);
 
         const prices = {
             estilizado: roundTo5(custoBaseEstilizado * (settings?.margem_pobre || 1.15)),
             colorido: roundTo5(custoBasePadrao * (settings?.margem_basica || 1.30)),
-            twoD: roundTo5(custoBasePadrao * (settings?.margem_premium || 1.60)),
         };
 
         const cardPrices = {
             estilizado: roundTo5(prices.estilizado * taxaCard),
             colorido: roundTo5(prices.colorido * taxaCard),
-            twoD: roundTo5(prices.twoD * taxaCard),
         };
 
         return new ImageResponse(
@@ -188,20 +186,20 @@ export async function GET(
 
                         {/* Price Grid */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-                            {/* Row 1: Estilizado & Colorido */}
+                            {/* Row 1: Sem Pintura & Colorido */}
                             <div style={{ display: 'flex', gap: 15 }}>
-                                {/* Estilizado */}
+                                {/* Sem Pintura */}
                                 <div style={{ 
                                     flex: 1, 
-                                    backgroundColor: 'rgba(9, 9, 11, 0.6)', 
+                                    backgroundColor: 'rgba(9, 9, 11, 0.7)', 
                                     border: '1px solid rgba(255, 255, 255, 0.12)', 
                                     borderRadius: 30, 
-                                    padding: '30px 35px', 
+                                    padding: '40px 35px', 
                                     display: 'flex', 
                                     flexDirection: 'column', 
                                     gap: 10 
                                 }}>
-                                    <span style={{ fontSize: 15, color: '#a1a1aa', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 2 }}>Estilizado</span>
+                                    <span style={{ fontSize: 18, color: '#a1a1aa', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 2 }}>Sem Pintura</span>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                                         <span style={{ fontSize: 44, fontWeight: 950, color: '#ffffff' }}>R$ {prices.estilizado.toFixed(0)} <span style={{ fontSize: 18, color: '#71717a', fontWeight: 900 }}>(PIX)</span></span>
                                         <span style={{ fontSize: 18, color: '#3b82f6', fontWeight: 800 }}>CRED R$ {cardPrices.estilizado.toFixed(0)}</span>
@@ -210,43 +208,18 @@ export async function GET(
                                 {/* Colorido */}
                                 <div style={{ 
                                     flex: 1, 
-                                    backgroundColor: 'rgba(9, 9, 11, 0.6)', 
+                                    backgroundColor: 'rgba(9, 9, 11, 0.7)', 
                                     border: '1px solid rgba(249, 115, 22, 0.25)', 
                                     borderRadius: 30, 
-                                    padding: '30px 35px', 
+                                    padding: '40px 35px', 
                                     display: 'flex', 
                                     flexDirection: 'column', 
                                     gap: 10 
                                 }}>
-                                    <span style={{ fontSize: 15, color: '#F97316', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 2 }}>Colorido</span>
+                                    <span style={{ fontSize: 18, color: '#F97316', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 2 }}>Colorido</span>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                                         <span style={{ fontSize: 44, fontWeight: 950, color: '#ffffff' }}>R$ {prices.colorido.toFixed(0)} <span style={{ fontSize: 18, color: '#F97316', fontWeight: 900 }}>(PIX)</span></span>
                                         <span style={{ fontSize: 18, color: '#fb923c', fontWeight: 800 }}>CRED R$ {cardPrices.colorido.toFixed(0)}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Row 2: 2D Premium Series (NOIR GLASS STYLE) */}
-                            <div style={{ 
-                                backgroundColor: 'rgba(180, 77, 18, 0.8)', 
-                                border: '1px solid rgba(255,255,255,0.15)',
-                                borderRadius: 35, 
-                                padding: '35px 50px', 
-                                display: 'flex', 
-                                justifyContent: 'space-between', 
-                                alignItems: 'center',
-                                boxShadow: '0 20px 50px -10px rgba(0,0,0,0.5)'
-                            }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                    <span style={{ fontSize: 16, color: '#ffedd5', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 3 }}>MAIOR IMPACTO VISUAL</span>
-                                    <span style={{ fontSize: 82, fontWeight: 950, color: 'white', textTransform: 'uppercase', letterSpacing: -4, lineHeight: 0.8 }}>2D</span>
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
-                                    <span style={{ fontSize: 86, fontWeight: 950, color: 'white', lineHeight: 1 }}>R$ {prices.twoD.toFixed(0)}</span>
-                                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                                        <span style={{ fontSize: 20, color: '#ffffff', fontWeight: 900, textTransform: 'uppercase' }}>PIX (-15%)</span>
-                                        <span style={{ fontSize: 20, color: '#fed7aa', fontWeight: 950 }}>•</span>
-                                        <span style={{ fontSize: 20, color: '#fed7aa', fontWeight: 900, textTransform: 'uppercase' }}>CARD R$ {cardPrices.twoD.toFixed(0)}</span>
                                     </div>
                                 </div>
                             </div>

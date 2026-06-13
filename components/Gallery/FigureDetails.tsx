@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner';
 
 import { ImageMagnifier } from './ImageMagnifier';
+import { getFigureTier, getTierBadgeStyle } from '@/lib/pricing';
 
 interface FigureDetailsProps {
     figure: FiguraDTO;
@@ -64,13 +65,13 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         figureId: figure.id,
-                        source: source,
-                        platform: isApp ? 'app' : 'site'
+                        source,
+                        platform: isApp ? 'pwa' : 'web'
                     }),
                     keepalive: true
                 });
-            } catch (e) {
-                // Silently ignore beacon errors
+            } catch (err) {
+                // Silently fail
             }
         };
 
@@ -116,12 +117,14 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
     };
 
     const finishOptions = [
-        { id: 'estilizado', label: 'Estilizado', icon: Paintbrush, description: 'OSL / Monocromático', color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20', price: figure.precos?.estilizado, pixPrice: figure.precos?.pix_estilizado },
-        { id: 'colorido', label: 'Colorido', icon: Palette, description: 'Fidelidade Total', color: 'text-zinc-400', bg: 'bg-zinc-400/10', border: 'border-zinc-400/20', price: figure.precos?.colorido, pixPrice: figure.precos?.pix_colorido },
-        { id: 'premium', label: '2D / Premium', icon: Crown, description: 'Estilo Cel-Shaded', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', price: figure.precos?.premium, pixPrice: figure.precos?.pix_premium },
+        { id: 'estilizado', label: 'Sem Pintura', icon: Paintbrush, description: 'Apenas Impresso & Limpo', color: 'text-zinc-400', bg: 'bg-zinc-400/10', border: 'border-zinc-400/20', price: figure.precos?.estilizado, pixPrice: figure.precos?.pix_estilizado },
+        { id: 'colorido', label: 'Colorido', icon: Palette, description: 'Pintura Premium', color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20', price: figure.precos?.colorido, pixPrice: figure.precos?.pix_colorido },
     ] as const;
 
     const imageUrl = getOptimizedImageUrl(figure.imagem_url);
+    const figurePrice = figure.precos?.estilizado || 0;
+    const tier = figurePrice > 0 ? getFigureTier(figurePrice) : null;
+    const tierStyle = tier ? getTierBadgeStyle(tier) : null;
 
     return (
         <div className="relative flex flex-col items-center justify-center min-h-full w-full max-w-6xl mx-auto p-4 md:p-4">
@@ -224,11 +227,19 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                 {/* Info & Pricing Panel */}
                 <div className="w-full lg:w-1/2 flex flex-col gap-5 order-2 pt-[35vh] sm:pt-[45vh] lg:pt-0">
                     <div>
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex flex-wrap items-center gap-3 mb-2">
                             <h3 className="text-sm font-black text-blue-500 uppercase tracking-[0.3em]">{figure.studio || 'Studio Indiferente'}</h3>
                             {figure.codigo && (
                                 <span className="text-[10px] bg-zinc-800 text-zinc-500 font-black px-2 py-0.5 rounded border border-white/5 uppercase tracking-widest">
                                     #{figure.codigo}
+                                </span>
+                            )}
+                            {tierStyle && (
+                                <span className={clsx(
+                                    "text-[10px] font-black px-2 py-0.5 rounded border shadow-md uppercase tracking-widest",
+                                    tierStyle.bg, tierStyle.text, tierStyle.border
+                                )}>
+                                    {tierStyle.label}
                                 </span>
                             )}
                             {isCampanha && (
@@ -278,7 +289,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                     className="absolute inset-x-0 bottom-full mb-4 z-[60] bg-zinc-950/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl overflow-hidden"
                                 >
-                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 via-blue-500 to-purple-500" />
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-zinc-500 to-amber-500" />
                                     <div className="flex items-center justify-between mb-3">
                                         <h5 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
                                             <Sparkles size={12} className="text-blue-500" />
@@ -290,32 +301,25 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                     </div>
                                     <div className="space-y-3">
                                         <div className="flex gap-3">
+                                            <div className="w-1 h-auto bg-zinc-500 rounded-full shrink-0" />
+                                            <div>
+                                                <p className="text-[9px] font-black text-zinc-400 uppercase tracking-wider mb-0.5">Sem Pintura</p>
+                                                <p className="text-[10px] text-zinc-400 leading-relaxed font-medium">Apenas impresso e limpo. A peça vai montada ou desmontada (conforme complexidade), no tom cinza fosco natural da resina, pronta para você pintar ou colecionar.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3">
                                             <div className="w-1 h-auto bg-amber-500 rounded-full shrink-0" />
                                             <div>
-                                                <p className="text-[9px] font-black text-amber-500 uppercase tracking-wider mb-0.5">Estilizado</p>
-                                                <p className="text-[10px] text-zinc-400 leading-relaxed font-medium">Arte em contraste. Tons de cinza/prata com efeitos de luz vibrantes (OSL). Realça a escultura.</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-3">
-                                            <div className="w-1 h-auto bg-zinc-400 rounded-full shrink-0" />
-                                            <div>
-                                                <p className="text-[9px] font-black text-zinc-200 uppercase tracking-wider mb-0.5">Colorido</p>
-                                                <p className="text-[10px] text-zinc-400 leading-relaxed font-medium">Fidelidade total. Pintura completa com as cores clássicas e sombreamento de estúdio.</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-3">
-                                            <div className="w-1 h-auto bg-purple-500 rounded-full shrink-0" />
-                                            <div>
-                                                <p className="text-[9px] font-black text-purple-400 uppercase tracking-wider mb-0.5">2D / Premium</p>
-                                                <p className="text-[10px] text-zinc-400 leading-relaxed font-medium">O ápice da arte. Estilos exclusivos como Cel-Shaded (Anime/Hades), transformando a peça em uma ilustração real.</p>
+                                                <p className="text-[9px] font-black text-amber-500 uppercase tracking-wider mb-0.5">Colorido</p>
+                                                <p className="text-[10px] text-zinc-400 leading-relaxed font-medium">Pintura Premium. Totalmente pintada à mão, com sombreamento completo de estúdio e proteção em verniz.</p>
                                             </div>
                                         </div>
                                     </div>
                                 </motion.div>
                             )}
                         </AnimatePresence>
-
-                        <div className="grid grid-cols-3 gap-2">
+ 
+                        <div className="grid grid-cols-2 gap-2">
                             {finishOptions.map((opt) => (
                                 <button
                                     key={opt.id}

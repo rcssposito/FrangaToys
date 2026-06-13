@@ -21,35 +21,33 @@ export default function Header() {
   return (
     <header className="w-full">
       {/* Desktop Header */}
-      <div className="hidden sm:flex items-center justify-between relative py-4 sm:py-8 px-4 max-w-[95%] mx-auto">
-        {/* Left Spacer */}
-        <div className="flex-1 flex items-center gap-4">
+      <div className="hidden sm:flex items-center justify-between relative py-4 sm:py-6 px-4 max-w-[95%] mx-auto border-b border-white/5 mb-6">
+        {/* Left: Logo */}
+        <div className="flex-1 flex justify-start">
+          <Link href="/" className="hover:opacity-80 transition-opacity flex-shrink-0">
+            <img
+              src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
+              alt="Franga Toys Logo"
+              className="h-16 md:h-20 object-contain"
+            />
+          </Link>
         </div>
 
-        {/* Logo Center */}
-        <Link href="/" className="hover:opacity-80 transition-opacity flex-shrink-0">
-          <img
-            src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
-            alt="Franga Toys Logo"
-            className="h-20 md:h-28 object-contain"
-          />
-        </Link>
-
-        {/* Right Menu */}
-        <div className="flex-1 flex items-center justify-end gap-4 md:gap-6">
+        {/* Center: Navigation Links */}
+        <div className="flex items-center gap-8 justify-center">
           <Link
             href="/rastreio"
             className={clsx(
               "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group whitespace-nowrap",
-              pathname === '/rastreio' ? "text-orange-400" : "text-orange-500 hover:text-orange-400"
+              pathname === '/rastreio' ? "text-orange-400" : "text-zinc-400 hover:text-orange-400"
             )}
             title="Rastrear meu Pedido"
           >
-            <Truck size={18} className="group-hover:animate-bounce" />
+            <Truck size={16} className="group-hover:animate-bounce" />
             <span className="hidden lg:inline">Rastrear</span>
           </Link>
 
-          <div className="h-4 w-px bg-zinc-800/50 hidden md:block" />
+          <div className="h-4 w-px bg-zinc-800/30 hidden md:block" />
 
           <Link
             href="/campanha"
@@ -58,11 +56,11 @@ export default function Header() {
               pathname === '/campanha' ? "text-purple-400" : "text-purple-500 hover:text-purple-400"
             )}
           >
-            <Flame size={18} className="group-hover:animate-pulse" />
+            <Flame size={16} className="group-hover:animate-pulse" />
             <span className="hidden lg:inline">Promoções</span>
           </Link>
 
-          <div className="h-4 w-px bg-zinc-800/50 hidden md:block" />
+          <div className="h-4 w-px bg-zinc-800/30 hidden md:block" />
 
           <Link
             href="/parceiros"
@@ -70,11 +68,11 @@ export default function Header() {
               "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group whitespace-nowrap",
               pathname === '/parceiros'
                 ? "text-blue-500"
-                : "text-[var(--text-muted)] hover:text-blue-500"
+                : "text-zinc-400 hover:text-blue-500"
             )}
           >
             <Palette
-              size={18}
+              size={16}
               className={clsx(
                 pathname === '/parceiros'
                   ? "text-blue-500"
@@ -83,7 +81,10 @@ export default function Header() {
             />
             <span className="hidden lg:inline">Estúdios</span>
           </Link>
+        </div>
 
+        {/* Right Menu / Utilities */}
+        <div className="flex-1 flex items-center justify-end gap-4 md:gap-6">
           <a
             href="https://www.instagram.com/frangatoys/"
             target="_blank"
@@ -91,7 +92,7 @@ export default function Header() {
             className="p-2 text-zinc-500 hover:text-pink-500 transition-colors"
             title="Siga no Instagram"
           >
-            <Instagram size={20} />
+            <Instagram size={18} />
           </a>
 
           <div className="h-4 w-px bg-zinc-800/50" />
@@ -104,10 +105,10 @@ export default function Header() {
             />
             <Link
               href="/admin/figures"
-              className="p-2 text-[var(--text-muted)] hover:text-orange-500 transition-colors"
+              className="p-2 text-zinc-500 hover:text-orange-500 transition-colors"
               title="Acessar Admin"
             >
-              <Settings size={20} />
+              <Settings size={18} />
             </Link>
           </div>
         </div>

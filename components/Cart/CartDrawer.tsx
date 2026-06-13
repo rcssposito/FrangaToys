@@ -163,9 +163,8 @@ export const CartDrawer = () => {
 
     const getFinishLabel = (finish: string) => {
         switch (finish) {
-            case 'colorido': return 'Pintura Colorida';
-            case 'premium': return 'Premium / 2D';
-            default: return 'Pintura Estilizada';
+            case 'colorido': return 'Colorido';
+            default: return 'Sem Pintura';
         }
     };
 
@@ -477,9 +476,8 @@ export const CartDrawer = () => {
                                                                     onChange={(e) => updateFinish(item.id, e.target.value as any)}
                                                                     className="text-[10px] font-black bg-black border border-zinc-800 text-white rounded-full py-1 px-3 outline-none focus:border-blue-500/50 shadow-sm cursor-pointer hover:border-blue-500/30 transition-colors uppercase tracking-tighter"
                                                                 >
-                                                                    <option value="estilizado">Estilizado</option>
+                                                                    <option value="estilizado">Sem Pintura</option>
                                                                     <option value="colorido">Colorido</option>
-                                                                    <option value="premium">Premium / 2D</option>
                                                                 </select>
                                                             </div>
                                                             <div className="text-right">

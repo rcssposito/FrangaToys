@@ -52,6 +52,7 @@ export const FiltersSchema = z.object({
   limit: z.string().optional(),
   cursor: z.string().optional(),
   sort: z.string().optional(),
+  priceRange: z.string().optional(),
 });
 
 export const EstudioSchema = z.object({

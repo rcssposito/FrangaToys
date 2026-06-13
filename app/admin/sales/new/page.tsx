@@ -781,8 +781,9 @@ export default function NewSalePage() {
                                                 </div>
                                                 
                                                 <div className="flex bg-zinc-950/50 p-1 rounded-xl border border-zinc-800/50 mb-3 w-full relative">
-                                                    {(['estilizado', 'colorido', '2D'] as const).map((tier) => {
+                                                    {(['estilizado', 'colorido'] as const).map((tier) => {
                                                         const isLocked = item.is_campanha && tier !== 'estilizado';
+                                                        const tierLabel = tier === 'estilizado' ? 'Sem Pintura' : 'Colorido';
                                                         return (
                                                             <button
                                                                 key={tier}
@@ -794,7 +795,7 @@ export default function NewSalePage() {
                                                                     : isLocked ? 'opacity-20 cursor-not-allowed' : 'text-zinc-600 hover:text-zinc-400'
                                                                 }`}
                                                             >
-                                                                {tier}
+                                                                {tierLabel}
                                                             </button>
                                                         );
                                                     })}
