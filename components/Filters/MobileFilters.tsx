@@ -2,7 +2,18 @@
 
 import { useEstudios } from '@/hooks/useEstudios';
 import { FiltersSchema } from '@/lib/dto';
-import { SlidersHorizontal, ArrowLeft, X, Search, Settings, Truck } from 'lucide-react';
+import { 
+  SlidersHorizontal, 
+  ArrowLeft, 
+  X, 
+  Search, 
+  Settings, 
+  Truck, 
+  Sparkles, 
+  MoveUp, 
+  MoveDown, 
+  Tag 
+} from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useState, useEffect, useRef } from 'react';
 import { z } from 'zod';
@@ -13,6 +24,14 @@ import Link from 'next/link';
 type FilterState = z.infer<typeof FiltersSchema>;
 
 import { usePathname } from 'next/navigation';
+
+const PRICE_RANGES = [
+  { label: 'Até R$ 400', value: '0-400', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
+  { label: 'R$ 400 - R$ 700', value: '400-700', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
+  { label: 'R$ 700 - R$ 1200', value: '700-1200', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
+  { label: 'R$ 1200 - R$ 1800', value: '1200-1800', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
+  { label: 'R$ 1800+', value: '1800-+', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' }
+];
 
 interface MobileFiltersProps {
     filters: FilterState;
@@ -88,10 +107,24 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
         onChange({ ...filters, studioIds: newIds.join(',') });
     };
 
+    const handlePriceRangeChange = (newRange: string | undefined) => {
+        if (newRange) {
+            onChange({ ...filters, priceRange: newRange, sort: 'name_asc' });
+        } else {
+            onChange({ ...filters, priceRange: newRange });
+        }
+    };
+
+    const handleSortChange = (newSort: string) => {
+        onChange({ ...filters, sort: newSort });
+    };
+
     const countActiveFilters = () => {
         let count = 0;
         if (filters.studioIds) count += filters.studioIds.split(',').filter(Boolean).length;
         if (filters.incluirNaoVendaveis === 'true') count++;
+        if (filters.priceRange) count++;
+        if (filters.sort && filters.sort !== 'newest') count++;
         return count;
     };
 
@@ -213,7 +246,86 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                                         </label>
                                     </div>
 
+                                    {/* Ordenação */}
+                                    <div>
+                                        <h4 className="text-sm font-bold text-[var(--text-muted)] mb-3 uppercase tracking-wider flex items-center gap-2">
+                                            <SlidersHorizontal size={14} className="text-orange-500" />
+                                            Ordenar por
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                onClick={() => handleSortChange('newest')}
+                                                className={clsx(
+                                                    "flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-all border",
+                                                    filters.sort === 'newest'
+                                                        ? "bg-orange-500 text-white border-orange-500 font-bold shadow-md"
+                                                        : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--text-muted)]"
+                                                )}
+                                            >
+                                                <Sparkles size={13} /> Novidades
+                                            </button>
+                                            <button
+                                                onClick={() => handleSortChange('name_asc')}
+                                                className={clsx(
+                                                    "flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-all border",
+                                                    filters.sort === 'name_asc'
+                                                        ? "bg-orange-500 text-white border-orange-500 font-bold shadow-md"
+                                                        : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--text-muted)]"
+                                                )}
+                                            >
+                                                <MoveUp size={13} /> A-Z
+                                            </button>
+                                            <button
+                                                onClick={() => handleSortChange('name_desc')}
+                                                className={clsx(
+                                                    "flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-all border",
+                                                    filters.sort === 'name_desc'
+                                                        ? "bg-orange-500 text-white border-orange-500 font-bold shadow-md"
+                                                        : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--text-muted)]"
+                                                )}
+                                            >
+                                                <MoveDown size={13} /> Z-A
+                                            </button>
+                                        </div>
+                                    </div>
 
+                                    {/* Preço */}
+                                    <div>
+                                        <h4 className="text-sm font-bold text-[var(--text-muted)] mb-3 uppercase tracking-wider flex items-center gap-2">
+                                            <Tag size={14} className="text-orange-500" />
+                                            Filtrar por Valor
+                                        </h4>
+                                        <div className="flex flex-col gap-2">
+                                            <button
+                                                onClick={() => handlePriceRangeChange(undefined)}
+                                                className={clsx(
+                                                    "w-full px-4 py-2.5 rounded-lg text-xs font-bold transition-all border text-center",
+                                                    !filters.priceRange
+                                                        ? "bg-orange-500 text-white border-orange-500 font-bold shadow-md"
+                                                        : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--text-muted)]"
+                                                )}
+                                            >
+                                                Todos os valores
+                                            </button>
+                                            {PRICE_RANGES.map((range) => {
+                                                const isActive = filters.priceRange === range.value;
+                                                return (
+                                                    <button
+                                                        key={range.value}
+                                                        onClick={() => handlePriceRangeChange(isActive ? undefined : range.value)}
+                                                        className={clsx(
+                                                            "w-full px-4 py-2.5 rounded-lg text-xs font-bold transition-all border text-center",
+                                                            isActive
+                                                                ? range.activeClass
+                                                                : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--text-muted)]"
+                                                        )}
+                                                    >
+                                                        {range.label}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
 
                                     {/* Studios */}
                                     <div>

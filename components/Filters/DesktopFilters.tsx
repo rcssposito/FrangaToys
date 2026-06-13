@@ -102,7 +102,11 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
     };
 
     const handlePriceRangeChange = (newRange: string | undefined) => {
-        onChange({ ...filters, priceRange: newRange });
+        if (newRange) {
+            onChange({ ...filters, priceRange: newRange, sort: 'name_asc' });
+        } else {
+            onChange({ ...filters, priceRange: newRange });
+        }
     };
 
     return (

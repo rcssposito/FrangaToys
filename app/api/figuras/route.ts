@@ -151,12 +151,23 @@ export async function GET(req: NextRequest) {
 
         // --- Sorting ---
         const sortType = filters.sort || (filters.novidades === 'true' ? 'newest' : 'name_asc');
+        
+        let mappedSort = sortType;
+        if (filters.priceRange) {
+            if (sortType === 'name_asc') {
+                mappedSort = 'price_asc';
+            } else if (sortType === 'name_desc') {
+                mappedSort = 'price_desc';
+            }
+        }
+        
+        const isPriceSort = mappedSort === 'price_asc' || mappedSort === 'price_desc';
 
         if (sortType === 'newest') {
             query = query.order('id', { ascending: false });
         } else if (sortType === 'name_desc') {
             query = query.order('nome', { ascending: false });
-        } else {
+        } else if (!isPriceSort) {
             query = query.order('nome', { ascending: true });
         }
 
@@ -165,7 +176,9 @@ export async function GET(req: NextRequest) {
         const from = page * limit;
         const to = from + limit - 1;
 
-        query = query.range(from, to);
+        if (!isPriceSort) {
+            query = query.range(from, to);
+        }
 
         const { data, error, count } = await query;
 
@@ -228,12 +241,29 @@ export async function GET(req: NextRequest) {
             };
         });
 
-        const nextPage = items.length === limit ? page + 1 : undefined;
+        // In-memory sorting for price
+        if (isPriceSort) {
+            items.sort((a, b) => {
+                const priceA = a.precos?.colorido ?? 0;
+                const priceB = b.precos?.colorido ?? 0;
+                if (mappedSort === 'price_asc') {
+                    return priceA - priceB;
+                } else {
+                    return priceB - priceA;
+                }
+            });
+        }
+
+        const totalItemsCount = isPriceSort ? items.length : (count || 0);
+        const paginatedItems = isPriceSort ? items.slice(from, from + limit) : items;
+        const nextPage = isPriceSort
+            ? (from + paginatedItems.length < totalItemsCount ? page + 1 : undefined)
+            : (items.length === limit ? page + 1 : undefined);
 
         return NextResponse.json({ 
-            items, 
+            items: paginatedItems, 
             nextCursor: nextPage,
-            total: count || 0
+            total: totalItemsCount
         }, {
             headers: {
                 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',

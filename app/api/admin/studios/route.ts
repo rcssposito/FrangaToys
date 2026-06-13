@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { calculateFigurePrices } from '@/lib/pricing';
 
 // GET ALL STUDIOS WITH PERFORMANCE METRICS (ADMIN ONLY)
 export async function GET(req: Request) {
@@ -8,10 +9,19 @@ export async function GET(req: Request) {
         const sessionOrResponse = await requireRoles(['admin', 'pricing']);
         if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
-        // Fetch all studios with their figure IDs
+        // Fetch pricing parameters (to calculate figure prices)
+        const { data: settings, error: settingsError } = await supabase
+            .from('pricing_params')
+            .select('*')
+            .eq('id', 1)
+            .single();
+
+        if (settingsError) throw settingsError;
+
+        // Fetch all studios with their figure IDs and metadata
         const { data: studios, error: studiosError } = await supabase
             .from('studios')
-            .select('*, figuras(id)');
+            .select('*, figuras(id, figuras_meta(resina_kg, horas_impressao, horas_pintura, is_campanha_active, desconto_campanha, preco_fixo_campanha))');
 
         if (studiosError) throw studiosError;
 
@@ -87,7 +97,20 @@ export async function GET(req: Request) {
             const figuras_vendidas = m.figuras_vendidas_unicas.size;
             const conversao_acervo = total_figuras > 0 ? (figuras_vendidas / total_figuras) * 100 : 0;
             const margem_lucro = m.receita_bruta > 0 ? (m.lucro_liquido / m.receita_bruta) * 100 : 0;
-            const ticket_medio = m.total_itens > 0 ? m.receita_bruta / m.total_itens : 0;
+
+            // Calculate average ticket as average colored price of figures in the studio's catalog
+            let sumPrices = 0;
+            let countPrices = 0;
+            s.figuras?.forEach((f: any) => {
+                const metaList = f.figuras_meta;
+                const meta = Array.isArray(metaList) ? metaList[0] : metaList;
+                if (meta && settings) {
+                    const prices = calculateFigurePrices(meta, settings);
+                    sumPrices += prices.colorido; // Use colored price (Colorido)
+                    countPrices++;
+                }
+            });
+            const ticket_medio = countPrices > 0 ? sumPrices / countPrices : 0;
 
             // Clean up original figures array to avoid bloated response payload
             const { figuras, ...rest } = s;
