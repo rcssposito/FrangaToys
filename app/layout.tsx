@@ -4,6 +4,7 @@ import Script from 'next/script';
 import './globals.css';
 import Providers from './providers';
 import { Toaster } from 'sonner';
+import Footer from '@/components/common/Footer';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -42,6 +43,7 @@ export default function RootLayout({
         <Providers>
           {children}
           {modal}
+          <Footer />
           <Toaster position="top-center" richColors />
         </Providers>
 
