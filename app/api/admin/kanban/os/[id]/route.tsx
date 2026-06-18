@@ -257,7 +257,7 @@ export async function GET(
                                     {`Declaro ter recebido o valor de R$ ${formatMoney(Number(sale.valor_venda_final) || 0)} referente à confecção de ${fig?.nome || 'figura personalizada'}.`}
                                 </p>
                                 <p style={{ fontSize: 11, margin: '8px 0 0 0', color: '#64748b', fontWeight: 'bold' }}>
-                                    {`Responsável: Franga Toys – CNPJ XXX.XXX.XXX-XX`}
+                                    {`Franga Toys – CNPJ ${process.env.NEXT_PUBLIC_CNPJ || '67.566.499/0001-70'}`}
                                 </p>
                                 <p style={{ fontSize: 11, margin: '2px 0 0 0', color: '#64748b', fontWeight: 'bold' }}>
                                     {`Forma de pagamento: ${sale.link_pagamento ? 'Mercado Pago (Cartão/Link)' : 'Pix'}`}
