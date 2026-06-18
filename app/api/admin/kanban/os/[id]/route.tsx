@@ -132,7 +132,7 @@ export async function GET(
                     {/* Header Section - Industrial Style */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '4px solid #000', paddingBottom: 15, marginBottom: 25 }}>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <h1 style={{ fontSize: 32, margin: 0, fontWeight: '900', color: '#000', letterSpacing: '-0.5px' }}>FICHA DE PRODUÇÃO // OS</h1>
+                            <h1 style={{ fontSize: 26, margin: 0, fontWeight: '900', color: '#000', letterSpacing: '-0.5px' }}>FICHA DE PRODUÇÃO // OS</h1>
                             <p style={{ fontSize: 14, color: '#64748b', margin: '2px 0 0 0', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '2px' }}>Franga Toys - Ateliê de Impressão 3D</p>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
@@ -249,6 +249,19 @@ export async function GET(
                                         <span style={{ fontSize: 14, fontWeight: '900', textTransform: 'uppercase' }}>2D</span>
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Recebimento / Declaração */}
+                            <div style={{ display: 'flex', flexDirection: 'column', marginTop: 20, border: '2px dashed #cbd5e1', padding: '15px 20px', backgroundColor: '#f8fafc' }}>
+                                <p style={{ fontSize: 12, margin: 0, lineHeight: 1.5, color: '#1e293b', fontWeight: 'bold' }}>
+                                    {`Declaro ter recebido o valor de R$ ${formatMoney(Number(sale.valor_venda_final) || 0)} referente à confecção de ${fig?.nome || 'figura personalizada'}.`}
+                                </p>
+                                <p style={{ fontSize: 11, margin: '8px 0 0 0', color: '#64748b', fontWeight: 'bold' }}>
+                                    {`Responsável: Franga Toys – CNPJ XXX.XXX.XXX-XX`}
+                                </p>
+                                <p style={{ fontSize: 11, margin: '2px 0 0 0', color: '#64748b', fontWeight: 'bold' }}>
+                                    {`Forma de pagamento: ${sale.link_pagamento ? 'Mercado Pago (Cartão/Link)' : 'Pix'}`}
+                                </p>
                             </div>
                         </div>
 
