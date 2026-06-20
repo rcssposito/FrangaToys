@@ -107,7 +107,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                         )}
                         {figure.tem_pintura_real && (
                            <div className="bg-blue-950/40 backdrop-blur-md text-blue-400 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-blue-500/20">
-                                <Instagram size={10} /> Pintura Real
+                                <Instagram size={10} /> Ver Fotos
                            </div>
                         )}
                         {figure.tem_extras && (

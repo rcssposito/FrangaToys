@@ -249,7 +249,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                             )}
                             {figure.tem_pintura_real && (
                                 <span className="text-[10px] bg-blue-600 text-white font-black px-2 py-0.5 rounded-full border border-blue-400 shadow-lg shadow-blue-600/20 uppercase tracking-[0.2em] flex items-center gap-1">
-                                    <Instagram size={10} className="fill-white" /> Pintura
+                                    <Instagram size={10} className="fill-white" /> Ver Fotos
                                 </span>
                             )}
                         </div>
@@ -410,7 +410,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="p-5 bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 text-white rounded-2xl shadow-lg hover:opacity-90 transition-opacity active:scale-[0.98]"
-                                title="Ver Pintura Real no Instagram"
+                                title="Ver Fotos no Instagram"
                             >
                                 <Instagram size={24} />
                             </a>
