@@ -79,11 +79,29 @@ export async function GET(req: NextRequest) {
 
         // --- Price Range Filtering (Unified with storefront tiers) ---
         if (filters.priceRange) {
-            const { data: allMeta, error: metaError } = await supabase
-                .from('figuras')
-                .select('id, figuras_meta(resina_kg, horas_impressao, horas_pintura, is_campanha_active, desconto_campanha, preco_fixo_campanha)');
-            
-            if (metaError) throw metaError;
+            let allMeta: any[] = [];
+            let page = 0;
+            const pageSize = 1000;
+            let hasMore = true;
+
+            while (hasMore) {
+                const { data, error } = await supabase
+                    .from('figuras')
+                    .select('id, figuras_meta(resina_kg, horas_impressao, horas_pintura, is_campanha_active, desconto_campanha, preco_fixo_campanha)')
+                    .range(page * pageSize, (page + 1) * pageSize - 1);
+
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    allMeta = allMeta.concat(data);
+                    if (data.length < pageSize) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
+                } else {
+                    hasMore = false;
+                }
+            }
 
             if (allMeta && settings) {
                 const parts = filters.priceRange.split('-');

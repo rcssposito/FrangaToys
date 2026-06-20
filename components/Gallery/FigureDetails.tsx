@@ -123,7 +123,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
 
     const imageUrl = getOptimizedImageUrl(figure.imagem_url);
     const figurePrice = figure.precos?.estilizado || 0;
-    const tier = figurePrice > 0 ? getFigureTier(figurePrice) : null;
+    const tier = figure.precos?.colorido ? getFigureTier(figure.precos.colorido) : null;
     const tierStyle = tier ? getTierBadgeStyle(tier) : null;
 
     return (
