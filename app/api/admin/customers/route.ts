@@ -10,6 +10,21 @@ export async function GET(req: Request) {
 
         const { searchParams } = new URL(req.url);
         const query = searchParams.get('q'); // Para autocomplete
+        const id = searchParams.get('id'); // Para busca especifica por id
+
+        if (id) {
+            const { data, error } = await supabase
+                .from('clientes')
+                .select('*')
+                .eq('id', id)
+                .maybeSingle();
+
+            if (error) throw error;
+            if (!data) {
+                return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 });
+            }
+            return NextResponse.json(data);
+        }
 
         let supabaseQuery = supabase
             .from('clientes')
@@ -66,7 +81,7 @@ export async function POST(req: Request) {
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();
-        const { nome, telefone, instagram, notas } = body;
+        const { nome, telefone, instagram, notas, cpf, cep, logradouro, numero, bairro, cidade, uf } = body;
 
         if (!nome || !telefone) {
             return NextResponse.json({ error: 'Nome e telefone são obrigatórios' }, { status: 400 });
@@ -74,7 +89,7 @@ export async function POST(req: Request) {
 
         const { data, error } = await supabase
             .from('clientes')
-            .insert([{ nome, telefone, instagram, notas }])
+            .insert([{ nome, telefone, instagram, notas, cpf, cep, logradouro, numero, bairro, cidade, uf }])
             .select()
             .single();
 
@@ -93,13 +108,13 @@ export async function PATCH(req: Request) {
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();
-        const { id, nome, telefone, instagram, notas } = body;
+        const { id, nome, telefone, instagram, notas, cpf, cep, logradouro, numero, bairro, cidade, uf } = body;
 
         if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 });
 
         const { data, error } = await supabase
             .from('clientes')
-            .update({ nome, telefone, instagram, notas })
+            .update({ nome, telefone, instagram, notas, cpf, cep, logradouro, numero, bairro, cidade, uf })
             .eq('id', id)
             .select()
             .single();

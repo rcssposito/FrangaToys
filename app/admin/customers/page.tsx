@@ -39,6 +39,13 @@ interface Customer {
     total_pedidos?: number;
     total_gasto?: number;
     ultima_venda_em?: string;
+    cpf?: string;
+    cep?: string;
+    logradouro?: string;
+    numero?: string;
+    bairro?: string;
+    cidade?: string;
+    uf?: string;
 }
 
 export default function CustomersPage() {
@@ -88,6 +95,60 @@ export default function CustomersPage() {
         }, 300);
         return () => clearTimeout(timer);
     }, [search]);
+
+    useEffect(() => {
+        if (!selectedCustomer?.cep) return;
+        const cleanCep = selectedCustomer.cep.replace(/\D/g, '');
+        if (cleanCep.length === 8) {
+            fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && !data.erro && selectedCustomer) {
+                        setSelectedCustomer(prev => {
+                            if (!prev) return null;
+                            return {
+                                ...prev,
+                                logradouro: data.logradouro || '',
+                                bairro: data.bairro || '',
+                                cidade: data.localidade || '',
+                                uf: data.uf || ''
+                            };
+                        });
+                    }
+                })
+                .catch(err => console.error('Erro ao buscar CEP:', err));
+        }
+    }, [selectedCustomer?.cep]);
+
+    const handleModalCpfChange = (val: string) => {
+        let value = val.replace(/\D/g, '');
+        if (value.length <= 11) {
+            value = value
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        } else {
+            value = value.substring(0, 14)
+                .replace(/^(\d{2})(\d)/, '$1.$2')
+                .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+                .replace(/\.(\d{3})(\d)/, '.$1/$2')
+                .replace(/(\d{4})(\d)/, '$1-$2');
+        }
+        if (selectedCustomer) {
+            setSelectedCustomer({ ...selectedCustomer, cpf: value });
+        }
+    };
+
+    const handleModalCepChange = (val: string) => {
+        let value = val.replace(/\D/g, '');
+        if (value.length > 5) {
+            value = value.replace(/^(\d{5})(\d)/, '$1-$2');
+        }
+        value = value.substring(0, 9);
+        if (selectedCustomer) {
+            setSelectedCustomer({ ...selectedCustomer, cep: value });
+        }
+    };
 
     const handleUpdateCustomer = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -513,6 +574,89 @@ export default function CustomersPage() {
                                             onChange={e => setSelectedCustomer({ ...selectedCustomer, instagram: e.target.value })}
                                             className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200"
                                             placeholder="ex: afkak_oficial"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="text-[10px] font-black text-zinc-600 uppercase tracking-widest border-t border-zinc-800/80 pt-4 mt-2">Dados de Faturamento (NF-e)</div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">CPF ou CNPJ</label>
+                                        <input
+                                            type="text"
+                                            value={selectedCustomer.cpf || ''}
+                                            onChange={e => handleModalCpfChange(e.target.value)}
+                                            placeholder="Ex: 000.000.000-00"
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">CEP</label>
+                                        <input
+                                            type="text"
+                                            value={selectedCustomer.cep || ''}
+                                            onChange={e => handleModalCepChange(e.target.value)}
+                                            placeholder="Ex: 00000-000"
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-4 gap-4">
+                                    <div className="col-span-3">
+                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Logradouro</label>
+                                        <input
+                                            type="text"
+                                            value={selectedCustomer.logradouro || ''}
+                                            onChange={e => setSelectedCustomer({ ...selectedCustomer, logradouro: e.target.value })}
+                                            placeholder="Ex: Rua das Flores"
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Número</label>
+                                        <input
+                                            type="text"
+                                            value={selectedCustomer.numero || ''}
+                                            onChange={e => setSelectedCustomer({ ...selectedCustomer, numero: e.target.value })}
+                                            placeholder="Ex: 123"
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Bairro</label>
+                                    <input
+                                        type="text"
+                                        value={selectedCustomer.bairro || ''}
+                                        onChange={e => setSelectedCustomer({ ...selectedCustomer, bairro: e.target.value })}
+                                        placeholder="Ex: Centro"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-4 gap-4">
+                                    <div className="col-span-3">
+                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Cidade</label>
+                                        <input
+                                            type="text"
+                                            value={selectedCustomer.cidade || ''}
+                                            onChange={e => setSelectedCustomer({ ...selectedCustomer, cidade: e.target.value })}
+                                            placeholder="Ex: São Paulo"
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">UF</label>
+                                        <input
+                                            type="text"
+                                            value={selectedCustomer.uf || ''}
+                                            onChange={e => setSelectedCustomer({ ...selectedCustomer, uf: e.target.value.toUpperCase() })}
+                                            maxLength={2}
+                                            placeholder="SP"
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200 text-center"
                                         />
                                     </div>
                                 </div>

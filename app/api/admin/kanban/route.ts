@@ -33,7 +33,10 @@ export async function GET() {
 
         const formatted = kanbanData.map(s => ({
             ...s,
-            vendedor_nome: userMap[s.vendedor] || userMap[(s.vendedor || '').toLowerCase()] || 'Ateliê'
+            vendedor_nome: (() => {
+                const name = userMap[s.vendedor] || userMap[(s.vendedor || '').toLowerCase()] || 'Ateliê';
+                return name.toLowerCase().includes('rodrigo') ? '@frangatoys' : name;
+            })()
         }));
 
         return NextResponse.json(formatted);

@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
@@ -36,7 +35,10 @@ export async function GET() {
 
         const formatted = sales.map(s => ({
             ...s,
-            vendedor_nome: userMap[(s.vendedor || '').toLowerCase()] || s.vendedor || 'Ateliê'
+            vendedor_nome: (() => {
+                const name = userMap[(s.vendedor || '').toLowerCase()] || s.vendedor || 'Ateliê';
+                return name.toLowerCase().includes('rodrigo') ? '@frangatoys' : name;
+            })()
         }));
 
         return NextResponse.json(formatted);
@@ -65,7 +67,14 @@ export async function POST(req: Request) {
             valor_frete,
             cliente_id, // Novo campo para CRM
             metodo_entrega, // Novo campo para logística
-            cupom_codigo // Novo campo para cupons
+            cupom_codigo, // Novo campo para cupons
+            cpf,
+            cep,
+            logradouro,
+            numero,
+            bairro,
+            cidade,
+            uf
         } = body;
 
         if (!carrinho || !Array.isArray(carrinho) || carrinho.length === 0) {
@@ -75,24 +84,52 @@ export async function POST(req: Request) {
         // --- MOTOR DE AUTO-CRM (POST) ---
         let final_cliente_id = cliente_id;
         let final_cliente_nome = cliente_nome;
-        if (!final_cliente_id && cliente_contato && cliente_contato.trim() !== '') {
-            // 1. Tentar localizar por telefone
+        const sanitizedPhone = cliente_contato ? cliente_contato.replace(/\D/g, '') : '';
+
+        const clientData = {
+            nome: cliente_nome,
+            telefone: sanitizedPhone || null,
+            cpf: cpf || null,
+            cep: cep || null,
+            logradouro: logradouro || null,
+            numero: numero || null,
+            bairro: bairro || null,
+            cidade: cidade || null,
+            uf: uf || null
+        };
+
+        if (final_cliente_id) {
+            // 1. Atualizar cliente existente se ID for enviado
+            await supabase
+                .from('clientes')
+                .update(clientData)
+                .eq('id', final_cliente_id);
+        } else if (sanitizedPhone && sanitizedPhone.trim() !== '') {
+            // 2. Tentar localizar por telefone
             const { data: existing } = await supabase
                 .from('clientes')
                 .select('id, nome')
-                .eq('telefone', cliente_contato)
+                .eq('telefone', sanitizedPhone)
                 .maybeSingle();
             
             if (existing) {
                 final_cliente_id = existing.id;
                 if (existing.nome) final_cliente_nome = existing.nome;
+                
+                await supabase
+                    .from('clientes')
+                    .update(clientData)
+                    .eq('id', final_cliente_id);
             } else if (cliente_nome) {
-                // 2. Criar novo se não existir
+                // 3. Criar novo se não existir
                 const { data: novo } = await supabase
                     .from('clientes')
-                    .insert([{ nome: cliente_nome, telefone: cliente_contato }])
+                    .insert([{ 
+                        ...clientData,
+                        id: crypto.randomUUID()
+                    }])
                     .select('id')
-                    .single();
+                    .maybeSingle();
                 if (novo) final_cliente_id = novo.id;
             }
         }
@@ -250,21 +287,41 @@ export async function PATCH(req: Request) {
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();
-        const { id, cliente_nome, cliente_contato, canal_venda, vendedor, status, observacao, pintura_freelancer, pintor_nome, cliente_id, metodo_entrega } = body;
+        const { 
+            id, 
+            cliente_nome, 
+            cliente_contato, 
+            canal_venda, 
+            vendedor, 
+            status, 
+            observacao, 
+            pintura_freelancer, 
+            pintor_nome, 
+            cliente_id, 
+            metodo_entrega,
+            cpf,
+            cep,
+            logradouro,
+            numero,
+            bairro,
+            cidade,
+            uf
+        } = body;
 
         if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 });
 
         // --- MOTOR DE AUTO-CRM (PATCH) ---
         let final_cliente_id = cliente_id;
         let final_cliente_nome = cliente_nome;
+        const sanitizedPhone = cliente_contato ? cliente_contato.replace(/\D/g, '') : '';
         
         // Se não temos um ID mas temos o contato, tentamos vincular ou criar
-        if (!final_cliente_id && cliente_contato && cliente_contato.trim() !== '') {
+        if (!final_cliente_id && sanitizedPhone && sanitizedPhone.trim() !== '') {
             // 1. Tentar localizar por telefone exato
             const { data: existing } = await supabase
                 .from('clientes')
                 .select('id, nome')
-                .eq('telefone', cliente_contato)
+                .eq('telefone', sanitizedPhone)
                 .maybeSingle();
             
             if (existing) {
@@ -274,11 +331,34 @@ export async function PATCH(req: Request) {
                 // 2. Criar novo se não existir
                 const { data: novo } = await supabase
                     .from('clientes')
-                    .insert([{ nome: cliente_nome, telefone: cliente_contato }])
+                    .insert([{ 
+                        nome: cliente_nome, 
+                        telefone: sanitizedPhone,
+                        id: crypto.randomUUID()
+                    }])
                     .select('id')
-                    .single();
+                    .maybeSingle();
                 if (novo) final_cliente_id = novo.id;
             }
+        }
+
+        // Se o cliente existe (ou acabou de ser criado), atualizamos as informações dele
+        if (final_cliente_id) {
+            const updatePayload: any = {};
+            if (cliente_nome) updatePayload.nome = cliente_nome;
+            if (cliente_contato) updatePayload.telefone = sanitizedPhone;
+            if (cpf !== undefined) updatePayload.cpf = cpf || null;
+            if (cep !== undefined) updatePayload.cep = cep || null;
+            if (logradouro !== undefined) updatePayload.logradouro = logradouro || null;
+            if (numero !== undefined) updatePayload.numero = numero || null;
+            if (bairro !== undefined) updatePayload.bairro = bairro || null;
+            if (cidade !== undefined) updatePayload.cidade = cidade || null;
+            if (uf !== undefined) updatePayload.uf = uf || null;
+
+            await supabase
+                .from('clientes')
+                .update(updatePayload)
+                .eq('id', final_cliente_id);
         }
 
         // 1. Buscar a venda atual para ter os snapshots de custo e valor original
@@ -294,7 +374,6 @@ export async function PATCH(req: Request) {
         let lucro_real = currentSale.lucro_real;
 
         // 2. Se a pintura freelancer mudou ou o pintor mudou, precisamos recalcular
-        // Nota: Só recalculamos se houver mudança explícita ou se pintura_freelancer for true
         if (pintura_freelancer !== undefined || pintor_nome !== undefined) {
             const isFreelancer = pintura_freelancer !== undefined ? pintura_freelancer : currentSale.pintura_freelancer;
 
@@ -313,7 +392,6 @@ export async function PATCH(req: Request) {
             }
 
             // Recalcular Lucro Real
-            // Lucro = Valor Venda - Custo Produção - Valor Pintor - Comissão Vendedor
             lucro_real = currentSale.valor_venda_final -
                 (currentSale.custo_producao_snapshot || 0) -
                 valor_pago_pintor -

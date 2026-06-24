@@ -22,12 +22,12 @@ function PixPaymentWidget({ order }: { order: any }) {
     const remaining = Math.max(0, total - pagoVal);
 
     useEffect(() => {
-        if (remaining > 0) {
+        if (remaining > 0 && !order.link_pagamento) {
             // Chave E-mail da loja, nome Rodrigo Casagrande Sposito
             const payload = generatePixPayload("contato@frangatoys.com.br", "Rodrigo Casagrande Sposito", remaining);
             setPixPayload(payload);
         }
-    }, [remaining]);
+    }, [remaining, order.link_pagamento]);
 
     const copyPix = () => {
         if (!pixPayload) return;
@@ -39,17 +39,27 @@ function PixPaymentWidget({ order }: { order: any }) {
 
     if (remaining <= 0) return null;
 
+    const isCard = !!order.link_pagamento;
+
     return (
         <div className="mt-6 bg-zinc-950/80 border border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6 shadow-lg backdrop-blur-sm relative overflow-hidden">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-4">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500">
-                        <QrCode size={20} />
+                        {isCard ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                        ) : (
+                            <QrCode size={20} />
+                        )}
                     </div>
                     <div>
-                        <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400">Pagamento Pendente (PIX)</h4>
-                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Pague com PIX para liberar o envio da sua figura</p>
+                        <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400">
+                            {isCard ? 'Pagamento Pendente (Cartão)' : 'Pagamento Pendente (PIX)'}
+                        </h4>
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                            {isCard ? 'Pague com cartão de crédito para liberar o envio da sua figura' : 'Pague com PIX para liberar o envio da sua figura'}
+                        </p>
                     </div>
                 </div>
                 
@@ -60,46 +70,63 @@ function PixPaymentWidget({ order }: { order: any }) {
                 </div>
             </div>
 
-            {/* Financial summary and QR Code */}
+            {/* Financial summary and Payment Actions */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-                {/* QR Code and Copy Area */}
+                {/* QR Code/Link Area */}
                 <div className="lg:col-span-7 flex flex-col sm:flex-row items-center gap-6 w-full min-w-0">
-                    <div className="bg-white p-3 rounded-2xl shrink-0 shadow-xl border border-white/10">
-                        <img 
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(pixPayload)}`} 
-                            alt="PIX QR Code" 
-                            className="w-32 h-32"
-                        />
-                    </div>
-                    
-                    <div className="space-y-3 w-full min-w-0">
-                        <p className="text-[10px] text-zinc-500 font-black uppercase tracking-wider text-center sm:text-left">
-                            Escaneie o QR Code ao lado ou copie a chave Pix abaixo:
-                        </p>
-                        
-                        {/* Caixa de código Pix com overflow hidden e estilo elegante */}
-                        <div className="w-full bg-zinc-900/60 border border-zinc-800 p-3 rounded-2xl overflow-hidden text-ellipsis whitespace-nowrap text-[9px] font-mono text-zinc-500 shadow-inner">
-                            {pixPayload}
+                    {isCard ? (
+                        <div className="w-full space-y-4">
+                            <p className="text-[10.5px] text-zinc-400 font-medium">
+                                Clique no botão abaixo para efetuar o pagamento via Mercado Pago:
+                            </p>
+                            <a 
+                                href={order.link_pagamento}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full bg-orange-500 hover:bg-orange-400 text-black text-[10px] font-black py-4 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-widest shadow-lg shadow-orange-500/10"
+                            >
+                                <ExternalLink size={14} strokeWidth={3} />
+                                Pagar com Cartão de Crédito
+                            </a>
                         </div>
+                    ) : (
+                        <>
+                            <div className="bg-white p-3 rounded-2xl shrink-0 shadow-xl border border-white/10">
+                                <img 
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(pixPayload)}`} 
+                                    alt="PIX QR Code" 
+                                    className="w-32 h-32"
+                                />
+                            </div>
+                            
+                            <div className="space-y-3 w-full min-w-0">
+                                <p className="text-[10px] text-zinc-500 font-black uppercase tracking-wider text-center sm:text-left">
+                                    Escaneie o QR Code ao lado ou copie a chave Pix abaixo:
+                                </p>
+                                
+                                <div className="w-full bg-zinc-900/60 border border-zinc-800 p-3 rounded-2xl overflow-hidden text-ellipsis whitespace-nowrap text-[9px] font-mono text-zinc-500 shadow-inner">
+                                    {pixPayload}
+                                </div>
 
-                        {/* Botão de cópia destacado */}
-                        <button 
-                            onClick={copyPix}
-                            className="w-full bg-orange-500 hover:bg-orange-400 text-black text-[10px] font-black py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-widest shadow-lg shadow-orange-500/10"
-                        >
-                            {copied ? (
-                                <>
-                                    <Check size={14} strokeWidth={3} />
-                                    Código Copiado!
-                                </>
-                            ) : (
-                                <>
-                                    <Copy size={14} />
-                                    Copiar Código Pix
-                                    </>
-                            )}
-                        </button>
-                    </div>
+                                <button 
+                                    onClick={copyPix}
+                                    className="w-full bg-orange-500 hover:bg-orange-400 text-black text-[10px] font-black py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-widest shadow-lg shadow-orange-500/10"
+                                >
+                                    {copied ? (
+                                        <>
+                                            <Check size={14} strokeWidth={3} />
+                                            Código Copiado!
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Copy size={14} />
+                                            Copiar Código Pix
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Values Summary Card */}

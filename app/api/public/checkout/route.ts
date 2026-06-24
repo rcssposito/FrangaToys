@@ -3,6 +3,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { createMPPreference } from '@/lib/mp';
 import { randomUUID } from 'crypto';
 import { sendTelegramAlert } from '@/lib/telegram';
+import { enviarReciboAutomatico } from '@/lib/notifications';
 
 export async function POST(req: NextRequest) {
     try {
@@ -16,7 +17,14 @@ export async function POST(req: NextRequest) {
             metodo_pagamento, // 'pix' ou 'card'
             vendedor_id, // Opcional
             observacoes,
-            cupom_codigo // Opcional
+            cupom_codigo, // Opcional
+            cpf,
+            cep,
+            logradouro,
+            numero,
+            bairro,
+            cidade,
+            uf
         } = body;
 
         if (!items || !Array.isArray(items) || items.length === 0) {
@@ -143,13 +151,34 @@ export async function POST(req: NextRequest) {
         if (existing) {
             cliente_id = existing.id;
             if (existing.nome) final_cliente_nome = existing.nome;
+            // Update address and tax details in CRM to keep it fresh
+            await supabase
+                .from('clientes')
+                .update({
+                    nome: cliente_nome,
+                    cpf: cpf || null,
+                    cep: cep || null,
+                    logradouro: logradouro || null,
+                    numero: numero || null,
+                    bairro: bairro || null,
+                    cidade: cidade || null,
+                    uf: uf || null
+                })
+                .eq('id', cliente_id);
         } else {
             const { data: novo, error: clientError } = await supabase
                 .from('clientes')
                 .insert([{ 
                     id: randomUUID(), // Garante UUID válido
                     nome: cliente_nome, 
-                    telefone: sanitizedPhone 
+                    telefone: sanitizedPhone,
+                    cpf: cpf || null,
+                    cep: cep || null,
+                    logradouro: logradouro || null,
+                    numero: numero || null,
+                    bairro: bairro || null,
+                    cidade: cidade || null,
+                    uf: uf || null
                 }])
                 .select('id')
                 .maybeSingle();
@@ -338,6 +367,13 @@ export async function POST(req: NextRequest) {
             await sendTelegramAlert(telegramMsg);
         } catch (e) {
             console.error('Telegram background alert failed:', e);
+        }
+
+        // --- AUTO RECEIPT DISPATCH ---
+        try {
+            await enviarReciboAutomatico(checkout_id);
+        } catch (e) {
+            console.error('Failed to trigger automatic receipt dispatch:', e);
         }
 
         return NextResponse.json({

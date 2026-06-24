@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle } from 'lucide-react';
+import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle, Receipt, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
@@ -12,6 +12,7 @@ interface Sale {
     data_venda: string;
     cliente_nome: string;
     cliente_contato: string;
+    cliente_id?: number;
     status: string;
     quantidade: number;
     pintura_freelancer?: boolean;
@@ -19,6 +20,7 @@ interface Sale {
     vendedor?: string;
     vendedor_nome?: string;
     access_token?: string;
+    checkout_id?: string;
     figuras: {
         nome: string;
         imagem_url: string;
@@ -39,6 +41,51 @@ const COLUMNS = [
     { id: 'Pronto p/ Entrega', title: 'Pronto p/ Entrega', icon: CheckCircle2, color: 'border-emerald-500/40 bg-zinc-950/80', text: 'text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' }
 ];
 
+const COLUMN_ACCENTS: Record<string, { border: string; glow: string; text: string; bg: string; titleHover: string }> = {
+    'Aguardando Pagamento': {
+        border: 'hover:border-yellow-500/50',
+        glow: 'hover:shadow-[0_0_35px_rgba(234,179,8,0.22)]',
+        text: 'text-yellow-400',
+        bg: 'bg-yellow-500/10',
+        titleHover: 'group-hover:text-yellow-400'
+    },
+    'Fila de Impressão': {
+        border: 'hover:border-zinc-500/50',
+        glow: 'hover:shadow-[0_0_35px_rgba(161,161,170,0.18)]',
+        text: 'text-zinc-400',
+        bg: 'bg-zinc-800/10',
+        titleHover: 'group-hover:text-zinc-300'
+    },
+    'Imprimindo': {
+        border: 'hover:border-orange-500/50',
+        glow: 'hover:shadow-[0_0_35px_rgba(249,115,22,0.22)]',
+        text: 'text-orange-400',
+        bg: 'bg-orange-500/10',
+        titleHover: 'group-hover:text-orange-400'
+    },
+    'Lavagem e Cura': {
+        border: 'hover:border-blue-500/50',
+        glow: 'hover:shadow-[0_0_35px_rgba(59,130,246,0.22)]',
+        text: 'text-blue-400',
+        bg: 'bg-blue-500/10',
+        titleHover: 'group-hover:text-blue-400'
+    },
+    'Pintura Secagem': {
+        border: 'hover:border-purple-500/50',
+        glow: 'hover:shadow-[0_0_35px_rgba(168,85,247,0.22)]',
+        text: 'text-purple-400',
+        bg: 'bg-purple-500/10',
+        titleHover: 'group-hover:text-purple-400'
+    },
+    'Pronto p/ Entrega': {
+        border: 'hover:border-emerald-500/50',
+        glow: 'hover:shadow-[0_0_35px_rgba(16,185,129,0.22)]',
+        text: 'text-emerald-400',
+        bg: 'bg-emerald-500/10',
+        titleHover: 'group-hover:text-emerald-400'
+    }
+};
+
 export default function KanbanPage() {
     const [sales, setSales] = useState<Sale[]>([]);
     const [loading, setLoading] = useState(true);
@@ -47,6 +94,179 @@ export default function KanbanPage() {
     // States for inline partial payment editing
     const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
     const [inputValorParcial, setInputValorParcial] = useState<string>('');
+
+    // NF-e modal states
+    const [isNfeModalOpen, setIsNfeModalOpen] = useState(false);
+    const [selectedNfeSale, setSelectedNfeSale] = useState<Sale | null>(null);
+    const [isFetchingCustomer, setIsFetchingCustomer] = useState(false);
+    const [isSavingNfe, setIsSavingNfe] = useState(false);
+
+    // Customer billing info states for the modal
+    const [nfeCustomerNome, setNfeCustomerNome] = useState('');
+    const [nfeCustomerCpf, setNfeCustomerCpf] = useState('');
+    const [nfeCustomerCep, setNfeCustomerCep] = useState('');
+    const [nfeCustomerLogradouro, setNfeCustomerLogradouro] = useState('');
+    const [nfeCustomerNumero, setNfeCustomerNumero] = useState('');
+    const [nfeCustomerBairro, setNfeCustomerBairro] = useState('');
+    const [nfeCustomerCidade, setNfeCustomerCidade] = useState('');
+    const [nfeCustomerUf, setNfeCustomerUf] = useState('');
+    const [nfeClienteId, setNfeClienteId] = useState<number | null>(null);
+
+    // Auto-fill address details based on CEP in NF-e modal
+    useEffect(() => {
+        const cleanCep = nfeCustomerCep.replace(/\D/g, '');
+        if (cleanCep.length === 8) {
+            fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && !data.erro) {
+                        setNfeCustomerLogradouro(data.logradouro || '');
+                        setNfeCustomerBairro(data.bairro || '');
+                        setNfeCustomerCidade(data.localidade || '');
+                        setNfeCustomerUf(data.uf || '');
+                    }
+                })
+                .catch(err => console.error('Erro ao buscar CEP:', err));
+        }
+    }, [nfeCustomerCep]);
+
+    const handleNfeCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 11) {
+            value = value
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        } else {
+            value = value.substring(0, 14)
+                .replace(/^(\d{2})(\d)/, '$1.$2')
+                .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+                .replace(/\.(\d{3})(\d)/, '.$1/$2')
+                .replace(/(\d{4})(\d)/, '$1-$2');
+        }
+        setNfeCustomerCpf(value);
+    };
+
+    const handleNfeCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 5) {
+            value = value.replace(/^(\d{5})(\d)/, '$1-$2');
+        }
+        setNfeCustomerCep(value.substring(0, 9));
+    };
+
+    const handleOpenNfeModal = async (sale: Sale) => {
+        setSelectedNfeSale(sale);
+        setIsNfeModalOpen(true);
+        setIsFetchingCustomer(true);
+
+        // Reset values
+        setNfeCustomerNome(sale.cliente_nome || '');
+        setNfeCustomerCpf('');
+        setNfeCustomerCep('');
+        setNfeCustomerLogradouro('');
+        setNfeCustomerNumero('');
+        setNfeCustomerBairro('');
+        setNfeCustomerCidade('');
+        setNfeCustomerUf('');
+        setNfeClienteId(sale.cliente_id || null);
+
+        if (sale.cliente_id) {
+            try {
+                const res = await fetch(`/api/admin/customers?id=${sale.cliente_id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setNfeCustomerNome(data.nome || sale.cliente_nome || '');
+                    setNfeCustomerCpf(data.cpf || '');
+                    setNfeCustomerCep(data.cep || '');
+                    setNfeCustomerLogradouro(data.logradouro || '');
+                    setNfeCustomerNumero(data.numero || '');
+                    setNfeCustomerBairro(data.bairro || '');
+                    setNfeCustomerCidade(data.cidade || '');
+                    setNfeCustomerUf(data.uf || '');
+                }
+            } catch (err) {
+                console.error('Erro ao buscar dados cadastrais do cliente:', err);
+                toast.error('Não foi possível carregar os dados cadastrais do cliente.');
+            } finally {
+                setIsFetchingCustomer(false);
+            }
+        } else {
+            setIsFetchingCustomer(false);
+        }
+    };
+
+    const handleSaveAndEmitNfe = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedNfeSale || isSavingNfe) return;
+
+        // Validations
+        const cleanCpf = nfeCustomerCpf.replace(/\D/g, '');
+        if (cleanCpf.length !== 11 && cleanCpf.length !== 14) {
+            toast.error('Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.');
+            return;
+        }
+
+        if (!nfeCustomerCep || !nfeCustomerLogradouro || !nfeCustomerNumero || !nfeCustomerBairro || !nfeCustomerCidade || !nfeCustomerUf) {
+            toast.error('Todos os campos de endereço são obrigatórios para emissão de nota fiscal.');
+            return;
+        }
+
+        setIsSavingNfe(true);
+
+        try {
+            // 1. Salvar dados do cliente se tiver cliente_id
+            if (nfeClienteId) {
+                const patchRes = await fetch('/api/admin/customers', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: nfeClienteId,
+                        nome: nfeCustomerNome,
+                        cpf: nfeCustomerCpf,
+                        cep: nfeCustomerCep,
+                        logradouro: nfeCustomerLogradouro,
+                        numero: nfeCustomerNumero,
+                        bairro: nfeCustomerBairro,
+                        cidade: nfeCustomerCidade,
+                        uf: nfeCustomerUf
+                    })
+                });
+
+                if (!patchRes.ok) {
+                    throw new Error('Falha ao atualizar dados cadastrais do cliente no banco de dados.');
+                }
+            }
+
+            // 2. Emitir NF-e
+            const bodyPayload = selectedNfeSale.checkout_id 
+                ? { checkout_id: selectedNfeSale.checkout_id } 
+                : { sale_id: selectedNfeSale.id };
+
+            const nfeRes = await fetch('/api/admin/sales/nfe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bodyPayload)
+            });
+
+            const nfeData = await nfeRes.json();
+            if (!nfeRes.ok) {
+                throw new Error(nfeData.error || 'Erro ao emitir Nota Fiscal na SEFAZ');
+            }
+
+            toast.success(`NF-e emitida com sucesso! Chave: ${nfeData.chave.substring(0, 15)}...`);
+            setIsNfeModalOpen(false);
+            
+            // Recarregar tarefas para atualizar observações
+            fetchTasks();
+
+        } catch (err: any) {
+            console.error('NFe save/emit error:', err);
+            toast.error(err.message || 'Falha ao salvar dados ou emitir Nota Fiscal.');
+        } finally {
+            setIsSavingNfe(false);
+        }
+    };
 
     useEffect(() => {
         fetchTasks();
@@ -288,279 +508,449 @@ export default function KanbanPage() {
                                         </span>
                                     </div>
                                 </div>
-
-                                <div className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[calc(100vh-280px)] custom-scrollbar">
+<div className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[calc(100vh-280px)] custom-scrollbar">
                                     {columnTasks.length === 0 && (
                                         <div className="text-center p-8 border-2 border-dashed border-zinc-800 rounded-2xl text-zinc-600 text-sm font-black uppercase tracking-widest">
                                             Vazio
                                         </div>
                                     )}
 
-                                    {columnTasks.map(task => (
-                                        <div
-                                            key={task.id}
-                                            draggable
-                                            onDragStart={(e) => handleDragStart(e, task.id)}
-                                            onDragEnd={handleDragEnd}
-                                            className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800/60 rounded-2xl p-2.5 sm:p-3 cursor-grab active:cursor-grabbing hover:border-blue-500/50 hover:bg-zinc-900/80 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)] hover:-translate-y-1 transition-all duration-300 group relative shadow-lg"
-                                        >
-                                            <div className="flex gap-3">
-                                                <div className="w-16 h-16 rounded-xl bg-zinc-950 border border-zinc-800 flex-shrink-0 overflow-hidden relative shadow-inner">
-                                                    {task.figuras?.imagem_url ? (
+                                    {columnTasks.map(task => {
+                                        const accent = COLUMN_ACCENTS[col.id] || {
+                                            border: 'hover:border-blue-500/40',
+                                            glow: 'hover:shadow-[0_0_35px_rgba(59,130,246,0.22)]',
+                                            text: 'text-blue-400',
+                                            bg: 'bg-blue-500/10',
+                                            titleHover: 'group-hover:text-blue-400'
+                                        };
+
+                                        return (
+                                            <div
+                                                key={task.id}
+                                                draggable
+                                                onDragStart={(e) => handleDragStart(e, task.id)}
+                                                onDragEnd={handleDragEnd}
+                                                className={`bg-zinc-950/50 backdrop-blur-lg border border-zinc-900/80 rounded-2xl p-3.5 cursor-grab active:cursor-grabbing transition-all duration-500 ease-out group relative shadow-xl overflow-hidden min-h-[245px] flex flex-col justify-between hover:-translate-y-1.5 ${accent.border} ${accent.glow}`}
+                                            >
+                                                {/* Full-bleed Product Image Background */}
+                                                {task.figuras?.imagem_url && (
+                                                    <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
                                                         <img
                                                             src={task.figuras.imagem_url}
-                                                            alt={task.figuras.nome || 'Figura'}
-                                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                                            alt=""
+                                                            className="w-full h-full object-cover opacity-55 group-hover:opacity-75 group-hover:scale-110 transition-all duration-700 ease-out"
                                                         />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-zinc-700">
-                                                            <Package size={24} />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                                    <div className="text-[15px] font-black text-zinc-100 truncate leading-tight tracking-tight mb-1 group-hover:text-blue-400 transition-colors" title={task.figuras?.nome}>
-                                                        {task.figuras?.nome || 'Item Desconhecido'}
+                                                        {/* Sophisticated dual overlays for depth and contrast */}
+                                                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0)_15%,rgba(9,9,11,0.85)_95%)]" />
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-black/35" />
                                                     </div>
-                                                    <div className="text-xs text-zinc-500 truncate font-medium">
-                                                        Cliente: <span className="text-zinc-300 font-bold">{task.cliente_nome}</span>
-                                                    </div>
-                                                    <div className="text-[10px] text-zinc-600 mt-1.5 uppercase font-black tracking-wider">
-                                                        Vendedor: <span className="text-blue-500/80">{task.vendedor_nome || task.vendedor?.split('@')[0] || 'Franguinha'}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-col gap-2 justify-center">
-                                                    <Link
-                                                        href={`/os/${task.id}`}
-                                                        target="_blank"
-                                                        title="Imprimir Ordem de Serviço (OS)"
-                                                        className="p-2 bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white border border-blue-500/20 rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center"
-                                                    >
-                                                        <FileText size={16} />
-                                                    </Link>
-                                                    <Link
-                                                        href={`/certificado/${task.access_token || task.id}`}
-                                                        target="_blank"
-                                                        title="Imprimir Certificado de Autenticidade"
-                                                        className="p-2 bg-zinc-900 text-zinc-500 hover:text-emerald-400 border border-zinc-800 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center"
-                                                    >
-                                                        <CheckCircle2 size={16} />
-                                                    </Link>
-                                                    <button
-                                                        onClick={() => {
-                                                            const trackingIdentifier = task.access_token || (task.cliente_contato || '').replace(/\D/g, '');
-                                                            if (!trackingIdentifier) {
-                                                                toast.error('Cliente sem contato ou token cadastrado');
-                                                                return;
-                                                            }
-                                                            const urlBase = window.location.origin;
-                                                            const link = `${urlBase}/rastreio/${trackingIdentifier}`;
-                                                            navigator.clipboard.writeText(link);
-                                                            toast.success('Link de rastreio copiado!');
-                                                        }}
-                                                        title="Copiar Link de Rastreio para o Cliente"
-                                                        className="p-2 bg-zinc-900 text-zinc-500 hover:text-orange-500 border border-zinc-800 hover:border-orange-500/50 hover:bg-orange-500/10 hover:shadow-[0_0_15px_rgba(249,115,22,0.2)] rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center"
-                                                    >
-                                                        <ExternalLink size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            const cleanPhone = (task.cliente_contato || '').replace(/\D/g, '');
-                                                            const trackingIdentifier = task.access_token || cleanPhone;
-                                                            if (!cleanPhone) {
-                                                                toast.error('Cliente sem telefone cadastrado');
-                                                                return;
-                                                            }
-                                                            const urlBase = window.location.origin;
-                                                            const link = `${urlBase}/rastreio/${trackingIdentifier}`;
-                                                            const msg = `Olá, ${task.cliente_nome.trim()}!\n\nAcompanhe a produção do seu pedido em tempo real diretamente pelo nosso site:\n👉 ${link}\n\n(Lá você consegue ver se a peça está imprimindo, em acabamento, pintura ou se já foi enviada!). Qualquer dúvida, estou por aqui!`;
-                                                            
-                                                            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                                                            const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
-                                                            const waLink = `${baseUrl}?phone=55${cleanPhone}&text=${encodeURIComponent(msg)}`;
-                                                            window.open(waLink, '_blank');
-                                                        }}
-                                                        title="Enviar Rastreio via WhatsApp"
-                                                        className="p-2 bg-zinc-900 text-zinc-500 hover:text-emerald-500 border border-zinc-800 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center"
-                                                    >
-                                                        <MessageCircle size={16} />
-                                                    </button>
-                                            </div>
-                                            </div>
-
-                                            {/* Prazo Limite do Pedido */}
-                                            {(() => {
-                                                if (!task.data_venda) return null;
-                                                const dataVenda = new Date(task.data_venda);
-                                                const deadlineDate = new Date(dataVenda);
-                                                deadlineDate.setDate(deadlineDate.getDate() + 45);
-                                                
-                                                const today = new Date();
-                                                const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                                                const deadlineDateOnly = new Date(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate());
-                                                const diffTime = deadlineDateOnly.getTime() - todayDateOnly.getTime();
-                                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                                                
-                                                const formattedDeadline = deadlineDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-                                                
-                                                let badgeClass = 'bg-zinc-950 border-zinc-800 text-zinc-400';
-                                                let label = `Prazo: ${formattedDeadline} (${diffDays}d)`;
-                                                
-                                                if (diffDays < 0) {
-                                                    badgeClass = 'bg-red-500/10 border-red-500/30 text-red-400 font-black';
-                                                    label = `Atrasado ${Math.abs(diffDays)}d (${formattedDeadline})`;
-                                                } else if (diffDays <= 7) {
-                                                    badgeClass = 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400 font-black';
-                                                    label = `Urgente: ${diffDays}d (${formattedDeadline})`;
-                                                } else if (diffDays <= 15) {
-                                                    badgeClass = 'bg-orange-500/10 border-orange-500/30 text-orange-400';
-                                                    label = `${diffDays}d restando (${formattedDeadline})`;
-                                                } else {
-                                                    badgeClass = 'bg-zinc-950/50 border-zinc-800/80 text-zinc-500';
-                                                    label = `${diffDays}d restando (${formattedDeadline})`;
-                                                }
-                                                
-                                                return (
-                                                    <div className="mt-3 flex items-center">
-                                                        <span 
-                                                            className={`text-[9px] font-black px-2 py-0.5 rounded border shadow-inner flex items-center gap-1.5 ${badgeClass}`}
-                                                            title={`Data limite de entrega (45 dias): ${deadlineDate.toLocaleDateString('pt-BR')}`}
-                                                        >
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse shrink-0" />
-                                                            {label}
-                                                        </span>
-                                                    </div>
-                                                );
-                                            })()}
-
-                                            <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-zinc-800/50">
-                                                <span className="text-[10px] font-black px-3 py-1 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-300 shadow-inner">
-                                                    QTD: {task.quantidade}x
-                                                </span>
-                                                {task.valor_venda_final !== undefined && (
-                                                    <span className="text-[10px] font-black px-3 py-1 bg-zinc-950 border border-zinc-800 rounded-lg text-emerald-400 shadow-inner">
-                                                        R$ {Number(task.valor_venda_final).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                    </span>
                                                 )}
-                                                {editingSaleId === task.id ? (
-                                                    <div className="flex items-center gap-1.5 bg-zinc-950 p-1 border border-zinc-800 rounded-lg w-full mt-2 animate-in slide-in-from-top-1 duration-150">
-                                                        <span className="text-[9px] font-black text-zinc-500 pl-1">R$</span>
-                                                        <input
-                                                            type="text"
-                                                            value={inputValorParcial}
-                                                            onChange={(e) => setInputValorParcial(e.target.value)}
-                                                            placeholder="Valor pago"
-                                                            className="bg-transparent text-xs font-black text-blue-400 outline-none w-20 py-0.5"
-                                                            autoFocus
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter') savePartialPayment(task.id, task.valor_venda_final);
-                                                                if (e.key === 'Escape') setEditingSaleId(null);
-                                                            }}
-                                                        />
-                                                        <button
-                                                            onClick={() => savePartialPayment(task.id, task.valor_venda_final)}
-                                                            className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-black text-[9px] font-black rounded"
+
+                                                {/* Elegant shimmer reflection card effect */}
+                                                <div className="absolute inset-0 z-20 pointer-events-none bg-[linear-gradient(110deg,transparent_35%,rgba(255,255,255,0.06)_45%,rgba(255,255,255,0.1)_50%,rgba(255,255,255,0.06)_55%,transparent_65%)] -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
+
+                                                {/* Top row: tags and deadline */}
+                                                <div className="relative z-10 flex items-center justify-between gap-2">
+                                                    {/* Seller and Delivery tags */}
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        <span className="text-[8px] font-black uppercase tracking-wider bg-zinc-900/80 text-zinc-300 border border-zinc-800/80 px-1.5 py-0.5 rounded-md backdrop-blur-sm shadow-sm">
+                                                            {(() => {
+                                                                const raw = task.vendedor_nome || task.vendedor?.split('@')[0] || 'Ateliê';
+                                                                return raw.toLowerCase().includes('rodrigo') ? '@frangatoys' : raw;
+                                                            })()}
+                                                        </span>
+                                                        {task.metodo_entrega && (
+                                                            <span className="text-[8px] font-black uppercase tracking-wider bg-zinc-900/80 text-zinc-400 px-1.5 py-0.5 rounded-md border border-zinc-800/80 backdrop-blur-sm shadow-sm">
+                                                                {task.metodo_entrega === 'envio' ? 'Correios' : 'Retirada'}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Deadline badge */}
+                                                    {(() => {
+                                                        if (!task.data_venda) return null;
+                                                        const dataVenda = new Date(task.data_venda);
+                                                        const deadlineDate = new Date(dataVenda);
+                                                        deadlineDate.setDate(deadlineDate.getDate() + 45);
+                                                        
+                                                        const today = new Date();
+                                                        const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                                                        const deadlineDateOnly = new Date(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate());
+                                                        const diffTime = deadlineDateOnly.getTime() - todayDateOnly.getTime();
+                                                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                                        
+                                                        const formattedDeadline = deadlineDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                                                        
+                                                        let badgeClass = 'bg-zinc-900/60 border-zinc-800 text-zinc-400';
+                                                        let label = `${diffDays}d (${formattedDeadline})`;
+                                                        
+                                                        if (diffDays < 0) {
+                                                            badgeClass = 'bg-red-500/20 border-red-500/30 text-red-400 font-bold shadow-[0_0_10px_rgba(239,68,68,0.15)]';
+                                                            label = `Atrasado ${Math.abs(diffDays)}d (${formattedDeadline})`;
+                                                        } else if (diffDays <= 7) {
+                                                            badgeClass = 'bg-yellow-500/20 border-yellow-500/30 text-yellow-400 font-bold animate-pulse shadow-[0_0_10px_rgba(234,179,8,0.15)]';
+                                                            label = `Urgente: ${diffDays}d (${formattedDeadline})`;
+                                                        } else if (diffDays <= 15) {
+                                                            badgeClass = 'bg-orange-500/20 border-orange-500/30 text-orange-400';
+                                                            label = `${diffDays}d (${formattedDeadline})`;
+                                                        }
+                                                        
+                                                        return (
+                                                            <span 
+                                                                className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border backdrop-blur-sm shadow-inner flex items-center gap-1 ${badgeClass}`}
+                                                                title={`Prazo limite de entrega (45 dias): ${deadlineDate.toLocaleDateString('pt-BR')}`}
+                                                            >
+                                                                <span className="w-1 h-1 rounded-full bg-current animate-pulse shrink-0" />
+                                                                {label}
+                                                            </span>
+                                                        );
+                                                    })()}
+                                                </div>
+
+                                                {/* Content & Action vertical stack layout */}
+                                                <div className="relative z-10 mt-3 flex-1 flex gap-3 items-stretch">
+                                                    {/* Left side: Product & Client info and optional Observation */}
+                                                    <div className="flex-1 flex flex-col justify-between min-w-0">
+                                                        {/* Product & Client info on glass panel */}
+                                                        <div className="bg-zinc-950/70 backdrop-blur-md border border-zinc-900/60 rounded-xl p-3 shadow-md group-hover:bg-zinc-950/85 group-hover:border-zinc-800/85 transition-all duration-300">
+                                                            <h4 className={`text-[13px] font-black text-white leading-snug tracking-tight mb-2 transition-colors ${accent.titleHover}`}>
+                                                                {task.figuras?.nome || 'Item Desconhecido'}
+                                                            </h4>
+                                                            
+                                                            <div className="text-[11.5px] text-zinc-400 font-semibold flex items-center gap-1.5">
+                                                                <span className="text-[8px] font-black uppercase tracking-wider text-zinc-500">Cliente</span>
+                                                                <span className="text-zinc-200 font-black tracking-tight">{task.cliente_nome}</span>
+                                                            </div>
+
+                                                            {task.pintura_freelancer && (
+                                                                <span className="inline-flex items-center gap-1 text-[8px] font-black px-1.5 py-0.5 bg-purple-500/10 border border-purple-500/20 rounded text-purple-400 mt-2 w-fit shadow-inner">
+                                                                    <Paintbrush size={8} className="shrink-0" /> PINTURA TERCEIRIZADA
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Observation block at the bottom */}
+                                                        {task.observacao && (
+                                                            <div className="w-full text-[9.5px] text-blue-300/90 italic mt-3 px-2.5 py-1.5 bg-blue-950/40 backdrop-blur-md border border-blue-500/20 border-l-2 border-blue-500 rounded-lg font-medium shadow-inner break-all">
+                                                                "{task.observacao}"
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Right side: Action buttons stacked vertically */}
+                                                    <div className="flex flex-col gap-1.5 justify-start shrink-0 z-20">
+                                                        <Link
+                                                            href={`/os/${task.id}`}
+                                                            target="_blank"
+                                                            title="Ordem de Serviço (OS)"
+                                                            className="w-9 h-9 text-zinc-400 hover:text-blue-400 bg-zinc-900/60 hover:bg-blue-500/10 border border-zinc-800/80 hover:border-blue-500/30 rounded-lg transition-all duration-200 active:scale-90 flex items-center justify-center hover:shadow-[0_0_10px_rgba(59,130,246,0.2)]"
                                                         >
-                                                            OK
+                                                            <FileText size={13} />
+                                                        </Link>
+                                                        <Link
+                                                            href={`/certificado/${task.access_token || task.id}`}
+                                                            target="_blank"
+                                                            title="Certificado de Autenticidade"
+                                                            className="w-9 h-9 text-zinc-400 hover:text-emerald-400 bg-zinc-900/60 hover:bg-emerald-500/10 border border-zinc-800/80 hover:border-emerald-500/30 rounded-lg transition-all duration-200 active:scale-90 flex items-center justify-center hover:shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+                                                        >
+                                                            <CheckCircle2 size={13} />
+                                                        </Link>
+                                                        <button
+                                                            onClick={() => {
+                                                                const trackingIdentifier = task.access_token || (task.cliente_contato || '').replace(/\D/g, '');
+                                                                if (!trackingIdentifier) {
+                                                                    toast.error('Cliente sem contato ou token cadastrado');
+                                                                    return;
+                                                                }
+                                                                const urlBase = window.location.origin;
+                                                                const link = `${urlBase}/rastreio/${trackingIdentifier}`;
+                                                                navigator.clipboard.writeText(link);
+                                                                toast.success('Link de rastreio copiado!');
+                                                            }}
+                                                            title="Copiar Link de Rastreio"
+                                                            className="w-9 h-9 text-zinc-400 hover:text-orange-450 bg-zinc-900/60 hover:bg-orange-500/10 border border-zinc-800/80 hover:border-orange-500/30 rounded-lg transition-all duration-200 active:scale-90 flex items-center justify-center hover:shadow-[0_0_10px_rgba(249,115,22,0.2)]"
+                                                        >
+                                                            <ExternalLink size={13} />
                                                         </button>
                                                         <button
                                                             onClick={() => {
-                                                                setInputValorParcial(String(task.valor_venda_final || 0));
-                                                                // Use setTimeout to ensure the state update is registered before saving
-                                                                setTimeout(() => {
-                                                                    savePartialPayment(task.id, task.valor_venda_final);
-                                                                }, 0);
+                                                                const cleanPhone = (task.cliente_contato || '').replace(/\D/g, '');
+                                                                const trackingIdentifier = task.access_token || cleanPhone;
+                                                                if (!cleanPhone) {
+                                                                    toast.error('Cliente sem telefone cadastrado');
+                                                                    return;
+                                                                }
+                                                                const urlBase = window.location.origin;
+                                                                const link = `${urlBase}/rastreio/${trackingIdentifier}`;
+                                                                const msg = `Olá, ${task.cliente_nome.trim()}!\n\nAcompanhe a produção do seu pedido em tempo real diretamente pelo nosso site:\n👉 ${link}\n\n(Lá você consegue ver se a peça está imprimindo, em acabamento, pintura ou se já foi enviada!). Qualquer dúvida, estou por aqui!`;
+                                                                
+                                                                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                                                                const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+                                                                const waLink = `${baseUrl}?phone=55${cleanPhone}&text=${encodeURIComponent(msg)}`;
+                                                                window.open(waLink, '_blank');
                                                             }}
-                                                            className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white text-[9px] font-black rounded"
-                                                            title="Confirmar pagamento total"
+                                                            title="Enviar Rastreio via WhatsApp"
+                                                            className="w-9 h-9 text-zinc-400 hover:text-green-400 bg-zinc-900/60 hover:bg-green-500/10 border border-zinc-800/80 hover:border-green-500/30 rounded-lg transition-all duration-200 active:scale-90 flex items-center justify-center hover:shadow-[0_0_10px_rgba(34,197,94,0.2)]"
                                                         >
-                                                            Quitar
+                                                            <MessageCircle size={13} />
                                                         </button>
                                                         <button
-                                                            onClick={() => setEditingSaleId(null)}
-                                                            className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-[9px] font-black rounded"
+                                                            onClick={() => handleOpenNfeModal(task)}
+                                                            title="Emitir Nota Fiscal (NF-e)"
+                                                            className="w-9 h-9 text-zinc-400 hover:text-purple-400 bg-zinc-900/60 hover:bg-purple-500/10 border border-zinc-800/80 hover:border-purple-500/30 rounded-lg transition-all duration-200 active:scale-90 flex items-center justify-center hover:shadow-[0_0_10px_rgba(168,85,247,0.2)]"
                                                         >
-                                                            X
+                                                            <Receipt size={13} />
                                                         </button>
                                                     </div>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => {
-                                                            setEditingSaleId(task.id);
-                                                            setInputValorParcial(task.valor_pago_parcial !== undefined && task.valor_pago_parcial !== null ? String(task.valor_pago_parcial) : '');
-                                                        }}
-                                                        title="Editar pagamento/sinal"
-                                                        className={`flex items-center gap-1.5 text-[10px] font-black px-3 py-1 rounded-lg border transition-all active:scale-95 shadow-sm ${
-                                                            task.status_pagamento === 'Pago'
-                                                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-                                                            : task.status_pagamento === 'Parcial'
-                                                            ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20'
-                                                            : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500 hover:bg-yellow-500/20'
-                                                        }`}
-                                                    >
-                                                        <div className={`w-1.5 h-1.5 rounded-full ${
-                                                            task.status_pagamento === 'Pago'
-                                                            ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]'
-                                                            : task.status_pagamento === 'Parcial'
-                                                            ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]'
-                                                            : 'bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.6)]'
-                                                        }`} />
-                                                        {task.status_pagamento === 'Pago'
-                                                            ? 'PAGO'
-                                                            : task.status_pagamento === 'Parcial'
-                                                            ? `SINAL: R$ ${Number(task.valor_pago_parcial).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                                                            : 'PENDENTE'
-                                                        }
-                                                    </button>
-                                                )}
-                                                {task.pintura_freelancer && (
-                                                    <span className="flex items-center gap-1.5 text-[10px] font-black px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-lg text-purple-400 shadow-sm" title="Exige pintura terceirizada">
-                                                        <Paintbrush size={10} /> TERCEIRIZADA
-                                                    </span>
-                                                )}
-                                                {task.observacao && (
-                                                    <div className="w-full text-xs text-blue-400 italic mt-3 px-4 py-3 bg-blue-500/5 border-l-2 border-blue-500/40 rounded-r-xl font-medium shadow-sm">
-                                                        "{task.observacao}"
+                                                </div>
+
+                                                {/* Pronto p/ Entrega CTAs */}
+                                                {col.id === 'Pronto p/ Entrega' && (
+                                                    <div className="relative z-10 flex flex-col gap-1.5 mt-3">
+                                                        <button
+                                                            onClick={() => {
+                                                                const clientWhatsApp = (task.cliente_contato || '').replace(/\D/g, '');
+                                                                if (!clientWhatsApp || clientWhatsApp.length < 10) {
+                                                                    toast.error('Cliente sem WhatsApp cadastrado');
+                                                                    return;
+                                                                }
+                                                                const entregaStr = task.metodo_entrega === 'envio' ? 'postagem' : 'retirada';
+                                                                const emojis = String.fromCodePoint(0x1F423, 0x2728, 0x1F680);
+                                                                const msg = `Olá, ${task.cliente_nome.trim()}!\nSeu ${task.figuras.nome} ficou pronto e já está pronto para ${entregaStr}!\nQualquer dúvida, estou por aqui! ${emojis}`;
+                                                                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                                                                const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+                                                                const waLink = `${baseUrl}?phone=55${clientWhatsApp}&text=${encodeURIComponent(msg)}`;
+                                                                window.open(waLink, '_blank');
+                                                            }}
+                                                            className="w-full bg-emerald-500 hover:bg-emerald-450 text-black text-[9px] font-black py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] active:scale-95 uppercase tracking-widest"
+                                                        >
+                                                            <MessageCircle size={11} /> Notificar Cliente
+                                                        </button>
+
+                                                        <button
+                                                            onClick={() => markAsCompleted(task.id)}
+                                                            className="w-full bg-zinc-900/90 hover:bg-zinc-800 text-zinc-300 text-[9px] font-black py-2 rounded-xl flex items-center justify-center gap-1.5 transition-all border border-zinc-800 active:scale-95 uppercase tracking-widest"
+                                                        >
+                                                            <Truck size={11} /> Finalizar Entrega
+                                                        </button>
                                                     </div>
                                                 )}
-                                            </div>
 
-                                            {col.id === 'Pronto p/ Entrega' && (
-                                                <div className="flex flex-col gap-2 mt-4">
-                                                    <button
-                                                        onClick={() => {
-                                                            const clientWhatsApp = (task.cliente_contato || '').replace(/\D/g, '');
-                                                            if (!clientWhatsApp || clientWhatsApp.length < 10) {
-                                                                toast.error('Cliente sem WhatsApp cadastrado');
-                                                                return;
-                                                            }
-                                                            const entregaStr = task.metodo_entrega === 'envio' ? 'postagem' : 'retirada';
-                                                            const emojis = String.fromCodePoint(0x1F423, 0x2728, 0x1F680);
-                                                            const msg = `Olá, ${task.cliente_nome.trim()}!\nSeu ${task.figuras.nome} ficou pronto e já está pronto para ${entregaStr}!\nQualquer dúvida, estou por aqui! ${emojis}`;
-                                                            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                                                            const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
-                                                            const waLink = `${baseUrl}?phone=55${clientWhatsApp}&text=${encodeURIComponent(msg)}`;
-                                                            window.open(waLink, '_blank');
-                                                        }}
-                                                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-black text-[10px] font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 uppercase tracking-widest"
-                                                    >
-                                                        <MessageCircle size={14} /> NOTIFICAR CLIENTE
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => markAsCompleted(task.id)}
-                                                        className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all border border-zinc-700 active:scale-95 uppercase tracking-widest"
-                                                    >
-                                                        <Truck size={14} /> FINALIZAR ENTREGA
-                                                    </button>
+                                                {/* Barra de utilidades na base do cartão */}
+                                                <div className="relative z-10 border-t border-zinc-900/60 bg-zinc-950/80 backdrop-blur-lg px-3.5 py-2 flex items-center justify-center gap-2.5 -mx-3.5 -mb-3.5 mt-3.5 rounded-b-2xl">
+                                                    <span className="text-[9px] font-black px-1.5 py-0.5 bg-zinc-900 border border-zinc-850 rounded text-zinc-400 shadow-inner">
+                                                        {task.quantidade}x
+                                                    </span>
+                                                    {task.valor_venda_final !== undefined && (
+                                                        <span className="text-[9px] font-black px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-emerald-400">
+                                                            R$ {Number(task.valor_venda_final).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </span>
+                                                    )}
+                                                    
+                                                    {editingSaleId === task.id ? (
+                                                        <div className="flex items-center gap-1 bg-zinc-900 px-1 border border-zinc-800 rounded">
+                                                            <span className="text-[8px] font-black text-zinc-500">R$</span>
+                                                            <input
+                                                                type="text"
+                                                                value={inputValorParcial}
+                                                                onChange={(e) => setInputValorParcial(e.target.value)}
+                                                                className="bg-transparent text-[9px] font-black text-blue-450 outline-none w-10"
+                                                                autoFocus
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') savePartialPayment(task.id, task.valor_venda_final);
+                                                                    if (e.key === 'Escape') setEditingSaleId(null);
+                                                                }}
+                                                            />
+                                                            <button
+                                                                onClick={() => savePartialPayment(task.id, task.valor_venda_final)}
+                                                                className="px-1 bg-emerald-600 text-black text-[8px] font-black rounded"
+                                                            >
+                                                                OK
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingSaleId(task.id);
+                                                                setInputValorParcial(task.valor_pago_parcial !== undefined && task.valor_pago_parcial !== null ? String(task.valor_pago_parcial) : '');
+                                                            }}
+                                                            className={`flex items-center gap-1 text-[8px] font-black px-1.5 py-0.5 rounded border transition-all active:scale-95 ${
+                                                                task.status_pagamento === 'Pago'
+                                                                ? 'bg-emerald-500/15 border-emerald-500/25 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)] hover:bg-emerald-500/25'
+                                                                : task.status_pagamento === 'Parcial'
+                                                                ? 'bg-blue-500/15 border-blue-500/25 text-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.1)] hover:bg-blue-500/25'
+                                                                : 'bg-yellow-500/15 border-yellow-500/25 text-yellow-400 shadow-[0_0_8px_rgba(234,179,8,0.1)] hover:bg-yellow-500/25'
+                                                            }`}
+                                                            title="Editar pagamento/sinal"
+                                                        >
+                                                            <div className={`w-1 h-1 rounded-full ${
+                                                                task.status_pagamento === 'Pago'
+                                                                ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]'
+                                                                : task.status_pagamento === 'Parcial'
+                                                                ? 'bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.5)]'
+                                                                : 'bg-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.5)]'
+                                                            }`} />
+                                                            {task.status_pagamento === 'Pago' ? 'PAGO' : task.status_pagamento === 'Parcial' ? 'PARCIAL' : 'PENDENTE'}
+                                                        </button>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
-                        )
+                        );
                     })}
+                </div>
+            )}
+
+            {/* Modal de Emissão de NF-e */}
+            {isNfeModalOpen && selectedNfeSale && (
+                <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-zinc-950 border border-zinc-800 w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl relative animate-in zoom-in-95 duration-200 text-left">
+                        <button 
+                            onClick={() => setIsNfeModalOpen(false)}
+                            className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors"
+                        >
+                            <X size={24} />
+                        </button>
+
+                        <div className="mb-6">
+                            <div className="w-12 h-12 bg-purple-500/10 border border-purple-500/20 rounded-2xl flex items-center justify-center text-purple-500 mb-4 shadow-inner">
+                                <Receipt size={24} />
+                            </div>
+                            <h2 className="text-2xl font-black tracking-tighter uppercase italic text-white">Dados de <span className="text-purple-500">Faturamento</span></h2>
+                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">Preencha ou revise as informações antes de emitir a NF-e</p>
+                        </div>
+
+                        {isFetchingCustomer ? (
+                            <div className="py-12 flex flex-col items-center justify-center gap-4">
+                                <Loader2 className="animate-spin text-purple-500" size={32} />
+                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Buscando cadastro do cliente...</p>
+                            </div>
+                        ) : (
+                            <form onSubmit={handleSaveAndEmitNfe} className="space-y-5">
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Nome do Cliente</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={nfeCustomerNome}
+                                            onChange={e => setNfeCustomerNome(e.target.value)}
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">CPF ou CNPJ</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={nfeCustomerCpf}
+                                                onChange={handleNfeCpfChange}
+                                                placeholder="Ex: 000.000.000-00"
+                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">CEP</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={nfeCustomerCep}
+                                                onChange={handleNfeCepChange}
+                                                placeholder="Ex: 00000-000"
+                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-4 gap-4">
+                                        <div className="col-span-3">
+                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Logradouro</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={nfeCustomerLogradouro}
+                                                onChange={e => setNfeCustomerLogradouro(e.target.value)}
+                                                placeholder="Ex: Rua das Flores"
+                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Número</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={nfeCustomerNumero}
+                                                onChange={e => setNfeCustomerNumero(e.target.value)}
+                                                placeholder="Ex: 123"
+                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200 text-center"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Bairro</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={nfeCustomerBairro}
+                                            onChange={e => setNfeCustomerBairro(e.target.value)}
+                                            placeholder="Ex: Centro"
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-4 gap-4">
+                                        <div className="col-span-3">
+                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Cidade</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={nfeCustomerCidade}
+                                                onChange={e => setNfeCustomerCidade(e.target.value)}
+                                                placeholder="Ex: São Paulo"
+                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">UF</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={nfeCustomerUf}
+                                                onChange={e => setNfeCustomerUf(e.target.value.toUpperCase())}
+                                                maxLength={2}
+                                                placeholder="SP"
+                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200 text-center"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="pt-2 flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsNfeModalOpen(false)}
+                                        className="flex-1 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 font-black py-3 rounded-xl border border-zinc-800 transition-all active:scale-[0.98] uppercase text-[10px] tracking-widest"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSavingNfe}
+                                        className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 uppercase text-[10px] tracking-widest shadow-lg shadow-purple-500/20"
+                                    >
+                                        {isSavingNfe ? <Loader2 size={16} className="animate-spin" /> : <Receipt size={16} />}
+                                        Salvar e Emitir
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

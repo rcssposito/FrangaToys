@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { sendTelegramAlert } from '@/lib/telegram';
+import { emitirNFe } from '@/lib/nfe';
 
 export async function POST(req: NextRequest) {
     try {
@@ -49,6 +50,13 @@ export async function POST(req: NextRequest) {
                             `🆔 *Checkout:* \`${checkout_id}\`\n\n` +
                             `O status foi atualizado para *Pago* no seu Kanban.`
                         );
+
+                        // 4. Emitir Nota Fiscal Eletrônica (NF-e)
+                        try {
+                            await emitirNFe(checkout_id);
+                        } catch (nfeErr) {
+                            console.error('Erro ao acionar emissão de NF-e:', nfeErr);
+                        }
                     }
                 }
             }

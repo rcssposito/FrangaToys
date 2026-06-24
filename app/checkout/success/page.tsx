@@ -173,12 +173,15 @@ function SuccessContent() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <button 
                         onClick={() => {
-                            const msg = `Olá! Acabei de fazer o pedido #${order.checkout_id} e gostaria de informar o pagamento / tirar dúvidas.`;
+                            const itemsStr = order.items.map((i: any) => `${i.quantidade}x ${i.figuras?.nome || 'Item'}`).join(', ');
+                            const total = order.items.reduce((acc: number, item: any) => acc + (item.valor_venda_final || 0), 0) + (order.valor_frete || 0);
+                            const receiptLink = `${window.location.origin}/api/admin/kanban/os/${order.items[0]?.id}`;
+                            const msg = `Olá! Acabei de fazer o pedido #${order.checkout_id} (${itemsStr}) no total de R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. Gostaria de confirmar o pagamento.\n\n🧾 Meu Recibo: ${receiptLink}`;
                             window.open(`https://wa.me/5511988781670?text=${encodeURIComponent(msg)}`, '_blank');
                         }}
                         className="bg-[#25D366] hover:bg-[#128C7E] text-white p-5 rounded-3xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all shadow-lg active:scale-95"
                     >
-                        <MessageSquare size={18} /> Confirmar via WhatsApp
+                        <MessageSquare size={18} /> Ver Recibo / Confirmar via WhatsApp
                     </button>
                     <Link 
                         href="/"

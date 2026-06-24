@@ -45,6 +45,51 @@ export const CartDrawer = () => {
     const [vendedores, setVendedores] = useState<{ id: number; nome: string; telefone: string }[]>([]);
     const [selectedVendedorId, setSelectedVendedorId] = useState<number | ''>('');
 
+    // Address & Tax states for NF-e and billing
+    const [cpf, setCpf] = useState('');
+    const [logradouro, setLogradouro] = useState('');
+    const [numero, setNumero] = useState('');
+    const [bairro, setBairro] = useState('');
+    const [cidade, setCidade] = useState('');
+    const [uf, setUf] = useState('');
+
+    // Auto-fill address details based on CEP
+    useEffect(() => {
+        const cleanCep = cep.replace(/\D/g, '');
+        if (cleanCep.length === 8) {
+            fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && !data.erro) {
+                        setLogradouro(data.logradouro || '');
+                        setBairro(data.bairro || '');
+                        setCidade(data.localidade || '');
+                        setUf(data.uf || '');
+                    }
+                })
+                .catch(err => console.error('Erro ao buscar CEP:', err));
+        }
+    }, [cep]);
+
+    const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 11) {
+            // CPF Mask
+            value = value
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        } else {
+            // CNPJ Mask
+            value = value.substring(0, 14)
+                .replace(/^(\d{2})(\d)/, '$1.$2')
+                .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+                .replace(/\.(\d{3})(\d)/, '.$1/$2')
+                .replace(/(\d{4})(\d)/, '$1-$2');
+        }
+        setCpf(value);
+    };
+
     // Fetch active salespeople when opening checkout step
     useEffect(() => {
         if (step === 'checkout') {
@@ -296,6 +341,14 @@ export const CartDrawer = () => {
             toast.error('Preencha seu nome e contato!');
             return;
         }
+        if (!cpf) {
+            toast.error('Informe o seu CPF ou CNPJ para faturamento!');
+            return;
+        }
+        if (!cep || !logradouro || !numero || !bairro || !cidade || !uf) {
+            toast.error('Preencha o endereço completo para emissão da nota!');
+            return;
+        }
 
         setIsProcessing(true);
         try {
@@ -317,7 +370,14 @@ export const CartDrawer = () => {
                     metodo_pagamento: metodoPagamento,
                     observacoes,
                     vendedor_id: selectedVendedorId,
-                    cupom_codigo: cupomAplicado?.codigo
+                    cupom_codigo: cupomAplicado?.codigo,
+                    cpf,
+                    cep,
+                    logradouro,
+                    numero,
+                    bairro,
+                    cidade,
+                    uf
                 })
             });
 
@@ -671,6 +731,93 @@ export const CartDrawer = () => {
                                                 />
                                             </div>
 
+                                            {/* CPF/CNPJ */}
+                                            <div className="space-y-2 focus-within:text-blue-500 transition-colors">
+                                                <label className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 ml-1 text-zinc-600">
+                                                    <User size={12} /> CPF ou CNPJ (para NF-e)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={cpf}
+                                                    onChange={handleCpfChange}
+                                                    placeholder="000.000.000-00"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-sm"
+                                                />
+                                            </div>
+
+                                            {/* Endereço de Faturamento */}
+                                            <div className="space-y-3 p-4 bg-zinc-950/60 rounded-3xl border border-zinc-800/40">
+                                                <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1 mb-2">Endereço de Faturamento</h4>
+                                                
+                                                <div className="space-y-2">
+                                                    <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600 ml-1">CEP</label>
+                                                    <input
+                                                        type="text"
+                                                        value={cep}
+                                                        onChange={(e) => setCep(e.target.value.replace(/\D/g, '').substring(0, 8))}
+                                                        placeholder="00000-000"
+                                                        className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-xs"
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600 ml-1">Logradouro (Rua, Av.)</label>
+                                                    <input
+                                                        type="text"
+                                                        value={logradouro}
+                                                        onChange={(e) => setLogradouro(e.target.value)}
+                                                        placeholder="Nome da rua..."
+                                                        className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-xs"
+                                                    />
+                                                </div>
+
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    <div className="col-span-1 space-y-2">
+                                                        <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600 ml-1">Número</label>
+                                                        <input
+                                                            type="text"
+                                                            value={numero}
+                                                            onChange={(e) => setNumero(e.target.value)}
+                                                            placeholder="123"
+                                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-xs"
+                                                        />
+                                                    </div>
+                                                    <div className="col-span-2 space-y-2">
+                                                        <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600 ml-1">Bairro</label>
+                                                        <input
+                                                            type="text"
+                                                            value={bairro}
+                                                            onChange={(e) => setBairro(e.target.value)}
+                                                            placeholder="Bairro..."
+                                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-xs"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    <div className="col-span-2 space-y-2">
+                                                        <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600 ml-1">Cidade</label>
+                                                        <input
+                                                            type="text"
+                                                            value={cidade}
+                                                            onChange={(e) => setCidade(e.target.value)}
+                                                            placeholder="Cidade..."
+                                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-xs"
+                                                        />
+                                                    </div>
+                                                    <div className="col-span-1 space-y-2">
+                                                        <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600 ml-1">UF</label>
+                                                        <input
+                                                            type="text"
+                                                            value={uf}
+                                                            onChange={(e) => setUf(e.target.value.toUpperCase().substring(0, 2))}
+                                                            placeholder="SP"
+                                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-xs text-center"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             <div className="space-y-2 focus-within:text-blue-500 transition-colors">
                                                 <label className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 ml-1 text-zinc-600">
                                                     <User size={12} /> Consultor (Opcional)
@@ -809,7 +956,7 @@ export const CartDrawer = () => {
                                 ) : (
                                     <button
                                         onClick={handleCheckout}
-                                        disabled={!nome || !contato || isProcessing}
+                                        disabled={!nome || !contato || !cpf || !cep || !logradouro || !numero || !bairro || !cidade || !uf || isProcessing}
                                         className="w-full bg-orange-600 hover:bg-orange-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-black uppercase tracking-[0.2em] py-5 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-[0_15px_40px_rgba(234,88,12,0.2)] active:scale-[0.98] text-xs"
                                     >
                                         {isProcessing ? (

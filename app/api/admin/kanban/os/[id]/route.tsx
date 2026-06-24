@@ -66,7 +66,8 @@ export async function GET(
             .eq('email', sale.vendedor)
             .single();
 
-        const vendedorNome = userData?.nome || sale.vendedor?.split('@')[0].toUpperCase() || 'FRANGUINHA';
+        const rawVendedor = userData?.nome || sale.vendedor?.split('@')[0] || 'FRANGUINHA';
+        const vendedorNome = rawVendedor.toLowerCase().includes('rodrigo') ? 'frangatoys' : rawVendedor;
 
         // --- PAYMENT LOGIC ---
         // Fetch all items in the same checkout session for total calculation
@@ -296,8 +297,13 @@ export async function GET(
                                     <span style={{ color: '#fff', fontSize: 12, fontWeight: '900', letterSpacing: '1px' }}>VENDEDOR: @{vendedorNome.toUpperCase()}</span>
                                 </div>
                                 <div style={{ display: 'flex', background: '#000', padding: '12px', justifyContent: 'center', alignItems: 'center' }}>
-                                    <span style={{ color: '#fff', fontSize: 12, fontWeight: '900', letterSpacing: '1px' }}>PINTOR(A): @{sale.pintura_freelancer && typeof sale.pintura_freelancer === 'string' ? sale.pintura_freelancer.split('@')[0].toUpperCase() : vendedorNome.toUpperCase()}</span>
-                                </div>
+                                     <span style={{ color: '#fff', fontSize: 12, fontWeight: '900', letterSpacing: '1px' }}>PINTOR(A): @{(() => {
+                                         let rawPainter = (sale.pintura_freelancer && typeof sale.pintura_freelancer === 'string' ? sale.pintura_freelancer : vendedorNome) || '';
+                                         let cleanPainter = rawPainter.split('@')[0];
+                                         if (cleanPainter.toLowerCase().includes('rodrigo')) return 'FRANGATOYS';
+                                         return cleanPainter.toUpperCase();
+                                     })()}</span>
+                                 </div>
                             </div>
 
                             {/* Lower Box: Payment & Stamp */}

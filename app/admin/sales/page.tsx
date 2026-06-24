@@ -359,7 +359,10 @@ function SalesContent() {
                                                     <span className="text-zinc-600 font-bold mr-1">Cli:</span> {sale.cliente_nome}
                                                 </div>
                                                 <div className="text-xs text-zinc-400 font-medium flex justify-between">
-                                                    <span><span className="text-zinc-600 font-bold mr-1">Ven:</span> {sale.vendedor ? (sale.vendedor_nome || sale.vendedor.split('@')[0]) : 'Loja'}</span>
+                                                    <span><span className="text-zinc-600 font-bold mr-1">Ven:</span> {(() => {
+                                                        const raw = sale.vendedor ? (sale.vendedor_nome || sale.vendedor.split('@')[0]) : 'Loja';
+                                                        return raw.toLowerCase().includes('rodrigo') ? '@frangatoys' : raw;
+                                                    })()}</span>
                                                     <span className="font-mono text-[10px] bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded text-zinc-500">{new Date(sale.data_venda).toLocaleDateString('pt-BR')}</span>
                                                 </div>
                                             </div>

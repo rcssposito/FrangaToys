@@ -79,6 +79,53 @@ export default function NewSalePage() {
     const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
     const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
 
+    // Address & Tax states for NF-e billing in manual sales
+    const [cpf, setCpf] = useState('');
+    const [cep, setCep] = useState('');
+    const [logradouro, setLogradouro] = useState('');
+    const [numero, setNumero] = useState('');
+    const [bairro, setBairro] = useState('');
+    const [cidade, setCidade] = useState('');
+    const [uf, setUf] = useState('');
+    const [showBilling, setShowBilling] = useState(false);
+
+    // Auto-fill address details based on billing CEP
+    useEffect(() => {
+        const cleanCep = cep.replace(/\D/g, '');
+        if (cleanCep.length === 8) {
+            fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && !data.erro) {
+                        setLogradouro(data.logradouro || '');
+                        setBairro(data.bairro || '');
+                        setCidade(data.localidade || '');
+                        setUf(data.uf || '');
+                    }
+                })
+                .catch(err => console.error('Erro ao buscar CEP:', err));
+        }
+    }, [cep]);
+
+    const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 11) {
+            // CPF Mask
+            value = value
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        } else {
+            // CNPJ Mask
+            value = value.substring(0, 14)
+                .replace(/^(\d{2})(\d)/, '$1.$2')
+                .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+                .replace(/\.(\d{3})(\d)/, '.$1/$2')
+                .replace(/(\d{4})(\d)/, '$1-$2');
+        }
+        setCpf(value);
+    };
+
     // PIX Payload Generator for Client-Side Copy
     const generatePixPayload = (key: string, name: string, amount: number) => {
         name = name.substring(0, 25).normalize('NFD').replace(/[\u0300-\u036f]/g, "").toUpperCase();
@@ -293,7 +340,8 @@ export default function NewSalePage() {
     }, 0) : 0;
     const OWNER_EMAIL = 'rcssposito@gmail.com';
     const emailComissao = vendedorSelecionado || user?.email;
-    const nomeVendedorComissao = vendedores.find(v => v.email === emailComissao)?.nome || emailComissao;
+    const rawVendedor = vendedores.find(v => v.email === emailComissao)?.nome || emailComissao || '';
+    const nomeVendedorComissao = rawVendedor.toLowerCase().includes('rodrigo') ? '@frangatoys' : rawVendedor;
     const totalComissao = (emailComissao && emailComissao.toLowerCase() !== OWNER_EMAIL.toLowerCase()) ? Math.round(totalVendaBase * 0.15) : 0;
     const lucroEstimado = totalVendaBase - totalCustoProducao - totalFreelancer - totalComissao;
 
@@ -413,9 +461,17 @@ export default function NewSalePage() {
                 try {
                     const customerRes = await fetch('/api/admin/customers', {
                         method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             nome: cliente,
-                            telefone: clienteContato
+                            telefone: clienteContato,
+                            cpf: cpf || null,
+                            cep: cep || null,
+                            logradouro: logradouro || null,
+                            numero: numero || null,
+                            bairro: bairro || null,
+                            cidade: cidade || null,
+                            uf: uf || null
                         })
                     });
                     const customerData = await customerRes.json();
@@ -491,7 +547,14 @@ export default function NewSalePage() {
                     checkout_id: checkoutId,
                     cliente_id: finalClienteId,
                     metodo_entrega: metodoEntrega,
-                    cupom_codigo: cupomAplicado?.codigo
+                    cupom_codigo: cupomAplicado?.codigo,
+                    cpf: cpf || null,
+                    cep: cep || null,
+                    logradouro: logradouro || null,
+                    numero: numero || null,
+                    bairro: bairro || null,
+                    cidade: cidade || null,
+                    uf: uf || null
                 }),
             });
 
@@ -1013,8 +1076,18 @@ export default function NewSalePage() {
                                                             type="button"
                                                             onClick={() => {
                                                                 setCliente(c.nome);
-                                                                setClienteContato(c.telefone);
+                                                                setClienteContato(c.telefone || '');
                                                                 setClienteId(c.id);
+                                                                setCpf(c.cpf || '');
+                                                                setCep(c.cep || '');
+                                                                setLogradouro(c.logradouro || '');
+                                                                setNumero(c.numero || '');
+                                                                setBairro(c.bairro || '');
+                                                                setCidade(c.cidade || '');
+                                                                setUf(c.uf || '');
+                                                                if (c.cpf || c.cep) {
+                                                                    setShowBilling(true);
+                                                                }
                                                                 setCustomerSuggestions([]);
                                                                 toast.success(`Perfil de ${c.nome.split(' ')[0]} vinculado!`, {
                                                                     icon: <UserCheck size={16} className="text-emerald-500" />
@@ -1074,6 +1147,102 @@ export default function NewSalePage() {
                                         </select>
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Dados de Faturamento / NF-e Collapsible */}
+                            <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-4 mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowBilling(!showBilling)}
+                                    className="w-full flex items-center justify-between text-xs font-black uppercase tracking-wider text-zinc-400 hover:text-white transition-colors"
+                                >
+                                    <span>🧾 Dados de Faturamento / NF-e {showBilling ? '▲' : '▼'}</span>
+                                    {cpf && <span className="text-[10px] text-emerald-500 font-bold font-mono">CPF Preenchido</span>}
+                                </button>
+                                
+                                {showBilling && (
+                                    <div className="mt-4 space-y-4 border-t border-zinc-900 pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 pl-1">CPF ou CNPJ</label>
+                                                <input
+                                                    type="text"
+                                                    value={cpf}
+                                                    onChange={handleCpfChange}
+                                                    placeholder="000.000.000-00"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 outline-none focus:border-cyan-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 pl-1">CEP</label>
+                                                <input
+                                                    type="text"
+                                                    value={cep}
+                                                    onChange={(e) => setCep(e.target.value.replace(/\D/g, '').substring(0, 8))}
+                                                    placeholder="00000-000"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 outline-none focus:border-cyan-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 pl-1">Logradouro (Rua, Avenida)</label>
+                                            <input
+                                                type="text"
+                                                value={logradouro}
+                                                onChange={(e) => setLogradouro(e.target.value)}
+                                                placeholder="Rua..."
+                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 outline-none focus:border-cyan-500 text-sm transition-all"
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div className="col-span-1">
+                                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 pl-1">Número</label>
+                                                <input
+                                                    type="text"
+                                                    value={numero}
+                                                    onChange={(e) => setNumero(e.target.value)}
+                                                    placeholder="123"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 outline-none focus:border-cyan-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 pl-1">Bairro</label>
+                                                <input
+                                                    type="text"
+                                                    value={bairro}
+                                                    onChange={(e) => setBairro(e.target.value)}
+                                                    placeholder="Bairro..."
+                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 outline-none focus:border-cyan-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div className="col-span-2">
+                                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 pl-1">Cidade</label>
+                                                <input
+                                                    type="text"
+                                                    value={cidade}
+                                                    onChange={(e) => setCidade(e.target.value)}
+                                                    placeholder="Cidade..."
+                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 outline-none focus:border-cyan-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                            <div className="col-span-1">
+                                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 pl-1 text-center">UF</label>
+                                                <input
+                                                    type="text"
+                                                    value={uf}
+                                                    onChange={(e) => setUf(e.target.value.toUpperCase().substring(0, 2))}
+                                                    placeholder="SP"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 outline-none focus:border-cyan-500 text-sm text-center transition-all"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex flex-col gap-1 bg-zinc-950 border border-zinc-800 p-3 rounded-lg">
