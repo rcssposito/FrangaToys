@@ -162,6 +162,53 @@ function PixPaymentWidget({ order }: { order: any }) {
     );
 }
 
+function NfeWidget({ order }: { order: any }) {
+    const [copied, setCopied] = useState(false);
+
+    const copyNfe = () => {
+        if (!order.chave_nfe) return;
+        navigator.clipboard.writeText(order.chave_nfe);
+        setCopied(true);
+        toast.success('Chave da NF-e copiada!');
+        setTimeout(() => setCopied(false), 3000);
+    };
+
+    return (
+        <div className="mt-4 p-4 rounded-2xl bg-zinc-950/60 border border-zinc-800/80 hover:border-orange-500/30 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-orange-500/10 transition-all" />
+            <div className="space-y-1 z-10 w-full sm:w-auto min-w-0">
+                <div className="text-[10px] uppercase font-black text-zinc-400 tracking-widest flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                    Nota Fiscal Eletrônica (NF-e)
+                </div>
+                <div className="flex items-center gap-2 w-full min-w-0">
+                    <div className="text-xs font-mono text-zinc-500 select-all group-hover:text-zinc-300 transition-colors overflow-hidden text-ellipsis whitespace-nowrap">
+                        {order.chave_nfe}
+                    </div>
+                    <button 
+                        onClick={copyNfe}
+                        className="p-1.5 text-zinc-500 hover:text-orange-500 rounded-lg hover:bg-zinc-850/50 transition-all shrink-0 active:scale-90 flex items-center justify-center"
+                        title="Copiar chave de acesso"
+                    >
+                        {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                    </button>
+                </div>
+            </div>
+            {order.link_danfe && (
+                <a 
+                    href={order.link_danfe}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-orange-500/10 hover:bg-orange-500 border border-orange-500/20 hover:border-orange-500 text-orange-500 hover:text-black text-[10px] font-black uppercase tracking-widest px-4 py-2.5 rounded-xl transition-all shadow-lg active:scale-95 z-10 shrink-0"
+                >
+                    <ExternalLink size={12} strokeWidth={2.5} />
+                    Visualizar DANFE (PDF)
+                </a>
+            )}
+        </div>
+    );
+}
+
 export default function CustomerDashboard() {
     const params = useParams();
     const router = useRouter();
@@ -288,6 +335,11 @@ export default function CustomerDashboard() {
                                     <div className="pt-4 border-t border-zinc-800/50">
                                         <OrderTracker status={order.status} />
                                     </div>
+
+                                    {/* Seção de Nota Fiscal (NF-e) se disponível */}
+                                    {order.chave_nfe && (
+                                        <NfeWidget order={order} />
+                                    )}
 
                                     {/* Seção de Pagamento PIX */}
                                     {((order.status_pagamento === 'Pendente' ||

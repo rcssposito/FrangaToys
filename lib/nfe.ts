@@ -10,22 +10,25 @@ interface FocusNFePayload {
   destino_operacao: number; // 1 = Interna, 2 = Interestadual
   consumidor_final: number; // 1 = Sim
   finalidade_emissao: number; // 1 = Normal
-  dados_destinatario: {
-    nome: string;
-    cpf?: string;
-    cnpj?: string;
-    telefone?: string;
-    logradouro?: string;
-    numero?: string;
-    bairro?: string;
-    municipio?: string;
-    uf?: string;
-    cep?: string;
-  };
+  data_emissao?: string;
+  
+  nome_destinatario: string;
+  cpf_destinatario?: string;
+  cnpj_destinatario?: string;
+  inscricao_estadual_destinatario?: string;
+  telefone_destinatario?: string;
+  logradouro_destinatario?: string;
+  numero_destinatario?: string;
+  bairro_destinatario?: string;
+  municipio_destinatario?: string;
+  uf_destinatario?: string;
+  cep_destinatario?: string;
+  
   itens: Array<{
     numero_item: string;
     codigo_produto: string;
     descricao: string;
+    codigo_ncm: string;
     cfop: string; // 5102 = Interno, 6102 = Interestadual
     unidade_comercial: string;
     quantidade_comercial: string;
@@ -36,10 +39,28 @@ interface FocusNFePayload {
     valor_unitario_tributavel: string;
     icms_situacao_tributaria: string; // 102 = Simples Nacional sem crédito
     icms_origem: string; // 0 = Nacional
+    pis_situacao_tributaria?: string;
+    cofins_situacao_tributaria?: string;
   }>;
   valor_frete: string;
   valor_total: string;
   modalidade_frete: number; // 0 = Emitente, 1 = Destinatário, 9 = Sem Frete
+}
+
+function getFormattedDate(): string {
+  const date = new Date();
+  const tzOffset = -date.getTimezoneOffset();
+  const diff = tzOffset >= 0 ? '+' : '-';
+  const pad = (num: number) => String(num).padStart(2, '0');
+  
+  return date.getFullYear() +
+    '-' + pad(date.getMonth() + 1) +
+    '-' + pad(date.getDate()) +
+    'T' + pad(date.getHours()) +
+    ':' + pad(date.getMinutes()) +
+    ':' + pad(date.getSeconds()) +
+    diff + pad(Math.floor(Math.abs(tzOffset) / 60)) +
+    ':' + pad(Math.abs(tzOffset) % 60);
 }
 
 export async function emitirNFe(checkoutId: string): Promise<{ success: boolean; message: string; chave?: string }> {
@@ -97,7 +118,7 @@ export async function emitirNFe(checkoutId: string): Promise<{ success: boolean;
 
     // 3. Montar os itens da NF-e
     const ufDestinatario = realClient?.uf || 'SP';
-    const cfop = ufDestinatario === 'SP' ? '5102' : '6102'; // CFOP padrão de venda de mercadoria adquirida de terceiros
+    const cfop = ufDestinatario === 'SP' ? '5101' : '6101'; // CFOP de venda de produção do estabelecimento (fabricação própria)
 
     const itensNFe = sales.map((sale: any, idx: number) => {
       const fig = sale.figuras;
@@ -106,6 +127,7 @@ export async function emitirNFe(checkoutId: string): Promise<{ success: boolean;
         numero_item: String(idx + 1),
         codigo_produto: fig?.codigo || `FIG-${sale.figura_id}`,
         descricao: fig?.nome || 'Figura Personalizada',
+        codigo_ncm: '95030099', // Brinquedos de plástico / Colecionáveis
         cfop: cfop,
         unidade_comercial: 'UN',
         quantidade_comercial: Number(sale.quantidade || 1).toFixed(2),
@@ -115,22 +137,15 @@ export async function emitirNFe(checkoutId: string): Promise<{ success: boolean;
         quantidade_tributavel: Number(sale.quantidade || 1).toFixed(2),
         valor_unitario_tributavel: Number(unitPrice).toFixed(2),
         icms_situacao_tributaria: '102', // Simples Nacional (Sem crédito)
-        icms_origem: '0'
+        icms_origem: '0',
+        pis_situacao_tributaria: '49',
+        cofins_situacao_tributaria: '49'
       };
     });
 
     // 4. Montar destinatário com os dados cadastrais reais
-    const destinatario = {
-      nome: sales[0].cliente_nome || realClient?.nome || 'Cliente Franga Toys',
-      cpf: realClient?.cpf ? realClient.cpf.replace(/\D/g, '') : '99999999999',
-      telefone: sales[0].cliente_contato ? sales[0].cliente_contato.replace(/\D/g, '') : (realClient?.telefone ? realClient.telefone.replace(/\D/g, '') : undefined),
-      logradouro: realClient?.logradouro || 'Av. Paulista',
-      numero: realClient?.numero || '1000',
-      bairro: realClient?.bairro || 'Bela Vista',
-      municipio: realClient?.cidade || 'São Paulo',
-      uf: realClient?.uf || 'SP',
-      cep: realClient?.cep ? realClient.cep.replace(/\D/g, '') : '01310100'
-    };
+    const cleanCpfCnpj = (realClient?.cpf || '99999999999').replace(/\D/g, '');
+    const isCnpj = cleanCpfCnpj.length === 14;
 
     const payload: FocusNFePayload = {
       cnpj_emitente: cnpjEmitente,
@@ -141,7 +156,18 @@ export async function emitirNFe(checkoutId: string): Promise<{ success: boolean;
       destino_operacao: ufDestinatario === 'SP' ? 1 : 2,
       consumidor_final: 1,
       finalidade_emissao: 1,
-      dados_destinatario: destinatario,
+      data_emissao: getFormattedDate(),
+      
+      nome_destinatario: realClient?.nome || sales[0].cliente_nome || 'Cliente Franga Toys',
+      [isCnpj ? 'cnpj_destinatario' : 'cpf_destinatario']: cleanCpfCnpj,
+      telefone_destinatario: sales[0].cliente_contato ? sales[0].cliente_contato.replace(/\D/g, '') : (realClient?.telefone ? realClient.telefone.replace(/\D/g, '') : undefined),
+      logradouro_destinatario: realClient?.logradouro || 'Av. Paulista',
+      numero_destinatario: realClient?.numero || '1000',
+      bairro_destinatario: realClient?.bairro || 'Bela Vista',
+      municipio_destinatario: realClient?.cidade || 'São Paulo',
+      uf_destinatario: ufDestinatario,
+      cep_destinatario: realClient?.cep ? realClient.cep.replace(/\D/g, '') : '01310100',
+
       itens: itensNFe,
       valor_frete: Number(totalFrete).toFixed(2),
       valor_total: Number(totalGeral).toFixed(2),
@@ -168,20 +194,19 @@ export async function emitirNFe(checkoutId: string): Promise<{ success: boolean;
       // Generate a mock SEFAZ access key (44 digits)
       const randomDigits = Array.from({ length: 44 }, () => Math.floor(Math.random() * 10)).join('');
       
-      // Update observacao of the first item of the sale
+      // Update chave_nfe of the first item of the sale
       const firstSale = sales[0];
-      const newObs = `${firstSale.observacao || ''}\n[NF-e: Emitida (Simulada) | Chave: ${randomDigits}]`.trim();
       
       await supabase
         .from('vendas')
-        .update({ observacao: newObs })
+        .update({ chave_nfe: randomDigits })
         .eq('id', firstSale.id);
 
       // Notify Telegram
       await sendTelegramAlert(
         `🧾 *[SIMULAÇÃO NF-e]*\n\n` +
         `✅ *Nota Fiscal Simulada com Sucesso!*\n` +
-        `👤 *Cliente:* ${destinatario.nome}\n` +
+        `👤 *Cliente:* ${payload.nome_destinatario}\n` +
         `💰 *Valor:* R$ ${totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
         `🔑 *Chave de Acesso:* \`${randomDigits}\`\n\n` +
         `*Nota:* Esta nota foi gerada em modo simulação (sem certificado digital).`
@@ -205,17 +230,16 @@ export async function emitirNFe(checkoutId: string): Promise<{ success: boolean;
       if (response.ok && resData.status === 'autorizado') {
         const key = resData.chave_nfe;
         const firstSale = sales[0];
-        const newObs = `${firstSale.observacao || ''}\n[NF-e: Autorizada | Chave: ${key}]`.trim();
         
         await supabase
           .from('vendas')
-          .update({ observacao: newObs })
+          .update({ chave_nfe: key })
           .eq('id', firstSale.id);
 
         await sendTelegramAlert(
           `🧾 *[NF-e EMITIDA]*\n\n` +
           `✅ *Nota Fiscal Autorizada pela SEFAZ!*\n` +
-          `👤 *Cliente:* ${destinatario.nome}\n` +
+          `👤 *Cliente:* ${payload.nome_destinatario}\n` +
           `💰 *Valor:* R$ ${totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
           `🔑 *Chave de Acesso:* \`${key}\``
         );
@@ -225,18 +249,13 @@ export async function emitirNFe(checkoutId: string): Promise<{ success: boolean;
         const errorMsg = resData.mensagem || resData.errors?.[0]?.mensagem || 'Erro desconhecido da SEFAZ';
         console.error('FocusNFe Error:', resData);
 
+        // We do not pollute the observacao column with emission failures
         const firstSale = sales[0];
-        const newObs = `${firstSale.observacao || ''}\n[NF-e: Falha na emissão (${errorMsg})]`.trim();
-        
-        await supabase
-          .from('vendas')
-          .update({ observacao: newObs })
-          .eq('id', firstSale.id);
 
         await sendTelegramAlert(
           `⚠️ *[FALHA NF-e]*\n\n` +
           `❌ *Erro ao emitir nota para o checkout ${checkoutId}!*\n` +
-          `👤 *Cliente:* ${destinatario.nome}\n` +
+          `👤 *Cliente:* ${payload.nome_destinatario}\n` +
           `Detalhe do erro: _${errorMsg}_`
         );
 

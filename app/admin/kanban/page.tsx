@@ -610,7 +610,7 @@ export default function KanbanPage() {
                                                 {/* Content & Action vertical stack layout */}
                                                 <div className="relative z-10 mt-3 flex-1 flex gap-3 items-stretch">
                                                     {/* Left side: Product & Client info and optional Observation */}
-                                                    <div className="flex-1 flex flex-col justify-between min-w-0">
+                                                    <div className="flex-1 flex flex-col justify-end min-w-0 gap-2">
                                                         {/* Product & Client info on glass panel */}
                                                         <div className="bg-zinc-950/70 backdrop-blur-md border border-zinc-900/60 rounded-xl p-3 shadow-md group-hover:bg-zinc-950/85 group-hover:border-zinc-800/85 transition-all duration-300">
                                                             <h4 className={`text-[13px] font-black text-white leading-snug tracking-tight mb-2 transition-colors ${accent.titleHover}`}>
@@ -631,7 +631,7 @@ export default function KanbanPage() {
 
                                                         {/* Observation block at the bottom */}
                                                         {task.observacao && (
-                                                            <div className="w-full text-[9.5px] text-blue-300/90 italic mt-3 px-2.5 py-1.5 bg-blue-950/40 backdrop-blur-md border border-blue-500/20 border-l-2 border-blue-500 rounded-lg font-medium shadow-inner break-all">
+                                                            <div className="w-full text-[9.5px] text-blue-300/90 italic px-2.5 py-1.5 bg-blue-950/40 backdrop-blur-md border border-blue-500/20 border-l-2 border-blue-500 rounded-lg font-medium shadow-inner break-all">
                                                                 "{task.observacao}"
                                                             </div>
                                                         )}
