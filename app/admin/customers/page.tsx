@@ -438,7 +438,14 @@ export default function CustomersPage() {
                                                     {customer.nome[0].toUpperCase()}
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-zinc-100 group-hover:text-white transition-colors">{customer.nome}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-zinc-100 group-hover:text-white transition-colors">{customer.nome}</span>
+                                                        {customer.cpf && customer.cep && (
+                                                            <span className="text-[7.5px] font-black uppercase tracking-widest bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1.5 py-0.5 rounded shadow-sm" title="Dados cadastrais para NF-e completos">
+                                                                NF-e OK
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <a 
                                                         href="#"
                                                         onClick={(e) => {
