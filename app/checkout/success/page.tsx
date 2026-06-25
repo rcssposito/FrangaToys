@@ -39,7 +39,7 @@ function SuccessContent() {
                 // Generate PIX payload if it was a PIX order
                 if (data.metodo_pagamento === 'pix' || !data.link_pagamento) {
                     const total = data.items.reduce((acc: number, item: any) => acc + (item.valor_venda_final || 0), 0) + (data.valor_frete || 0);
-                    const payload = generatePixPayload("contato@frangatoys.com.br", "Rodrigo Casagrande Sposito", total);
+                    const payload = generatePixPayload("contato@frangatoys.com.br", "Bianca Machado Mastrocollo", total);
                     setPixPayload(payload);
                 }
             } catch (err: any) {

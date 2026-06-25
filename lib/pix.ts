@@ -13,10 +13,12 @@ export function generatePixPayload(key: string, name: string, amount: number) {
     const city = "SAO PAULO";
     const amountStr = amount.toFixed(2);
     
+    const merchantAccountInfo = "0014br.gov.bcb.pix" + `01${key.length.toString().padStart(2, '0')}${key}`;
+    
     // Static PIX payload structure
     let payload = 
-        "00020126330014br.gov.bcb.pix" + 
-        `01${key.length.toString().padStart(2, '0')}${key}` + 
+        "000201" + 
+        `26${merchantAccountInfo.length.toString().padStart(2, '0')}${merchantAccountInfo}` + 
         "520400005303986" + 
         `54${amountStr.length.toString().padStart(2, '0')}${amountStr}` + 
         "5802BR" + 
