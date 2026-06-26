@@ -255,8 +255,15 @@ export async function POST(req: Request) {
         
         // --- TELEGRAM ALERT ---
         try {
-            const itemsList = carrinho.map((item: any) => `• ${item.quantidade}x ${item.nome} (R$ ${item.valor_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`).join('\n');
-            const totalVenda = carrinho.reduce((sum: number, item: any) => sum + (item.valor_final * item.quantidade), 0) + (Number(valor_frete) || 0);
+            const itemsList = carrinho.map((item: any) => {
+                const totalVal = item.valor_final;
+                const unitVal = totalVal / item.quantidade;
+                const valFormatted = item.quantidade > 1 
+                    ? `R$ ${unitVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} cada - Total: R$ ${totalVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                    : `R$ ${totalVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+                return `• ${item.quantidade}x ${item.nome} (${valFormatted})`;
+            }).join('\n');
+            const totalVenda = carrinho.reduce((sum: number, item: any) => sum + item.valor_final, 0) + (Number(valor_frete) || 0);
             
             const telegramMsg = `🛠 *VENDA MANUAL REGISTRADA!*\n` +
                 `_(Registrada via Admin)_\n\n` +

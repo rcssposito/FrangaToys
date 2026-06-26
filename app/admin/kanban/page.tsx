@@ -347,9 +347,10 @@ export default function KanbanPage() {
                 
                 if (clientWhatsApp && clientWhatsApp.length >= 10) {
                     let msg = '';
-                    if (toStatus === 'Fila de Impressão') msg = `Olá, ${task.cliente_nome.trim()}! Seu ${task.figuras.nome} acabou de entrar na nossa fila de impressão! 🚀`;
-                    else if (toStatus === 'Imprimindo') msg = `Olá, ${task.cliente_nome.trim()}! Nossas máquinas já começaram a imprimir o seu ${task.figuras.nome}! 🏭`;
-                    else if (toStatus === 'Lavagem e Cura') msg = `A impressão concluiu, ${task.cliente_nome.trim()}! Seu ${task.figuras.nome} agora está no pós processamento. 💧`;
+                    const primeiroNome = task.cliente_nome ? task.cliente_nome.trim().split(' ')[0] : 'Cliente';
+                    if (toStatus === 'Fila de Impressão') msg = `Olá, ${primeiroNome}! Seu ${task.figuras.nome} acabou de entrar na nossa fila de impressão! 🚀`;
+                    else if (toStatus === 'Imprimindo') msg = `Olá, ${primeiroNome}! Nossas máquinas já começaram a imprimir o seu ${task.figuras.nome}! 🏭`;
+                    else if (toStatus === 'Lavagem e Cura') msg = `A impressão concluiu, ${primeiroNome}! Seu ${task.figuras.nome} agora está no pós processamento. 💧`;
                     else if (toStatus === 'Pintura Secagem') msg = `Saindo do forno! Seu ${task.figuras.nome} agora está na fase de pintura e acabamento. 🎨`;
                     
                     if (msg) {
@@ -682,7 +683,8 @@ export default function KanbanPage() {
                                                                 }
                                                                 const urlBase = window.location.origin;
                                                                 const link = `${urlBase}/rastreio/${trackingIdentifier}`;
-                                                                const msg = `Olá, ${task.cliente_nome.trim()}!\n\nAcompanhe a produção do seu pedido em tempo real diretamente pelo nosso site:\n👉 ${link}\n\n(Lá você consegue ver se a peça está imprimindo, em acabamento, pintura ou se já foi enviada!). Qualquer dúvida, estou por aqui!`;
+                                                                const primeiroNome = task.cliente_nome ? task.cliente_nome.trim().split(' ')[0] : 'Cliente';
+                                                                const msg = `Olá, ${primeiroNome}!\n\nAcompanhe a produção do seu pedido em tempo real diretamente pelo nosso site:\n👉 ${link}\n\n(Lá você consegue ver se a peça está imprimindo, em acabamento, pintura ou se já foi enviada!). Qualquer dúvida, estou por aqui!`;
                                                                 
                                                                 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                                                                 const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
@@ -716,7 +718,8 @@ export default function KanbanPage() {
                                                                 }
                                                                 const entregaStr = task.metodo_entrega === 'envio' ? 'postagem' : 'retirada';
                                                                 const emojis = String.fromCodePoint(0x1F423, 0x2728, 0x1F680);
-                                                                const msg = `Olá, ${task.cliente_nome.trim()}!\nSeu ${task.figuras.nome} ficou pronto e já está pronto para ${entregaStr}!\nQualquer dúvida, estou por aqui! ${emojis}`;
+                                                                const primeiroNome = task.cliente_nome ? task.cliente_nome.trim().split(' ')[0] : 'Cliente';
+                                                                const msg = `Olá, ${primeiroNome}!\nSeu ${task.figuras.nome} ficou pronto e já está pronto para ${entregaStr}!\nQualquer dúvida, estou por aqui! ${emojis}`;
                                                                 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                                                                 const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
                                                                 const waLink = `${baseUrl}?phone=55${clientWhatsApp}&text=${encodeURIComponent(msg)}`;

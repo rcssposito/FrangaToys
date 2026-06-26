@@ -39,7 +39,8 @@ export async function enviarReciboAutomatico(checkoutId: string): Promise<{ succ
       return `• ${s.quantidade}x ${fig?.nome || 'Figura'}`;
     }).join('\n');
     
-    const textoMensagem = `Olá, ${firstItem.cliente_nome}! Seu pedido na Franga Toys foi recebido com sucesso. 🎉\n\n` +
+    const clientePrimeiroNome = firstItem.cliente_nome ? firstItem.cliente_nome.trim().split(' ')[0] : 'Cliente';
+    const textoMensagem = `Olá, ${clientePrimeiroNome}! Seu pedido na Franga Toys foi recebido com sucesso. 🎉\n\n` +
       `📦 *Resumo do Pedido #${checkoutId}:*\n${itemSummary}\n\n` +
       `💰 *Total:* R$ ${totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n` +
       `🧾 *Acesse seu Recibo Oficial aqui:* ${linkRecibo}\n\n` +
