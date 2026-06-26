@@ -180,6 +180,7 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
                     else if (cat === 'Marvel') IconComponent = Shield;
                     else if (cat === 'DC') IconComponent = Zap;
                     else if (cat === 'Random') IconComponent = Shuffle;
+                    else if (cat === 'Outros') IconComponent = Boxes;
 
                     return (
                         <button

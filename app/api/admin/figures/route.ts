@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
         const limit = parseInt(searchParams.get('limit') || '50');
 
         // Dynamically select join type based on filtering
-        const shouldFilterCategory = categoria_id && categoria_id !== '0';
+        const shouldFilterCategory = categoria_id !== null && categoria_id !== undefined && categoria_id !== '';
         const seriesJoin = shouldFilterCategory ? 'series:series!inner' : 'series:series';
         // Note: We need 'categorias' inside series to display category name even if not filtering
         // But if filtering, we want !inner to ensure match.

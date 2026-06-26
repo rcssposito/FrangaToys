@@ -19,7 +19,7 @@ import ThemeToggle from '@/components/common/ThemeToggle';
 
 type FilterState = z.infer<typeof FiltersSchema>;
 
-const CATEGORIES = ['Anime', 'Games', 'Marvel', 'DC', 'Random'];
+const CATEGORIES = ['Anime', 'Games', 'Marvel', 'DC', 'Random', 'Outros'];
 
 function HomeContent() {
   const searchParams = useSearchParams();

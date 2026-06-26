@@ -361,7 +361,7 @@ function DataGridContent() {
             const params = new URLSearchParams();
             if (catId === 'sem_preco') {
                 params.append('sem_preco', 'true');
-            } else if (catId) {
+            } else if (catId !== null && catId !== undefined && catId !== '') {
                 params.append('categoria_id', catId.toString());
             }
 
@@ -554,6 +554,7 @@ function DataGridContent() {
         { id: 3, label: 'Marvel' },
         { id: 4, label: 'DC' },
         { id: 5, label: 'Random' },
+        { id: 0, label: 'Outros' },
     ];
 
     // Check for duplicate keys in figures (Accessing state)
@@ -619,7 +620,7 @@ function DataGridContent() {
                         )}
                         <button
                             onClick={() => setSelectedCategoryId(null)}
-                            className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${!selectedCategoryId ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] hover:bg-[var(--input-bg)] hover:text-[var(--foreground)]'}`}
+                            className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${selectedCategoryId === null ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] hover:bg-[var(--input-bg)] hover:text-[var(--foreground)]'}`}
                         >
                             Todas
                         </button>
