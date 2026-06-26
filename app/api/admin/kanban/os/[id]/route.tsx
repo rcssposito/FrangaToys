@@ -2,6 +2,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { generatePixPayload } from '@/lib/pix';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -88,24 +89,9 @@ export async function GET(
         const totalFreight = (alliedSales || []).reduce((acc, s) => acc + (Number(s.valor_frete) || 0), 0);
         const valorTotalReal = totalItemsPrice + totalFreight;
 
-        // Generate Pix Payload
-        function generatePixPayload(key: string, name: string, amount: number) {
-            name = name.substring(0, 25).normalize('NFD').replace(/[\u0300-\u036f]/g, "").toUpperCase();
-            const city = "SAO PAULO";
-            const amountStr = amount.toFixed(2);
-            let payload = "00020126330014br.gov.bcb.pix" + `01${key.length.toString().padStart(2, '0')}${key}` + "520400005303986" + `54${amountStr.length.toString().padStart(2, '0')}${amountStr}` + "5802BR" + `59${name.length.toString().padStart(2, '0')}${name}` + `60${city.length.toString().padStart(2, '0')}${city}` + "62070503***6304";
-            let crc = 0xFFFF;
-            for (let i = 0; i < payload.length; i++) {
-                crc ^= payload.charCodeAt(i) << 8;
-                for (let j = 0; j < 8; j++) {
-                    if ((crc & 0x8000) !== 0) crc = (crc << 1) ^ 0x1021;
-                    else crc = crc << 1;
-                }
-            }
-            return payload + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
-        }
 
-        const pixPayload = generatePixPayload("contato@frangatoys.com.br", "Rodrigo Casagrande Sposito", valorTotalReal);
+
+        const pixPayload = generatePixPayload("contato@frangatoys.com.br", "Bianca Machado Mastrocollo", valorTotalReal);
         const originUrl = sale.link_pagamento ? sale.link_pagamento : pixPayload;
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(originUrl)}`;
         const formatMoney = (val: number) => val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

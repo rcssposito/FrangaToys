@@ -585,7 +585,7 @@ export default function NewSalePage() {
     };
 
     if (completedSaleData) {
-        const pixCode = completedSaleData.method === 'pix' ? generatePixPayload("contato@frangatoys.com.br", "Rodrigo Casagrande Sposito", completedSaleData.total) : null;
+        const pixCode = completedSaleData.method === 'pix' ? generatePixPayload("contato@frangatoys.com.br", "Bianca Machado Mastrocollo", completedSaleData.total) : null;
 
         const handleCopy = (text: string, type: string) => {
             navigator.clipboard.writeText(text);

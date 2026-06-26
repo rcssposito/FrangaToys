@@ -23,8 +23,8 @@ function PixPaymentWidget({ order }: { order: any }) {
 
     useEffect(() => {
         if (remaining > 0 && !order.link_pagamento) {
-            // Chave E-mail da loja, nome Rodrigo Casagrande Sposito
-            const payload = generatePixPayload("contato@frangatoys.com.br", "Rodrigo Casagrande Sposito", remaining);
+            // Chave E-mail da loja, nome Bianca Machado Mastrocollo
+            const payload = generatePixPayload("contato@frangatoys.com.br", "Bianca Machado Mastrocollo", remaining);
             setPixPayload(payload);
         }
     }, [remaining, order.link_pagamento]);
