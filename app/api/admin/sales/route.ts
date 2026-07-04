@@ -306,6 +306,9 @@ export async function PATCH(req: Request) {
             pintor_nome, 
             cliente_id, 
             metodo_entrega,
+            figura_id,
+            quantidade,
+            valor_venda_final,
             cpf,
             cep,
             logradouro,
@@ -377,33 +380,52 @@ export async function PATCH(req: Request) {
 
         if (fetchError || !currentSale) throw new Error('Venda não encontrada');
 
-        let valor_pago_pintor = currentSale.valor_pago_pintor || 0;
-        let lucro_real = currentSale.lucro_real;
+        const finalFiguraId = figura_id !== undefined ? figura_id : currentSale.figura_id;
+        const finalQuantidade = quantidade !== undefined ? Number(quantidade) : currentSale.quantidade;
+        const finalValorVendaFinal = valor_venda_final !== undefined ? Number(valor_venda_final) : currentSale.valor_venda_final;
+        const finalVendedor = vendedor !== undefined ? vendedor : currentSale.vendedor;
+        const finalPinturaFreelancer = pintura_freelancer !== undefined ? pintura_freelancer : currentSale.pintura_freelancer;
 
-        // 2. Se a pintura freelancer mudou ou o pintor mudou, precisamos recalcular
-        if (pintura_freelancer !== undefined || pintor_nome !== undefined) {
-            const isFreelancer = pintura_freelancer !== undefined ? pintura_freelancer : currentSale.pintura_freelancer;
+        // Fetch pricing settings and figure metadata
+        const { data: settings, error: settingsError } = await supabase
+            .from('pricing_params')
+            .select('*')
+            .eq('id', 1)
+            .single();
 
-            if (isFreelancer) {
-                // Buscar horas de pintura da figura para calcular o custo
-                const { data: meta } = await supabase
-                    .from('figuras_meta')
-                    .select('horas_pintura')
-                    .eq('figura_id', currentSale.figura_id)
-                    .single();
+        if (settingsError) throw new Error('Falha ao obter parâmetros de precificação');
 
-                const horas = meta?.horas_pintura || 0;
-                valor_pago_pintor = Math.ceil(horas * 50) * (currentSale.quantidade || 1);
-            } else {
-                valor_pago_pintor = 0;
-            }
+        const { data: meta, error: metaError } = await supabase
+            .from('figuras_meta')
+            .select('*')
+            .eq('figura_id', finalFiguraId)
+            .single();
 
-            // Recalcular Lucro Real
-            lucro_real = currentSale.valor_venda_final -
-                (currentSale.custo_producao_snapshot || 0) -
-                valor_pago_pintor -
-                (currentSale.comissao_vendedor || 0);
+        if (metaError) throw new Error('Falha ao obter metadados da figura');
+
+        const custo_resina_raw = (meta.resina_kg || 0) * (settings.custo_resina_kg || 0);
+        const custo_impressao_raw = (meta.horas_impressao || 0) * (settings.custo_h_impressao || 0);
+
+        const custo_unitario_real = Math.ceil(custo_resina_raw + custo_impressao_raw);
+        const custo_total_real = custo_unitario_real * finalQuantidade;
+
+        // Deduções
+        let comissao_vendedor = 0;
+        const OWNER_EMAIL = 'rcssposito@gmail.com';
+
+        if (finalVendedor && finalVendedor.toLowerCase() !== OWNER_EMAIL.toLowerCase()) {
+            // 15% de comissão sobre o valor final do item
+            comissao_vendedor = Math.round(finalValorVendaFinal * 0.15);
         }
+
+        let custo_pintura_freelancer = 0;
+        if (finalPinturaFreelancer) {
+            custo_pintura_freelancer = Math.ceil((meta.horas_pintura || 0) * 50) * finalQuantidade;
+        }
+
+        // Lucro Real = Valor Final - Custos da Impressora - Custo Terceiro - Comissão
+        const lucro_real = finalValorVendaFinal - custo_total_real - custo_pintura_freelancer - comissao_vendedor;
+        const valor_pago_pintor = custo_pintura_freelancer;
 
         const { data, error } = await supabase
             .from('vendas')
@@ -411,13 +433,18 @@ export async function PATCH(req: Request) {
                 cliente_nome: final_cliente_nome,
                 cliente_contato,
                 canal_venda,
-                vendedor,
+                vendedor: finalVendedor,
                 status,
                 observacao,
-                pintura_freelancer,
+                pintura_freelancer: finalPinturaFreelancer,
                 pintor_nome,
                 valor_pago_pintor,
+                custo_producao_snapshot: custo_total_real,
+                comissao_vendedor,
                 lucro_real,
+                figura_id: finalFiguraId,
+                quantidade: finalQuantidade,
+                valor_venda_final: finalValorVendaFinal,
                 cliente_id: final_cliente_id === undefined ? currentSale.cliente_id : final_cliente_id,
                 metodo_entrega: metodo_entrega === undefined ? currentSale.metodo_entrega : metodo_entrega
             })

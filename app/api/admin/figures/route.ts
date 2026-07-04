@@ -380,7 +380,7 @@ export async function PUT(req: Request) {
             return NextResponse.json({ error: 'Database Error', details: error }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, updatedMeta: meta });
     } catch (error: any) {
         console.error('API Catch Error:', error);
         return NextResponse.json({ error: error.message || 'Unknown Error', stack: error.stack }, { status: 500 });

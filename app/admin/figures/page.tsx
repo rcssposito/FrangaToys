@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { toast } from 'sonner';
-import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus, ChevronDown, ChevronUp, LayoutGrid, List } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus, ChevronDown, ChevronUp, LayoutGrid, List, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import ThemeToggle from '@/components/common/ThemeToggle';
@@ -316,6 +316,9 @@ function DataGridContent() {
     const studioParam = searchParams.get('studio');
 
     const [figures, setFigures] = useState<Figure[]>([]);
+    const [allOriginalFigures, setAllOriginalFigures] = useState<Record<number, Figure>>({});
+    const [pendingChanges, setPendingChanges] = useState<Record<number, Partial<Figure>>>({});
+    const [isSavingAll, setIsSavingAll] = useState(false);
     const [settings, setSettings] = useState<PricingSettings | null>(null);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -395,6 +398,13 @@ function DataGridContent() {
             } else {
                 setFigures(prev => [...prev, ...formattedData]);
             }
+            setAllOriginalFigures(prev => {
+                const next = { ...prev };
+                formattedData.forEach((f: Figure) => {
+                    next[f.id] = f;
+                });
+                return next;
+            });
             setNextCursor(data.nextCursor);
 
         } catch (error) {
@@ -414,7 +424,13 @@ function DataGridContent() {
     }, [selectedCategoryId, search, studioParam]); // run when studioParam changes too
 
     const handleChange = (id: number, field: keyof Figure, value: string | boolean) => {
-        setFigures(prev => prev.map(f => f.id === id ? { ...f, [field]: value } : f));
+        setPendingChanges(prev => ({
+            ...prev,
+            [id]: {
+                ...prev[id],
+                [field]: value
+            }
+        }));
     };
 
     const handleSave = async (figure: Figure) => {
@@ -452,13 +468,152 @@ function DataGridContent() {
             });
 
             if (!res.ok) throw new Error('Erro ao salvar');
+            const data = await res.json();
+            
+            if (data.updatedMeta) {
+                const m = data.updatedMeta;
+                const formattedMeta = {
+                    resina_kg: Number(m.resina_kg) === 0 ? '' : (m.resina_kg ?? ''),
+                    horas_impressao: Number(m.horas_impressao) === 0 ? '' : (m.horas_impressao ?? ''),
+                    horas_pintura: Number(m.horas_pintura) === 0 ? '' : (m.horas_pintura ?? ''),
+                    altura_cm: Number(m.altura_cm) === 0 ? '' : (m.altura_cm ?? ''),
+                    largura_cm: Number(m.largura_cm) === 0 ? '' : (m.largura_cm ?? ''),
+                    profundidade_cm: Number(m.profundidade_cm) === 0 ? '' : (m.profundidade_cm ?? ''),
+                    escala: m.escala ?? 100
+                };
+                setFigures(prev => prev.map(f => f.id === figure.id ? { 
+                    ...f, 
+                    ...formattedMeta
+                } : f));
+                setAllOriginalFigures(prev => {
+                    const next = { ...prev };
+                    if (next[figure.id]) {
+                        next[figure.id] = {
+                            ...next[figure.id],
+                            ...formattedMeta
+                        };
+                    }
+                    return next;
+                });
+            }
+            // Remove from pendingChanges
+            setPendingChanges(prev => {
+                const next = { ...prev };
+                delete next[figure.id];
+                return next;
+            });
             toast.success('Alterações salvas!');
-            await fetchFigures(); // Refresh data to show calculated dimensions
         } catch (err) {
             toast.error('Erro ao salvar');
         } finally {
             setSavingId(null);
         }
+    };
+
+    const handleSaveAll = async () => {
+        const dirtyIds = Object.keys(pendingChanges).map(Number);
+        if (dirtyIds.length === 0) return;
+        setIsSavingAll(true);
+        
+        const figuresToSave = dirtyIds.map(id => {
+            const baseFigure = allOriginalFigures[id] || figures.find(f => f.id === id) || { id } as Figure;
+            return {
+                ...baseFigure,
+                ...pendingChanges[id]
+            };
+        });
+        
+        // Ensure values are numbers for API, or null if empty
+        const toNumberOrNull = (val: any) => {
+            if (val === '' || val === null || val === undefined) return null;
+            const num = Number(val);
+            return isNaN(num) ? null : num;
+        };
+
+        const promises = figuresToSave.map(async (figure) => {
+            const { is_campanha, is_campanha_active, desconto_campanha, preco_fixo_campanha, ...restFigure } = figure;
+            const payload = {
+                ...restFigure,
+                resina_kg: toNumberOrNull(figure.resina_kg),
+                horas_impressao: toNumberOrNull(figure.horas_impressao),
+                horas_pintura: toNumberOrNull(figure.horas_pintura),
+                altura_cm: toNumberOrNull(figure.altura_cm),
+                largura_cm: toNumberOrNull(figure.largura_cm),
+                profundidade_cm: toNumberOrNull(figure.profundidade_cm),
+                escala: toNumberOrNull(figure.escala) || 100,
+                tem_extras: !!figure.tem_extras,
+                tem_pintura_real: !!figure.tem_pintura_real,
+                sinonimos: figure.sinonimos || '',
+            };
+
+            const res = await fetch('/api/admin/figures', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) throw new Error(`Erro ao salvar a figura "${figure.nome || 'desconhecida'}"`);
+            return res.json();
+        });
+
+        try {
+            const results = await Promise.all(promises);
+            
+            // Apply updates to figures and original figures cache
+            setFigures(prev => prev.map(f => {
+                const idx = figuresToSave.findIndex(saveFig => saveFig.id === f.id);
+                if (idx !== -1 && results[idx] && results[idx].updatedMeta) {
+                    const m = results[idx].updatedMeta;
+                    return {
+                        ...f,
+                        resina_kg: Number(m.resina_kg) === 0 ? '' : (m.resina_kg ?? ''),
+                        horas_impressao: Number(m.horas_impressao) === 0 ? '' : (m.horas_impressao ?? ''),
+                        horas_pintura: Number(m.horas_pintura) === 0 ? '' : (m.horas_pintura ?? ''),
+                        altura_cm: Number(m.altura_cm) === 0 ? '' : (m.altura_cm ?? ''),
+                        largura_cm: Number(m.largura_cm) === 0 ? '' : (m.largura_cm ?? ''),
+                        profundidade_cm: Number(m.profundidade_cm) === 0 ? '' : (m.profundidade_cm ?? ''),
+                        escala: m.escala ?? 100
+                    };
+                }
+                return f;
+            }));
+
+            setAllOriginalFigures(prev => {
+                const next = { ...prev };
+                figuresToSave.forEach((figure, idx) => {
+                    if (results[idx] && results[idx].updatedMeta) {
+                        const m = results[idx].updatedMeta;
+                        const formattedMeta = {
+                            resina_kg: Number(m.resina_kg) === 0 ? '' : (m.resina_kg ?? ''),
+                            horas_impressao: Number(m.horas_impressao) === 0 ? '' : (m.horas_impressao ?? ''),
+                            horas_pintura: Number(m.horas_pintura) === 0 ? '' : (m.horas_pintura ?? ''),
+                            altura_cm: Number(m.altura_cm) === 0 ? '' : (m.altura_cm ?? ''),
+                            largura_cm: Number(m.largura_cm) === 0 ? '' : (m.largura_cm ?? ''),
+                            profundidade_cm: Number(m.profundidade_cm) === 0 ? '' : (m.profundidade_cm ?? ''),
+                            escala: m.escala ?? 100
+                        };
+                        next[figure.id] = {
+                            ...(next[figure.id] || figure),
+                            ...formattedMeta
+                        };
+                    }
+                });
+                return next;
+            });
+
+            setPendingChanges({});
+            toast.success('Todas as alterações foram salvas com sucesso!');
+        } catch (err: any) {
+            console.error(err);
+            toast.error(err.message || 'Erro ao salvar alterações');
+        } finally {
+            setIsSavingAll(false);
+        }
+    };
+
+    const handleDiscardAll = () => {
+        setPendingChanges({});
+        toast.info('Alterações descartadas.');
     };
 
     const handleDelete = async (id: number, nome: string) => {
@@ -662,7 +817,8 @@ function DataGridContent() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--card-border)] text-sm">
-                                {figures.map(f => {
+                                {figures.map(rawFigure => {
+                                    const f = { ...rawFigure, ...(pendingChanges[rawFigure.id] || {}) };
                                     const prices = calculatePrices(f);
                                     return (
                                         <tr key={f.id} className="hover:bg-orange-500/[0.02] transition-colors group">
@@ -900,7 +1056,8 @@ function DataGridContent() {
 
                     {/* View Mobile (Sempre Grade) E Desktop (Se selecionou Grade) */}
                     <div className={`${viewMode === 'table' ? 'md:hidden' : ''} grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 md:p-0 text-[var(--foreground)] bg-transparent w-full`}>
-                        {figures.map(f => {
+                        {figures.map(rawFigure => {
+                            const f = { ...rawFigure, ...(pendingChanges[rawFigure.id] || {}) };
                             const prices = calculatePrices(f);
                             return (
                                 <FigureMobileCard
@@ -971,6 +1128,34 @@ function DataGridContent() {
                     </div>
                 )
             }
+            {/* Barra Flutuante de Salvar Alterações */}
+            {Object.keys(pendingChanges).length > 0 && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] bg-zinc-950/95 backdrop-blur border border-orange-500/30 px-6 py-4 rounded-2xl flex items-center gap-6 shadow-2xl animate-in slide-in-from-bottom-5 duration-200">
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle className="text-orange-500 animate-pulse" size={18} />
+                        <span className="text-xs font-semibold text-zinc-200">
+                            Você possui <strong className="text-orange-500">{Object.keys(pendingChanges).length}</strong> {Object.keys(pendingChanges).length === 1 ? 'figura com alterações pendentes.' : 'figuras com alterações pendentes.'}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                        <button
+                            onClick={handleDiscardAll}
+                            disabled={isSavingAll}
+                            className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                        >
+                            Descartar
+                        </button>
+                        <button
+                            onClick={handleSaveAll}
+                            disabled={isSavingAll}
+                            className="px-5 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:brightness-110 text-black rounded-xl text-xs font-black transition-all disabled:opacity-50 flex items-center gap-2 shadow-[0_0_15px_rgba(249,115,22,0.2)]"
+                        >
+                            {isSavingAll ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                            Salvar Tudo
+                        </button>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }

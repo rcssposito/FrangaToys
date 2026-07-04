@@ -46,6 +46,7 @@ interface Sale {
     canal_venda?: string;
     pintura_freelancer?: boolean;
     pintor_nome?: string;
+    figura_id?: number;
     figuras: {
         nome: string;
         studios: { nome: string } | { nome: string }[];
@@ -92,12 +93,26 @@ function SalesContent() {
     const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
     const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
 
+    // Catalog States for Editing
+    const [catalogItems, setCatalogItems] = useState<any[]>([]);
+    const [figureSearch, setFigureSearch] = useState('');
+
     const { hasRole } = usePermission();
 
     useEffect(() => {
         fetchSales();
         fetchVendedores();
+        fetchCatalogItems();
     }, []);
+
+    const fetchCatalogItems = async () => {
+        try {
+            const res = await fetch('/api/admin/catalog-prices');
+            if (res.ok) setCatalogItems(await res.json());
+        } catch (err) {
+            console.error('Erro ao buscar catálogo');
+        }
+    };
 
     // CRM Search Logic for Edit Modal
     useEffect(() => {
@@ -402,6 +417,13 @@ function SalesContent() {
                                                 </Link>
                                                 {hasRole('admin') && (
                                                     <>
+                                                        <Link 
+                                                            href={`/admin/sales/new?cliente_nome=${encodeURIComponent(sale.cliente_nome)}&cliente_contato=${encodeURIComponent(sale.cliente_contato || '')}&cliente_id=${encodeURIComponent(sale.cliente_id || '')}&vendedor=${encodeURIComponent(sale.vendedor || '')}&canal=${encodeURIComponent(sale.canal_venda || '')}&metodo_entrega=${encodeURIComponent(sale.metodo_entrega || '')}&data_venda=${encodeURIComponent(sale.data_venda ? sale.data_venda.split('T')[0] : '')}`}
+                                                            className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-emerald-400 transition-colors shadow-sm flex items-center justify-center" 
+                                                            title="Adicionar Novo Item (Duplicar dados do Cliente)"
+                                                        >
+                                                            <Plus size={16} />
+                                                        </Link>
                                                         <button onClick={() => setEditingSale(sale)} className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-amber-400 transition-colors shadow-sm" title="Editar Venda">
                                                             <Edit3 size={16} />
                                                         </button>
@@ -452,7 +474,7 @@ function SalesContent() {
 
                                         {/* Suggestions Dropdown */}
                                         {customerSuggestions.length > 0 && (
-                                            <div className="absolute left-0 right-0 mt-2 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 divide-y divide-zinc-900">
+                                            <div className="absolute left-0 mt-2 w-[320px] bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 divide-y divide-zinc-900">
                                                 {customerSuggestions.map((c) => (
                                                     <button
                                                         key={c.id}
@@ -505,6 +527,65 @@ function SalesContent() {
                                             <option key={v.email} value={v.email} className="bg-zinc-900">{v.nome || v.email}</option>
                                         ))}
                                     </select>
+                                </div>
+                                <div className="space-y-2 relative">
+                                    <label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Figura / Peça: <span className="text-cyan-400 font-bold">{editingSale.figuras?.nome || 'Desconhecida'}</span></label>
+                                    <input
+                                        type="text"
+                                        value={figureSearch}
+                                        onChange={e => setFigureSearch(e.target.value)}
+                                        placeholder="Trocar figura do pedido..."
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-sm focus:border-cyan-500/50 outline-none transition-all font-bold text-zinc-200"
+                                    />
+                                    {figureSearch && (
+                                        <div className="absolute left-0 right-0 mt-1 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl z-50 max-h-48 overflow-y-auto divide-y divide-zinc-900">
+                                            {catalogItems
+                                                .filter(item => item.Figura.toLowerCase().includes(figureSearch.toLowerCase()))
+                                                .slice(0, 5)
+                                                .map(item => (
+                                                    <button
+                                                        key={item.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setEditingSale({
+                                                                ...editingSale,
+                                                                figura_id: item.id,
+                                                                figuras: { ...editingSale.figuras, nome: item.Figura }
+                                                            });
+                                                            setFigureSearch('');
+                                                            toast.success(`Peça alterada para: ${item.Figura}`);
+                                                        }}
+                                                        className="w-full text-left px-4 py-3 hover:bg-zinc-900 text-xs font-bold text-zinc-300 block"
+                                                    >
+                                                        {item.Figura} ({item.studio})
+                                                    </button>
+                                                ))
+                                            }
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="col-span-1">
+                                        <label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Quantidade</label>
+                                        <input
+                                            type="number"
+                                            value={editingSale.quantidade}
+                                            onChange={e => setEditingSale({ ...editingSale, quantidade: Math.max(1, Number(e.target.value)) })}
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-sm focus:border-cyan-500/50 outline-none transition-all font-bold text-zinc-200"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="col-span-1">
+                                        <label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Valor Final Total (R$)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={editingSale.valor_venda_final}
+                                            onChange={e => setEditingSale({ ...editingSale, valor_venda_final: Number(e.target.value) })}
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 text-sm focus:border-cyan-500/50 outline-none transition-all font-bold text-zinc-200"
+                                            required
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Status Logístico</label>

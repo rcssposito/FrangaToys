@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2, Plus, Minus, AlertTriangle, CheckCircle2, User, Copy, RefreshCw, UserCheck, Sparkles, ArrowRight, MessageCircle, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
@@ -32,8 +32,9 @@ interface CartItem extends CatalogItem {
     profundidade_cm?: number;
 }
 
-export default function NewSalePage() {
+function NewSaleContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { user } = usePermission();
     const [items, setItems] = useState<CatalogItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -151,7 +152,26 @@ export default function NewSalePage() {
         if (isFinanceOrAdmin) {
             fetchVendedores();
         }
-    }, [user, isFinanceOrAdmin]);
+
+        // Prepopulate from search params if duplicating/adding to a sale
+        const paramClienteNome = searchParams.get('cliente_nome');
+        const paramClienteContato = searchParams.get('cliente_contato');
+        const paramClienteId = searchParams.get('cliente_id');
+        const paramVendedor = searchParams.get('vendedor');
+        const paramCanal = searchParams.get('canal');
+        const paramMetodoEntrega = searchParams.get('metodo_entrega');
+        const paramDataVenda = searchParams.get('data_venda');
+
+        if (paramClienteNome) setCliente(paramClienteNome);
+        if (paramClienteContato) setClienteContato(paramClienteContato);
+        if (paramClienteId) setClienteId(paramClienteId);
+        if (paramVendedor) setVendedorSelecionado(paramVendedor);
+        if (paramCanal) setCanal(paramCanal);
+        if (paramMetodoEntrega === 'retirada' || paramMetodoEntrega === 'envio') {
+            setMetodoEntrega(paramMetodoEntrega);
+        }
+        if (paramDataVenda) setDataVenda(paramDataVenda);
+    }, [user, isFinanceOrAdmin, searchParams]);
 
     useEffect(() => {
         if (user?.email && !vendedorSelecionado) {
@@ -1065,7 +1085,7 @@ export default function NewSalePage() {
                                         
                                         {/* Suggestions Dropdown */}
                                         {customerSuggestions.length > 0 && (
-                                            <div className="absolute left-0 right-0 mt-3 bg-zinc-950/95 backdrop-blur-xl border border-zinc-800/80 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div className="absolute left-0 mt-3 w-[320px] sm:w-[400px] bg-zinc-950/95 backdrop-blur-xl border border-zinc-800/80 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
                                                 <div className="px-4 py-2 bg-zinc-900/80 border-b border-zinc-800/50 flex justify-between items-center">
                                                     <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Encontrados no CRM</span>
                                                     <Sparkles size={10} className="text-cyan-500 animate-pulse" />
@@ -1439,5 +1459,18 @@ export default function NewSalePage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function NewSalePage() {
+    return (
+        <Suspense fallback={
+            <div className="p-8 flex flex-col items-center justify-center min-h-screen gap-4">
+                <Loader2 className="animate-spin text-orange-500" size={40} />
+                <p className="text-xs font-black uppercase tracking-widest text-zinc-500">Carregando Nova Venda...</p>
+            </div>
+        }>
+            <NewSaleContent />
+        </Suspense>
     );
 }
