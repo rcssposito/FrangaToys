@@ -88,6 +88,7 @@ const COLUMN_ACCENTS: Record<string, { border: string; glow: string; text: strin
 
 export default function KanbanPage() {
     const [sales, setSales] = useState<Sale[]>([]);
+    const [draggedSaleId, setDraggedSaleId] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const { hasRole } = usePermission();
     
@@ -301,13 +302,16 @@ export default function KanbanPage() {
     };
 
     const handleDragStart = (e: React.DragEvent, saleId: number) => {
-        e.dataTransfer.setData('saleId', saleId.toString());
+        setDraggedSaleId(saleId);
+        e.dataTransfer.setData('text/plain', saleId.toString());
         setTimeout(() => {
-            (e.target as HTMLElement).classList.add('opacity-40', 'scale-95', 'rotate-2');
+            const target = e.target as HTMLElement;
+            target.classList.add('opacity-40', 'scale-95', 'rotate-2');
         }, 0);
     };
 
     const handleDragEnd = (e: React.DragEvent) => {
+        setDraggedSaleId(null);
         (e.target as HTMLElement).classList.remove('opacity-40', 'scale-95', 'rotate-2');
     };
 
@@ -323,7 +327,12 @@ export default function KanbanPage() {
     const handleDrop = async (e: React.DragEvent, toStatus: string) => {
         e.preventDefault();
         e.currentTarget.classList.remove('bg-orange-500/5', 'border-orange-500/20');
-        const saleId = e.dataTransfer.getData('saleId');
+        const dataTransferId = e.dataTransfer.getData('text/plain');
+        const saleId = (dataTransferId && dataTransferId !== 'drag') ? dataTransferId : (draggedSaleId ? draggedSaleId.toString() : '');
+        
+        // Reset state
+        setDraggedSaleId(null);
+        
         if (!saleId) return;
 
         const previousSales = [...sales];
@@ -531,7 +540,7 @@ export default function KanbanPage() {
                                                 draggable
                                                 onDragStart={(e) => handleDragStart(e, task.id)}
                                                 onDragEnd={handleDragEnd}
-                                                className={`bg-zinc-950/50 backdrop-blur-lg border border-zinc-900/80 rounded-2xl p-3.5 cursor-grab active:cursor-grabbing transition-all duration-500 ease-out group relative shadow-xl overflow-hidden min-h-[245px] flex flex-col justify-between hover:-translate-y-1.5 ${accent.border} ${accent.glow}`}
+                                                className={`bg-zinc-950/50 backdrop-blur-lg border border-zinc-900/80 rounded-2xl p-3.5 cursor-grab active:cursor-grabbing select-none transition-all duration-500 ease-out group relative shadow-xl overflow-hidden min-h-[245px] flex flex-col justify-between hover:-translate-y-1.5 ${accent.border} ${accent.glow}`}
                                             >
                                                 {/* Full-bleed Product Image Background */}
                                                 {task.figuras?.imagem_url && (
@@ -539,6 +548,7 @@ export default function KanbanPage() {
                                                         <img
                                                             src={task.figuras.imagem_url}
                                                             alt=""
+                                                            draggable={false}
                                                             className="w-full h-full object-cover opacity-55 group-hover:opacity-75 group-hover:scale-110 transition-all duration-700 ease-out"
                                                         />
                                                         {/* Sophisticated dual overlays for depth and contrast */}
