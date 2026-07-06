@@ -21,21 +21,38 @@ export async function GET(req: Request) {
         // Fetch all studios with their figure IDs and metadata
         const { data: studios, error: studiosError } = await supabase
             .from('studios')
-            .select('*, figuras(id, figuras_meta(resina_kg, horas_impressao, horas_pintura, is_campanha_active, desconto_campanha, preco_fixo_campanha))');
+            .select('*, figuras(id, views, figuras_meta(resina_kg, horas_impressao, horas_pintura, is_campanha_active, desconto_campanha, preco_fixo_campanha))');
 
         if (studiosError) throw studiosError;
 
-        // Fetch all sales of the current year that are not Cancelado
-        const currentYear = new Date().getFullYear();
-        const startOfYear = new Date(currentYear, 0, 1).toISOString();
-        const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59, 999).toISOString();
+        // Parse search params for date filtering
+        const { searchParams } = new URL(req.url);
+        const startDate = searchParams.get('startDate');
+        const endDate = searchParams.get('endDate');
 
-        const { data: sales, error: salesError } = await supabase
+        let query = supabase
             .from('vendas')
             .select('figura_id, quantidade, valor_venda_final, lucro_real, status')
-            .neq('status', 'Cancelado')
-            .gte('data_venda', startOfYear)
-            .lte('data_venda', endOfYear);
+            .neq('status', 'Cancelado');
+
+        if (startDate) {
+            query = query.gte('data_venda', startDate);
+        } else {
+            // Default to current year for backward compatibility
+            const currentYear = new Date().getFullYear();
+            const startOfYear = new Date(currentYear, 0, 1).toISOString();
+            query = query.gte('data_venda', startOfYear);
+        }
+
+        if (endDate) {
+            query = query.lte('data_venda', endDate);
+        } else if (!startDate) {
+            const currentYear = new Date().getFullYear();
+            const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59, 999).toISOString();
+            query = query.lte('data_venda', endOfYear);
+        }
+
+        const { data: sales, error: salesError } = await query;
 
         if (salesError) throw salesError;
 
@@ -98,10 +115,12 @@ export async function GET(req: Request) {
             const conversao_acervo = total_figuras > 0 ? (figuras_vendidas / total_figuras) * 100 : 0;
             const margem_lucro = m.receita_bruta > 0 ? (m.lucro_liquido / m.receita_bruta) * 100 : 0;
 
-            // Calculate average ticket as average colored price of figures in the studio's catalog
+            // Calculate average ticket as average colored price of figures in the studio's catalog, and sum views/clicks
             let sumPrices = 0;
             let countPrices = 0;
+            let total_cliques = 0;
             s.figuras?.forEach((f: any) => {
+                total_cliques += f.views || 0;
                 const metaList = f.figuras_meta;
                 const meta = Array.isArray(metaList) ? metaList[0] : metaList;
                 if (meta && settings) {
@@ -125,7 +144,8 @@ export async function GET(req: Request) {
                 figuras_vendidas,
                 conversao_acervo,
                 margem_lucro,
-                ticket_medio
+                ticket_medio,
+                total_cliques
             };
         });
 

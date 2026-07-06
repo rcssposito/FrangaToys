@@ -182,7 +182,7 @@ export default function StudiosPage() {
 
             <div className="max-w-7xl mx-auto relative z-10 transition-all duration-500">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-                    <div className="flex items-center gap-5">
+                    <div className="flex items-center gap-5 flex-wrap">
                         <Link href="/admin" className="p-3 bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-400 rounded-2xl transition-all shadow-lg text-zinc-500 group">
                             <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
                         </Link>
@@ -190,6 +190,13 @@ export default function StudiosPage() {
                             <h1 className="text-4xl font-black tracking-tighter text-white">Estúdios <span className="text-blue-500">Parceiros</span></h1>
                             <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-1 opacity-80">Gestão de Branding, Custos e BI.</p>
                         </div>
+                        <Link 
+                            href="/admin/studios/analytics" 
+                            className="flex items-center gap-2 px-5 py-3 bg-blue-600/10 border border-blue-500/25 hover:border-blue-500/50 hover:bg-blue-600/20 text-blue-400 font-black tracking-widest text-[10px] uppercase rounded-2xl transition-all active:scale-95 hover:shadow-[0_0_15px_rgba(59,130,246,0.15)] shadow-md ml-2"
+                        >
+                            <TrendingUp size={14} />
+                            Painel de BI
+                        </Link>
                     </div>
 
                     {/* Search & Sort Controls */}
