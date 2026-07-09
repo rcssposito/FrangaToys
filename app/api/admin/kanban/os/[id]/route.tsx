@@ -91,7 +91,7 @@ export async function GET(
 
 
 
-        const pixPayload = generatePixPayload("contato@frangatoys.com.br", "Bianca Machado Mastrocollo", valorTotalReal);
+        const pixPayload = generatePixPayload("contato@frangatoys.com.br", "Bianca Machado Mastrocollo", valorTotalReal, sale.checkout_id);
         const originUrl = sale.link_pagamento ? sale.link_pagamento : pixPayload;
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(originUrl)}`;
         const formatMoney = (val: number) => val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

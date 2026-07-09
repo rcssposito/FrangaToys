@@ -80,9 +80,7 @@ export async function GET(
         const quoteIndex = Number(id) % quotes.length;
         const selectedQuote = quotes[quoteIndex];
 
-
-
-        const pixPayload = generatePixPayload("contato@frangatoys.com.br", "Bianca Machado Mastrocollo", valorTotalReal);
+        const pixPayload = generatePixPayload("contato@frangatoys.com.br", "Bianca Machado Mastrocollo", valorTotalReal, sale.checkout_id);
 
         // Se tiver Link Pagamento (Mercado Pago), gera QRCode da URL. Se não, gera Payload do PIX.
         const originUrl = sale.link_pagamento ? sale.link_pagamento : pixPayload;

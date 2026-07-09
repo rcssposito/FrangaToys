@@ -24,7 +24,7 @@ function PixPaymentWidget({ order }: { order: any }) {
     useEffect(() => {
         if (remaining > 0 && !order.link_pagamento) {
             // Chave E-mail da loja, nome Bianca Machado Mastrocollo
-            const payload = generatePixPayload("contato@frangatoys.com.br", "Bianca Machado Mastrocollo", remaining);
+            const payload = generatePixPayload("contato@frangatoys.com.br", "Bianca Machado Mastrocollo", remaining, order.checkout_id);
             setPixPayload(payload);
         }
     }, [remaining, order.link_pagamento]);

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2, Plus, Minus, AlertTriangle, CheckCircle2, User, Copy, RefreshCw, UserCheck, Sparkles, ArrowRight, MessageCircle, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
+import { generatePixPayload } from '@/lib/pix';
 
 interface CatalogItem {
     id: number;
@@ -65,7 +66,7 @@ function NewSaleContent() {
 
     const [showPaymentOptions, setShowPaymentOptions] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit'>('pix');
-    const [completedSaleData, setCompletedSaleData] = useState<{ id: number, access_token?: string, link_pagamento: string | null, total: number, method: 'pix' | 'credit' } | null>(null);
+    const [completedSaleData, setCompletedSaleData] = useState<{ id: number, access_token?: string, link_pagamento: string | null, total: number, method: 'pix' | 'credit', checkout_id?: string } | null>(null);
 
     // Coupon States
     const [cupomCodigo, setCupomCodigo] = useState('');
@@ -125,23 +126,6 @@ function NewSaleContent() {
                 .replace(/(\d{4})(\d)/, '$1-$2');
         }
         setCpf(value);
-    };
-
-    // PIX Payload Generator for Client-Side Copy
-    const generatePixPayload = (key: string, name: string, amount: number) => {
-        name = name.substring(0, 25).normalize('NFD').replace(/[\u0300-\u036f]/g, "").toUpperCase();
-        const city = "SAO PAULO";
-        const amountStr = amount.toFixed(2);
-        let payload = "00020126330014br.gov.bcb.pix" + `01${key.length.toString().padStart(2, '0')}${key}` + "520400005303986" + `54${amountStr.length.toString().padStart(2, '0')}${amountStr}` + "5802BR" + `59${name.length.toString().padStart(2, '0')}${name}` + `60${city.length.toString().padStart(2, '0')}${city}` + "62070503***6304";
-        let crc = 0xFFFF;
-        for (let i = 0; i < payload.length; i++) {
-            crc ^= payload.charCodeAt(i) << 8;
-            for (let j = 0; j < 8; j++) {
-                if ((crc & 0x8000) !== 0) crc = (crc << 1) ^ 0x1021;
-                else crc = crc << 1;
-            }
-        }
-        return payload + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
     };
 
     const isFinanceOrAdmin = user?.roles?.some(r => r === 'admin' || r === 'finance');
@@ -594,7 +578,8 @@ function NewSaleContent() {
                 access_token: insertedSales[0]?.access_token,
                 link_pagamento: mpLink || null,
                 total: totalVenda,
-                method: paymentMethod
+                method: paymentMethod,
+                checkout_id: checkoutId
             });
 
         } catch (err: any) {
@@ -605,7 +590,7 @@ function NewSaleContent() {
     };
 
     if (completedSaleData) {
-        const pixCode = completedSaleData.method === 'pix' ? generatePixPayload("contato@frangatoys.com.br", "Bianca Machado Mastrocollo", completedSaleData.total) : null;
+        const pixCode = completedSaleData.method === 'pix' ? generatePixPayload("contato@frangatoys.com.br", "Bianca Machado Mastrocollo", completedSaleData.total, completedSaleData.checkout_id) : null;
 
         const handleCopy = (text: string, type: string) => {
             navigator.clipboard.writeText(text);

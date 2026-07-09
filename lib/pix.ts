@@ -2,7 +2,7 @@
  * Utility for generating BRCode (PIX Copy/Paste) payloads.
  */
 
-export function generatePixPayload(key: string, name: string, amount: number) {
+export function generatePixPayload(key: string, name: string, amount: number, txid?: string) {
     // Normalization: Max 25 chars, uppercase, no special chars
     const cleanName = name
         .substring(0, 25)
@@ -15,6 +15,14 @@ export function generatePixPayload(key: string, name: string, amount: number) {
     
     const merchantAccountInfo = "0014br.gov.bcb.pix" + `01${key.length.toString().padStart(2, '0')}${key}`;
     
+    // Alphanumeric txid (max 25 chars) for static PIX (Central Bank requirement)
+    const cleanTxid = txid
+        ? txid.replace(/[^A-Za-z0-9]/g, "").substring(0, 25)
+        : "***";
+        
+    const referenceField = `05${cleanTxid.length.toString().padStart(2, '0')}${cleanTxid}`;
+    const additionalData = `62${referenceField.length.toString().padStart(2, '0')}${referenceField}`;
+    
     // Static PIX payload structure
     let payload = 
         "000201" + 
@@ -24,7 +32,8 @@ export function generatePixPayload(key: string, name: string, amount: number) {
         "5802BR" + 
         `59${cleanName.length.toString().padStart(2, '0')}${cleanName}` + 
         `60${city.length.toString().padStart(2, '0')}${city}` + 
-        "62070503***6304";
+        additionalData +
+        "6304";
 
     // CRC16 Calculation
     let crc = 0xFFFF;

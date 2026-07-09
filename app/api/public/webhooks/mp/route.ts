@@ -32,7 +32,10 @@ export async function POST(req: NextRequest) {
                     // 2. Atualizar todas as vendas vinculadas a este checkout no Supabase
                     const { data: updatedSales, error } = await supabase
                         .from('vendas')
-                        .update({ status: 'Pago' })
+                        .update({ 
+                            status_pagamento: 'Pago',
+                            status: 'Fila de Impressão'
+                        })
                         .eq('checkout_id', checkout_id)
                         .select('cliente_nome, valor_venda_final, valor_frete');
 
@@ -48,7 +51,7 @@ export async function POST(req: NextRequest) {
                             `👤 *Cliente:* ${nome}\n` +
                             `💰 *Valor Recebido:* R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
                             `🆔 *Checkout:* \`${checkout_id}\`\n\n` +
-                            `O status foi atualizado para *Pago* no seu Kanban.`
+                            `O pagamento foi marcado como *Pago* e o pedido enviado para a *Fila de Impressão* no seu Kanban.`
                         );
 
                         // 4. Emitir Nota Fiscal Eletrônica (NF-e)
