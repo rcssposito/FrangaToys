@@ -205,22 +205,22 @@ function SalesContent() {
     };
 
     const handleDelete = async (id: number) => {
-        if (!confirm('Tem certeza que deseja excluir este registro de venda?')) return;
+        if (!confirm('Tem certeza que deseja cancelar esta venda?')) return;
 
         try {
-            const res = await fetch('/api/admin/sales', {
-                method: 'DELETE',
+            const res = await fetch('/api/admin/kanban', {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id }),
+                body: JSON.stringify({ id, status: 'Cancelada' }),
             });
 
-            if (!res.ok) throw new Error('Erro ao excluir');
+            if (!res.ok) throw new Error('Erro ao cancelar');
 
-            toast.success('Venda removida');
+            toast.success('Venda cancelada');
             // Refresh list
             fetchSales();
         } catch (err) {
-            toast.error('Erro ao excluir venda');
+            toast.error('Erro ao cancelar venda');
         }
     };
 
