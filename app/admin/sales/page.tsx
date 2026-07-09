@@ -602,6 +602,7 @@ function SalesContent() {
                                             <option value="Pintura Secagem">Pintura</option>
                                             <option value="Pronto p/ Entrega">Pronto p/ Entrega</option>
                                             <option value="Concluída">Pedido Concluído</option>
+                                            <option value="Cancelada">Pedido Cancelado</option>
                                         </select>
                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
                                             <ChevronDown size={14} />
