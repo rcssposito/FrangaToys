@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, DollarSign, Box, Activity, Store, Maximize2, X, ArrowUpRight, ArrowDownRight, Clock, Tag, Layers, Ruler, ImageIcon, ExternalLink, Droplet, Printer, Eye, EyeOff, BarChart3, Trophy } from 'lucide-react';
+import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, DollarSign, Box, Activity, Store, Maximize2, X, ArrowUpRight, ArrowDownRight, Clock, Tag, Layers, Ruler, ImageIcon, ExternalLink, Droplet, Printer, Eye, EyeOff, Trophy } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { toast } from 'sonner';
@@ -1106,17 +1106,132 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
-                {/* Left Column: Lists */}
+            {/* --- Fila de Produção / Entrega (Full Width) --- */}
+            <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 rounded-2xl overflow-hidden shadow-xl hover:border-zinc-700 transition-all mb-8">
+                <div className="p-5 border-b border-zinc-800/50 flex justify-between items-center bg-zinc-900/30">
+                    <h3 className="font-black flex items-center gap-2 text-zinc-100 uppercase tracking-widest text-sm">
+                        <Clock size={18} className="text-blue-500" />
+                        Fila de Produção & Entrega
+                    </h3>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="text-[10px] uppercase bg-zinc-900/50 text-zinc-500 font-black tracking-widest">
+                            <tr>
+                                <th className="px-6 py-4">Prazo / Estimativa</th>
+                                <th className="px-6 py-4">Cliente</th>
+                                <th className="px-6 py-4">Modelo</th>
+                                <th className="px-6 py-4 text-center">Resina</th>
+                                <th className="px-6 py-4 text-center">Pintura</th>
+                                {canViewFinance && <th className="px-6 py-4 text-right">Valor</th>}
+                                <th className="px-6 py-4 text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-800/50">
+                            {data?.lists?.recentActivity?.length > 0 ? (
+                                data.lists.recentActivity.map((a: any, i: number) => {
+                                    const isInactive = a.status === 'Concluída' || a.status === 'Cancelada';
+                                    const days = a.daysRemaining;
+                                    
+                                    return (
+                                        <tr key={i} className="hover:bg-zinc-800/40 transition-colors group">
+                                            <td className="px-6 py-4 whitespace-nowrap font-mono text-xs">
+                                                {isInactive ? (
+                                                    <span className="text-zinc-500 font-bold">Finalizado</span>
+                                                ) : (
+                                                    <div className="flex flex-col">
+                                                        <span className="text-zinc-200 font-bold">{new Date(a.deadline).toLocaleDateString('pt-BR')}</span>
+                                                        {days !== null && (
+                                                            <span className={`text-[10px] font-black uppercase tracking-wider mt-0.5 ${
+                                                                days < 0 ? 'text-red-400 animate-pulse' :
+                                                                days <= 2 ? 'text-amber-400' :
+                                                                'text-emerald-400'
+                                                            }`}>
+                                                                {days < 0 ? `⚠️ Atrasado ${days}d` :
+                                                                 days === 0 ? 'Hoje' :
+                                                                 days === 1 ? 'Amanhã' :
+                                                                 `Em ${days} dias`}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 text-zinc-300 font-bold truncate max-w-[150px] uppercase tracking-tight">{a.customer}</td>
+                                            <td className="px-6 py-4 font-bold text-zinc-100 truncate max-w-[220px] group-hover:text-blue-400 transition-colors tracking-tight">{a.product}</td>
+                                            <td className="px-6 py-4 text-center whitespace-nowrap">
+                                                {a.resina > 0 ? (
+                                                    <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 font-mono font-bold">
+                                                        {a.resina.toFixed(2)} kg
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-zinc-600 text-xs">-</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 text-center whitespace-nowrap">
+                                                {a.hoursPaint > 0 ? (
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-xs text-zinc-400 font-mono font-bold">
+                                                            {a.hoursPaint}h
+                                                        </span>
+                                                        {a.freelancer && (
+                                                            <span className="px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-[9px] text-purple-400 font-black uppercase tracking-wider">
+                                                                Freelancer
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-zinc-600 text-xs">-</span>
+                                                )}
+                                            </td>
+                                            {canViewFinance && (
+                                                <td className="px-6 py-4 text-right font-black text-emerald-500 font-mono tracking-tighter">
+                                                    {hideValues ? "R$ ••••" : `R$ ${(a.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                                                </td>
+                                            )}
+                                            <td className="px-6 py-4 text-right">
+                                                <span className={`px-2.5 py-1 rounded-md border text-[10px] font-black uppercase tracking-widest ${
+                                                    a.status === 'Concluída' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]' :
+                                                    a.status === 'Cancelada' ? 'bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]' :
+                                                    a.status === 'Pronto p/ Entrega' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
+                                                    a.status === 'Fila de Impressão' ? 'bg-zinc-800 text-zinc-400 border-zinc-700' :
+                                                    a.status === 'Imprimindo' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20 shadow-[0_0_10px_rgba(249,115,22,0.1)]' :
+                                                    a.status === 'Lavagem e Cura' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.1)]' :
+                                                    a.status === 'Pintura Secagem' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-[0_0_10px_rgba(168,85,247,0.1)]' :
+                                                    'bg-yellow-500/10 text-yellow-400 border-yellow-500/20 shadow-[0_0_10px_rgba(234,179,8,0.1)]'
+                                                }`}>
+                                                    {a.status === 'Lavagem e Cura' ? 'Pós Processamento' :
+                                                     a.status === 'Pintura Secagem' ? 'Pintura' :
+                                                     a.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            ) : (
+                                <tr>
+                                    <td colSpan={canViewFinance ? 7 : 6} className="px-6 py-10 text-center text-zinc-600 font-bold">
+                                        Nenhuma atividade recente ou fila de produção vazia.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* --- Painel de Rankings & Estatísticas (Duas Colunas) --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                {/* Coluna da Esquerda: Top Modelos e Vendas por Vendedor empilhados */}
                 <div className="flex flex-col gap-8">
-                    <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 rounded-2xl overflow-hidden shadow-xl hover:border-zinc-700 transition-all">
+                    {/* Top Modelos (Receita) */}
+                    <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 rounded-2xl overflow-hidden shadow-xl hover:border-zinc-700 transition-all flex flex-col h-full">
                         <div className="p-5 border-b border-zinc-800/50 flex justify-between items-center bg-zinc-900/30">
                             <h3 className="font-black flex items-center gap-2 text-zinc-100 uppercase tracking-widest text-sm">
                                 <Package size={18} className="text-yellow-500" />
                                 Top Modelos (Receita)
                             </h3>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto flex-1">
                             <table className="w-full text-sm text-left">
                                 <thead className="text-[10px] uppercase bg-zinc-900/50 text-zinc-500 font-black tracking-widest">
                                     <tr>
@@ -1130,8 +1245,8 @@ export default function AdminDashboard() {
                                     {data?.lists?.topProducts?.length > 0 ? (
                                         data.lists.topProducts.map((p: any, i: number) => (
                                             <tr key={i} className="hover:bg-zinc-800/40 transition-colors group">
-                                                <td className="px-6 py-4 font-bold text-zinc-300 group-hover:text-emerald-400 transition-colors">{p.name}</td>
-                                                <td className="px-6 py-4 text-zinc-500 font-bold">{p.studio}</td>
+                                                <td className="px-6 py-4 font-bold text-zinc-300 group-hover:text-emerald-400 transition-colors truncate max-w-[250px]" title={p.name}>{p.name}</td>
+                                                <td className="px-6 py-4 text-zinc-500 font-bold truncate max-w-[150px]" title={p.studio}>{p.studio}</td>
                                                 <td className="px-6 py-4 text-right text-zinc-100 font-black">{p.qty}</td>
                                                 {canViewFinance && (
                                                     <td className="px-6 py-4 text-right font-black text-emerald-500 font-mono tracking-tighter">
@@ -1143,7 +1258,7 @@ export default function AdminDashboard() {
                                     ) : (
                                         <tr>
                                             <td colSpan={canViewFinance ? 4 : 3} className="px-6 py-10 text-center text-zinc-600 font-bold">
-                                                Nenhum dado encontrado no período.
+                                                Nenhum dado encontrado.
                                             </td>
                                         </tr>
                                     )}
@@ -1152,29 +1267,83 @@ export default function AdminDashboard() {
                         </div>
                     </div>
 
-                    <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 rounded-2xl overflow-hidden shadow-xl hover:border-zinc-700 transition-all">
+                    {/* Vendas por Vendedor */}
+                    <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 rounded-2xl overflow-hidden shadow-xl hover:border-zinc-700 transition-all flex flex-col h-full">
+                        <div className="p-5 border-b border-zinc-800/50 flex justify-between items-center bg-zinc-900/30">
+                            <h3 className="font-black flex items-center gap-2 text-zinc-100 uppercase tracking-widest text-sm">
+                                <Trophy size={18} className="text-emerald-500" />
+                                Vendas por Vendedor
+                            </h3>
+                        </div>
+                        <div className="overflow-x-auto flex-1">
+                            <table className="w-full text-sm text-left">
+                                <thead className="text-[10px] uppercase bg-zinc-900/50 text-zinc-500 font-black tracking-widest border-b border-zinc-800/50">
+                                    <tr>
+                                        <th className="px-4 py-3 w-16 text-center">Pos</th>
+                                        <th className="px-4 py-3">Vendedor</th>
+                                        <th className="px-4 py-3 text-right">Qtd</th>
+                                        <th className="px-4 py-3 text-right">Comissão</th>
+                                        <th className="px-4 py-3 text-right">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-800/50">
+                                    {data?.charts?.salesBySeller?.length > 0 ? (
+                                        data.charts.salesBySeller.slice(0, 10).map((s: any, i: number) => (
+                                            <tr key={i} className="hover:bg-zinc-800/40 transition-colors group cursor-pointer" onClick={() => setDrillDownSeller(s.name)}>
+                                                <td className="px-4 py-4 text-center font-black">
+                                                     {i === 0 ? <span className="text-lg">🥇</span> :
+                                                      i === 1 ? <span className="text-lg">🥈</span> :
+                                                      i === 2 ? <span className="text-lg">🥉</span> :
+                                                      <span className="text-xs text-zinc-500 font-mono">#{i + 1}</span>}
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-400 flex items-center justify-center font-black uppercase tracking-wider shrink-0 shadow-inner group-hover:border-emerald-500/30 group-hover:text-emerald-400 transition-all duration-300">
+                                                            {getInitials(s.name)}
+                                                        </div>
+                                                        <span className="font-bold text-zinc-300 group-hover:text-emerald-400 transition-colors uppercase tracking-tight truncate max-w-[150px]" title={s.name}>{s.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4 text-right text-zinc-500 font-bold">{s.qty}</td>
+                                                <td className="px-4 py-4 text-right font-black text-amber-500 font-mono tracking-tighter whitespace-nowrap">
+                                                    {hideValues ? "R$ ••" : `R$ ${(s.commission || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`}
+                                                </td>
+                                                <td className="px-4 py-4 text-right font-black text-emerald-500 font-mono tracking-tighter whitespace-nowrap">
+                                                    {hideValues ? "R$ ••" : `R$ ${s.value.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={5} className="px-4 py-10 text-center text-zinc-600 font-bold">
+                                                Nenhum vendedor.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Coluna da Direita: Clientes VIP */}
+                <div className="h-full">
+                    {/* Clientes VIP (Ranking) */}
+                    <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 rounded-2xl overflow-hidden shadow-xl hover:border-zinc-700 transition-all flex flex-col h-full">
                         <div className="p-5 border-b border-zinc-800/50 flex justify-between items-center bg-zinc-900/30">
                             <h3 className="font-black flex items-center gap-2 text-zinc-100 uppercase tracking-widest text-sm">
                                 <Users size={18} className="text-emerald-500" />
                                 Clientes VIP (Ranking)
                             </h3>
-                            <button
-                                onClick={() => setHideValues(prev => !prev)}
-                                className="flex items-center gap-1.5 px-3.5 py-2 text-[9px] font-black uppercase tracking-widest bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-xl transition-all text-zinc-400 hover:text-white active:scale-95 shadow-sm"
-                                title={hideValues ? "Mostrar valores" : "Modo Print (Ocultar valores)"}
-                            >
-                                {hideValues ? <Eye size={12} className="text-emerald-400" /> : <EyeOff size={12} />}
-                                <span>{hideValues ? "Mostrar Valores" : "Modo Print"}</span>
-                            </button>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto flex-1">
                             <table className="w-full text-sm text-left">
                                 <thead className="text-[10px] uppercase bg-zinc-900/50 text-zinc-500 font-black tracking-widest">
                                     <tr>
                                         <th className="px-6 py-4 w-16 text-center">Pos</th>
                                         <th className="px-6 py-4">Cliente</th>
                                         <th className="px-6 py-4 text-right">Pedidos</th>
-                                        <th className="px-6 py-4 text-right">Total Investido</th>
+                                        <th className="px-6 py-4 text-right">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-800/50">
@@ -1192,11 +1361,11 @@ export default function AdminDashboard() {
                                                         <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-400 flex items-center justify-center font-black uppercase tracking-wider shrink-0 shadow-inner group-hover:border-emerald-500/30 group-hover:text-emerald-400 transition-all duration-300">
                                                             {getInitials(c.name)}
                                                         </div>
-                                                        <span className="font-bold text-zinc-300 group-hover:text-emerald-400 transition-colors uppercase tracking-tight">{c.name}</span>
+                                                        <span className="font-bold text-zinc-300 group-hover:text-emerald-400 transition-colors uppercase tracking-tight truncate max-w-[180px]" title={c.name}>{c.name}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-right text-zinc-500 font-bold">{c.count}</td>
-                                                <td className="px-6 py-4 text-right font-black text-emerald-500 font-mono tracking-tighter">
+                                                <td className="px-6 py-4 text-right font-black text-emerald-500 font-mono tracking-tighter whitespace-nowrap">
                                                     {hideValues ? "R$ ••••" : `R$ ${c.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                                                 </td>
                                             </tr>
@@ -1212,165 +1381,7 @@ export default function AdminDashboard() {
                             </table>
                         </div>
                     </div>
-
-                    <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 rounded-2xl overflow-hidden shadow-xl hover:border-zinc-700 transition-all">
-                        <div className="p-5 border-b border-zinc-800/50 flex justify-between items-center bg-zinc-900/30">
-                            <h3 className="font-black flex items-center gap-2 text-zinc-100 uppercase tracking-widest text-sm">
-                                <Clock size={18} className="text-blue-500" />
-                                Vendas Recentes
-                            </h3>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="text-[10px] uppercase bg-zinc-900/50 text-zinc-500 font-black tracking-widest">
-                                    <tr>
-                                        <th className="px-6 py-4">Data</th>
-                                        <th className="px-6 py-4">Modelo</th>
-                                        {canViewFinance && <th className="px-6 py-4 text-right">Valor</th>}
-                                        <th className="px-6 py-4 text-right">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-zinc-800/50">
-                                    {data?.lists?.recentActivity?.length > 0 ? (
-                                        data.lists.recentActivity.map((a: any, i: number) => (
-                                            <tr key={i} className="hover:bg-zinc-800/40 transition-colors group">
-                                                <td className="px-6 py-4 text-zinc-400 whitespace-nowrap font-mono text-xs">
-                                                    {new Date(a.date).toLocaleDateString('pt-BR')} <span className="opacity-50 ml-1">{new Date(a.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                                                </td>
-                                                <td className="px-6 py-4 font-bold text-zinc-200 truncate max-w-[200px] group-hover:text-blue-400 transition-colors tracking-tight">{a.product}</td>
-                                                {canViewFinance && (
-                                                    <td className="px-6 py-4 text-right font-black text-emerald-500 font-mono tracking-tighter">
-                                                        {hideValues ? "R$ ••••" : `R$ ${a.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-                                                    </td>
-                                                )}
-                                                <td className="px-6 py-4 text-right">
-                                                    <span className={`px-2.5 py-1 rounded-md border text-[10px] font-black uppercase tracking-widest ${a.status === 'Concluída' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]' :
-                                                        a.status === 'Cancelada' ? 'bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20 shadow-[0_0_10px_rgba(234,179,8,0.1)]'
-                                                        }`}>
-                                                        {a.status}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={canViewFinance ? 4 : 3} className="px-6 py-10 text-center text-zinc-600 font-bold">
-                                                Nenhuma atividade recente.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div> {/* End Left Column */}
-
-                {/* --- Vendas por Vendedor (Right Column) --- */}
-                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all h-full flex flex-col">
-                    <div className="flex justify-between items-start mb-8">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
-                            <Users size={22} className="text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                            Vendas por Vendedor
-                        </h2>
-                        
-                        <div className="flex items-center gap-2">
-                            {/* Toggle Controls */}
-                            <div className="flex bg-zinc-900 border border-zinc-800 rounded-xl p-0.5 shadow-inner">
-                                <button
-                                    onClick={() => setSellerViewMode('chart')}
-                                    className={`p-2 rounded-lg transition-all ${sellerViewMode === 'chart' ? 'bg-zinc-800 text-emerald-400' : 'text-zinc-500 hover:text-zinc-300'}`}
-                                    title="Visualizar em Gráfico"
-                                >
-                                    <BarChart3 size={16} />
-                                </button>
-                                <button
-                                    onClick={() => setSellerViewMode('list')}
-                                    className={`p-2 rounded-lg transition-all ${sellerViewMode === 'list' ? 'bg-zinc-800 text-emerald-400' : 'text-zinc-500 hover:text-zinc-300'}`}
-                                    title="Visualizar em Ranking"
-                                >
-                                    <Trophy size={16} />
-                                </button>
-                            </div>
-
-                            <button onClick={() => setExpandedChart('salesBySeller')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] text-zinc-500 hover:text-emerald-400" title="Expandir">
-                                <Maximize2 size={18} />
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div className="flex-1 w-full min-h-[600px]">
-                        {sellerViewMode === 'chart' ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={data?.charts?.salesBySeller?.slice(0, 10) || []} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 20 }}>
-                                    <CartesianGrid strokeDasharray="1 10" stroke="var(--card-border)" strokeOpacity={0.15} horizontal={false} vertical={true} />
-                                    <XAxis type="number" hide />
-                                    <YAxis dataKey="name" type="category" tick={{ fill: '#71717a', fontSize: 11, fontWeight: 700 }} width={120} axisLine={false} tickLine={false} />
-                                    <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number, name: string, payload: any) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | ${(payload?.payload?.qty || 0)} unid.`} />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
-                                    <Bar dataKey="value" radius={[0, 4, 4, 0]} className="cursor-pointer" onClick={(bdata) => setDrillDownSeller(bdata?.name || null)}>
-                                        {(data?.charts?.salesBySeller?.slice(0, 10) || []).map((_e: any, index: number) => (
-                                            <Cell
-                                                key={`cell-${index}`}
-                                                fill="#10b981"
-                                                className="hover:opacity-80 transition-all cursor-pointer"
-                                                onClick={() => setDrillDownSeller(_e.name || null)}
-                                            />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="overflow-x-auto w-full">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="text-[10px] uppercase bg-zinc-900/50 text-zinc-500 font-black tracking-widest border-b border-zinc-800/50">
-                                        <tr>
-                                            <th className="px-4 py-3 w-16 text-center">Pos</th>
-                                            <th className="px-4 py-3">Vendedor</th>
-                                            <th className="px-4 py-3 text-right">Qtd</th>
-                                            <th className="px-4 py-3 text-right">Comissão</th>
-                                            <th className="px-4 py-3 text-right">Faturamento</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-zinc-800/50">
-                                        {data?.charts?.salesBySeller?.length > 0 ? (
-                                            data.charts.salesBySeller.slice(0, 10).map((s: any, i: number) => (
-                                                <tr key={i} className="hover:bg-zinc-800/40 transition-colors group cursor-pointer" onClick={() => setDrillDownSeller(s.name)}>
-                                                    <td className="px-4 py-4 text-center font-black">
-                                                         {i === 0 ? <span className="text-lg">🥇</span> :
-                                                          i === 1 ? <span className="text-lg">🥈</span> :
-                                                          i === 2 ? <span className="text-lg">🥉</span> :
-                                                          <span className="text-xs text-zinc-500 font-mono">#{i + 1}</span>}
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-400 flex items-center justify-center font-black uppercase tracking-wider shrink-0 shadow-inner group-hover:border-emerald-500/30 group-hover:text-emerald-400 transition-all duration-300">
-                                                                {getInitials(s.name)}
-                                                            </div>
-                                                            <span className="font-bold text-zinc-300 group-hover:text-emerald-400 transition-colors uppercase tracking-tight">{s.name}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-4 text-right text-zinc-500 font-bold">{s.qty}</td>
-                                                    <td className="px-4 py-4 text-right font-black text-amber-500 font-mono tracking-tighter">
-                                                        {hideValues ? "R$ ••••" : `R$ ${(s.commission || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-                                                    </td>
-                                                    <td className="px-4 py-4 text-right font-black text-emerald-500 font-mono tracking-tighter">
-                                                        {hideValues ? "R$ ••••" : `R$ ${s.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan={5} className="px-4 py-10 text-center text-zinc-600 font-bold">
-                                                    Nenhum vendedor encontrado.
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </div>
                 </div>
-
             </div>
 
             {/* ROW 3: FINANCIAL ANALYTICS */}

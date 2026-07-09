@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
     try {
     const sessionOrResponse = await requireRoles(['admin', 'sales', 'pricing', 'finance', 'orcamento', 'production', 'painter']);
@@ -53,6 +55,11 @@ export async function GET(req: Request) {
                     series ( 
                         nome,
                         categorias ( nome )
+                    ),
+                    figuras_meta (
+                        horas_impressao,
+                        horas_pintura,
+                        resina_kg
                     )
                 )
             `)
@@ -74,6 +81,7 @@ export async function GET(req: Request) {
 
         const sales = currRes.data;
         const prevSales = prevRes.data;
+
 
         // 3. Fetch Studio Details
         const { data: studios, error: studiosError } = await supabase
@@ -320,15 +328,59 @@ export async function GET(req: Request) {
             .sort((a, b) => b.revenue - a.revenue)
             .slice(0, 10);
 
-        const recentActivity = sales
-            .sort((a, b) => new Date(b.data_venda).getTime() - new Date(a.data_venda).getTime())
-            .slice(0, 10)
+        // Calculate production deadline and metadata for each sale
+        const nowMs = new Date().getTime();
+        sales.forEach((s: any) => {
+            const figura = Array.isArray(s.figuras) ? s.figuras[0] : s.figuras;
+            const metas = figura?.figuras_meta;
+            const meta = Array.isArray(metas) ? metas[0] : metas;
+            
+            const hoursPrint = Number(meta?.horas_impressao) || 0;
+            const hoursPaint = Number(meta?.horas_pintura) || 0;
+            const resinaKg = Number(meta?.resina_kg) || 0;
+
+            const daysPrint = Math.ceil(hoursPrint / 24);
+            const daysPaint = Math.ceil(hoursPaint / 8);
+            const totalProdDays = daysPrint + daysPaint;
+
+            const saleDate = new Date(s.data_venda);
+            // Production deadline is strictly 45 days after the sale date
+            const bufferDays = 45;
+            const deadlineDate = new Date(saleDate.getTime() + bufferDays * 24 * 60 * 60 * 1000);
+            
+            s._deadlineTime = deadlineDate.getTime();
+            s._daysRemaining = s.status === 'Concluída' || s.status === 'Cancelada'
+                ? null
+                : Math.ceil((deadlineDate.getTime() - nowMs) / (1000 * 60 * 60 * 24));
+            s._resinaKg = resinaKg * (Number(s.quantidade) || 1);
+            s._horasPintura = hoursPaint * (Number(s.quantidade) || 1);
+            s._horasImpressao = hoursPrint * (Number(s.quantidade) || 1);
+            s._pinturaFreelancer = s.pintura_freelancer || false;
+            s._clienteNome = s.cliente_nome || 'Cliente Desconhecido';
+        });
+
+        const activeProductionSales = sales.filter(s => 
+            s.status !== 'Concluída' && 
+            s.status !== 'Cancelada' && 
+            s.status !== 'Pronto p/ Entrega'
+        );
+
+        const recentActivity = activeProductionSales
+            .sort((a, b) => (a._deadlineTime || 0) - (b._deadlineTime || 0))
+            .slice(0, 15)
             .map(s => ({
                 id: s.id,
                 date: s.data_venda,
+                deadline: new Date(s._deadlineTime).toISOString(),
+                daysRemaining: s._daysRemaining,
                 // @ts-ignore
                 product: s.figuras?.nome || 'Figura Desconhecida',
+                customer: s._clienteNome,
                 value: s.valor_venda_final,
+                resina: s._resinaKg,
+                hoursPrint: s._horasImpressao,
+                hoursPaint: s._horasPintura,
+                freelancer: s._pinturaFreelancer,
                 status: s.status
             }));
 
