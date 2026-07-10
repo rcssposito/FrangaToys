@@ -574,13 +574,30 @@ export async function GET(req: Request) {
                     figures: validItems.sort((a, b) => b.price - a.price)
                 }];
             } else {
-                // Customized distribution buckets (5 tiers: 0-400, 400-700, 700-1200, 1200-1800, 1800+)
+                // Determine a nice round step size based on actual catalog range
+                const rawStep = (maxPrice - minPrice) / 5;
+                let step = 100;
+                if (rawStep > 1000) {
+                    step = Math.ceil(rawStep / 500) * 500;
+                } else if (rawStep > 100) {
+                    step = Math.ceil(rawStep / 100) * 100;
+                } else if (rawStep > 50) {
+                    step = 50;
+                } else if (rawStep > 20) {
+                    step = 25;
+                } else {
+                    step = 10;
+                }
+
+                // Start from a round min (never less than 0)
+                const start = Math.max(0, Math.floor(minPrice / step) * step);
+
                 const buckets = [
-                    { min: 0, max: 400, name: "R$ 0 - 400", figures: [] as any[] },
-                    { min: 400, max: 700, name: "R$ 400 - 700", figures: [] as any[] },
-                    { min: 700, max: 1200, name: "R$ 700 - 1200", figures: [] as any[] },
-                    { min: 1200, max: 1800, name: "R$ 1200 - 1800", figures: [] as any[] },
-                    { min: 1800, max: Infinity, name: "R$ 1800+", figures: [] as any[] }
+                    { min: start, max: start + step, name: `R$ ${start} - ${start + step}`, figures: [] as any[] },
+                    { min: start + step, max: start + 2 * step, name: `R$ ${start + step} - ${start + 2 * step}`, figures: [] as any[] },
+                    { min: start + 2 * step, max: start + 3 * step, name: `R$ ${start + 2 * step} - ${start + 3 * step}`, figures: [] as any[] },
+                    { min: start + 3 * step, max: start + 4 * step, name: `R$ ${start + 3 * step} - ${start + 4 * step}`, figures: [] as any[] },
+                    { min: start + 4 * step, max: Infinity, name: `R$ ${start + 4 * step}+`, figures: [] as any[] }
                 ];
 
                 // Assign prices to buckets

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, DollarSign, Box, Activity, Store, Maximize2, X, ArrowUpRight, ArrowDownRight, Clock, Tag, Layers, Ruler, ImageIcon, ExternalLink, Droplet, Printer, Eye, EyeOff, Trophy } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { toast } from 'sonner';
 
 export default function AdminDashboard() {
@@ -707,24 +707,31 @@ export default function AdminDashboard() {
                     title = "Distribuição de Preço";
                     ChartComponent = (
                         <div className="w-full h-full flex flex-col pt-4">
-                            <p className="text-[var(--text-muted)] text-[10px] font-black uppercase tracking-widest mb-6 text-center bg-[var(--input-bg)] py-2 rounded-full w-fit mx-auto px-6 border border-[var(--card-border)]">Clique na barra para ver os modelos que se encaixam nesta faixa</p>
+                            <p className="text-[var(--text-muted)] text-[10px] font-black uppercase tracking-widest mb-6 text-center bg-[var(--input-bg)] py-2 rounded-full w-fit mx-auto px-6 border border-[var(--card-border)]">Clique no gráfico ou pontos para ver os modelos que se encaixam nesta faixa</p>
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={chartData} margin={{ left: 0, bottom: 40 }}>
+                                <LineChart 
+                                    data={chartData} 
+                                    margin={{ left: 20, right: 20, top: 10, bottom: 40 }}
+                                    onClick={(state) => {
+                                        if (state && state.activeLabel) {
+                                            setDrillDownPriceBucket(String(state.activeLabel));
+                                        }
+                                    }}
+                                    className="cursor-pointer"
+                                >
                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" vertical={false} />
                                     <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 11, fontWeight: 700 }} interval={0} axisLine={false} tickLine={false} />
                                     <YAxis hide />
                                     <Tooltip content={<CategoryTooltip suffix="figuras" />} cursor={{ fill: 'var(--input-bg)' }} />
-                                    <Bar dataKey="value" radius={[6, 6, 0, 0]} onClick={(data) => setDrillDownPriceBucket(data?.name || null)} className="cursor-pointer">
-                                        {chartData.map((_e: any, index: number) => (
-                                            <Cell
-                                                key={`cell-${index}`}
-                                                fill="#3b82f6"
-                                                className="hover:opacity-80 transition-all cursor-pointer"
-                                                onClick={() => setDrillDownPriceBucket(_e.name || null)}
-                                            />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
+                                    <Line 
+                                        type="monotone" 
+                                        dataKey="value" 
+                                        stroke="#3b82f6" 
+                                        strokeWidth={4}
+                                        activeDot={{ r: 8 }}
+                                        dot={{ r: 6, fill: "#3b82f6", strokeWidth: 2, stroke: "var(--card-bg)" }}
+                                    />
+                                </LineChart>
                             </ResponsiveContainer>
                         </div>
                     );
@@ -1392,24 +1399,38 @@ export default function AdminDashboard() {
                             <Activity size={22} className="text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
                             Rendimento vs Custo
                         </h2>
-                        <button onClick={() => setExpandedChart('revenueVsCost')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] text-zinc-500 hover:text-emerald-400 shadow-sm" title="Expandir">
-                            <Maximize2 size={18} />
-                        </button>
                     </div>
                     <div className="h-[320px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data?.charts.revenueVsCost.slice(0, 10)} margin={{ left: 0, bottom: 20 }}>
+                            <LineChart data={data?.charts.revenueVsCost} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
                                 <CartesianGrid strokeDasharray="1 10" stroke="rgba(255,255,255,0.05)" horizontal={true} vertical={false} />
-                                <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 10, fontWeight: 800 }} interval={0} angle={-45} textAnchor="end" height={60} axisLine={false} tickLine={false} />
+                                <XAxis dataKey="name" hide />
                                 <YAxis hide />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', borderColor: '#27272a', borderRadius: '12px', color: '#f4f4f5', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(12px)' }}
-                                    itemStyle={{ fontWeight: 800 }}
+                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', borderColor: '#27272a', borderRadius: '12px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(12px)' }}
+                                    itemStyle={{ color: '#f4f4f5', fontWeight: 800 }}
+                                    labelStyle={{ color: '#a1a1aa', fontWeight: 'bold' }}
                                     formatter={(value: any) => `R$ ${(value || 0).toLocaleString('pt-BR')}`}
                                 />
-                                <Bar dataKey="revenue" name="Rendimento" fill="#10b981" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="cost" name="Custo Mensal" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                            </BarChart>
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="revenue" 
+                                    name="Rendimento" 
+                                    stroke="#10b981" 
+                                    strokeWidth={3}
+                                    dot={{ r: 4, fill: "#10b981" }}
+                                    activeDot={{ r: 6 }}
+                                />
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="cost" 
+                                    name="Custo Mensal" 
+                                    stroke="#ef4444" 
+                                    strokeWidth={3}
+                                    dot={{ r: 4, fill: "#ef4444" }}
+                                    activeDot={{ r: 6 }}
+                                />
+                            </LineChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
@@ -1537,21 +1558,24 @@ export default function AdminDashboard() {
                             <Tag size={22} className="text-purple-500 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
                             Ticket Médio por Estúdio
                         </h2>
-                        <button onClick={() => setExpandedChart('avgPriceByStudio')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-purple-500 hover:shadow-[0_0_15px_rgba(168,85,247,0.2)] text-zinc-500 hover:text-purple-400 shadow-sm" title="Expandir">
-                            <Maximize2 size={18} />
-                        </button>
                     </div>
                     <div className="h-[320px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data?.charts.avgPriceByStudio?.slice(0, 10) || []} margin={{ left: 0, bottom: 20 }}>
+                            <LineChart data={data?.charts.avgPriceByStudio || []} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
                                 <CartesianGrid strokeDasharray="1 10" stroke="rgba(255,255,255,0.05)" horizontal={true} vertical={false} />
-                                <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 10, fontWeight: 800 }} interval={0} angle={-45} textAnchor="end" height={60} axisLine={false} tickLine={false} />
+                                <XAxis dataKey="name" hide />
                                 <YAxis hide />
-                                <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number) => `R$ ${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
-                                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                    {(data?.charts.avgPriceByStudio || []).slice(0, 10).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#a855f7" />)}
-                                </Bar>
-                            </BarChart>
+                                <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number) => `R$ ${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />} />
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="value" 
+                                    name="Ticket Médio" 
+                                    stroke="#a855f7" 
+                                    strokeWidth={3}
+                                    dot={{ r: 4, fill: "#a855f7" }}
+                                    activeDot={{ r: 6 }}
+                                />
+                            </LineChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
@@ -1568,22 +1592,30 @@ export default function AdminDashboard() {
                     </div>
                     <div className="h-[320px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data?.charts.priceDistribution || []} margin={{ left: 0, bottom: 20 }}>
+                            <LineChart 
+                                data={data?.charts.priceDistribution || []} 
+                                margin={{ left: 10, right: 10, bottom: 20 }}
+                                onClick={(state) => {
+                                    if (state && state.activeLabel) {
+                                        setExpandedChart('priceDistribution');
+                                        setDrillDownPriceBucket(String(state.activeLabel));
+                                    }
+                                }}
+                                className="cursor-pointer"
+                            >
                                 <CartesianGrid strokeDasharray="1 10" stroke="rgba(255,255,255,0.05)" horizontal={true} vertical={false} />
                                 <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 10, fontWeight: 800 }} interval={0} angle={-45} textAnchor="end" height={60} axisLine={false} tickLine={false} />
                                 <YAxis hide />
                                 <Tooltip content={<CategoryTooltip suffix="figuras" />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
-                                <Bar dataKey="value" radius={[4, 4, 0, 0]} onClick={(bdata) => { setExpandedChart('priceDistribution'); setDrillDownPriceBucket(bdata?.name || null); }} className="cursor-pointer">
-                                    {(data?.charts.priceDistribution || []).map((_e: any, index: number) => (
-                                        <Cell
-                                            key={`cell-${index}`}
-                                            fill="#3b82f6"
-                                            className="hover:opacity-80 transition-opacity cursor-pointer shadow-[0_0_10px_rgba(59,130,246,0.5)]"
-                                            onClick={() => { setExpandedChart('priceDistribution'); setDrillDownPriceBucket(_e.name || null); }}
-                                        />
-                                    ))}
-                                </Bar>
-                            </BarChart>
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="value" 
+                                    stroke="#3b82f6" 
+                                    strokeWidth={4}
+                                    activeDot={{ r: 8 }}
+                                    dot={{ r: 6, fill: "#3b82f6", strokeWidth: 2, stroke: "var(--card-bg)" }}
+                                />
+                            </LineChart>
                         </ResponsiveContainer>
                     </div>
                 </div>

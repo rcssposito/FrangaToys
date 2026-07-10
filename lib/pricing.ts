@@ -90,8 +90,8 @@ export function calculateFigurePrices(meta: FigureMeta, settings: PricingParams)
 export function getFigureTier(price: number): number {
     if (price >= 1800) return 1;
     if (price >= 1200) return 2;
-    if (price >= 700) return 3;
-    if (price >= 400) return 4;
+    if (price >= 600) return 3;
+    if (price >= 350) return 4;
     return 5;
 }
 

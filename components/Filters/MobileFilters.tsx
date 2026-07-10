@@ -26,9 +26,9 @@ type FilterState = z.infer<typeof FiltersSchema>;
 import { usePathname } from 'next/navigation';
 
 const PRICE_RANGES = [
-  { label: 'Até R$ 400', value: '0-400', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
-  { label: 'R$ 400 - R$ 700', value: '400-700', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
-  { label: 'R$ 700 - R$ 1200', value: '700-1200', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
+  { label: 'Até R$ 350', value: '0-350', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
+  { label: 'R$ 350 - R$ 600', value: '350-600', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
+  { label: 'R$ 600 - R$ 1200', value: '600-1200', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
   { label: 'R$ 1200 - R$ 1800', value: '1200-1800', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
   { label: 'R$ 1800+', value: '1800-+', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' }
 ];

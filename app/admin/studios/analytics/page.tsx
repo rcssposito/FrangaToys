@@ -531,7 +531,9 @@ export default function StudiosAnalyticsPage() {
                                                 <XAxis dataKey="name" stroke="#52525b" tickLine={false} />
                                                 <YAxis stroke="#52525b" tickLine={false} />
                                                 <Tooltip 
-                                                    contentStyle={{ backgroundColor: '#090b0e', borderColor: '#27272a', borderRadius: '1rem', color: '#f4f4f5' }}
+                                                    contentStyle={{ backgroundColor: '#090b0e', borderColor: '#27272a', borderRadius: '1rem' }}
+                                                    itemStyle={{ color: '#f4f4f5', fontWeight: 'bold' }}
+                                                    labelStyle={{ color: '#71717a', fontWeight: 'bold' }}
                                                     formatter={(value) => [`R$ ${Number(value).toLocaleString('pt-BR')}`]}
                                                 />
                                                 <Legend wrapperStyle={{ paddingTop: 10 }} />
@@ -575,7 +577,9 @@ export default function StudiosAnalyticsPage() {
                                                     ))}
                                                 </Pie>
                                                 <Tooltip 
-                                                    contentStyle={{ backgroundColor: '#090b0e', borderColor: '#27272a', borderRadius: '1rem', color: '#f4f4f5' }}
+                                                    contentStyle={{ backgroundColor: '#090b0e', borderColor: '#27272a', borderRadius: '1rem' }}
+                                                    itemStyle={{ color: '#f4f4f5', fontWeight: 'bold' }}
+                                                    labelStyle={{ color: '#71717a', fontWeight: 'bold' }}
                                                     formatter={(value) => [`${value} un`]}
                                                 />
                                             </PieChart>
@@ -637,7 +641,9 @@ export default function StudiosAnalyticsPage() {
                                                     ))}
                                                 </Pie>
                                                 <Tooltip 
-                                                    contentStyle={{ backgroundColor: '#090b0e', borderColor: '#27272a', borderRadius: '1rem', color: '#f4f4f5' }}
+                                                    contentStyle={{ backgroundColor: '#090b0e', borderColor: '#27272a', borderRadius: '1rem' }}
+                                                    itemStyle={{ color: '#f4f4f5', fontWeight: 'bold' }}
+                                                    labelStyle={{ color: '#71717a', fontWeight: 'bold' }}
                                                     formatter={(value) => [`R$ ${Number(value).toLocaleString('pt-BR')}`]}
                                                 />
                                             </PieChart>

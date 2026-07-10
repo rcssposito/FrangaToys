@@ -33,9 +33,9 @@ interface FiltersProps {
 }
 
 const PRICE_RANGES = [
-  { label: 'Até R$ 400', value: '0-400', activeClass: 'border-orange-500 text-orange-400 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.15)]' },
-  { label: 'R$ 400 - R$ 700', value: '400-700', activeClass: 'border-orange-500 text-orange-400 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.15)]' },
-  { label: 'R$ 700 - R$ 1200', value: '700-1200', activeClass: 'border-orange-500 text-orange-400 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.15)]' },
+  { label: 'Até R$ 350', value: '0-350', activeClass: 'border-orange-500 text-orange-400 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.15)]' },
+  { label: 'R$ 350 - R$ 600', value: '350-600', activeClass: 'border-orange-500 text-orange-400 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.15)]' },
+  { label: 'R$ 600 - R$ 1200', value: '600-1200', activeClass: 'border-orange-500 text-orange-400 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.15)]' },
   { label: 'R$ 1200 - R$ 1800', value: '1200-1800', activeClass: 'border-orange-500 text-orange-400 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.15)]' },
   { label: 'R$ 1800+', value: '1800-+', activeClass: 'border-orange-500 text-orange-400 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.15)]' }
 ];
