@@ -33,6 +33,25 @@ export default function CampaignManager() {
     // Bulk Discount State
     const [bulkDiscount, setBulkDiscount] = useState<string>('');
 
+    // Bulk Studio Campaign State
+    const [studios, setStudios] = useState<{ id: number, nome: string }[]>([]);
+    const [selectedStudioId, setSelectedStudioId] = useState<string>('');
+    const [studioDiscount, setStudioDiscount] = useState<string>('');
+    const [isApplyingStudio, setIsApplyingStudio] = useState(false);
+
+    // Fetch Studios
+    const fetchStudios = useCallback(async () => {
+        try {
+            const res = await fetch('/api/admin/studios');
+            if (res.ok) {
+                const data = await res.json();
+                setStudios(data.filter((s: any) => s.ativo));
+            }
+        } catch (e) {
+            console.error('Erro ao carregar estúdios:', e);
+        }
+    }, []);
+
     const fetchFigures = useCallback(async () => {
         try {
             setLoading(true);
@@ -51,7 +70,8 @@ export default function CampaignManager() {
     useEffect(() => {
         setMounted(true);
         fetchFigures();
-    }, [fetchFigures]);
+        fetchStudios();
+    }, [fetchFigures, fetchStudios]);
 
     const campaignFigures = useMemo(() => allFigures.filter(f => f.is_campanha || f.is_campanha_active || f.preco_fixo_campanha > 0 || f.desconto_campanha > 0), [allFigures]);
 
@@ -200,6 +220,66 @@ export default function CampaignManager() {
         fetchFigures();
     };
 
+    const handleApplyStudioDiscount = async () => {
+        if (!canEdit || !selectedStudioId) return;
+        const desc = Number(studioDiscount);
+        if (isNaN(desc) || desc < 0 || desc > 100) {
+            toast.error('Insira uma porcentagem válida entre 0 e 100.');
+            return;
+        }
+
+        const studio = studios.find(s => s.id === Number(selectedStudioId));
+        const confirm = window.confirm(`Deseja aplicar ${desc}% de desconto em TODAS as peças do estúdio "${studio?.nome}"?`);
+        if (!confirm) return;
+
+        setIsApplyingStudio(true);
+        toast.loading('Aplicando promoção no estúdio...', { id: 'studio-desc' });
+
+        try {
+            const res = await fetch('/api/admin/figures/bulk-campaign', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studioId: Number(selectedStudioId), discount: desc }),
+            });
+
+            if (!res.ok) throw new Error();
+
+            toast.success('Desconto por estúdio aplicado com sucesso!', { id: 'studio-desc' });
+            setStudioDiscount('');
+            fetchFigures();
+        } catch (e) {
+            toast.error('Erro ao aplicar desconto por estúdio.', { id: 'studio-desc' });
+        } finally {
+            setIsApplyingStudio(false);
+        }
+    };
+
+    const handleClearStudioDiscount = async () => {
+        if (!canEdit || !selectedStudioId) return;
+
+        const studio = studios.find(s => s.id === Number(selectedStudioId));
+        const confirm = window.confirm(`Deseja remover da campanha TODAS as peças do estúdio "${studio?.nome}"?`);
+        if (!confirm) return;
+
+        setIsApplyingStudio(true);
+        toast.loading('Limpando promoção do estúdio...', { id: 'studio-desc' });
+
+        try {
+            const res = await fetch(`/api/admin/figures/bulk-campaign?studioId=${selectedStudioId}`, {
+                method: 'DELETE',
+            });
+
+            if (!res.ok) throw new Error();
+
+            toast.success('Promoção do estúdio removida com sucesso!', { id: 'studio-desc' });
+            fetchFigures();
+        } catch (e) {
+            toast.error('Erro ao remover promoção do estúdio.', { id: 'studio-desc' });
+        } finally {
+            setIsApplyingStudio(false);
+        }
+    };
+
     if (!mounted) return null;
 
     return (
@@ -247,8 +327,64 @@ export default function CampaignManager() {
                         </div>
                     </div>
 
+                    {/* Promoção por Estúdio */}
+                    <div className="bg-[var(--card-bg)] border border-purple-500/20 rounded-2xl p-6 shadow-lg order-2 animate-in fade-in duration-300">
+                        <h3 className="font-black text-lg flex items-center gap-2 mb-2">
+                            <Tag size={20} className="text-purple-500" />
+                            Promoção por Estúdio
+                        </h3>
+                        <p className="text-xs text-[var(--text-muted)] mb-4">Aplica ou remove desconto de todas as peças de um estúdio selecionado.</p>
+
+                        <div className="flex flex-col gap-4">
+                            <div>
+                                <label className="block text-[10px] uppercase font-black tracking-widest text-[var(--text-muted)] mb-2">Selecione o Estúdio</label>
+                                <select
+                                    value={selectedStudioId}
+                                    onChange={(e) => setSelectedStudioId(e.target.value)}
+                                    className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl px-4 py-2.5 outline-none focus:border-purple-500 transition-all font-bold text-sm text-[var(--foreground)]"
+                                >
+                                    <option value="">-- Selecione --</option>
+                                    {studios.map(s => (
+                                        <option key={s.id} value={s.id}>{s.nome}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] uppercase font-black tracking-widest text-[var(--text-muted)] mb-2">Desconto (%)</label>
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        placeholder="Ex: 10"
+                                        value={studioDiscount}
+                                        onChange={(e) => setStudioDiscount(e.target.value)}
+                                        className="w-full bg-[var(--input-bg)] border border-purple-500/30 rounded-xl px-4 py-2.5 outline-none focus:border-purple-500 transition-all font-black text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 font-black text-purple-500 opacity-50">%</span>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 mt-2">
+                                <button
+                                    onClick={handleApplyStudioDiscount}
+                                    disabled={!canEdit || !selectedStudioId || isApplyingStudio}
+                                    className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50"
+                                >
+                                    Aplicar
+                                </button>
+                                <button
+                                    onClick={handleClearStudioDiscount}
+                                    disabled={!canEdit || !selectedStudioId || isApplyingStudio}
+                                    className="w-full py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-red-500 hover:text-red-400 text-zinc-400 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all disabled:opacity-50"
+                                >
+                                    Limpar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Adicionar à Campanha */}
-                    <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl p-6 shadow-sm order-2">
+                    <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl p-6 shadow-sm order-3">
                         <h2 className="text-xl font-black mb-2 flex items-center gap-2">
                             <Plus size={20} className="text-purple-500" />
                             Adicionar à Campanha
