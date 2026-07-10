@@ -24,7 +24,9 @@ import {
     Copy,
     Check,
     Gift,
-    Wand2
+    Wand2,
+    Trash2,
+    Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePermission } from '@/hooks/usePermission';
@@ -169,6 +171,64 @@ export default function CustomersPage() {
             fetchCustomers();
         } catch (err: any) {
             toast.error(err.message || 'Erro ao atualizar cliente');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const handleLgpdWipe = async (customerId: string) => {
+        if (!confirm('ATENÇÃO: Esta ação é definitiva e irreversível!\n\nEla apagará todos os dados cadastrais pessoais (Nome, Telefone, CPF, Endereço, Instagram, Observações) deste cliente, substituindo-os por dados genéricos (CLIENTE ANONIMIZADO).\n\nOs históricos e valores das vendas serão preservados para fins de auditoria de faturamento, mas totalmente desvinculados do cliente original.\n\nDeseja realmente realizar o wipe/anonimização deste cliente?')) {
+            return;
+        }
+
+        setIsUpdating(true);
+        try {
+            const res = await fetch('/api/admin/customers/anonimizar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: customerId })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erro ao anonimizar cliente');
+
+            toast.success('Cliente anonimizado com sucesso sob as regras da LGPD!');
+            setIsEditModalOpen(false);
+            setSelectedCustomer(null);
+            fetchCustomers();
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao processar solicitação');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const handleLgpdExport = async (customer: Customer) => {
+        setIsUpdating(true);
+        try {
+            const res = await fetch('/api/admin/customers/exportar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: customer.id })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erro ao exportar dados');
+
+            const jsonStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `export_lgpd_${customer.nome.toLowerCase().replace(/\s+/g, '_')}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            toast.success('Relatório LGPD exportado com sucesso!');
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao processar exportação');
         } finally {
             setIsUpdating(false);
         }
@@ -423,7 +483,6 @@ export default function CustomersPage() {
                             <thead>
                                 <tr className="border-b border-zinc-800/50 bg-black/40">
                                     <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Cliente / Contato</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden md:table-cell">Redes Sociais</th>
                                     <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden md:table-cell">Última Compra</th>
                                     <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden md:table-cell">Total Gasto (LTV)</th>
                                     <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] text-right">Ações</th>
@@ -465,20 +524,6 @@ export default function CustomersPage() {
                                                     </a>
                                                 </div>
                                             </div>
-                                        </td>
-                                        <td className="px-8 py-5 hidden md:table-cell">
-                                            {customer.instagram ? (
-                                                <a 
-                                                    href={`https://instagram.com/${customer.instagram.replace('@', '')}`}
-                                                    target="_blank"
-                                                    className="flex items-center gap-2 text-[11px] font-bold text-zinc-400 hover:text-pink-500 transition-colors bg-zinc-900/50 px-3 py-1.5 rounded-lg border border-zinc-800/80 w-fit"
-                                                >
-                                                    <InstagramIcon size={14} />
-                                                    @{customer.instagram.replace('@', '')}
-                                                </a>
-                                            ) : (
-                                                <span className="text-[10px] font-black text-zinc-700 uppercase tracking-widest">Não Vinculado</span>
-                                            )}
                                         </td>
                                         <td className="px-8 py-5 hidden md:table-cell">
                                             <div className="flex flex-col">
@@ -679,14 +724,36 @@ export default function CustomersPage() {
                                 </div>
                             </div>
 
-                            <button
-                                type="submit"
-                                disabled={isUpdating}
-                                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50 uppercase tracking-widest shadow-lg shadow-orange-500/20"
-                            >
-                                {isUpdating ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                                Salvar Alterações
-                            </button>
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    type="submit"
+                                    disabled={isUpdating}
+                                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50 uppercase tracking-widest shadow-lg shadow-orange-500/20 cursor-pointer"
+                                >
+                                    {isUpdating ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                                    Salvar Alterações
+                                </button>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleLgpdExport(selectedCustomer)}
+                                        disabled={isUpdating}
+                                        className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-300 font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 text-xs uppercase tracking-wider cursor-pointer"
+                                    >
+                                        <Download size={14} />
+                                        Exportar Dados
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleLgpdWipe(selectedCustomer.id)}
+                                        disabled={isUpdating}
+                                        className="w-full bg-red-950/40 hover:bg-red-950/60 border border-red-800/40 hover:border-red-650 text-red-400 font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 text-xs uppercase tracking-wider cursor-pointer"
+                                    >
+                                        <Trash2 size={14} />
+                                        Wipe (LGPD)
+                                    </button>
+                                </div>
+                            </div>
                         </form>
                     </div>
                 </div>

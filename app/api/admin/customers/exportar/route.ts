@@ -1,35 +1,42 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
     try {
-        const { phone } = await req.json();
-        if (!phone) return NextResponse.json({ error: 'Telefone é obrigatório' }, { status: 400 });
+        const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
-        const sanitizedPhone = phone.replace(/\D/g, '');
+        const body = await req.json();
+        const { id } = body;
+
+        if (!id) {
+            return NextResponse.json({ error: 'ID do cliente é obrigatório' }, { status: 400 });
+        }
 
         // 1. Obter informações do cliente
         const { data: client, error: clientErr } = await supabase
             .from('clientes')
             .select('*')
-            .eq('telefone', sanitizedPhone)
+            .eq('id', id)
             .maybeSingle();
 
         if (clientErr) throw clientErr;
         if (!client) {
-            return NextResponse.json({ error: 'Nenhum cadastro encontrado para este telefone' }, { status: 404 });
+            return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 });
         }
 
         // 2. Obter as vendas vinculadas a este cliente
         const { data: sales, error: salesErr } = await supabase
             .from('vendas')
             .select('*')
-            .eq('cliente_id', client.id);
+            .eq('cliente_id', id);
 
         if (salesErr) throw salesErr;
 
         return NextResponse.json({
             clientes: {
+                id: client.id,
                 nome: client.nome,
                 telefone: client.telefone,
                 instagram: client.instagram,
@@ -40,9 +47,11 @@ export async function POST(req: NextRequest) {
                 bairro: client.bairro,
                 cidade: client.cidade,
                 uf: client.uf,
-                data_cadastro: client.data_cadastro
+                data_cadastro: client.data_cadastro,
+                notas: client.notas
             },
-            vendas: sales.map(s => ({
+            vendas: (sales || []).map(s => ({
+                id: s.id,
                 data_venda: s.data_venda,
                 figura_id: s.figura_id,
                 quantidade: s.quantidade,
@@ -54,7 +63,7 @@ export async function POST(req: NextRequest) {
             }))
         });
     } catch (err: any) {
-        console.error('Data download API error:', err);
+        console.error('LGPD Admin export error:', err);
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }

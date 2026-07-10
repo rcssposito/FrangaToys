@@ -1,26 +1,32 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
     try {
-        const { phone } = await req.json();
-        if (!phone) return NextResponse.json({ error: 'Telefone é obrigatório' }, { status: 400 });
+        const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
-        const sanitizedPhone = phone.replace(/\D/g, '');
+        const body = await req.json();
+        const { id } = body;
 
-        // 1. Encontrar o cliente correspondente
+        if (!id) {
+            return NextResponse.json({ error: 'ID do cliente é obrigatório' }, { status: 400 });
+        }
+
+        // 1. Encontrar o cliente para garantir que existe
         const { data: client, error: clientErr } = await supabase
             .from('clientes')
-            .select('id')
-            .eq('telefone', sanitizedPhone)
+            .select('*')
+            .eq('id', id)
             .maybeSingle();
 
         if (clientErr) throw clientErr;
         if (!client) {
-            return NextResponse.json({ error: 'Nenhum cadastro encontrado para este telefone' }, { status: 404 });
+            return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 });
         }
 
-        // 2. Anonimizar o histórico de vendas (remoção de PII, preservando os totais para relatórios)
+        // 2. Anonimizar histórico de vendas (remove PII, mantém contabilidade e faturamento)
         const { error: salesErr } = await supabase
             .from('vendas')
             .update({
@@ -28,18 +34,18 @@ export async function POST(req: NextRequest) {
                 cliente_contato: '00000000000',
                 observacao: 'Observações removidas por solicitação de privacidade (LGPD).'
             })
-            .eq('cliente_id', client.id);
+            .eq('cliente_id', id);
 
         if (salesErr) throw salesErr;
 
-        // 3. Anonimizar a ficha do CRM (clientes)
+        // 3. Anonimizar cadastro no CRM (clientes)
         const { error: deleteErr } = await supabase
             .from('clientes')
             .update({
                 nome: 'CLIENTE ANONIMIZADO (LGPD)',
-                telefone: `ANON_${client.id.substring(0, 8)}`,
+                telefone: `ANON_${id.substring(0, 8)}`,
                 instagram: null,
-                notas: 'Dados excluídos sob as diretrizes da LGPD.',
+                notas: 'Dados excluídos sob solicitação manual LGPD no painel administrativo.',
                 cpf: null,
                 cep: null,
                 logradouro: null,
@@ -48,13 +54,13 @@ export async function POST(req: NextRequest) {
                 cidade: null,
                 uf: null
             })
-            .eq('id', client.id);
+            .eq('id', id);
 
         if (deleteErr) throw deleteErr;
 
         return NextResponse.json({ success: true });
     } catch (err: any) {
-        console.error('Anonymize/Forget API error:', err);
+        console.error('LGPD Admin anonymize error:', err);
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }

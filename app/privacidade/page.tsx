@@ -1,84 +1,50 @@
 'use client';
 
 import { useState } from 'react';
-import { ShieldCheck, Download, Trash2, ArrowLeft, Loader2, FileText, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Download, Trash2, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PrivacidadePage() {
     const [activeTab, setActiveTab] = useState<'download' | 'forget'>('download');
+    const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [loading, setLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [downloadedData, setDownloadedData] = useState<any | null>(null);
 
-    const handleDownload = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
-        setErrorMessage(null);
-        setSuccessMessage(null);
-        setDownloadedData(null);
-
-        try {
-            const res = await fetch('/api/public/consent/download', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone })
-            });
-
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Erro ao buscar dados');
-
-            setDownloadedData(data);
-            setSuccessMessage('Seus dados foram localizados com sucesso! Você pode visualizá-los ou baixá-los abaixo.');
-        } catch (err: any) {
-            setErrorMessage(err.message || 'Ocorreu um erro ao processar sua solicitação.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleForget = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!confirm('Atenção: Esta ação é definitiva e apagará todos os seus dados cadastrais (nome, telefone, endereço, etc.) da nossa loja. Deseja prosseguir?')) {
-            return;
-        }
-
         setLoading(true);
         setErrorMessage(null);
         setSuccessMessage(null);
 
         try {
-            const res = await fetch('/api/public/consent/forget', {
+            const res = await fetch('/api/public/consent/request', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone })
+                body: JSON.stringify({ nome: name, telefone: phone, tipo: activeTab })
             });
 
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Erro ao processar exclusão');
+            if (!res.ok) throw new Error(data.error || 'Erro ao registrar solicitação');
 
-            setSuccessMessage('Seus dados pessoais foram excluídos/anonimizados do nosso banco de dados de acordo com as diretrizes da LGPD.');
+            if (activeTab === 'download') {
+                setSuccessMessage(
+                    'Solicitação de Exportação de Dados registrada com sucesso! Para sua segurança, nossa equipe analisará o pedido e entrará em contato via WhatsApp/Telefone para confirmar sua identidade antes do envio das informações. Prazo de resposta: até 3 dias úteis.'
+                );
+            } else {
+                setSuccessMessage(
+                    'Solicitação de Exclusão de Cadastro registrada com sucesso! Para sua segurança, nossa equipe fará uma verificação manual de identidade. Entraremos em contato via WhatsApp/Telefone para confirmar a solicitação antes de realizar o wipe dos dados cadastrais.'
+                );
+            }
+
+            setName('');
             setPhone('');
         } catch (err: any) {
             setErrorMessage(err.message || 'Ocorreu um erro ao processar sua solicitação.');
         } finally {
             setLoading(false);
         }
-    };
-
-    const triggerFileDownload = () => {
-        if (!downloadedData) return;
-        const jsonStr = JSON.stringify(downloadedData, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `dados_frangatoys_${phone.replace(/\D/g, '')}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
     };
 
     return (
@@ -109,7 +75,6 @@ export default function PrivacidadePage() {
                             setActiveTab('download');
                             setSuccessMessage(null);
                             setErrorMessage(null);
-                            setDownloadedData(null);
                         }}
                         className={`pb-3 flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
                             activeTab === 'download' 
@@ -124,7 +89,6 @@ export default function PrivacidadePage() {
                             setActiveTab('forget');
                             setSuccessMessage(null);
                             setErrorMessage(null);
-                            setDownloadedData(null);
                         }}
                         className={`pb-3 flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
                             activeTab === 'forget' 
@@ -143,7 +107,7 @@ export default function PrivacidadePage() {
                     </div>
                 )}
                 {successMessage && (
-                    <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-sm font-medium flex items-start gap-3">
+                    <div className="p-5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl text-sm leading-relaxed flex items-start gap-3 shadow-lg shadow-emerald-500/5">
                         <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                         <span>{successMessage}</span>
                     </div>
@@ -151,87 +115,61 @@ export default function PrivacidadePage() {
 
                 {/* Form Container */}
                 <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 md:p-8 shadow-xl flex flex-col gap-6">
-                    {activeTab === 'download' ? (
-                        <form onSubmit={handleDownload} className="flex flex-col gap-5">
-                            <div className="flex flex-col gap-2">
-                                <h3 className="text-lg font-bold text-zinc-100 flex items-center gap-2">
-                                    Exportar minhas informações
-                                </h3>
-                                <p className="text-xs text-zinc-400 leading-relaxed">
-                                    Insira o número do telefone cadastrado durante suas compras para puxar o relatório completo de seus dados de cadastro (CRM) e histórico de compras.
-                                </p>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-semibold text-zinc-300">Telefone do Cliente</label>
-                                <input
-                                    type="text"
-                                    placeholder="Ex: (11) 99999-9999"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    className="w-full bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm rounded-xl px-4 py-3 text-zinc-200 outline-none transition-all"
-                                    required
-                                />
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-zinc-950 font-bold rounded-xl py-3.5 text-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                            >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                                Solicitar Download
-                            </button>
-                        </form>
-                    ) : (
-                        <form onSubmit={handleForget} className="flex flex-col gap-5">
-                            <div className="flex flex-col gap-2">
-                                <h3 className="text-lg font-bold text-zinc-100 flex items-center gap-2">
-                                    Solicitar exclusão de dados pessoais
-                                </h3>
-                                <p className="text-xs text-zinc-400 leading-relaxed">
-                                    De acordo com o Art. 18 da LGPD, você tem o direito de solicitar a eliminação dos seus dados pessoais tratados pela loja. Seus dados cadastrais serão permanentemente excluídos ou anonimizados.
-                                </p>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-semibold text-zinc-300">Telefone do Cliente</label>
-                                <input
-                                    type="text"
-                                    placeholder="Ex: (11) 99999-9999"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    className="w-full bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm rounded-xl px-4 py-3 text-zinc-200 outline-none transition-all"
-                                    required
-                                />
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold rounded-xl py-3.5 text-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-md shadow-red-500/10"
-                            >
-                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                Solicitar Exclusão Definitiva
-                            </button>
-                        </form>
-                    )}
-
-                    {/* Data Display & Download Button */}
-                    {downloadedData && (
-                        <div className="border-t border-zinc-800 pt-6 flex flex-col gap-4">
-                            <div className="flex items-center justify-between">
-                                <h4 className="text-sm font-bold text-zinc-200 flex items-center gap-2">
-                                    <FileText className="w-4 h-4 text-amber-500" /> Relatório de Dados Pessoais
-                                </h4>
-                                <button
-                                    onClick={triggerFileDownload}
-                                    className="text-xs font-bold text-amber-500 hover:text-amber-400 transition-colors flex items-center gap-1 cursor-pointer"
-                                >
-                                    <Download className="w-3.5 h-3.5" /> Baixar Arquivo .json
-                                </button>
-                            </div>
-                            <pre className="w-full max-h-60 overflow-y-auto bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-[10px] font-mono text-zinc-400 leading-relaxed scrollbar-thin scrollbar-thumb-zinc-800">
-                                {JSON.stringify(downloadedData, null, 2)}
-                            </pre>
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                        <div className="flex flex-col gap-2">
+                            <h3 className="text-lg font-bold text-zinc-100 flex items-center gap-2">
+                                {activeTab === 'download' ? 'Exportar minhas informações' : 'Solicitar exclusão de dados pessoais'}
+                            </h3>
+                            <p className="text-xs text-zinc-400 leading-relaxed">
+                                {activeTab === 'download' 
+                                    ? 'Preencha o formulário abaixo. Nossa equipe gerará o relatório das suas compras e cadastro, e entrará em contato para confirmar a identidade antes de compartilhá-lo.'
+                                    : 'De acordo com o Art. 18 da LGPD, você tem o direito de solicitar a eliminação dos seus dados tratados. Para sua segurança, a exclusão será efetuada após confirmação humana pela nossa equipe.'}
+                            </p>
                         </div>
-                    )}
+                        
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-semibold text-zinc-300">Nome Completo</label>
+                            <input
+                                type="text"
+                                placeholder="Digite seu nome completo"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                className="w-full bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm rounded-xl px-4 py-3 text-zinc-200 outline-none transition-all"
+                                required
+                            />
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-semibold text-zinc-300">Telefone para Contato (WhatsApp)</label>
+                            <input
+                                type="text"
+                                placeholder="Ex: (11) 99999-9999"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                className="w-full bg-zinc-950 border border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm rounded-xl px-4 py-3 text-zinc-200 outline-none transition-all"
+                                required
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className={`w-full font-bold rounded-xl py-3.5 text-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
+                                activeTab === 'download' 
+                                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-zinc-950 shadow-md shadow-amber-500/10'
+                                    : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-md shadow-red-500/10'
+                            }`}
+                        >
+                            {loading ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : activeTab === 'download' ? (
+                                <Download className="w-4 h-4" />
+                            ) : (
+                                <Trash2 className="w-4 h-4" />
+                            )}
+                            {activeTab === 'download' ? 'Enviar Solicitação de Download' : 'Enviar Solicitação de Exclusão'}
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
