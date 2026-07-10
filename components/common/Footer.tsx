@@ -67,6 +67,13 @@ export default function Footer() {
                 <Palette size={14} />
                 Estúdios Parceiros
               </Link>
+              <Link
+                href="/privacidade"
+                className="text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-emerald-500 transition-colors flex items-center gap-2"
+              >
+                <ShieldCheck size={14} />
+                Privacidade & LGPD
+              </Link>
             </nav>
           </div>
 

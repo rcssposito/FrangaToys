@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Cookie, ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
 
 export default function CookieConsent() {
     const [isVisible, setIsVisible] = useState(false);
@@ -27,18 +28,36 @@ export default function CookieConsent() {
         }
     }, []);
 
-    const handleAccept = () => {
+    const handleAccept = async () => {
         localStorage.setItem('cookie-consent', 'accepted');
         setIsVisible(false);
+        try {
+            await fetch('/api/public/consent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'accepted' })
+            });
+        } catch (err) {
+            console.error('Failed to log accept consent:', err);
+        }
     };
 
-    const handleReject = () => {
+    const handleReject = async () => {
         localStorage.setItem('cookie-consent', 'rejected');
         const gaId = process.env.NEXT_PUBLIC_GA_ID;
         if (gaId) {
             (window as any)[`ga-disable-${gaId}`] = true;
         }
         setIsVisible(false);
+        try {
+            await fetch('/api/public/consent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'rejected' })
+            });
+        } catch (err) {
+            console.error('Failed to log reject consent:', err);
+        }
     };
 
     return (
@@ -61,7 +80,7 @@ export default function CookieConsent() {
                                     </span>
                                 </h4>
                                 <p className="text-xs text-zinc-400 leading-relaxed">
-                                    Nós usamos cookies e tecnologias semelhantes para personalizar conteúdo, anúncios e analisar o tráfego do nosso site de acordo com a nossa política.
+                                    Nós usamos cookies e tecnologias semelhantes de acordo com a nossa <Link href="/privacidade" className="underline hover:text-zinc-200 transition-colors">Política de Privacidade</Link>.
                                 </p>
                             </div>
                             <div className="shrink-0 self-center">
