@@ -5,6 +5,7 @@ import './globals.css';
 import Providers from './providers';
 import { Toaster } from 'sonner';
 import Footer from '@/components/common/Footer';
+import CookieConsent from '@/components/common/CookieConsent';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -44,6 +45,7 @@ export default function RootLayout({
           {children}
           {modal}
           <Footer />
+          <CookieConsent />
           <Toaster position="top-center" richColors />
         </Providers>
 
