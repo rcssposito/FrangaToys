@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { calculateFigurePrices } from '@/lib/pricing';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,7 +94,7 @@ export async function GET(req: Request) {
         // 4. Fetch Resin Stock (Try ID 1 first, fallback to first available)
         const { data: settingsList } = await supabase
             .from('pricing_params')
-            .select('estoque_resina_kg')
+            .select('*')
             .order('id', { ascending: true })
             .limit(1);
         
@@ -132,45 +133,50 @@ export async function GET(req: Request) {
             return acc;
         }, {});
 
-        // 4. Fetch Pricing View (Budget) - WITH PAGINATION
-        // Supabase API might limit rows even if we request more.
-        const allPricingData: any[] = [];
-        let page = 0;
-        const pageSize = 1000;
-        let hasMore = true;
+        // 4. Fetch Figures & Metadata for Dynamic Pricing Calculations
+        const allFiguresData: any[] = [];
+        let figPage = 0;
+        const figPageSize = 1000;
+        let figHasMore = true;
 
-        while (hasMore) {
-            // Also fetching 'imagem_url' from the view or related, but vw_figuras_orcamento doesn't have it.
-            // Wait, we need the image. The view might not have it. Let's map it from the main query later.
+        while (figHasMore) {
             const { data: batch, error: batchError } = await supabase
-                .from('vw_figuras_orcamento')
-                .select('id, "Figura", "Total (R$)", "Premium (R$)"')
-                .range(page * pageSize, (page + 1) * pageSize - 1);
+                .from('figuras')
+                .select('id, nome, figuras_meta(resina_kg, horas_impressao, horas_pintura, is_campanha, is_campanha_active, desconto_campanha, preco_fixo_campanha)')
+                .range(figPage * figPageSize, (figPage + 1) * figPageSize - 1);
 
             if (batchError) {
-                console.error("Error fetching pricing batch:", batchError);
+                console.error("Error fetching figures batch:", batchError);
                 break;
             }
 
             if (batch && batch.length > 0) {
-                allPricingData.push(...batch);
-                if (batch.length < pageSize) hasMore = false;
-                page++;
+                allFiguresData.push(...batch);
+                if (batch.length < figPageSize) figHasMore = false;
+                figPage++;
             } else {
-                hasMore = false;
+                figHasMore = false;
             }
         }
 
-        console.log(`[PricingDebug] Total Rows Fetched: ${allPricingData.length}`);
+        console.log(`[PricingDebug] Total Figures Fetched: ${allFiguresData.length}`);
 
-        // Map to cleaner objects
-        const pricingMap = new Map(); // ID -> { premium, cost }
-        if (allPricingData) {
-            allPricingData.forEach((row: any) => {
-                pricingMap.set(row.id, {
-                    name: row['Figura'],
-                    cost: row['Total (R$)'] || 0,
-                    price: row['Premium (R$)'] || 0
+        // Map and calculate real prices using calculateFigurePrices
+        const pricingMap = new Map(); // ID -> { price, cost, name }
+        if (allFiguresData && settings) {
+            allFiguresData.forEach((fig: any) => {
+                const meta = Array.isArray(fig.figuras_meta) ? fig.figuras_meta[0] : fig.figuras_meta;
+                let price = 0;
+                let cost = 0;
+                if (meta) {
+                    const prices = calculateFigurePrices(meta, settings);
+                    price = prices.colorido; // Standard catalog colored price (Colorido)
+                    cost = prices.custo_producao; // Cost of production
+                }
+                pricingMap.set(fig.id, {
+                    name: fig.nome,
+                    cost: cost,
+                    price: price
                 });
             });
         }
