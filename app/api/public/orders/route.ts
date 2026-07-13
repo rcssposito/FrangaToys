@@ -12,29 +12,29 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'Telefone ou Token é obrigatório' }, { status: 400 });
         }
 
-        let query = supabase
-            .from('vendas')
-            .select(`
-                id,
-                access_token,
-                status,
-                data_venda,
-                cliente_nome,
-                quantidade,
-                figura_id,
-                metodo_entrega,
-                status_pagamento,
-                valor_venda_final,
-                valor_pago_parcial,
-                valor_frete,
-                link_pagamento,
-                chave_nfe,
-                figuras (
-                    nome,
-                    imagem_url,
-                    studios ( nome )
-                )
-            `);
+        const selectFields = `
+            id,
+            access_token,
+            status,
+            data_venda,
+            cliente_nome,
+            quantidade,
+            figura_id,
+            metodo_entrega,
+            status_pagamento,
+            valor_venda_final,
+            valor_pago_parcial,
+            valor_frete,
+            link_pagamento,
+            chave_nfe,
+            figuras (
+                nome,
+                imagem_url,
+                studios ( nome )
+            )
+        `;
+
+        let query: any;
 
         if (token) {
             // Se buscar por token, primeiro descobrimos o telefone dono desse token
@@ -46,10 +46,14 @@ export async function GET(req: NextRequest) {
 
             if (owner?.cliente_contato) {
                 const sanitizedPhone = owner.cliente_contato.replace(/\D/g, '');
-                const phonePattern = `%${sanitizedPhone}%`;
-                query = query.or(`cliente_contato.ilike.${phonePattern}`);
+                query = supabase
+                    .rpc('get_vendas_by_phone', { phone_input: sanitizedPhone })
+                    .select(selectFields);
             } else {
-                query = query.eq('access_token', token); // Fallback caso não ache contato
+                query = supabase
+                    .from('vendas')
+                    .select(selectFields)
+                    .eq('access_token', token); // Fallback caso não ache contato
             }
         } else if (phone) {
             // Normalização simples do telefone (apenas números)
@@ -57,8 +61,11 @@ export async function GET(req: NextRequest) {
             if (sanitizedPhone.length < 8) {
                 return NextResponse.json({ error: 'Telefone inválido' }, { status: 400 });
             }
-            const phonePattern = `%${sanitizedPhone}%`;
-            query = query.or(`cliente_contato.ilike.${phonePattern}`);
+            query = supabase
+                .rpc('get_vendas_by_phone', { phone_input: sanitizedPhone })
+                .select(selectFields);
+        } else {
+            return NextResponse.json({ error: 'Telefone ou Token é obrigatório' }, { status: 400 });
         }
 
         const { data: sales, error } = await query.order('data_venda', { ascending: false });
