@@ -4,7 +4,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 export async function POST(req: Request) {
     try {
-        const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
+        const sessionOrResponse = await requireRoles(['admin', 'finance']);
         if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();

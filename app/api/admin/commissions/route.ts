@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'finance', 'sales']);
+    const sessionOrResponse = await requireRoles(['admin', 'finance']);
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const { searchParams } = new URL(req.url);

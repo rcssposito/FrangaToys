@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 // LISTAR FIGURAS + METADADOS
 export async function GET(req: NextRequest) {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'pricing', 'orcamento']);
+    const sessionOrResponse = await requireRoles(['admin', 'pricing']);
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const { data: settings } = await supabase
@@ -231,7 +231,7 @@ export async function GET(req: NextRequest) {
 // ATUALIZAR FIGURA (METADATA)
 export async function PUT(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'pricing', 'orcamento']);
+    const sessionOrResponse = await requireRoles(['admin', 'pricing']);
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         
@@ -390,7 +390,7 @@ export async function PUT(req: Request) {
 // DELETAR FIGURA
 export async function DELETE(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'pricing', 'orcamento']);
+    const sessionOrResponse = await requireRoles(['admin', 'pricing']);
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         

@@ -104,7 +104,7 @@ export default function Header() {
               className="hover:bg-zinc-900/10 dark:hover:bg-zinc-800/50 px-3 py-2 rounded-lg"
             />
             <Link
-              href="/admin/figures"
+              href="/admin"
               className="p-2 text-zinc-500 hover:text-orange-500 transition-colors"
               title="Acessar Admin"
             >
@@ -137,7 +137,7 @@ export default function Header() {
             <Instagram size={18} />
           </a>
           <ThemeToggle />
-          <Link href="/admin/figures" className="p-1 text-[var(--text-muted)] hover:text-orange-500">
+          <Link href="/admin" className="p-1 text-[var(--text-muted)] hover:text-orange-500">
             <Settings size={18} />
           </Link>
         </div>

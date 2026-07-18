@@ -91,6 +91,7 @@ export default function KanbanPage() {
     const [draggedSaleId, setDraggedSaleId] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const { hasRole } = usePermission();
+    const canSeeValues = hasRole('finance');
     
     // States for inline partial payment editing
     const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
@@ -511,12 +512,14 @@ export default function KanbanPage() {
                                             {columnTasks.length}
                                         </span>
                                     </div>
-                                    <div className="flex items-center justify-between mt-1 px-1">
-                                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Total Fila:</span>
-                                        <span className="text-[11px] font-black text-emerald-400">
-                                            R$ {columnTasks.reduce((sum, t) => sum + (Number(t.valor_venda_final) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                        </span>
-                                    </div>
+                                    {canSeeValues && (
+                                        <div className="flex items-center justify-between mt-1 px-1">
+                                            <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Total Fila:</span>
+                                            <span className="text-[11px] font-black text-emerald-400">
+                                                R$ {columnTasks.reduce((sum, t) => sum + (Number(t.valor_venda_final) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
 <div className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[calc(100vh-280px)] custom-scrollbar">
                                     {columnTasks.length === 0 && (
@@ -754,13 +757,13 @@ export default function KanbanPage() {
                                                     <span className="text-[9px] font-black px-1.5 py-0.5 bg-zinc-900 border border-zinc-850 rounded text-zinc-400 shadow-inner">
                                                         {task.quantidade}x
                                                     </span>
-                                                    {task.valor_venda_final !== undefined && (
+                                                    {canSeeValues && task.valor_venda_final !== undefined && (
                                                         <span className="text-[9px] font-black px-1.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-emerald-400">
                                                             R$ {Number(task.valor_venda_final).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                         </span>
                                                     )}
                                                     
-                                                    {editingSaleId === task.id ? (
+                                                    {canSeeValues && editingSaleId === task.id ? (
                                                         <div className="flex items-center gap-1 bg-zinc-900 px-1 border border-zinc-800 rounded">
                                                             <span className="text-[8px] font-black text-zinc-500">R$</span>
                                                             <input
@@ -781,7 +784,7 @@ export default function KanbanPage() {
                                                                 OK
                                                             </button>
                                                         </div>
-                                                    ) : (
+                                                    ) : canSeeValues ? (
                                                         <button
                                                             onClick={() => {
                                                                 setEditingSaleId(task.id);
@@ -805,6 +808,25 @@ export default function KanbanPage() {
                                                             }`} />
                                                             {task.status_pagamento === 'Pago' ? 'PAGO' : task.status_pagamento === 'Parcial' ? 'PARCIAL' : 'PENDENTE'}
                                                         </button>
+                                                    ) : (
+                                                        <span
+                                                            className={`flex items-center gap-1 text-[8px] font-black px-1.5 py-0.5 rounded border ${
+                                                                task.status_pagamento === 'Pago'
+                                                                ? 'bg-emerald-500/15 border-emerald-500/25 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]'
+                                                                : task.status_pagamento === 'Parcial'
+                                                                ? 'bg-blue-500/15 border-blue-500/25 text-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.1)]'
+                                                                : 'bg-yellow-500/15 border-yellow-500/25 text-yellow-400 shadow-[0_0_8px_rgba(234,179,8,0.1)]'
+                                                            }`}
+                                                        >
+                                                            <div className={`w-1 h-1 rounded-full ${
+                                                                task.status_pagamento === 'Pago'
+                                                                ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.5)]'
+                                                                : task.status_pagamento === 'Parcial'
+                                                                ? 'bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.5)]'
+                                                                : 'bg-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.5)]'
+                                                            }`} />
+                                                            {task.status_pagamento === 'Pago' ? 'PAGO' : task.status_pagamento === 'Parcial' ? 'PARCIAL' : 'PENDENTE'}
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>

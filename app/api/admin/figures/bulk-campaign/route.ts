@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 // APLICAR PROMOÇÃO EM MASSA POR ESTÚDIO
 export async function PUT(req: Request) {
     try {
-        const sessionOrResponse = await requireRoles(['admin', 'pricing', 'sales', 'orcamento']);
+        const sessionOrResponse = await requireRoles(['admin', 'pricing', 'sales']);
         if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();
@@ -58,7 +58,7 @@ export async function PUT(req: Request) {
 // REMOVER PROMOÇÃO EM MASSA POR ESTÚDIO
 export async function DELETE(req: Request) {
     try {
-        const sessionOrResponse = await requireRoles(['admin', 'pricing', 'sales', 'orcamento']);
+        const sessionOrResponse = await requireRoles(['admin', 'pricing', 'sales']);
         if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const { searchParams } = new URL(req.url);

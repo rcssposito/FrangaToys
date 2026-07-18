@@ -2,13 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, DollarSign, Box, Activity, Store, Maximize2, X, ArrowUpRight, ArrowDownRight, Clock, Tag, Layers, Ruler, ImageIcon, ExternalLink, Droplet, Printer, Eye, EyeOff, Trophy } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { toast } from 'sonner';
 
 export default function AdminDashboard() {
-    const { hasRole } = usePermission();
+    const { hasRole, loading: authLoading } = usePermission();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!authLoading) {
+            const canViewFinance = hasRole('admin') || hasRole('finance');
+            if (!canViewFinance) {
+                router.replace('/admin/kanban');
+            }
+        }
+    }, [authLoading]);
+
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<any>(null);
     const [year, setYear] = useState<string>(new Date().getFullYear().toString());

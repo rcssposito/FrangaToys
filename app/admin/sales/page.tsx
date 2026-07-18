@@ -98,6 +98,7 @@ function SalesContent() {
     const [figureSearch, setFigureSearch] = useState('');
 
     const { hasRole } = usePermission();
+    const canSeeValues = hasRole('finance');
 
     useEffect(() => {
         fetchSales();
@@ -327,19 +328,19 @@ function SalesContent() {
                                         <Calendar size={22} className="text-cyan-500/70" />
                                         {group.label}
                                     </h2>
-                                    <div className="flex gap-8 text-sm">
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-zinc-500 text-[10px] uppercase font-black tracking-[0.1em]">Total Vendas</span>
-                                            <span className="font-black text-cyan-500 text-lg tracking-tighter">R$ {group.totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                        </div>
-                                        {(hasRole('admin') || hasRole('finance')) && (
+                                    {canSeeValues && (
+                                        <div className="flex gap-8 text-sm">
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-zinc-500 text-[10px] uppercase font-black tracking-[0.1em]">Total Vendas</span>
+                                                <span className="font-black text-cyan-500 text-lg tracking-tighter">R$ {group.totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                            </div>
                                             <div className="flex flex-col items-end border-l border-zinc-800/80 pl-8 relative">
                                                 <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-emerald-500/30 to-transparent"></div>
                                                 <span className="text-zinc-500 text-[10px] uppercase font-black tracking-[0.1em]">Lucro Real</span>
                                                 <span className="font-black text-emerald-400 text-lg tracking-tighter">R$ {group.totalLucro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                             </div>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Grid de Vendas */}
@@ -386,7 +387,7 @@ function SalesContent() {
                                             <div className="pt-4 border-t border-zinc-900 flex justify-between items-end">
                                                 <div className="flex flex-col">
                                                     <span className="font-black text-zinc-100 text-xl tracking-tighter">
-                                                        R$ {sale.valor_venda_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        R$ {canSeeValues ? sale.valor_venda_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '***'}
                                                     </span>
                                                     <span className={`w-fit text-[9px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-wider mt-1 ${sale.link_pagamento ? 'bg-indigo-950/60 text-indigo-400 border border-indigo-500/30' : 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30'}`}>
                                                         {sale.link_pagamento ? 'Cartão' : 'PIX'}

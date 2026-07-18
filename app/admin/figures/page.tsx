@@ -59,8 +59,26 @@ const FigureMobileCard = ({
             {/* Cabecalho */}
             <div className="flex gap-3 justify-between items-start">
                 <div className="flex-1 min-w-0">
-                    <h3 onClick={() => f.imagem_url && setPreviewImage({ url: f.imagem_url, nome: f.nome })} className="text-sm font-bold text-orange-500 cursor-pointer hover:underline truncate" title={f.nome}>{f.nome}</h3>
-                    <div className="text-xs text-[var(--text-muted)] mt-0.5">{f.categoria} - {f.serie}</div>
+                    <div className="flex items-center gap-2">
+                        {f.imagem_url && (
+                            <button
+                                onClick={() => setPreviewImage({ url: f.imagem_url, nome: f.nome })}
+                                className="p-1 hover:bg-orange-500/10 rounded text-orange-500 transition-colors shrink-0"
+                                title="Ver Foto"
+                            >
+                                <ImageIcon size={14} />
+                            </button>
+                        )}
+                        <input
+                            type="text"
+                            value={f.nome || ''}
+                            placeholder="Nome da figura"
+                            disabled={!canEdit}
+                            onChange={e => handleChange(f.id, 'nome', e.target.value)}
+                            className="w-full bg-transparent border border-transparent hover:border-[var(--input-border)] focus:border-orange-500/50 rounded px-1.5 py-1 text-sm font-bold text-[var(--foreground)] focus:bg-[var(--input-bg)] outline-none transition-all truncate"
+                        />
+                    </div>
+                    <div className="text-xs text-[var(--text-muted)] mt-0.5 px-1.5">{f.categoria} - {f.serie}</div>
                     <span className="font-mono text-[10px] bg-[var(--input-bg)] text-[var(--text-muted)] px-2 py-0.5 rounded-sm border border-[var(--input-border)] mt-2 inline-block">
                         SKU: {f.codigo || '--'}
                     </span>
@@ -823,14 +841,27 @@ function DataGridContent() {
                                     return (
                                         <tr key={f.id} className="hover:bg-orange-500/[0.02] transition-colors group">
                                             <td className="pl-4 pr-2 py-4 w-full min-w-[350px]">
-                                                <div
-                                                    onClick={() => f.imagem_url && setPreviewImage({ url: f.imagem_url, nome: f.nome })}
-                                                    className="cursor-pointer text-left group/name"
-                                                >
-                                                    <h3 className="text-sm font-bold text-[var(--foreground)] group-hover:text-orange-500 transition-colors truncate max-w-[340px]">
-                                                        {f.nome}
-                                                    </h3>
-                                                    <div className="text-xs text-[var(--text-muted)] truncate max-w-[340px]">{f.categoria} - {f.serie}</div>
+                                                <div className="flex items-center gap-2">
+                                                    {f.imagem_url && (
+                                                        <button
+                                                            onClick={() => setPreviewImage({ url: f.imagem_url, nome: f.nome })}
+                                                            className="p-1 hover:bg-orange-500/10 rounded text-orange-500 transition-colors shrink-0"
+                                                            title="Ver Foto"
+                                                        >
+                                                            <ImageIcon size={16} />
+                                                        </button>
+                                                    )}
+                                                    <div className="flex-1 min-w-0">
+                                                        <input
+                                                            type="text"
+                                                            value={f.nome || ''}
+                                                            placeholder="Nome da figura"
+                                                            disabled={!canEdit}
+                                                            onChange={e => handleChange(f.id, 'nome', e.target.value)}
+                                                            className="w-full bg-transparent border border-transparent hover:border-[var(--input-border)] focus:border-orange-500/50 rounded px-1.5 py-1 text-sm font-bold text-[var(--foreground)] focus:bg-[var(--input-bg)] outline-none transition-all truncate"
+                                                        />
+                                                        <div className="text-xs text-[var(--text-muted)] truncate px-1.5 mt-0.5">{f.categoria} - {f.serie}</div>
+                                                    </div>
                                                 </div>
                                             </td>
 
