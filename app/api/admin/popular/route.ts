@@ -113,13 +113,17 @@ export async function GET() {
         const sourceStats: Record<string, number> = {};
         const stateStats: Record<string, number> = {};
         const cityStats: Record<string, number> = {};
+        const brStates = new Set(['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']);
 
         (analyticsData || []).forEach(hit => {
             if (hit.estado === 'DEV') return; // Skip development activity
             if (hit.dispositivo) deviceStats[hit.dispositivo] = (deviceStats[hit.dispositivo] || 0) + 1;
             if (hit.plataforma) platformStats[hit.plataforma] = (platformStats[hit.plataforma] || 0) + 1;
             if (hit.origem) sourceStats[hit.origem] = (sourceStats[hit.origem] || 0) + 1;
-            if (hit.estado) stateStats[hit.estado] = (stateStats[hit.estado] || 0) + 1;
+            if (hit.estado && brStates.has(hit.estado.toUpperCase())) {
+                const stateUpper = hit.estado.toUpperCase();
+                stateStats[stateUpper] = (stateStats[stateUpper] || 0) + 1;
+            }
             if (hit.cidade) cityStats[hit.cidade] = (cityStats[hit.cidade] || 0) + 1;
         });
 
@@ -132,7 +136,7 @@ export async function GET() {
                 devices: Object.entries(deviceStats).map(([name, value]) => ({ name, value })),
                 platforms: Object.entries(platformStats).map(([name, value]) => ({ name, value })),
                 sources: Object.entries(sourceStats).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 5),
-                locations: Object.entries(stateStats).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 5)
+                locations: Object.entries(stateStats).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value)
             }
         };
 

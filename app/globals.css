@@ -3,6 +3,16 @@
 @theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-zinc-950: var(--zinc-950-custom);
+  --color-zinc-900: var(--zinc-900-custom);
+  --color-zinc-850: var(--zinc-850-custom);
+  --color-zinc-800: var(--zinc-800-custom);
+  --color-zinc-750: var(--zinc-750-custom);
+  --color-zinc-700: var(--zinc-700-custom);
+  --color-zinc-300: var(--zinc-300-custom);
+  --color-zinc-200: var(--zinc-200-custom);
+  --color-zinc-100: var(--zinc-100-custom);
+  --color-white: var(--white-custom);
 }
 
 :root {
@@ -19,6 +29,17 @@
   --accent-fuchsia: #d946ef;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+
+  --zinc-950-custom: #09090b;
+  --zinc-900-custom: #121214;
+  --zinc-850-custom: #1c1c1f;
+  --zinc-800-custom: #26262b;
+  --zinc-750-custom: #303036;
+  --zinc-700-custom: #3a3a42;
+  --zinc-300-custom: #dcdfe6;
+  --zinc-200-custom: #e4e7ed;
+  --zinc-100-custom: #f4f4f5;
+  --white-custom: #ffffff;
 }
 
 /* MacBook Pro 16" scale adjustment */
@@ -29,20 +50,32 @@
 }
 
 [data-theme='dark'] {
-  --background: #0d0f12;
-  /* Deep Chiaroscuro Base */
-  --foreground: #e9ecef;
-  --card-bg: #161a1f;
-  --card-border: rgba(255, 255, 255, 0.05);
-  --input-bg: #090b0e;
+  /* Softer Dark Base with Defined, Readable Cards */
+  --background: #151618;
+  --foreground: #d2d5da;
+  --card-bg: #212327;
+  --card-border: rgba(255, 255, 255, 0.08);
+  --input-bg: #1a1b1d;
   --input-border: rgba(255, 255, 255, 0.08);
-  --muted-bg: #1a1e24;
-  --text-muted: #adb5bd;
-  --accent-orange: #fb923c;
-  --accent-emerald: #34d399;
-  --accent-fuchsia: #f472b6;
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 12px 24px -8px rgba(0, 0, 0, 0.6);
+  --muted-bg: #2b2d31;
+  --text-muted: #8e929a;
+  --accent-orange: #e68245;
+  --accent-emerald: #4eab70;
+  --accent-fuchsia: #d16ed1;
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 8px 16px -4px rgba(0, 0, 0, 0.35);
+
+  /* Overrides for Tailwind Zinc colors to make cards lighter than background and text sharp */
+  --zinc-950-custom: #151618;
+  --zinc-900-custom: #212327;
+  --zinc-850-custom: #282b30;
+  --zinc-800-custom: #303339;
+  --zinc-750-custom: #383c43;
+  --zinc-700-custom: #42474f;
+  --zinc-300-custom: #9fa3ab;
+  --zinc-200-custom: #c2c6cd;
+  --zinc-100-custom: #e1e3e6;
+  --white-custom: #e3e5e8;
 }
 
 body {
