@@ -499,10 +499,15 @@ function DataGridContent() {
                     profundidade_cm: Number(m.profundidade_cm) === 0 ? '' : (m.profundidade_cm ?? ''),
                     escala: m.escala ?? 100
                 };
-                setFigures(prev => prev.map(f => f.id === figure.id ? { 
-                    ...f, 
-                    ...formattedMeta
-                } : f));
+                setFigures(prev => {
+                    if (selectedCategoryId === 'sem_preco' && Number(m.resina_kg) > 0) {
+                        return prev.filter(f => f.id !== figure.id);
+                    }
+                    return prev.map(f => f.id === figure.id ? { 
+                        ...f, 
+                        ...formattedMeta
+                    } : f);
+                });
                 setAllOriginalFigures(prev => {
                     const next = { ...prev };
                     if (next[figure.id]) {
@@ -578,23 +583,37 @@ function DataGridContent() {
             const results = await Promise.all(promises);
             
             // Apply updates to figures and original figures cache
-            setFigures(prev => prev.map(f => {
-                const idx = figuresToSave.findIndex(saveFig => saveFig.id === f.id);
-                if (idx !== -1 && results[idx] && results[idx].updatedMeta) {
-                    const m = results[idx].updatedMeta;
-                    return {
-                        ...f,
-                        resina_kg: Number(m.resina_kg) === 0 ? '' : (m.resina_kg ?? ''),
-                        horas_impressao: Number(m.horas_impressao) === 0 ? '' : (m.horas_impressao ?? ''),
-                        horas_pintura: Number(m.horas_pintura) === 0 ? '' : (m.horas_pintura ?? ''),
-                        altura_cm: Number(m.altura_cm) === 0 ? '' : (m.altura_cm ?? ''),
-                        largura_cm: Number(m.largura_cm) === 0 ? '' : (m.largura_cm ?? ''),
-                        profundidade_cm: Number(m.profundidade_cm) === 0 ? '' : (m.profundidade_cm ?? ''),
-                        escala: m.escala ?? 100
-                    };
+            setFigures(prev => {
+                let updated = prev.map(f => {
+                    const idx = figuresToSave.findIndex(saveFig => saveFig.id === f.id);
+                    if (idx !== -1 && results[idx] && results[idx].updatedMeta) {
+                        const m = results[idx].updatedMeta;
+                        return {
+                            ...f,
+                            resina_kg: Number(m.resina_kg) === 0 ? '' : (m.resina_kg ?? ''),
+                            horas_impressao: Number(m.horas_impressao) === 0 ? '' : (m.horas_impressao ?? ''),
+                            horas_pintura: Number(m.horas_pintura) === 0 ? '' : (m.horas_pintura ?? ''),
+                            altura_cm: Number(m.altura_cm) === 0 ? '' : (m.altura_cm ?? ''),
+                            largura_cm: Number(m.largura_cm) === 0 ? '' : (m.largura_cm ?? ''),
+                            profundidade_cm: Number(m.profundidade_cm) === 0 ? '' : (m.profundidade_cm ?? ''),
+                            escala: m.escala ?? 100
+                        };
+                    }
+                    return f;
+                });
+
+                if (selectedCategoryId === 'sem_preco') {
+                    updated = updated.filter(f => {
+                        const idx = figuresToSave.findIndex(saveFig => saveFig.id === f.id);
+                        if (idx !== -1 && results[idx] && results[idx].updatedMeta) {
+                            const m = results[idx].updatedMeta;
+                            return Number(m.resina_kg) === 0 || !m.resina_kg;
+                        }
+                        return Number(f.resina_kg) === 0 || !f.resina_kg;
+                    });
                 }
-                return f;
-            }));
+                return updated;
+            });
 
             setAllOriginalFigures(prev => {
                 const next = { ...prev };
