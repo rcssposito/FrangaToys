@@ -170,7 +170,7 @@ export async function GET(req: Request) {
                 let cost = 0;
                 if (meta) {
                     const prices = calculateFigurePrices(meta, settings);
-                    price = prices.colorido; // Standard catalog colored price (Colorido)
+                    price = prices.pix_colorido; // Standard catalog colored PIX price (pix_colorido)
                     cost = prices.custo_producao; // Cost of production
                 }
                 pricingMap.set(fig.id, {

@@ -73,7 +73,7 @@ export async function GET() {
                 const metaData = Array.isArray(fig.figuras_meta) ? fig.figuras_meta[0] : fig.figuras_meta;
                 if (metaData) {
                     const prices = calculateFigurePrices(metaData, settings);
-                    const basePrice = prices.colorido || 0;
+                    const basePrice = prices.pix_colorido || 0;
                     
                     if (basePrice < 100) priceBuckets['Abaixo de R$ 100'] += views;
                     else if (basePrice <= 200) priceBuckets['R$ 100 - R$ 200'] += views;

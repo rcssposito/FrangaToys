@@ -125,7 +125,7 @@ export async function GET(req: Request) {
                 const meta = Array.isArray(metaList) ? metaList[0] : metaList;
                 if (meta && settings) {
                     const prices = calculateFigurePrices(meta, settings);
-                    sumPrices += prices.colorido; // Use colored price (Colorido)
+                    sumPrices += prices.pix_colorido; // Use colored PIX price (pix_colorido)
                     countPrices++;
                 }
             });
