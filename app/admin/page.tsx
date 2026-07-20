@@ -7,6 +7,7 @@ import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, Dolla
 import { usePermission } from '@/hooks/usePermission';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { toast } from 'sonner';
+import PatreonWidget from '@/components/Admin/PatreonWidget';
 
 export default function AdminDashboard() {
     const { hasRole, loading: authLoading } = usePermission();
@@ -1403,6 +1404,11 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
+            {/* Patreon Merchant Licenses & Active Studio Feeds */}
+            <div className="mb-8 w-full">
+                <PatreonWidget />
+            </div>
+
             {/* ROW 3: FINANCIAL ANALYTICS */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                 <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all">
@@ -1545,6 +1551,7 @@ export default function AdminDashboard() {
                     <span className="text-xs font-bold text-zinc-400 bg-zinc-900 px-3 py-1 rounded-full uppercase tracking-widest ml-2 border border-zinc-800">Laboratório</span>
                 </h2>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
                 <div className="flex flex-col gap-4">
                     <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl flex flex-col justify-center items-center flex-1 shadow-2xl hover:border-zinc-700 transition-all group overflow-hidden relative">

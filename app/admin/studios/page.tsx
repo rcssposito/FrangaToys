@@ -22,7 +22,11 @@ import {
     TrendingUp,
     Percent,
     ChevronDown,
-    MessageSquare
+    MessageSquare,
+    Crown,
+    UserCheck,
+    UserX,
+    MoreVertical
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
@@ -62,6 +66,8 @@ export default function StudiosPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<'receita_bruta' | 'lucro_liquido' | 'total_figuras' | 'custo_mensal' | 'nome'>('receita_bruta');
     const [expandedStudioIds, setExpandedStudioIds] = useState<Record<number, boolean>>({});
+    const [patreonData, setPatreonData] = useState<any>(null);
+    const [openMenuId, setOpenMenuId] = useState<number | null>(null);
     
     const { hasRole, user } = usePermission();
     const canEdit = hasRole('admin') || hasRole('pricing');
@@ -77,8 +83,31 @@ export default function StudiosPage() {
     useEffect(() => {
         if (canEdit) {
             fetchStudios();
+            fetchPatreon();
         }
     }, [canEdit]);
+
+    const fetchPatreon = async () => {
+        try {
+            const res = await fetch('/api/admin/integrations/patreon/licenses');
+            if (res.ok) {
+                const data = await res.json();
+                setPatreonData(data);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar licenças Patreon:', error);
+        }
+    };
+
+    const findPatreonMembership = (studioName: string) => {
+        if (!patreonData?.memberships) return null;
+        const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const normStudio = norm(studioName);
+        return patreonData.memberships.find((m: any) => {
+            const normCamp = norm(m.campaignName);
+            return normCamp.includes(normStudio) || normStudio.includes(normCamp);
+        });
+    };
 
     const fetchStudios = async () => {
         try {
@@ -232,7 +261,7 @@ export default function StudiosPage() {
 
                 {/* Financial Summary */}
                 {!loading && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
                         <div className="bg-zinc-900/30 border border-zinc-800/80 rounded-[2rem] p-6 flex items-center gap-6 backdrop-blur-sm relative overflow-hidden group">
                             <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                             <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
@@ -254,7 +283,7 @@ export default function StudiosPage() {
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Total de Parceiros</p>
                                 <h3 className="text-2xl font-black text-white tracking-tighter">
-                                    {studios.length} <span className="text-xs font-bold text-zinc-600 ml-1">({studios.filter(s => s.ativo).length} ativos | {studios.filter(s => s.merchant).length} merchants)</span>
+                                    {studios.length} <span className="text-xs font-bold text-zinc-600 ml-1">({studios.filter(s => s.ativo).length} ativos)</span>
                                 </h3>
                             </div>
                         </div>
@@ -269,6 +298,19 @@ export default function StudiosPage() {
                                 <h3 className="text-2xl font-black text-white tracking-tighter">
                                     {studios.filter(s => s.merchant).reduce((acc, s) => acc + (s.total_figuras || 0), 0)} 
                                     <span className="text-sm font-bold text-zinc-600 ml-1">figuras</span>
+                                </h3>
+                            </div>
+                        </div>
+
+                        <div className="bg-zinc-900/30 border border-orange-500/30 rounded-[2rem] p-6 flex items-center gap-6 backdrop-blur-sm relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 shadow-[0_0_20px_rgba(249,115,22,0.15)]">
+                                <ShoppingBag size={24} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-orange-400 mb-1">Licenças Patreon</p>
+                                <h3 className="text-2xl font-black text-white tracking-tighter">
+                                    {patreonData?.stats?.totalActive || 0} <span className="text-xs font-bold text-zinc-400 ml-1">ativas ({patreonData?.stats?.totalMonthlyUSD || '$0.00'})</span>
                                 </h3>
                             </div>
                         </div>
@@ -301,6 +343,7 @@ export default function StudiosPage() {
 
                         {filteredAndSortedStudios.map(studio => {
                             const isExpanded = !!expandedStudioIds[studio.id];
+                            const patreonMembership = findPatreonMembership(studio.nome);
                             
                             const revenue = studio.receita_bruta || 0;
                             const profit = studio.lucro_liquido || 0;
@@ -346,7 +389,13 @@ export default function StudiosPage() {
                                             </div>
                                             
                                             <div className="flex flex-col">
-                                                <div className="font-black text-lg tracking-tight text-white leading-tight flex items-center gap-2 max-w-[180px] break-words">
+                                                <div 
+                                                    className={clsx(
+                                                        "font-black tracking-tight text-white leading-tight truncate max-w-[220px] sm:max-w-[250px]",
+                                                        studio.nome.length > 16 ? "text-sm" : "text-base"
+                                                    )}
+                                                    title={studio.nome}
+                                                >
                                                     {studio.nome}
                                                 </div>
                                                 <div className="flex gap-2 mt-1.5">
@@ -372,71 +421,128 @@ export default function StudiosPage() {
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-1.5">
-                                            {/* Merchant Toggle */}
-                                            <button 
-                                                onClick={() => {
-                                                    const newVal = !studio.merchant;
-                                                    handleChange(studio.id, 'merchant', newVal);
-                                                    handleUpdate({ ...studio, merchant: newVal });
-                                                }}
+                                        {/* Compact Square Menu Button */}
+                                        <div className="relative shrink-0">
+                                            <button
+                                                onClick={() => setOpenMenuId(openMenuId === studio.id ? null : studio.id)}
                                                 className={clsx(
-                                                    "w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 border cursor-pointer",
-                                                    studio.merchant 
-                                                        ? "bg-purple-500/10 border-purple-500/40 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.15)]" 
-                                                        : "bg-zinc-950 border-zinc-900 text-zinc-600 hover:text-zinc-400"
+                                                    "w-9 h-9 rounded-2xl flex items-center justify-center transition-all cursor-pointer border shadow-md",
+                                                    openMenuId === studio.id
+                                                        ? "bg-blue-600/20 border-blue-500/50 text-blue-400"
+                                                        : "bg-zinc-950/80 border-zinc-800/80 text-zinc-400 hover:text-white hover:border-zinc-700"
                                                 )}
-                                                title={studio.merchant ? "Vitrine Ativa (Figuras Visíveis)" : "Vitrine Inativa (Figuras Ocultas)"}
+                                                title="Opções do Estúdio"
                                             >
-                                                <ShoppingBag size={15} />
+                                                <MoreVertical size={16} />
                                             </button>
 
-                                            {/* Active Switch Toggle */}
-                                            <button 
-                                                onClick={() => {
-                                                    const newVal = !studio.ativo;
-                                                    handleChange(studio.id, 'ativo', newVal);
-                                                    handleUpdate({ ...studio, ativo: newVal });
-                                                }}
-                                                className={clsx(
-                                                    "w-10 h-6 rounded-full p-0.5 transition-all duration-300 relative border border-transparent cursor-pointer",
-                                                    studio.ativo ? "bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.3)]" : "bg-zinc-900 border-zinc-800"
-                                                )}
-                                                title={studio.ativo ? "Operação Ativa (Gerando Custos)" : "Operação Pausada"}
-                                            >
-                                                <div className={clsx(
-                                                    "w-4 h-4 bg-white rounded-full transition-all duration-300 shadow-md",
-                                                    studio.ativo ? "translate-x-4" : "translate-x-0"
-                                                )} />
-                                            </button>
+                                            {openMenuId === studio.id && (
+                                                <>
+                                                    <div 
+                                                        className="fixed inset-0 z-40" 
+                                                        onClick={() => setOpenMenuId(null)} 
+                                                    />
+                                                    <div className="absolute right-0 top-11 z-50 bg-zinc-950/95 border border-zinc-800 rounded-2xl p-2 shadow-2xl backdrop-blur-xl w-52 space-y-1 animate-[fadeIn_0.15s_ease-out]">
+                                                        {/* Vitrine Toggle */}
+                                                        <button
+                                                            onClick={() => {
+                                                                const newVal = !studio.merchant;
+                                                                handleChange(studio.id, 'merchant', newVal);
+                                                                handleUpdate({ ...studio, merchant: newVal });
+                                                            }}
+                                                            className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-zinc-900 text-xs font-bold text-zinc-300 transition-colors cursor-pointer"
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <ShoppingBag size={14} className={studio.merchant ? "text-purple-400" : "text-zinc-500"} />
+                                                                <span>Exibir na Vitrine</span>
+                                                            </div>
+                                                            <span className={clsx("text-[10px] font-black uppercase px-2 py-0.5 rounded-md", studio.merchant ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : "bg-zinc-800 text-zinc-500")}>
+                                                                {studio.merchant ? 'Sim' : 'Não'}
+                                                            </span>
+                                                        </button>
 
-                                            {/* Settings Expand Button */}
-                                            <button 
-                                                onClick={() => toggleExpand(studio.id)}
-                                                className={clsx(
-                                                    "w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 border cursor-pointer",
-                                                    isExpanded 
-                                                        ? "bg-blue-500/10 border-blue-500/40 text-blue-400" 
-                                                        : "bg-zinc-950 border-zinc-900 text-zinc-600 hover:text-zinc-400"
-                                                )}
-                                                title="Configurações e Links"
-                                            >
-                                                <Settings size={15} />
-                                            </button>
+                                                        {/* Operação Switch */}
+                                                        <button
+                                                            onClick={() => {
+                                                                const newVal = !studio.ativo;
+                                                                handleChange(studio.id, 'ativo', newVal);
+                                                                handleUpdate({ ...studio, ativo: newVal });
+                                                            }}
+                                                            className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-zinc-900 text-xs font-bold text-zinc-300 transition-colors cursor-pointer"
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <Sparkles size={14} className={studio.ativo ? "text-blue-400" : "text-zinc-500"} />
+                                                                <span>Status da Operação</span>
+                                                            </div>
+                                                            <span className={clsx("text-[10px] font-black uppercase px-2 py-0.5 rounded-md", studio.ativo ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-zinc-800 text-zinc-500")}>
+                                                                {studio.ativo ? 'Ativo' : 'Pausado'}
+                                                            </span>
+                                                        </button>
 
-                                            {saving === studio.id ? (
-                                                <div className="w-9 h-9 flex items-center justify-center"><Loader2 size={15} className="text-blue-500 animate-spin" /></div>
-                                            ) : (
-                                                <button 
-                                                    onClick={() => handleDelete(studio.id, studio.total_figuras || 0)} 
-                                                    className="text-zinc-600 hover:text-red-500 transition-colors p-2 bg-zinc-950 border border-zinc-900 hover:border-red-500/20 rounded-xl cursor-pointer"
-                                                    title="Remover Estúdio"
-                                                >
-                                                    <Trash size={15} />
-                                                </button>
+                                                        {/* Settings Expand */}
+                                                        <button
+                                                            onClick={() => {
+                                                                toggleExpand(studio.id);
+                                                                setOpenMenuId(null);
+                                                            }}
+                                                            className="w-full flex items-center gap-2 p-2.5 rounded-xl hover:bg-zinc-900 text-xs font-bold text-zinc-300 transition-colors cursor-pointer"
+                                                        >
+                                                            <Settings size={14} className="text-zinc-400" />
+                                                            <span>Configurações & Links</span>
+                                                        </button>
+
+                                                        <div className="border-t border-zinc-900 my-1" />
+
+                                                        {/* Delete Button */}
+                                                        <button
+                                                            onClick={() => {
+                                                                handleDelete(studio.id, studio.total_figuras || 0);
+                                                                setOpenMenuId(null);
+                                                            }}
+                                                            className="w-full flex items-center gap-2 p-2.5 rounded-xl hover:bg-rose-500/10 text-xs font-bold text-rose-400 transition-colors cursor-pointer"
+                                                        >
+                                                            <Trash size={14} />
+                                                            <span>Excluir Estúdio</span>
+                                                        </button>
+                                                    </div>
+                                                </>
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Patreon Merchant License Status Banner */}
+                                    {patreonMembership && (() => {
+                                        const isActive = patreonMembership.patronStatus === 'active_patron' && (patreonMembership.amountCents || 0) > 0;
+                                        const isMerchant = patreonMembership.isMerchantTier;
+
+                                        return (
+                                            <div className={clsx(
+                                                "rounded-2xl p-3.5 flex justify-between items-center text-xs shadow-md border transition-all",
+                                                isActive 
+                                                    ? (isMerchant ? "bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/30" : "bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/25")
+                                                    : "bg-zinc-950/60 border-zinc-800/60 opacity-75"
+                                            )}>
+                                                <div className="flex items-center gap-2.5">
+                                                    <span className={clsx(
+                                                        "w-2 h-2 rounded-full shrink-0",
+                                                        isActive 
+                                                            ? (isMerchant ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]" : "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]") 
+                                                            : "bg-zinc-600"
+                                                    )} />
+                                                    <div className="flex flex-col">
+                                                        <span className="font-black text-white text-[12px] leading-tight">
+                                                            {patreonMembership.tiers[0] || 'Tier'}
+                                                        </span>
+                                                        <span className="text-[10px] text-zinc-400 font-semibold mt-0.5">
+                                                            {isActive 
+                                                                ? (isMerchant ? 'Licença Comercial Ativa no Patreon' : 'Assinatura Pessoal Ativa no Patreon')
+                                                                : 'Membro Free (Assinatura Inativa no Patreon)'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
 
                                     {/* Financial Health Pill */}
                                     {salesCount > 0 && (
@@ -532,7 +638,27 @@ export default function StudiosPage() {
                                     {/* Collapsible Edit Panel */}
                                     {isExpanded && (
                                         <div className="space-y-4 pt-3 border-t border-zinc-900/85 animate-[fadeIn_0.2s_ease-out]">
-                                            <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Configurações do Estúdio</h4>
+                                            <div className="flex justify-between items-center">
+                                                <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Configurações do Estúdio</h4>
+                                                {patreonMembership && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const updated = {
+                                                                ...studio,
+                                                                social_url: studio.social_url || patreonMembership.campaignUrl || '',
+                                                                custo_mensal: (studio.custo_mensal && studio.custo_mensal > 0) ? studio.custo_mensal : patreonMembership.amountBRL
+                                                            };
+                                                            setStudios(prev => prev.map(s => s.id === studio.id ? updated : s));
+                                                            handleUpdate(updated);
+                                                            toast.success(`Dados do ${studio.nome} sincronizados com o Patreon!`);
+                                                        }}
+                                                        className="px-2.5 py-1 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-400 text-[10px] font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
+                                                    >
+                                                        <Sparkles size={11} /> Auto-preencher via Patreon
+                                                    </button>
+                                                )}
+                                            </div>
                                             
                                             <div className="grid grid-cols-1 gap-3">
                                                 {/* Logo URL */}
@@ -603,22 +729,39 @@ export default function StudiosPage() {
                                     )}
 
                                     {/* Custo Operacional */}
-                                    <div className="bg-zinc-950/40 p-4 rounded-3xl border border-zinc-900/60 border-dashed group-hover:border-emerald-500/20 transition-all mt-auto">
-                                        <div className="flex justify-between items-center mb-1.5">
-                                            <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">CUSTO OPERACIONAL MENSAL</span>
-                                            <DollarSign size={13} className="text-emerald-600 opacity-60 animate-pulse" />
+                                    <div className="bg-zinc-950/40 p-4 rounded-3xl border border-zinc-900/60 border-dashed transition-all mt-auto flex justify-between items-center">
+                                        <div>
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                                <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">CUSTO OPERACIONAL MENSAL</span>
+                                                {patreonMembership && patreonMembership.patronStatus === 'active_patron' && (
+                                                    <span className="text-[9px] font-bold text-orange-400/90 bg-orange-500/10 border border-orange-500/20 px-1.5 py-0.5 rounded-md">
+                                                        Patreon Sync
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-zinc-500 font-extrabold text-sm">R$</span>
+                                                <span className="text-xl font-black text-emerald-400 tracking-tighter">
+                                                    {(patreonMembership && patreonMembership.patronStatus === 'active_patron')
+                                                        ? (patreonMembership.amountBRL || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+                                                        : ((studio.custo_mensal || 0) as number).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+                                                    }
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-1">
-                                            <span className="text-zinc-500 font-extrabold text-sm">R$</span>
-                                            <input
-                                                type="number"
-                                                value={studio.custo_mensal ?? ''}
-                                                onChange={(e) => handleChange(studio.id, 'custo_mensal', e.target.value === '' ? '' : parseFloat(e.target.value))}
-                                                onBlur={() => handleUpdate(studio)}
-                                                className="bg-transparent text-xl font-black text-emerald-400 outline-none w-full tracking-tighter py-0"
-                                                placeholder="0,00"
-                                            />
-                                        </div>
+                                        {(!patreonMembership || patreonMembership.patronStatus !== 'active_patron') && (
+                                            <div className="flex items-center gap-1 bg-zinc-900/80 px-2.5 py-1 rounded-xl border border-zinc-800">
+                                                <span className="text-xs text-zinc-500 font-bold">R$</span>
+                                                <input
+                                                    type="number"
+                                                    value={studio.custo_mensal ?? ''}
+                                                    onChange={(e) => handleChange(studio.id, 'custo_mensal', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                                                    onBlur={() => handleUpdate(studio)}
+                                                    className="bg-transparent text-right text-xs font-bold text-zinc-300 outline-none w-16 tracking-tighter"
+                                                    placeholder="0,00"
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             );

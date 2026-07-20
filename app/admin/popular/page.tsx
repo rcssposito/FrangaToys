@@ -179,6 +179,8 @@ export default function PopularFiguresPage() {
                         </div>
                     </div>
 
+
+
                     {/* Localização (Destaque Inferior com Mapa de Hexágonos) */}
                     <div className="bg-zinc-950/50 backdrop-blur-xl border border-white/5 p-8 rounded-[2.5rem]">
                         <div className="flex justify-between items-start mb-8 pl-2">
