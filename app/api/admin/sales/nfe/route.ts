@@ -21,8 +21,15 @@ export async function POST(req: NextRequest) {
                 .eq('id', Number(sale_id))
                 .maybeSingle();
             
-            if (sale) {
+            if (sale && sale.checkout_id) {
                 finalCheckoutId = sale.checkout_id;
+            } else {
+                const dummyId = `MAN_${sale_id}`;
+                await supabase
+                    .from('vendas')
+                    .update({ checkout_id: dummyId })
+                    .eq('id', Number(sale_id));
+                finalCheckoutId = dummyId;
             }
         }
 
@@ -38,6 +45,20 @@ export async function POST(req: NextRequest) {
                     .from('vendas')
                     .update({ chave_nfe: cleanKey })
                     .eq('checkout_id', finalCheckoutId);
+
+                // Registrar ou atualizar registros_nfe
+                const numStr = cleanKey.slice(25, 34);
+                const num = parseInt(numStr, 10);
+                if (!isNaN(num)) {
+                    await supabase
+                        .from('registros_nfe')
+                        .upsert([{
+                            checkout_id: finalCheckoutId,
+                            numero_nfe: num,
+                            chave_nfe: cleanKey,
+                            status: 'autorizada'
+                        }], { onConflict: 'checkout_id' });
+                }
             } else if (sale_id) {
                 await supabase
                     .from('vendas')

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle, Receipt, X } from 'lucide-react';
+import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle, Receipt, X, Download, Check } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
@@ -115,6 +115,8 @@ export default function KanbanPage() {
     const [nfeClienteId, setNfeClienteId] = useState<number | null>(null);
     const [isManualNfe, setIsManualNfe] = useState(false);
     const [manualNfeKey, setManualNfeKey] = useState('');
+    const [nfeNumber, setNfeNumber] = useState<number | string>(2);
+    const [nfeNumberAlreadyAssigned, setNfeNumberAlreadyAssigned] = useState(false);
 
     // Auto-fill address details based on CEP in NF-e modal
     useEffect(() => {
@@ -176,6 +178,19 @@ export default function KanbanPage() {
         setNfeClienteId(sale.cliente_id || null);
         setIsManualNfe(false);
         setManualNfeKey('');
+        setNfeNumber(2);
+        setNfeNumberAlreadyAssigned(false);
+
+        try {
+            const nextRes = await fetch(`/api/admin/sales/nfe/xml?checkout_id=${sale.checkout_id || ''}`);
+            if (nextRes.ok) {
+                const nextData = await nextRes.json();
+                setNfeNumber(nextData.nextNfeNumber || 2);
+                setNfeNumberAlreadyAssigned(!!nextData.alreadyAssigned);
+            }
+        } catch (err) {
+            console.error('Erro ao buscar próximo número sequencial da NFe:', err);
+        }
 
         if (sale.cliente_id) {
             try {
@@ -199,6 +214,81 @@ export default function KanbanPage() {
             }
         } else {
             setIsFetchingCustomer(false);
+        }
+    };
+
+    const handleDownloadXml = async () => {
+        if (!selectedNfeSale) return;
+        
+        const cleanCpf = nfeCustomerCpf.replace(/\D/g, '');
+        if (cleanCpf.length !== 11 && cleanCpf.length !== 14) {
+            toast.error('Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido para o XML.');
+            return;
+        }
+
+        if (!nfeCustomerCep || !nfeCustomerLogradouro || !nfeCustomerNumero || !nfeCustomerBairro || !nfeCustomerCidade || !nfeCustomerUf) {
+            toast.error('Todos os campos de endereço são obrigatórios para gerar o XML.');
+            return;
+        }
+
+        try {
+            if (nfeClienteId) {
+                await fetch('/api/admin/customers', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: nfeClienteId,
+                        nome: nfeCustomerNome,
+                        cpf: nfeCustomerCpf,
+                        cep: nfeCustomerCep,
+                        logradouro: nfeCustomerLogradouro,
+                        numero: nfeCustomerNumero,
+                        bairro: nfeCustomerBairro,
+                        cidade: nfeCustomerCidade,
+                        uf: nfeCustomerUf
+                    })
+                });
+            }
+
+            const bodyPayload = {
+                checkout_id: selectedNfeSale.checkout_id,
+                sale_id: selectedNfeSale.id,
+                nome: nfeCustomerNome,
+                cpf: nfeCustomerCpf,
+                cep: nfeCustomerCep,
+                logradouro: nfeCustomerLogradouro,
+                numero: nfeCustomerNumero,
+                bairro: nfeCustomerBairro,
+                cidade: nfeCustomerCidade,
+                uf: nfeCustomerUf,
+                numero_nfe: Number(nfeNumber)
+            };
+
+            const res = await fetch('/api/admin/sales/nfe/xml', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bodyPayload)
+            });
+
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || 'Erro ao gerar arquivo XML.');
+            }
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `NFe-${nfeNumber}.xml`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+            toast.success('Arquivo XML gerado e baixado! Agora importe-o no emissor do SEBRAE.');
+        } catch (err: any) {
+            console.error('XML download error:', err);
+            toast.error(err.message || 'Falha ao baixar arquivo XML.');
         }
     };
 
@@ -929,15 +1019,31 @@ export default function KanbanPage() {
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Nome do Cliente</label>
-                                            <input
-                                                type="text"
-                                                required={!isManualNfe}
-                                                value={nfeCustomerNome}
-                                                onChange={e => setNfeCustomerNome(e.target.value)}
-                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
-                                            />
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div className="col-span-2">
+                                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Nome do Cliente</label>
+                                                <input
+                                                    type="text"
+                                                    required={!isManualNfe}
+                                                    value={nfeCustomerNome}
+                                                    onChange={e => setNfeCustomerNome(e.target.value)}
+                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Número da NF-e</label>
+                                                <input
+                                                    type="number"
+                                                    disabled
+                                                    value={nfeNumber}
+                                                    className="w-full bg-zinc-900/50 border border-zinc-850 text-zinc-400 rounded-xl p-3 outline-none text-xs font-bold text-center cursor-not-allowed"
+                                                />
+                                                <p className="text-[8px] text-zinc-500 mt-1 pl-1 font-semibold leading-tight">
+                                                    {nfeNumberAlreadyAssigned 
+                                                        ? "✓ Reservado para este checkout" 
+                                                        : "⚡ Gerado automaticamente"}
+                                                </p>
+                                            </div>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4">
@@ -1030,22 +1136,45 @@ export default function KanbanPage() {
                                     </div>
                                 )}
 
-                                <div className="pt-2 flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsNfeModalOpen(false)}
-                                        className="flex-1 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 font-black py-3 rounded-xl border border-zinc-800 transition-all active:scale-[0.98] uppercase text-[10px] tracking-widest"
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isSavingNfe}
-                                        className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 uppercase text-[10px] tracking-widest shadow-lg shadow-purple-500/20"
-                                    >
-                                        {isSavingNfe ? <Loader2 size={16} className="animate-spin" /> : <Receipt size={16} />}
-                                        Salvar e Emitir
-                                    </button>
+                                <div className="pt-2 flex flex-col gap-2">
+                                    <div className="flex gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsNfeModalOpen(false)}
+                                            className="flex-1 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 font-black py-3.5 rounded-xl border border-zinc-800 transition-all active:scale-[0.98] uppercase text-[10px] tracking-widest text-center"
+                                        >
+                                            Cancelar
+                                        </button>
+                                        {isManualNfe ? (
+                                            <button
+                                                type="submit"
+                                                disabled={isSavingNfe}
+                                                className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-black py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 uppercase text-[10px] tracking-widest shadow-lg shadow-purple-500/20"
+                                            >
+                                                {isSavingNfe ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                                                Salvar Chave
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={handleDownloadXml}
+                                                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] uppercase text-[10px] tracking-widest shadow-lg shadow-blue-500/20"
+                                            >
+                                                <Download size={16} />
+                                                Gerar XML
+                                            </button>
+                                        )}
+                                    </div>
+                                    {!isManualNfe && (
+                                        <button
+                                            type="submit"
+                                            disabled={isSavingNfe}
+                                            className="w-full bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 uppercase text-[10px] tracking-widest shadow-lg border border-purple-500/20 hover:border-purple-500 transition-all"
+                                        >
+                                            {isSavingNfe ? <Loader2 size={16} className="animate-spin" /> : <Receipt size={16} />}
+                                            Emitir Automático (UniNFe)
+                                        </button>
+                                    )}
                                 </div>
                             </form>
                         )}
