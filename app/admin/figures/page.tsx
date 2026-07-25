@@ -36,6 +36,8 @@ interface Figure {
     vendas_count?: number;
     faturamento_gerado?: number;
     badge_desempenho?: 'Estrela' | 'Lento' | 'Encalhado';
+    studio_id?: number | string | null;
+    studios?: { nome: string } | null;
 }
 
 interface PricingSettings {
@@ -78,7 +80,19 @@ const FigureMobileCard = ({
                             className="w-full bg-transparent border border-transparent hover:border-[var(--input-border)] focus:border-orange-500/50 rounded px-1.5 py-1 text-sm font-bold text-[var(--foreground)] focus:bg-[var(--input-bg)] outline-none transition-all truncate"
                         />
                     </div>
-                    <div className="text-xs text-[var(--text-muted)] mt-0.5 px-1.5">{f.categoria} - {f.serie}</div>
+                    <div className="text-xs text-[var(--text-muted)] mt-0.5 px-1.5 flex items-center gap-1.5 flex-wrap">
+                        <span>{f.categoria}</span>
+                        <span className="text-zinc-600 font-bold">•</span>
+                        <span>{f.serie}</span>
+                        {f.studios?.nome && (
+                            <>
+                                <span className="text-zinc-600 font-bold">•</span>
+                                <span className="text-[10px] font-black uppercase text-orange-400 bg-orange-500/10 border border-orange-500/20 px-1.5 py-0.5 rounded shadow-sm">
+                                    {f.studios.nome}
+                                </span>
+                            </>
+                        )}
+                    </div>
                     <span className="font-mono text-[10px] bg-[var(--input-bg)] text-[var(--text-muted)] px-2 py-0.5 rounded-sm border border-[var(--input-border)] mt-2 inline-block">
                         SKU: {f.codigo || '--'}
                     </span>
@@ -87,17 +101,17 @@ const FigureMobileCard = ({
                 {/* Desempenho de Vendas */}
                 <div className="flex flex-col items-end gap-1 shrink-0">
                     {f.badge_desempenho === 'Estrela' && (
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/10 border border-amber-500/30 text-amber-500 flex items-center gap-0.5 shadow-[0_0_8px_rgba(245,158,11,0.15)] animate-pulse">
+                        <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center gap-1 shadow-[0_0_12px_rgba(245,158,11,0.2)] animate-pulse">
                             ★ Estrela ({f.vendas_count} pçs)
                         </span>
                     )}
                     {f.badge_desempenho === 'Lento' && (
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-500/10 border border-blue-500/30 text-blue-400">
+                        <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center gap-1 shadow-[0_0_8px_rgba(59,130,246,0.1)]">
                             🔄 Lento ({f.vendas_count} pçs)
                         </span>
                     )}
                     {f.badge_desempenho === 'Encalhado' && (
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-zinc-950 border border-zinc-900/60 text-zinc-600">
+                        <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-zinc-950/80 border border-zinc-900/60 text-zinc-550 flex items-center gap-1 shadow-[inset_0_1px_3px_rgba(0,0,0,0.4)]">
                             ❄️ Encalhado
                         </span>
                     )}
@@ -109,24 +123,27 @@ const FigureMobileCard = ({
                 </div>
             </div>
 
-            {/* Precos Principais */}
-            <div className="flex flex-col gap-2 bg-[var(--input-bg)] rounded-lg p-3 border border-[var(--card-border)]">
-                <div className="flex justify-between items-center border-b border-[var(--card-border)] pb-2">
-                    <div className="flex flex-col">
-                        <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-tighter">Estilizado</span>
-                        <span className="text-xs font-black text-blue-400">R$ {prices.basicCredito}</span>
-                        <span className="text-[10px] font-bold text-[var(--accent-emerald)]">PIX: R$ {prices.basic}</span>
-                    </div>
-                    <div className="flex flex-col text-right">
-                        <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-tighter">Colorido</span>
-                        <span className="text-xs font-black text-blue-400">R$ {prices.premiumCredito}</span>
-                        <span className="text-[10px] font-bold text-[var(--accent-fuchsia)]">PIX: R$ {prices.premium}</span>
-                    </div>
+            {/* Tabela de Preços Renovada (Visual Dashboard) */}
+            <div className="grid grid-cols-3 gap-1 bg-zinc-950/40 rounded-xl p-3 border border-zinc-900/60 shadow-inner">
+                {/* Estilizado */}
+                <div className="flex flex-col items-center justify-between text-center py-0.5 border-r border-zinc-900/60">
+                    <span className="text-[9px] font-black tracking-widest text-zinc-500 uppercase">Estilizado</span>
+                    <span className="text-xs font-black text-emerald-400 mt-1">R$ {prices.basic}</span>
+                    <span className="text-[9px] font-bold text-zinc-500/70">Cartão R$ {prices.basicCredito}</span>
                 </div>
-                <div className="flex flex-col items-center">
-                    <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-tighter">2D</span>
-                    <span className="text-sm font-black text-orange-500">R$ {prices.twoDCredito}</span>
-                    <span className="text-[10px] font-bold text-orange-500">PIX: R$ {prices.twoD}</span>
+                
+                {/* Colorido */}
+                <div className="flex flex-col items-center justify-between text-center py-0.5 border-r border-zinc-900/60">
+                    <span className="text-[9px] font-black tracking-widest text-zinc-500 uppercase">Colorido</span>
+                    <span className="text-xs font-black text-fuchsia-400 mt-1">R$ {prices.premium}</span>
+                    <span className="text-[9px] font-bold text-zinc-500/70">Cartão R$ {prices.premiumCredito}</span>
+                </div>
+
+                {/* 2D */}
+                <div className="flex flex-col items-center justify-between text-center py-0.5">
+                    <span className="text-[9px] font-black tracking-widest text-zinc-500 uppercase">Estátua 2D</span>
+                    <span className="text-xs font-black text-orange-500 mt-1">R$ {prices.twoD || 0}</span>
+                    <span className="text-[9px] font-bold text-zinc-500/70">Cartão R$ {prices.twoDCredito || 0}</span>
                 </div>
             </div>
 
@@ -135,7 +152,7 @@ const FigureMobileCard = ({
                 <div className="flex gap-2">
                     <button
                         onClick={() => handleDownloadImage(f.id, f.nome)}
-                        className="p-2 bg-blue-500/10 text-blue-500 rounded-md hover:bg-blue-500 hover:text-white transition-all border border-blue-500/20"
+                        className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 rounded-md transition-all border border-blue-500/20 shadow-sm active:scale-95"
                     >
                         <ImageIcon size={14} />
                     </button>
@@ -143,7 +160,7 @@ const FigureMobileCard = ({
                         <button
                             onClick={() => handleDelete(f.id, f.nome)}
                             disabled={deletingId === f.id}
-                            className="p-2 bg-orange-400/10 text-orange-400 rounded-md hover:bg-orange-400 hover:text-white transition-all disabled:opacity-50 border border-orange-400/20"
+                            className="p-2 bg-orange-400/10 hover:bg-orange-400/20 text-orange-400 rounded-md transition-all disabled:opacity-50 border border-orange-400/20 shadow-sm active:scale-95"
                         >
                             {deletingId === f.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                         </button>
@@ -152,10 +169,14 @@ const FigureMobileCard = ({
 
                 <button
                     onClick={() => setExpanded(!expanded)}
-                    className="text-xs font-semibold flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--foreground)]"
+                    className={`px-3 py-1.5 rounded-lg border text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 active:scale-95 ${
+                        expanded 
+                        ? 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-850'
+                        : 'bg-orange-500/10 border-orange-500/20 text-orange-500 hover:bg-orange-500/20'
+                    }`}
                 >
-                    {expanded ? 'Ocultar Edição' : 'Editar Dados'}
-                    {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    {expanded ? 'Fechar' : 'Editar'}
+                    {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                 </button>
             </div>
 
@@ -194,40 +215,49 @@ const FigureMobileCard = ({
                         {/* KG Resina */}
                         <div className="flex flex-col gap-1">
                             <label className="text-[10px] uppercase font-bold text-[var(--text-muted)]">KG Resina</label>
-                            <input
-                                type="number" step="0.001"
-                                value={f.resina_kg ?? ''}
-                                placeholder="0"
-                                disabled={!canEdit}
-                                onChange={e => handleChange(f.id, 'resina_kg', e.target.value)}
-                                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-1.5 text-center text-xs font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
-                            />
+                            <div className="relative flex items-center">
+                                <input
+                                    type="number" step="0.001"
+                                    value={f.resina_kg ?? ''}
+                                    placeholder="0.000"
+                                    disabled={!canEdit}
+                                    onChange={e => handleChange(f.id, 'resina_kg', e.target.value)}
+                                    className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm pl-2 pr-8 py-1.5 text-left text-xs font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+                                />
+                                <span className="absolute right-2 text-[9px] font-black text-zinc-600 select-none pointer-events-none uppercase">KG</span>
+                            </div>
                         </div>
 
                         {/* Horas Impressao */}
                         <div className="flex flex-col gap-1">
                             <label className="text-[10px] uppercase font-bold text-[var(--text-muted)]">H. Impres.</label>
-                            <input
-                                type="number"
-                                value={f.horas_impressao ?? ''}
-                                placeholder="0"
-                                disabled={!canEdit}
-                                onChange={e => handleChange(f.id, 'horas_impressao', e.target.value)}
-                                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-1.5 text-center text-xs font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
-                            />
+                            <div className="relative flex items-center">
+                                <input
+                                    type="number"
+                                    value={f.horas_impressao ?? ''}
+                                    placeholder="0"
+                                    disabled={!canEdit}
+                                    onChange={e => handleChange(f.id, 'horas_impressao', e.target.value)}
+                                    className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm pl-2 pr-6 py-1.5 text-left text-xs font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+                                />
+                                <span className="absolute right-2 text-[9px] font-black text-zinc-650 select-none pointer-events-none uppercase">h</span>
+                            </div>
                         </div>
 
                         {/* Horas Pintura */}
                         <div className="flex flex-col gap-1">
                             <label className="text-[10px] uppercase font-bold text-[var(--text-muted)]">H. Pintura</label>
-                            <input
-                                type="number"
-                                value={f.horas_pintura ?? ''}
-                                placeholder="0"
-                                disabled={!canEdit}
-                                onChange={e => handleChange(f.id, 'horas_pintura', e.target.value)}
-                                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-1.5 text-center text-xs font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
-                            />
+                            <div className="relative flex items-center">
+                                <input
+                                    type="number"
+                                    value={f.horas_pintura ?? ''}
+                                    placeholder="0"
+                                    disabled={!canEdit}
+                                    onChange={e => handleChange(f.id, 'horas_pintura', e.target.value)}
+                                    className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm pl-2 pr-6 py-1.5 text-left text-xs font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+                                />
+                                <span className="absolute right-2 text-[9px] font-black text-zinc-650 select-none pointer-events-none uppercase">h</span>
+                            </div>
                         </div>
                     </div>
 
@@ -235,30 +265,39 @@ const FigureMobileCard = ({
                     <div className="flex flex-col gap-1">
                         <label className="text-[10px] uppercase font-bold text-[var(--text-muted)]">Medidas (CM) - Altura, Largura, Prof.</label>
                         <div className="flex gap-2">
-                            <input
-                                type="number" step="0.1"
-                                value={f.altura_cm ?? ''}
-                                placeholder="Alt"
-                                disabled={!canEdit}
-                                onChange={e => handleChange(f.id, 'altura_cm', e.target.value)}
-                                className="w-1/3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-xs font-black text-[var(--foreground)] outline-none disabled:opacity-50"
-                            />
-                            <input
-                                type="number" step="0.1"
-                                value={f.largura_cm ?? ''}
-                                placeholder="Larg"
-                                disabled={!canEdit}
-                                onChange={e => handleChange(f.id, 'largura_cm', e.target.value)}
-                                className="w-1/3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-xs font-black text-[var(--foreground)] outline-none disabled:opacity-50"
-                            />
-                            <input
-                                type="number" step="0.1"
-                                value={f.profundidade_cm ?? ''}
-                                placeholder="Prof"
-                                disabled={!canEdit}
-                                onChange={e => handleChange(f.id, 'profundidade_cm', e.target.value)}
-                                className="w-1/3 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-xs font-black text-[var(--foreground)] outline-none disabled:opacity-50"
-                            />
+                            <div className="relative flex items-center w-1/3">
+                                <span className="absolute left-2.5 text-[10px] font-black text-zinc-550 select-none pointer-events-none">A:</span>
+                                <input
+                                    type="number" step="0.1"
+                                    value={f.altura_cm ?? ''}
+                                    placeholder="0"
+                                    disabled={!canEdit}
+                                    onChange={e => handleChange(f.id, 'altura_cm', e.target.value)}
+                                    className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm pl-6 pr-2 py-1.5 text-center text-xs font-black text-[var(--foreground)] outline-none disabled:opacity-50"
+                                />
+                            </div>
+                            <div className="relative flex items-center w-1/3">
+                                <span className="absolute left-2.5 text-[10px] font-black text-zinc-550 select-none pointer-events-none">L:</span>
+                                <input
+                                    type="number" step="0.1"
+                                    value={f.largura_cm ?? ''}
+                                    placeholder="0"
+                                    disabled={!canEdit}
+                                    onChange={e => handleChange(f.id, 'largura_cm', e.target.value)}
+                                    className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm pl-6 pr-2 py-1.5 text-center text-xs font-black text-[var(--foreground)] outline-none disabled:opacity-50"
+                                />
+                            </div>
+                            <div className="relative flex items-center w-1/3">
+                                <span className="absolute left-2.5 text-[10px] font-black text-zinc-550 select-none pointer-events-none">P:</span>
+                                <input
+                                    type="number" step="0.1"
+                                    value={f.profundidade_cm ?? ''}
+                                    placeholder="0"
+                                    disabled={!canEdit}
+                                    onChange={e => handleChange(f.id, 'profundidade_cm', e.target.value)}
+                                    className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm pl-6 pr-2 py-1.5 text-center text-xs font-black text-[var(--foreground)] outline-none disabled:opacity-50"
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -461,8 +500,12 @@ function DataGridContent() {
             return isNaN(num) ? null : num;
         };
 
-        // Strip campaign-related fields to prevent stale state from overwriting active campaigns
-        const { is_campanha, is_campanha_active, desconto_campanha, preco_fixo_campanha, ...restFigure } = figure;
+        // Strip campaign-related fields, sales metrics and related object to prevent payload pollution
+        const { 
+            is_campanha, is_campanha_active, desconto_campanha, preco_fixo_campanha, 
+            studios, vendas_count, faturamento_gerado, badge_desempenho,
+            ...restFigure 
+        } = figure;
 
         const payload = {
             ...restFigure,
@@ -505,6 +548,7 @@ function DataGridContent() {
                     }
                     return prev.map(f => f.id === figure.id ? { 
                         ...f, 
+                        ...figure,
                         ...formattedMeta
                     } : f);
                 });
@@ -513,6 +557,7 @@ function DataGridContent() {
                     if (next[figure.id]) {
                         next[figure.id] = {
                             ...next[figure.id],
+                            ...figure,
                             ...formattedMeta
                         };
                     }
@@ -554,7 +599,11 @@ function DataGridContent() {
         };
 
         const promises = figuresToSave.map(async (figure) => {
-            const { is_campanha, is_campanha_active, desconto_campanha, preco_fixo_campanha, ...restFigure } = figure;
+            const { 
+                is_campanha, is_campanha_active, desconto_campanha, preco_fixo_campanha, 
+                studios, vendas_count, faturamento_gerado, badge_desempenho,
+                ...restFigure 
+            } = figure;
             const payload = {
                 ...restFigure,
                 resina_kg: toNumberOrNull(figure.resina_kg),
@@ -590,6 +639,7 @@ function DataGridContent() {
                         const m = results[idx].updatedMeta;
                         return {
                             ...f,
+                            ...figuresToSave[idx],
                             resina_kg: Number(m.resina_kg) === 0 ? '' : (m.resina_kg ?? ''),
                             horas_impressao: Number(m.horas_impressao) === 0 ? '' : (m.horas_impressao ?? ''),
                             horas_pintura: Number(m.horas_pintura) === 0 ? '' : (m.horas_pintura ?? ''),
@@ -631,6 +681,7 @@ function DataGridContent() {
                         };
                         next[figure.id] = {
                             ...(next[figure.id] || figure),
+                            ...figure,
                             ...formattedMeta
                         };
                     }

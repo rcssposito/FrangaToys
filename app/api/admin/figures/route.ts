@@ -52,6 +52,9 @@ export async function GET(req: NextRequest) {
         studio_id,
         tem_pintura_real,
         slug,
+        studios (
+          nome
+        ),
         ${seriesJoin} ( 
             nome, 
             ${categoryJoin} ( nome, id ) 
@@ -147,6 +150,8 @@ export async function GET(req: NextRequest) {
                 tem_pintura_real: item.tem_pintura_real || false,
                 slug: item.slug || '',
                 sinonimos: item.sinonimos || '',
+                studio_id: item.studio_id,
+                studios: item.studios,
                 altura_cm: meta.altura_cm ?? 0,
                 largura_cm: meta.largura_cm ?? 0,
                 profundidade_cm: meta.profundidade_cm ?? 0,
@@ -237,13 +242,14 @@ export async function PUT(req: Request) {
         
 
         const body = await req.json();
-        const { id, nome, serie, imagem_url, disponivel, tem_extras, tem_pintura_real, sinonimos, ...rawMeta } = body;
+        const { id, nome, serie, imagem_url, disponivel, tem_extras, tem_pintura_real, sinonimos, studio_id, ...rawMeta } = body;
 
         const updateFields: any = {};
         if (nome !== undefined) updateFields.nome = nome;
         if (disponivel !== undefined) updateFields.disponivel = disponivel;
         if (tem_extras !== undefined) updateFields.tem_extras = tem_extras;
         if (tem_pintura_real !== undefined) updateFields.tem_pintura_real = tem_pintura_real;
+        if (studio_id !== undefined) updateFields.studio_id = studio_id;
         // Removido: O catálogo não pode escrever diretamente o sinônimo na tabela figuras.
         // if (sinonimos !== undefined) updateFields.sinonimos = sinonimos;
 

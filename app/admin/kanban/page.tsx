@@ -113,6 +113,8 @@ export default function KanbanPage() {
     const [nfeCustomerCidade, setNfeCustomerCidade] = useState('');
     const [nfeCustomerUf, setNfeCustomerUf] = useState('');
     const [nfeClienteId, setNfeClienteId] = useState<number | null>(null);
+    const [isManualNfe, setIsManualNfe] = useState(false);
+    const [manualNfeKey, setManualNfeKey] = useState('');
 
     // Auto-fill address details based on CEP in NF-e modal
     useEffect(() => {
@@ -172,6 +174,8 @@ export default function KanbanPage() {
         setNfeCustomerCidade('');
         setNfeCustomerUf('');
         setNfeClienteId(sale.cliente_id || null);
+        setIsManualNfe(false);
+        setManualNfeKey('');
 
         if (sale.cliente_id) {
             try {
@@ -202,21 +206,52 @@ export default function KanbanPage() {
         e.preventDefault();
         if (!selectedNfeSale || isSavingNfe) return;
 
-        // Validations
-        const cleanCpf = nfeCustomerCpf.replace(/\D/g, '');
-        if (cleanCpf.length !== 11 && cleanCpf.length !== 14) {
-            toast.error('Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.');
-            return;
-        }
-
-        if (!nfeCustomerCep || !nfeCustomerLogradouro || !nfeCustomerNumero || !nfeCustomerBairro || !nfeCustomerCidade || !nfeCustomerUf) {
-            toast.error('Todos os campos de endereço são obrigatórios para emissão de nota fiscal.');
-            return;
-        }
-
         setIsSavingNfe(true);
 
         try {
+            if (isManualNfe) {
+                const cleanKey = manualNfeKey.replace(/\D/g, '');
+                if (cleanKey.length !== 44) {
+                    toast.error('A chave de acesso da NF-e deve conter exatamente 44 dígitos.');
+                    setIsSavingNfe(false);
+                    return;
+                }
+
+                const bodyPayload = selectedNfeSale.checkout_id 
+                    ? { checkout_id: selectedNfeSale.checkout_id, manual_key: cleanKey } 
+                    : { sale_id: selectedNfeSale.id, manual_key: cleanKey };
+
+                const nfeRes = await fetch('/api/admin/sales/nfe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(bodyPayload)
+                });
+
+                const nfeData = await nfeRes.json();
+                if (!nfeRes.ok) {
+                    throw new Error(nfeData.error || 'Erro ao registrar chave NF-e manualmente');
+                }
+
+                toast.success('Chave NF-e registrada com sucesso!');
+                setIsNfeModalOpen(false);
+                fetchTasks();
+                return;
+            }
+
+            // Validations for auto emission
+            const cleanCpf = nfeCustomerCpf.replace(/\D/g, '');
+            if (cleanCpf.length !== 11 && cleanCpf.length !== 14) {
+                toast.error('Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.');
+                setIsSavingNfe(false);
+                return;
+            }
+
+            if (!nfeCustomerCep || !nfeCustomerLogradouro || !nfeCustomerNumero || !nfeCustomerBairro || !nfeCustomerCidade || !nfeCustomerUf) {
+                toast.error('Todos os campos de endereço são obrigatórios para emissão de nota fiscal.');
+                setIsSavingNfe(false);
+                return;
+            }
+
             // 1. Salvar dados do cliente se tiver cliente_id
             if (nfeClienteId) {
                 const patchRes = await fetch('/api/admin/customers', {
@@ -865,106 +900,135 @@ export default function KanbanPage() {
                             </div>
                         ) : (
                             <form onSubmit={handleSaveAndEmitNfe} className="space-y-5">
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Nome do Cliente</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={nfeCustomerNome}
-                                            onChange={e => setNfeCustomerNome(e.target.value)}
-                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
-                                        />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">CPF ou CNPJ</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={nfeCustomerCpf}
-                                                onChange={handleNfeCpfChange}
-                                                placeholder="Ex: 000.000.000-00"
-                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">CEP</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={nfeCustomerCep}
-                                                onChange={handleNfeCepChange}
-                                                placeholder="Ex: 00000-000"
-                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-4 gap-4">
-                                        <div className="col-span-3">
-                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Logradouro</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={nfeCustomerLogradouro}
-                                                onChange={e => setNfeCustomerLogradouro(e.target.value)}
-                                                placeholder="Ex: Rua das Flores"
-                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Número</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={nfeCustomerNumero}
-                                                onChange={e => setNfeCustomerNumero(e.target.value)}
-                                                placeholder="Ex: 123"
-                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200 text-center"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Bairro</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={nfeCustomerBairro}
-                                            onChange={e => setNfeCustomerBairro(e.target.value)}
-                                            placeholder="Ex: Centro"
-                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
-                                        />
-                                    </div>
-
-                                    <div className="grid grid-cols-4 gap-4">
-                                        <div className="col-span-3">
-                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Cidade</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={nfeCustomerCidade}
-                                                onChange={e => setNfeCustomerCidade(e.target.value)}
-                                                placeholder="Ex: São Paulo"
-                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">UF</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={nfeCustomerUf}
-                                                onChange={e => setNfeCustomerUf(e.target.value.toUpperCase())}
-                                                maxLength={2}
-                                                placeholder="SP"
-                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200 text-center"
-                                            />
-                                        </div>
-                                    </div>
+                                <div className="flex items-center gap-2 mb-2 p-3 bg-zinc-900/50 border border-zinc-850 rounded-xl">
+                                    <input
+                                        type="checkbox"
+                                        id="isManualNfe"
+                                        checked={isManualNfe}
+                                        onChange={(e) => setIsManualNfe(e.target.checked)}
+                                        className="w-4 h-4 rounded border-zinc-700 bg-zinc-950 text-purple-600 focus:ring-purple-500/20"
+                                    />
+                                    <label htmlFor="isManualNfe" className="text-[10px] font-black text-zinc-300 uppercase tracking-widest cursor-pointer select-none">
+                                        Registrar chave da NF-e manualmente (Bypass API)
+                                    </label>
                                 </div>
+
+                                {isManualNfe ? (
+                                    <div className="space-y-2">
+                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Chave de Acesso da NF-e (44 dígitos)</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            maxLength={44}
+                                            value={manualNfeKey}
+                                            onChange={e => setManualNfeKey(e.target.value.replace(/\D/g, ''))}
+                                            placeholder="44 dígitos numéricos"
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-purple-500 text-xs font-mono font-bold transition-all text-zinc-200"
+                                        />
+                                        <p className="text-[9px] text-zinc-500 mt-1.5 pl-1 leading-normal">Insira a chave de acesso da nota que você emitiu diretamente no portal nacional da SEFAZ ou MEI.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Nome do Cliente</label>
+                                            <input
+                                                type="text"
+                                                required={!isManualNfe}
+                                                value={nfeCustomerNome}
+                                                onChange={e => setNfeCustomerNome(e.target.value)}
+                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">CPF ou CNPJ</label>
+                                                <input
+                                                    type="text"
+                                                    required={!isManualNfe}
+                                                    value={nfeCustomerCpf}
+                                                    onChange={handleNfeCpfChange}
+                                                    placeholder="Ex: 000.000.000-00"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">CEP</label>
+                                                <input
+                                                    type="text"
+                                                    required={!isManualNfe}
+                                                    value={nfeCustomerCep}
+                                                    onChange={handleNfeCepChange}
+                                                    placeholder="Ex: 00000-000"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-4 gap-4">
+                                            <div className="col-span-3">
+                                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Logradouro</label>
+                                                <input
+                                                    type="text"
+                                                    required={!isManualNfe}
+                                                    value={nfeCustomerLogradouro}
+                                                    onChange={e => setNfeCustomerLogradouro(e.target.value)}
+                                                    placeholder="Ex: Rua das Flores"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Número</label>
+                                                <input
+                                                    type="text"
+                                                    required={!isManualNfe}
+                                                    value={nfeCustomerNumero}
+                                                    onChange={e => setNfeCustomerNumero(e.target.value)}
+                                                    placeholder="Ex: 123"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200 text-center"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Bairro</label>
+                                            <input
+                                                type="text"
+                                                required={!isManualNfe}
+                                                value={nfeCustomerBairro}
+                                                onChange={e => setNfeCustomerBairro(e.target.value)}
+                                                placeholder="Ex: Centro"
+                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-4 gap-4">
+                                            <div className="col-span-3">
+                                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Cidade</label>
+                                                <input
+                                                    type="text"
+                                                    required={!isManualNfe}
+                                                    value={nfeCustomerCidade}
+                                                    onChange={e => setNfeCustomerCidade(e.target.value)}
+                                                    placeholder="Ex: São Paulo"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">UF</label>
+                                                <input
+                                                    type="text"
+                                                    required={!isManualNfe}
+                                                    value={nfeCustomerUf}
+                                                    onChange={e => setNfeCustomerUf(e.target.value.toUpperCase())}
+                                                    maxLength={2}
+                                                    placeholder="SP"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-bold transition-all text-zinc-200 text-center"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="pt-2 flex gap-3">
                                     <button

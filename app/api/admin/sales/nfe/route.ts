@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
         if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();
-        const { checkout_id, sale_id } = body;
+        const { checkout_id, sale_id, manual_key } = body;
 
         let finalCheckoutId = checkout_id;
 
@@ -24,6 +24,40 @@ export async function POST(req: NextRequest) {
             if (sale) {
                 finalCheckoutId = sale.checkout_id;
             }
+        }
+
+        if (manual_key) {
+            const cleanKey = manual_key.replace(/\D/g, '');
+            if (cleanKey.length !== 44) {
+                return NextResponse.json({ error: 'A chave de acesso da NF-e deve conter exatamente 44 dígitos' }, { status: 400 });
+            }
+
+            // Atualiza todas as vendas deste checkout (ou a venda específica)
+            if (finalCheckoutId) {
+                await supabase
+                    .from('vendas')
+                    .update({ chave_nfe: cleanKey })
+                    .eq('checkout_id', finalCheckoutId);
+            } else if (sale_id) {
+                await supabase
+                    .from('vendas')
+                    .update({ chave_nfe: cleanKey })
+                    .eq('id', Number(sale_id));
+            }
+
+            // Alerta opcional no Telegram
+            try {
+                const { sendTelegramAlert } = await import('@/lib/telegram');
+                await sendTelegramAlert(
+                    `🧾 *[NF-e REGISTRADA MANUALMENTE]*\n\n` +
+                    `✅ *Chave de Acesso vinculada com sucesso!*\n` +
+                    `🔑 *Chave de Acesso:* \`${cleanKey}\``
+                );
+            } catch (tgErr) {
+                console.error('Error sending Telegram alert for manual NFe:', tgErr);
+            }
+
+            return NextResponse.json({ success: true, message: 'Chave NF-e registrada manualmente', chave: cleanKey });
         }
 
         if (!finalCheckoutId) {
