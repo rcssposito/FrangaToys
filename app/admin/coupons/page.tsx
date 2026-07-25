@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Tag, Calendar, Activity, Check, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 interface Cupom {
     id: string;
@@ -18,6 +19,7 @@ interface Cupom {
     criado_em: string;
     serie_id?: number | null;
     series?: { nome: string } | null;
+    figuras_permitidas?: number[] | null;
 }
 
 export default function AdminCouponsPage() {
@@ -38,6 +40,12 @@ export default function AdminCouponsPage() {
     const [descontoMaximo, setDescontoMaximo] = useState('');
     const [serieId, setSerieId] = useState('');
     const [ativo, setAtivo] = useState(true);
+
+    // Figures restrictions states
+    const [figurasPermitidas, setFigurasPermitidas] = useState<number[]>([]);
+    const [figurasPermitidasObj, setFigurasPermitidasObj] = useState<any[]>([]);
+    const [searchFigQuery, setSearchFigQuery] = useState('');
+    const [searchFigResults, setSearchFigResults] = useState<any[]>([]);
 
     const router = useRouter();
 
@@ -67,12 +75,67 @@ export default function AdminCouponsPage() {
         }
     };
 
+    const handleSearchFigures = async (q: string) => {
+        if (!q.trim()) {
+            setSearchFigResults([]);
+            return;
+        }
+        try {
+            const res = await fetch(`/api/admin/figures?search=${encodeURIComponent(q)}&limit=10`);
+            if (res.ok) {
+                const data = await res.json();
+                setSearchFigResults(data.items || []);
+            }
+        } catch (err) {
+            console.error('Erro ao buscar figuras:', err);
+        }
+    };
+
     useEffect(() => {
         fetchCupons();
         fetchSeries();
     }, []);
 
-    const openModal = (cupom?: Cupom) => {
+    const fetchFigurasPermitidasDetails = async (ids: number[]) => {
+        if (!ids || ids.length === 0) return [];
+        try {
+            const { data, error } = await supabase
+                .from('figuras')
+                .select(`
+                    id,
+                    nome,
+                    series ( nome ),
+                    categorias:series ( categorias ( nome ) )
+                `)
+                .in('id', ids);
+
+            if (error) {
+                console.error("Error fetching figures details:", error);
+                return [];
+            }
+            return (data || []).map((f: any) => {
+                const series = Array.isArray(f.series) ? f.series[0] : f.series;
+                const catArr = Array.isArray(f.categorias) ? f.categorias : [f.categorias].filter(Boolean);
+                const catObj = catArr[0]?.categorias;
+                const cat = Array.isArray(catObj) ? catObj[0] : catObj;
+
+                return {
+                    id: f.id,
+                    nome: f.nome,
+                    serie: series?.nome || 'Sem Série',
+                    categoria: cat?.nome || 'Outros'
+                };
+            });
+        } catch (err) {
+            console.error(err);
+            return [];
+        }
+    };
+
+    const openModal = async (cupom?: Cupom) => {
+        setSearchFigQuery('');
+        setSearchFigResults([]);
+
         if (cupom) {
             setEditingCupom(cupom);
             setCodigo(cupom.codigo);
@@ -84,6 +147,15 @@ export default function AdminCouponsPage() {
             setDescontoMaximo(cupom.desconto_maximo ? cupom.desconto_maximo.toString() : '');
             setSerieId(cupom.serie_id ? cupom.serie_id.toString() : '');
             setAtivo(cupom.ativo);
+
+            const pIds = cupom.figuras_permitidas || [];
+            setFigurasPermitidas(pIds);
+            if (pIds.length > 0) {
+                const details = await fetchFigurasPermitidasDetails(pIds);
+                setFigurasPermitidasObj(details);
+            } else {
+                setFigurasPermitidasObj([]);
+            }
         } else {
             setEditingCupom(null);
             setCodigo('');
@@ -95,6 +167,8 @@ export default function AdminCouponsPage() {
             setDescontoMaximo('');
             setSerieId('');
             setAtivo(true);
+            setFigurasPermitidas([]);
+            setFigurasPermitidasObj([]);
         }
         setIsModalOpen(true);
     };
@@ -113,6 +187,7 @@ export default function AdminCouponsPage() {
                 valor_minimo: valorMinimo ? Number(valorMinimo) : null,
                 desconto_maximo: descontoMaximo ? Number(descontoMaximo) : null,
                 serie_id: serieId ? Number(serieId) : null,
+                figuras_permitidas: figurasPermitidas.length > 0 ? figurasPermitidas : null,
                 ativo
             };
 
@@ -211,6 +286,11 @@ export default function AdminCouponsPage() {
                                                     Série: {cupom.series.nome}
                                                 </span>
                                             )}
+                                            {cupom.figuras_permitidas && cupom.figuras_permitidas.length > 0 && (
+                                                <span className="block mt-1 text-orange-400 font-bold">
+                                                    Seleção: {cupom.figuras_permitidas.length} figuras
+                                                </span>
+                                            )}
                                         </p>
                                     </div>
                                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -250,7 +330,7 @@ export default function AdminCouponsPage() {
             {/* Modal */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-[#09090b] border border-zinc-800 rounded-[2rem] w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                    <div className="bg-[#09090b] border border-zinc-800 rounded-[2rem] w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
                         <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-black/20">
                             <h2 className="text-xl font-black text-white uppercase tracking-tighter">
                                 {editingCupom ? 'Editar Cupom' : 'Novo Cupom'}
@@ -260,34 +340,20 @@ export default function AdminCouponsPage() {
                             </button>
                         </div>
                         
-                        <form onSubmit={handleSave} className="p-6 flex-1 overflow-y-auto space-y-6 custom-scrollbar">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Código do Cupom</label>
-                                <input
-                                    required
-                                    type="text"
-                                    value={codigo}
-                                    onChange={(e) => setCodigo(e.target.value.toUpperCase())}
-                                    placeholder="Ex: PROMO10"
-                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 uppercase"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Restrição de Série</label>
-                                <select
-                                    value={serieId}
-                                    onChange={(e) => setSerieId(e.target.value)}
-                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold appearance-none cursor-pointer"
-                                >
-                                    <option value="">Qualquer Série (Sem restrição)</option>
-                                    {series.map(s => (
-                                        <option key={s.id} value={s.id}>{s.nome}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
+                        <form onSubmit={handleSave} className="p-6 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-6">
+                            {/* Seção 1: Informações Básicas (Código, Tipo, Valor) */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Código do Cupom</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        value={codigo}
+                                        onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+                                        placeholder="Ex: PROMO10"
+                                        className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 uppercase"
+                                    />
+                                </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Tipo de Desconto</label>
                                     <select
@@ -314,19 +380,20 @@ export default function AdminCouponsPage() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            {/* Seção 2: Usos e Validade */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Limite de Usos (Opcional)</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Limite de Usos</label>
                                     <input
                                         type="number"
                                         min="1"
                                         value={usosRestantes}
                                         onChange={(e) => setUsosRestantes(e.target.value)}
-                                        placeholder="Ex: 100"
+                                        placeholder="Ilimitado"
                                         className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700"
                                     />
                                 </div>
-                                <div className="space-y-2">
+                                <div className="space-y-2 md:col-span-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Validade (Opcional)</label>
                                     <input
                                         type="datetime-local"
@@ -336,46 +403,133 @@ export default function AdminCouponsPage() {
                                     />
                                 </div>
                             </div>
-                            
-                            <div className="grid grid-cols-2 gap-4">
+
+                            {/* Seção 3: Valores Condicionais */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Valor Mínimo (R$ Opcional)</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Valor Mínimo do Carrinho (Opcional)</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         min="0"
                                         value={valorMinimo}
                                         onChange={(e) => setValorMinimo(e.target.value)}
-                                        placeholder="Ex: 100.00"
+                                        placeholder="Ex: R$ 100.00"
                                         className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Teto Máximo (R$ Opcional)</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Teto Máximo de Desconto (Opcional)</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         min="0"
                                         value={descontoMaximo}
                                         onChange={(e) => setDescontoMaximo(e.target.value)}
-                                        placeholder="Ex: 50.00"
+                                        placeholder="Ex: R$ 50.00"
                                         disabled={tipo !== 'porcentagem'}
                                         className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 disabled:opacity-50"
                                     />
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-3 p-4 bg-zinc-900 border border-zinc-800 rounded-2xl cursor-pointer hover:border-zinc-700 transition-colors" onClick={() => setAtivo(!ativo)}>
-                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center border transition-all ${ativo ? 'bg-blue-600 border-blue-500' : 'bg-black border-zinc-700'}`}>
-                                    {ativo && <Check size={14} className="text-white" />}
+                            {/* Seção 3: Restrições (Série e Figuras) */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Restrição de Série</label>
+                                    <select
+                                        value={serieId}
+                                        onChange={(e) => setSerieId(e.target.value)}
+                                        className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold appearance-none cursor-pointer"
+                                    >
+                                        <option value="">Qualquer Série (Sem restrição)</option>
+                                        {series.map(s => (
+                                            <option key={s.id} value={s.id}>{s.nome}</option>
+                                        ))}
+                                    </select>
                                 </div>
-                                <div>
-                                    <p className="text-sm font-bold text-white">Cupom Ativo</p>
-                                    <p className="text-[10px] font-medium text-zinc-500">Permitir que clientes utilizem este cupom</p>
+
+                                <div className="space-y-2 relative">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Restringir a Figuras Específicas (Opcional)</label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            placeholder="Digite o nome da figura..."
+                                            value={searchFigQuery}
+                                            onChange={(e) => {
+                                                setSearchFigQuery(e.target.value);
+                                                handleSearchFigures(e.target.value);
+                                            }}
+                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700"
+                                        />
+                                        {searchFigResults.length > 0 && (
+                                            <div className="absolute left-0 right-0 top-full mt-2 bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl z-[60] max-h-48 overflow-y-auto">
+                                                {searchFigResults.map((fig: any) => (
+                                                    <button
+                                                        key={fig.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (!figurasPermitidas.includes(fig.id)) {
+                                                                setFigurasPermitidas([...figurasPermitidas, fig.id]);
+                                                                setFigurasPermitidasObj([...figurasPermitidasObj, fig]);
+                                                            }
+                                                            setSearchFigQuery('');
+                                                            setSearchFigResults([]);
+                                                        }}
+                                                        className="w-full text-left px-4 py-3 hover:bg-zinc-900 text-sm font-bold text-white transition-colors border-b border-zinc-900 last:border-0"
+                                                    >
+                                                        {fig.nome} ({fig.categoria} - {fig.serie})
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                            
-                            <div className="pt-4 flex gap-3">
+
+                            {/* Seção 4: Lista de Figuras Selecionadas & Status Ativo */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start pt-2">
+                                <div>
+                                    {figurasPermitidasObj.length > 0 ? (
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Figuras Selecionadas ({figurasPermitidasObj.length})</label>
+                                            <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto custom-scrollbar pr-1">
+                                                {figurasPermitidasObj.map((fig: any) => (
+                                                    <div key={fig.id} className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-full text-xs font-black text-blue-400">
+                                                        <span>{fig.nome}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setFigurasPermitidas(figurasPermitidas.filter(id => id !== fig.id));
+                                                                setFigurasPermitidasObj(figurasPermitidasObj.filter(f => f.id !== fig.id));
+                                                            }}
+                                                            className="hover:text-red-400 transition-colors p-0.5 rounded-full hover:bg-red-500/10"
+                                                        >
+                                                            <X size={12} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="h-full flex items-center justify-center p-4 border border-zinc-800 border-dashed rounded-2xl text-zinc-600 text-[11px] font-bold uppercase tracking-wider select-none min-h-[58px]">
+                                            Nenhuma figura selecionada
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center gap-3 p-4 bg-zinc-900 border border-zinc-800 rounded-2xl cursor-pointer hover:border-zinc-700 transition-colors" onClick={() => setAtivo(!ativo)}>
+                                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center border transition-all ${ativo ? 'bg-blue-600 border-blue-500' : 'bg-black border-zinc-700'}`}>
+                                        {ativo && <Check size={14} className="text-white" />}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-white">Cupom Ativo</p>
+                                        <p className="text-[10px] font-medium text-zinc-500">Permitir que clientes utilizem este cupom</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-4 flex gap-3 border-t border-zinc-800">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}

@@ -64,6 +64,32 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: 'Cupom inválido, expirado ou inativo' }, { status: 400 });
             }
 
+            // Figures restriction validation
+            if (cupom_ativo.figuras_permitidas && cupom_ativo.figuras_permitidas.length > 0) {
+                const allowedIds = cupom_ativo.figuras_permitidas.map(Number);
+                const itemsInPermitted = items.filter(item => {
+                    return allowedIds.includes(Number(item.id));
+                });
+
+                if (itemsInPermitted.length === 0) {
+                    return NextResponse.json({ 
+                        error: 'Este cupom é válido apenas para produtos específicos da seleção do mês.' 
+                    }, { status: 400 });
+                }
+
+                // Check if those items are in active campaigns
+                const eligibleItemsInPermitted = itemsInPermitted.filter(item => {
+                    const meta = metaMap.get(Number(item.id)) || {};
+                    return !meta.is_campanha_active;
+                });
+
+                if (eligibleItemsInPermitted.length === 0) {
+                    return NextResponse.json({ 
+                        error: 'Os produtos elegíveis deste cupom no carrinho já estão em promoção e não aceitam cupom.' 
+                    }, { status: 400 });
+                }
+            }
+
             // Series restriction validation
             if (cupom_ativo.serie_id) {
                 const requiredSerieId = cupom_ativo.serie_id;
@@ -106,9 +132,11 @@ export async function POST(req: NextRequest) {
             const isCampanha = meta.is_campanha_active;
             
             const fig = figureMap.get(Number(item.id)) || {};
+            
+            const isFigureEligible = !cupom_ativo || !cupom_ativo.figuras_permitidas || cupom_ativo.figuras_permitidas.length === 0 || cupom_ativo.figuras_permitidas.map(Number).includes(Number(item.id));
             const isSerieEligible = !cupom_ativo || !cupom_ativo.serie_id || fig.serie_id === cupom_ativo.serie_id;
 
-            if (!isCampanha && isSerieEligible) {
+            if (!isCampanha && isFigureEligible && isSerieEligible) {
                 totalElegivel += itemTotalPrice;
             }
         }

@@ -51,7 +51,8 @@ export async function POST(req: NextRequest) {
                 valor_minimo: cupom.valor_minimo ? Number(cupom.valor_minimo) : null,
                 desconto_maximo: cupom.desconto_maximo ? Number(cupom.desconto_maximo) : null,
                 serie_id: cupom.serie_id,
-                serie_nome: cupom.series?.nome || null
+                serie_nome: cupom.series?.nome || null,
+                figuras_permitidas: cupom.figuras_permitidas || null
             }
         });
 
