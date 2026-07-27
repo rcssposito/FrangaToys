@@ -291,7 +291,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                             {/* CTA Action Button */}
                             <div className="w-full mt-auto">
                                 <div className="w-full flex items-center justify-center bg-gradient-to-r from-orange-500 to-amber-500 text-white py-3.5 sm:py-4 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] shadow-lg shadow-orange-500/15 hover:from-orange-400 hover:to-amber-400 active:scale-98 transition-all">
-                                    <span>{figure.is_merchant ? 'Detalhes Completos' : 'Falar com o Ateliê'}</span>
+                                    <span>{figure.is_merchant ? 'Detalhes' : 'Falar com o Ateliê'}</span>
                                 </div>
                             </div>
                         </div>
