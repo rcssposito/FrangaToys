@@ -295,9 +295,10 @@ export async function POST(req: NextRequest) {
       nome_destinatario: nome || sales[0].cliente_nome || 'Cliente Franga Toys',
       [isCnpj ? 'cnpj_destinatario' : 'cpf_destinatario']: cleanCpfCnpj,
       telefone_destinatario: sales[0].cliente_contato ? sales[0].cliente_contato.replace(/\D/g, '') : undefined,
-      logradouro_destinatario: logradouro || 'Av. Paulista',
-      numero_destinatario: numero || '1000',
-      bairro_destinatario: bairro || 'Bela Vista',
+      logradouro_destinatario: realClient?.logradouro || 'Av. Paulista',
+      numero_destinatario: realClient?.numero || '1000',
+      complemento_destinatario: realClient?.complemento || undefined,
+      bairro_destinatario: realClient?.bairro || 'Bela Vista',
       municipio_destinatario: cidade || 'São Paulo',
       uf_destinatario: ufDestinatario,
       cep_destinatario: cleanCep,
@@ -425,8 +426,7 @@ export async function POST(req: NextRequest) {
       <xFant>Franga Toys</xFant>
       <enderEmit>
         <xLgr>Rua Catanduvas do Sul</xLgr>
-        <nro>459</nro>
-        <xCpl>A</xCpl>
+        <nro>459 A</nro>
         <xBairro>Jardim Primavera (Zona Norte)</xBairro>
         <cMun>3550308</cMun>
         <xMun>São Paulo</xMun>
@@ -445,6 +445,7 @@ export async function POST(req: NextRequest) {
       <enderDest>
         <xLgr>${formatXmlString(payload.logradouro_destinatario)}</xLgr>
         <nro>${formatXmlString(payload.numero_destinatario)}</nro>
+        ${payload.complemento_destinatario ? `<xCpl>${formatXmlString(payload.complemento_destinatario)}</xCpl>` : ''}
         <xBairro>${formatXmlString(payload.bairro_destinatario)}</xBairro>
         <cMun>${payload.ibge_codigo}</cMun>
         <xMun>${formatXmlString(payload.municipio_destinatario)}</xMun>

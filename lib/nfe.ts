@@ -474,6 +474,7 @@ export async function emitirNFeUniNFe(checkoutId: string): Promise<{ success: bo
       telefone_destinatario: sales[0].cliente_contato ? sales[0].cliente_contato.replace(/\D/g, '') : (realClient?.telefone ? realClient.telefone.replace(/\D/g, '') : undefined),
       logradouro_destinatario: realClient?.logradouro || 'Av. Paulista',
       numero_destinatario: realClient?.numero || '1000',
+      complemento_destinatario: realClient?.complemento || undefined,
       bairro_destinatario: realClient?.bairro || 'Bela Vista',
       municipio_destinatario: realClient?.cidade || 'São Paulo',
       uf_destinatario: ufDestinatario,
@@ -602,8 +603,7 @@ export async function emitirNFeUniNFe(checkoutId: string): Promise<{ success: bo
       <xFant>Franga Toys</xFant>
       <enderEmit>
         <xLgr>Rua Catanduvas do Sul</xLgr>
-        <nro>459</nro>
-        <xCpl>A</xCpl>
+        <nro>459 A</nro>
         <xBairro>Jardim Primavera (Zona Norte)</xBairro>
         <cMun>3550308</cMun>
         <xMun>São Paulo</xMun>
