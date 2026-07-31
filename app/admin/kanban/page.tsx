@@ -822,7 +822,7 @@ export default function KanbanPage() {
                                                                 const urlBase = window.location.origin;
                                                                 const link = `${urlBase}/rastreio/${trackingIdentifier}`;
                                                                 const primeiroNome = task.cliente_nome ? task.cliente_nome.trim().split(' ')[0] : 'Cliente';
-                                                                const msg = `Olá, ${primeiroNome}!\n\nAcompanhe a produção do seu pedido em tempo real diretamente pelo nosso site:\n👉 ${link}\n\n(Lá você consegue ver se a peça está imprimindo, em acabamento, pintura ou se já foi enviada!). Qualquer dúvida, estou por aqui!`;
+                                                                const msg = `Olá, ${primeiroNome}!\n\nAcompanhe o status da produção ou realize o pagamento do seu pedido pelo nosso link exclusivo:\n👉 ${link}\n\n(No link você acompanha se a peça está imprimindo, em pintura ou enviada, e também pode efetuar o pagamento via PIX ou Cartão). Qualquer dúvida, estou por aqui!`;
                                                                 
                                                                 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                                                                 const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';

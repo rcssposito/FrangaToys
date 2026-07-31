@@ -55,10 +55,10 @@ function PixPaymentWidget({ order }: { order: any }) {
                     </div>
                     <div>
                         <h4 className="text-xs font-black uppercase tracking-widest text-zinc-400">
-                            {isCard ? 'Pagamento Pendente (Cartão)' : 'Pagamento Pendente (PIX)'}
+                            {isCard ? 'EFETUAR PAGAMENTO (CARTÃO)' : 'EFETUAR PAGAMENTO (PIX)'}
                         </h4>
                         <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
-                            {isCard ? 'Pague com cartão de crédito para liberar o envio da sua figura' : 'Pague com PIX para liberar o envio da sua figura'}
+                            {isCard ? 'Realize o pagamento via Mercado Pago para liberar a produção e o envio da sua figura' : 'Realize o pagamento via PIX para liberar a produção e o envio da sua figura'}
                         </p>
                     </div>
                 </div>
@@ -77,7 +77,7 @@ function PixPaymentWidget({ order }: { order: any }) {
                     {isCard ? (
                         <div className="w-full space-y-4">
                             <p className="text-[10.5px] text-zinc-400 font-medium">
-                                Clique no botão abaixo para efetuar o pagamento via Mercado Pago:
+                                Clique no botão abaixo para efetuar o pagamento com cartão de crédito via Mercado Pago:
                             </p>
                             <a 
                                 href={order.link_pagamento}
@@ -86,7 +86,7 @@ function PixPaymentWidget({ order }: { order: any }) {
                                 className="w-full bg-orange-500 hover:bg-orange-400 text-black text-[10px] font-black py-4 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-widest shadow-lg shadow-orange-500/10"
                             >
                                 <ExternalLink size={14} strokeWidth={3} />
-                                Pagar com Cartão de Crédito
+                                Pagar Agora (Mercado Pago)
                             </a>
                         </div>
                     ) : (

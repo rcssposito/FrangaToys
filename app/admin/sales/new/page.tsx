@@ -604,9 +604,8 @@ function NewSaleContent() {
                 return;
             }
             const trackingIdentifier = completedSaleData?.access_token || clientWhatsApp;
-            const rocket = String.fromCodePoint(0x1F680);
             const primeiroNome = cliente ? cliente.trim().split(' ')[0] : 'Cliente';
-            const msgCliente = `Olá ${primeiroNome}, obrigado pela sua compra na Franga Toys! ${rocket}\n\nAqui está o seu recibo:\n${window.location.origin}/recibo/${trackingIdentifier}\n\nVocê pode acompanhar o status do seu pedido no seu painel de rastreio:\n${window.location.origin}/rastreio/${trackingIdentifier}`;
+            const msgCliente = `Olá ${primeiroNome}, obrigado pela sua compra na Franga Toys! 🚀\n\nAqui está o seu recibo:\n${window.location.origin}/recibo/${trackingIdentifier}\n\nVocê pode acompanhar o status do seu pedido e o pagamento no seu painel:\n${window.location.origin}/rastreio/${trackingIdentifier}`;
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
             const waClientLink = `${baseUrl}?phone=55${clientWhatsApp}&text=${encodeURIComponent(msgCliente)}`;

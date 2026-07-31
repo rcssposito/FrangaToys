@@ -242,6 +242,14 @@ export async function POST(req: Request) {
             throw error;
         }
 
+        // CASCATURAMENTO: Se criado como merchant, garante que figuras do estúdio também fiquem disponíveis
+        if (data?.merchant && data?.id) {
+            await supabase
+                .from('figuras')
+                .update({ disponivel: true })
+                .eq('studio_id', data.id);
+        }
+
         return NextResponse.json(data, { status: 201 });
     } catch (error: any) {
         console.error("POST Studio error", error);

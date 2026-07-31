@@ -69,14 +69,24 @@ export async function GET() {
                 (targetAtivo && m.isMerchantTier && !studio.merchant);
 
             if (needsUpdate) {
+                const targetMerchant = targetAtivo ? (m.isMerchantTier || studio.merchant) : studio.merchant;
+
                 await supabase
                     .from('studios')
                     .update({
                         ativo: targetAtivo,
-                        merchant: targetAtivo ? (m.isMerchantTier || studio.merchant) : studio.merchant,
+                        merchant: targetMerchant,
                         custo_mensal: targetCusto
                     })
                     .eq('id', studio.id);
+
+                // Cascata: Se o estúdio é merchant, habilita as figuras no catálogo (disponivel = true)
+                if (targetMerchant) {
+                    await supabase
+                        .from('figuras')
+                        .update({ disponivel: true })
+                        .eq('studio_id', studio.id);
+                }
             }
         }
 
