@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/recibo/:id',
-        destination: '/api/admin/receipt/:id',
+        destination: '/api/admin/kanban/os/:id',
       },
       {
         source: '/certificado/:id',

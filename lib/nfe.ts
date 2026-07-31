@@ -707,8 +707,8 @@ export async function emitirNFeUniNFe(checkoutId: string): Promise<{ success: bo
         break;
       }
 
-      // Procura por qualquer arquivo *-pro-rec.xml na pasta Retorno (UniNFe usa lote sequencial)
-      const retornoFiles = fs.readdirSync(retornoDir).filter(f => f.endsWith('-pro-rec.xml'));
+      // Procura por qualquer arquivo de retorno XML na pasta Retorno (ignora apenas o num-lot.xml intermediário)
+      const retornoFiles = fs.readdirSync(retornoDir).filter(f => f.endsWith('.xml') && !f.endsWith('-num-lot.xml'));
       if (retornoFiles.length > 0) {
         const retornoFile = path.join(retornoDir, retornoFiles[0]);
         try {
@@ -719,10 +719,21 @@ export async function emitirNFeUniNFe(checkoutId: string): Promise<{ success: bo
           const numLotFiles = fs.readdirSync(retornoDir).filter(f => f.endsWith('-num-lot.xml'));
           numLotFiles.forEach(f => { try { fs.unlinkSync(path.join(retornoDir, f)); } catch {} });
 
-          // A resposta pode ter múltiplos cStat - o do protocolo da nota é o que importa
-          const protMatch = retXml.match(/<protNFe[^>]*>.*?<cStat>(\d+)<\/cStat>.*?<xMotivo>([^<]+)<\/xMotivo>/s);
-          const cStat = protMatch ? protMatch[1] : '';
-          const xMotivo = protMatch ? protMatch[2] : '';
+          // 1. Tentar extrair cStat e xMotivo do protocolo da nota (protNFe/infProt)
+          let cStat = '';
+          let xMotivo = '';
+
+          const protMatch = retXml.match(/<(?:protNFe|infProt)[^>]*>[\s\S]*?<cStat>(\d+)<\/cStat>[\s\S]*?<xMotivo>([^<]+)<\/xMotivo>/);
+          if (protMatch) {
+            cStat = protMatch[1];
+            xMotivo = protMatch[2];
+          } else {
+            // 2. Fallback: Se for erro geral de lote, pega o cStat e xMotivo da raiz (retEnviNFe/retConsReciNFe)
+            const topStatMatch = retXml.match(/<cStat>(\d+)<\/cStat>/);
+            const topMotivoMatch = retXml.match(/<xMotivo>([^<]+)<\/xMotivo>/);
+            cStat = topStatMatch ? topStatMatch[1] : '';
+            xMotivo = topMotivoMatch ? topMotivoMatch[2] : '';
+          }
 
           console.log(`[UniNFe] SEFAZ resposta - cStat: ${cStat}, xMotivo: ${xMotivo}`);
 
@@ -730,7 +741,7 @@ export async function emitirNFeUniNFe(checkoutId: string): Promise<{ success: bo
             success = true;
             break;
           } else {
-            errorMessage = `Rejeição SEFAZ (${cStat}): ${xMotivo || 'Erro desconhecido'}`;
+            errorMessage = `Rejeição SEFAZ (${cStat || 'Erro'}): ${xMotivo || 'Rejeição no processamento da SEFAZ'}`;
             break;
           }
         } catch (fileErr: any) {

@@ -18,8 +18,10 @@ export async function GET(
     try {
         const { id } = await params;
 
-        // Fetch Sale/Kanban info
-        const { data: sale, error } = await supabase
+        // Check if ID parameter is a UUID access token or numeric ID
+        const isToken = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+        let query = supabase
             .from('vendas')
             .select(`
                 id,
@@ -48,9 +50,15 @@ export async function GET(
                         horas_pintura
                     )
                 )
-            `)
-            .eq('id', id)
-            .single();
+            `);
+
+        if (isToken) {
+            query = query.eq('access_token', id);
+        } else {
+            query = query.eq('id', id);
+        }
+
+        const { data: sale, error } = await query.single();
 
         if (error || !sale) {
             return new Response('Ordem de Serviço não encontrada', { status: 404 });
