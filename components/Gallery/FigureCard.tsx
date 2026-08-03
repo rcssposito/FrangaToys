@@ -45,7 +45,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
     };
  
     const imageUrl = getOptimizedImageUrl(figure.imagem_url);
-    const figurePrice = figure.precos?.estilizado || 0;
+    const figurePrice = figure.precos?.pix_colorido || figure.precos?.colorido || figure.precos?.pix_estilizado || 0;
     const tier = figure.precos?.colorido ? getFigureTier(figure.precos.colorido) : null;
     const tierStyle = tier ? getTierBadgeStyle(tier) : null;
  

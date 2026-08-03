@@ -50,7 +50,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
     }, [items, isInitialized]);
 
-    const addToCart = (figure: FiguraDTO, finish: 'estilizado' | 'colorido' | 'premium' = 'estilizado') => {
+    const addToCart = (figure: FiguraDTO, finish: 'estilizado' | 'colorido' | 'premium' = 'colorido') => {
         if (items.some(i => i.id === figure.id)) {
             toast.error('Figura já está no carrinho!');
             setIsCartOpen(true);

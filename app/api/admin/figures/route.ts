@@ -141,6 +141,7 @@ export async function GET(req: NextRequest) {
                 id: item.id,
                 nome: item.nome,
                 codigo: item.codigo,
+                serie_id: item.serie_id,
                 serie: (Array.isArray(item.series) ? item.series[0]?.nome : item.series?.nome) || 'Sem Série',
                 categoria: cat.nome || 'Outros',
                 categoria_id: cat.id || 0,

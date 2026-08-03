@@ -245,7 +245,7 @@ function NewSaleContent() {
             setCart([...cart, { 
                 ...item, 
                 quantidade: 1, 
-                selectedTier: isCampanha ? 'estilizado' : 'estilizado', // Já é o padrão
+                selectedTier: 'colorido',
                 valor_final: Number((unitPrice * 1).toFixed(2)) 
             }]);
         }
@@ -850,17 +850,15 @@ function NewSaleContent() {
                                                 
                                                 <div className="flex bg-zinc-950/50 p-1 rounded-xl border border-zinc-800/50 mb-3 w-full relative">
                                                     {(['estilizado', 'colorido'] as const).map((tier) => {
-                                                        const isLocked = item.is_campanha && tier !== 'estilizado';
                                                         const tierLabel = tier === 'estilizado' ? 'Sem Pintura' : 'Colorido';
                                                         return (
                                                             <button
                                                                 key={tier}
-                                                                onClick={() => !isLocked && updateItemTier(item.id, tier)}
-                                                                disabled={isLocked}
+                                                                onClick={() => updateItemTier(item.id, tier)}
                                                                 className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-tighter rounded-lg transition-all ${
                                                                     item.selectedTier === tier 
                                                                     ? 'bg-zinc-800 text-cyan-400 shadow-sm border border-cyan-500/20' 
-                                                                    : isLocked ? 'opacity-20 cursor-not-allowed' : 'text-zinc-600 hover:text-zinc-400'
+                                                                    : 'text-zinc-600 hover:text-zinc-400'
                                                                 }`}
                                                             >
                                                                 {tierLabel}

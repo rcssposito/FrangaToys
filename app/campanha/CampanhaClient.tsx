@@ -113,7 +113,7 @@ export default function CampanhaClient() {
                     <div>
                         <h3 className="text-sm font-bold text-white mb-1 line-clamp-2 leading-tight">{item.nome}</h3>
                         <div className="flex items-center gap-2 mb-3">
-                            <span className="text-purple-400 font-black text-lg sm:text-xl">{formatPrice(item.precos?.pix_estilizado || 0)}</span>
+                            <span className="text-purple-400 font-black text-lg sm:text-xl">{formatPrice(item.precos?.pix_colorido || item.precos?.colorido || item.precos?.pix_estilizado || 0)}</span>
                         </div>
                     </div>
                     

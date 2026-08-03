@@ -41,7 +41,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
     );
 
     const [selectedFinishOverride, setSelectedFinishOverride] = useState<'estilizado' | 'colorido' | 'premium' | null>(null);
-    const selectedFinish = selectedFinishOverride || (isCampanha ? 'estilizado' : 'colorido');
+    const selectedFinish = selectedFinishOverride || 'colorido';
 
     const [showInfo, setShowInfo] = useState(false);
     const [isZenMode, setIsZenMode] = useState(false);
@@ -122,7 +122,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
     ] as const;
 
     const imageUrl = getOptimizedImageUrl(figure.imagem_url);
-    const figurePrice = figure.precos?.estilizado || 0;
+    const figurePrice = figure.precos?.colorido || figure.precos?.estilizado || 0;
     const tier = figure.precos?.colorido ? getFigureTier(figure.precos.colorido) : null;
     const tierStyle = tier ? getTierBadgeStyle(tier) : null;
 
@@ -323,14 +323,12 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                             {finishOptions.map((opt) => (
                                 <button
                                     key={opt.id}
-                                    onClick={() => !isCampanha && setSelectedFinishOverride(opt.id)}
-                                    disabled={isCampanha && opt.id !== 'estilizado'}
+                                    onClick={() => setSelectedFinishOverride(opt.id)}
                                     className={clsx(
                                         "relative flex flex-col items-center justify-center aspect-[1/1] p-1.5 rounded-2xl border-2 transition-all duration-300 text-center group",
                                         selectedFinish === opt.id
                                             ? `${opt.border} bg-zinc-900/80 ring-1 ring-white/20 scale-[1.02] shadow-2xl`
-                                            : "border-transparent bg-zinc-900/40 opacity-50 hover:opacity-100 hover:bg-zinc-900/60",
-                                        isCampanha && opt.id !== 'estilizado' && "cursor-not-allowed grayscale opacity-30"
+                                            : "border-transparent bg-zinc-900/40 opacity-50 hover:opacity-100 hover:bg-zinc-900/60"
                                     )}
                                 >
                                     <div className={clsx(

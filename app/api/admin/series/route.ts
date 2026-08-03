@@ -4,7 +4,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 export async function GET() {
     try {
-        const sessionOrResponse = await requireRoles(['admin', 'sales']);
+        const sessionOrResponse = await requireRoles(['admin', 'sales', 'pricing']);
         if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const { data, error } = await supabase
