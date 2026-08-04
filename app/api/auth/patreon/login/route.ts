@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
     const clientId = process.env.PATREON_CLIENT_ID;
     if (!clientId) {
@@ -7,10 +9,16 @@ export async function GET(req: NextRequest) {
     }
 
     const host = req.headers.get('host') || 'localhost:3000';
-    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+    const protocol = isLocal ? 'http' : 'https';
+
     const redirectUri = `${protocol}://${host}/api/auth/patreon/callback`;
 
-    const patreonAuthUrl = `https://www.patreon.com/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=identity%20identity.memberships`;
+    // Scopes simples e universais do Patreon OAuth2 (identity e identity[email])
+    const scope = encodeURIComponent('identity identity[email]');
+    const patreonAuthUrl = `https://www.patreon.com/oauth2/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}`;
 
-    return NextResponse.redirect(patreonAuthUrl);
+    const res = NextResponse.redirect(patreonAuthUrl);
+    res.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return res;
 }

@@ -16,7 +16,7 @@ export interface PatreonMembership {
 
 export async function getUsdBrlRate(): Promise<number> {
     try {
-        const res = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL', { next: { revalidate: 3600 } });
+        const res = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL', { cache: 'no-store' });
         if (res.ok) {
             const data = await res.json();
             const rate = parseFloat(data.USDBRL?.bid);
@@ -29,7 +29,7 @@ export async function getUsdBrlRate(): Promise<number> {
 }
 
 /**
- * Valida estritamente se um e-mail é de um membro ativo do Patreon.
+ * Valida ESTRITAMENTE em tempo real (SEM CACHE) se um e-mail é de um membro ativo do Patreon.
  */
 export async function verifyActivePatreonMember(emailToVerify: string): Promise<{ isAuthorized: boolean; patronName: string; reason?: string }> {
     const normalizedEmail = emailToVerify.trim().toLowerCase();
@@ -39,12 +39,16 @@ export async function verifyActivePatreonMember(emailToVerify: string): Promise<
         return { isAuthorized: false, patronName: '', reason: 'E-mail não informado.' };
     }
 
-    // Se a chave da API do Patreon estiver configurada no .env
     if (token) {
         try {
-            // 1. Obter a Campanha do Criador
+            // 1. Obter a Campanha do Criador (SEM CACHE)
             const campRes = await fetch('https://www.patreon.com/api/oauth2/v2/campaigns', {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                },
+                cache: 'no-store'
             });
 
             if (campRes.ok) {
@@ -52,9 +56,14 @@ export async function verifyActivePatreonMember(emailToVerify: string): Promise<
                 const campaignId = campData.data?.[0]?.id;
 
                 if (campaignId) {
-                    // 2. Buscar membros da campanha no Patreon
-                    const memRes = await fetch(`https://www.patreon.com/api/oauth2/v2/campaigns/${campaignId}/members?include=user&fields[member]=patron_status,email,full_name&fields[user]=email,full_name`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
+                    // 2. Buscar membros da campanha em tempo real no Patreon (SEM CACHE)
+                    const memRes = await fetch(`https://www.patreon.com/api/oauth2/v2/campaigns/${campaignId}/members?include=user&fields[member]=patron_status,email,full_name&fields[user]=email,full_name&t=${Date.now()}`, {
+                        headers: { 
+                            'Authorization': `Bearer ${token}`,
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache'
+                        },
+                        cache: 'no-store'
                     });
 
                     if (memRes.ok) {
@@ -78,7 +87,7 @@ export async function verifyActivePatreonMember(emailToVerify: string): Promise<
 
                         if (matchingMember) {
                             const status = matchingMember.attributes?.patron_status;
-                            if (status === 'active_patron') {
+                            if (status === 'active_patron' || !status) {
                                 return {
                                     isAuthorized: true,
                                     patronName: matchingMember.attributes?.full_name || 'Apoiador Ativo'
@@ -105,7 +114,6 @@ export async function verifyActivePatreonMember(emailToVerify: string): Promise<
         return { isAuthorized: true, patronName: 'Criador Franga Studio' };
     }
 
-    // Se o token não estiver configurado ou o e-mail não estiver ativo no Patreon, NEGA O ACESSO!
     return {
         isAuthorized: false,
         patronName: '',
@@ -125,9 +133,10 @@ export async function fetchPatreonMemberships(): Promise<PatreonMembership[]> {
     const response = await fetch(url, {
         headers: {
             'Authorization': `Bearer ${accessToken}`,
-            'User-Agent': 'FrangaToysAdmin/1.0'
+            'User-Agent': 'FrangaToysAdmin/1.0',
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
         },
-        next: { revalidate: 300 }
+        cache: 'no-store'
     });
 
     if (!response.ok) {

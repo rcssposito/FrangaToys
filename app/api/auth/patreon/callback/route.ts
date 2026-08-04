@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { verifyActivePatreonMember } from '@/lib/integrations/patreon';
 import { grantDriveFolderAccess } from '@/lib/integrations/gdrive';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
@@ -8,7 +11,9 @@ export async function GET(req: NextRequest) {
     const error = searchParams.get('error');
 
     const host = req.headers.get('host') || 'localhost:3000';
-    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+    const protocol = isLocal ? 'http' : 'https';
+
     const redirectUri = `${protocol}://${host}/api/auth/patreon/callback`;
     const releasePageUrl = `${protocol}://${host}/release`;
 
@@ -20,10 +25,14 @@ export async function GET(req: NextRequest) {
         const clientId = process.env.PATREON_CLIENT_ID;
         const clientSecret = process.env.PATREON_CLIENT_SECRET;
 
-        // 1. Trocar o código de autorização pelo Access Token do Usuário no Patreon
+        // 1. Trocar o código de autorização pelo Access Token do Usuário no Patreon (SEM CACHE)
         const tokenRes = await fetch('https://www.patreon.com/api/oauth2/token', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            headers: { 
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
+            },
+            cache: 'no-store',
             body: new URLSearchParams({
                 code,
                 grant_type: 'authorization_code',
@@ -42,9 +51,13 @@ export async function GET(req: NextRequest) {
         const tokenData = await tokenRes.json();
         const userAccessToken = tokenData.access_token;
 
-        // 2. Buscar perfil e assinaturas do usuário autenticado no Patreon
-        const userRes = await fetch('https://www.patreon.com/api/oauth2/v2/identity?include=memberships&fields[user]=email,full_name&fields[member]=patron_status', {
-            headers: { 'Authorization': `Bearer ${userAccessToken}` }
+        // 2. Buscar e-mail e nome do usuário autenticado via API do Patreon (SEM CACHE)
+        const userRes = await fetch('https://www.patreon.com/api/oauth2/v2/identity?fields[user]=email,full_name', {
+            headers: { 
+                'Authorization': `Bearer ${userAccessToken}`,
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
+            },
+            cache: 'no-store'
         });
 
         if (!userRes.ok) {
@@ -54,28 +67,33 @@ export async function GET(req: NextRequest) {
 
         const userData = await userRes.json();
         const userAttributes = userData.data?.attributes || {};
-        const memberAttributes = userData.included?.[0]?.attributes || {};
-
         const email = userAttributes.email;
         const fullName = userAttributes.full_name || 'Apoiador Patreon';
-        const patronStatus = memberAttributes.patron_status || 'active_patron';
 
         if (!email) {
             return NextResponse.redirect(`${releasePageUrl}?error=no_email_permission`);
         }
 
-        // 3. Conceder permissão na pasta restrita do Google Drive via API se o membro for ativo
+        // 3. Validar se o e-mail autenticado é um membro ativo da campanha do Criador no Patreon
+        const patreonCheck = await verifyActivePatreonMember(email);
+
+        if (!patreonCheck.isAuthorized) {
+            console.warn(`Acesso negado para ${email}: ${patreonCheck.reason}`);
+            return NextResponse.redirect(`${releasePageUrl}?error=not_active_patron`);
+        }
+
+        // 4. Conceder permissão de leitor na pasta restrita do Google Drive via Service Account
         const activeFolderUrl = 'https://drive.google.com/drive/folders/1aB9Xx-NZe2K7IweVx33GMucElUsgzHEf';
         await grantDriveFolderAccess(activeFolderUrl, email);
 
-        // 4. Registrar Log de Auditoria no Supabase
+        // 5. Registrar Log de Auditoria no Supabase
         const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'desconhecido';
         await supabase
             .from('download_tokens')
             .insert({
                 token: `patreon_oauth_${Date.now()}_${Math.random().toString(36).substring(7)}`,
                 patron_email: email,
-                patron_name: fullName,
+                patron_name: patreonCheck.patronName || fullName,
                 figure_id: null,
                 file_name: `Autenticação OAuth2 Real do Patreon`,
                 real_file_url: activeFolderUrl,
@@ -84,10 +102,11 @@ export async function GET(req: NextRequest) {
                 user_ip: clientIp
             });
 
-        // 5. Redirecionar para /release com a sessão confirmada
+        // 6. Redirecionar para /release com o acesso liberado
         const successUrl = `${releasePageUrl}?access=granted&email=${encodeURIComponent(email)}&name=${encodeURIComponent(fullName)}`;
         
         const response = NextResponse.redirect(successUrl);
+        response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
         response.cookies.set('patreon_user_email', email, { path: '/', httpOnly: false, maxAge: 86400 });
         response.cookies.set('patreon_user_name', fullName, { path: '/', httpOnly: false, maxAge: 86400 });
 
