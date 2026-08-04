@@ -2,8 +2,8 @@ export interface PatreonMembership {
     campaignId: string;
     campaignName: string;
     campaignUrl: string;
-    patronStatus: string; // 'active_patron' | 'former_patron' | 'declined_patron'
-    lastChargeStatus: string; // 'Paid' | 'Declined' | 'Refunded'
+    patronStatus: string;
+    lastChargeStatus: string;
     amountCents: number;
     amountFormattedUSD: string;
     amountBRL: number;
@@ -28,14 +28,98 @@ export async function getUsdBrlRate(): Promise<number> {
     return 5.60;
 }
 
+/**
+ * Valida estritamente se um e-mail é de um membro ativo do Patreon.
+ */
+export async function verifyActivePatreonMember(emailToVerify: string): Promise<{ isAuthorized: boolean; patronName: string; reason?: string }> {
+    const normalizedEmail = emailToVerify.trim().toLowerCase();
+    const token = process.env.PATREON_CREATOR_ACCESS_TOKEN;
+
+    if (!normalizedEmail) {
+        return { isAuthorized: false, patronName: '', reason: 'E-mail não informado.' };
+    }
+
+    // Se a chave da API do Patreon estiver configurada no .env
+    if (token) {
+        try {
+            // 1. Obter a Campanha do Criador
+            const campRes = await fetch('https://www.patreon.com/api/oauth2/v2/campaigns', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (campRes.ok) {
+                const campData = await campRes.json();
+                const campaignId = campData.data?.[0]?.id;
+
+                if (campaignId) {
+                    // 2. Buscar membros da campanha no Patreon
+                    const memRes = await fetch(`https://www.patreon.com/api/oauth2/v2/campaigns/${campaignId}/members?include=user&fields[member]=patron_status,email,full_name&fields[user]=email,full_name`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (memRes.ok) {
+                        const memData = await memRes.json();
+                        const members = memData.data || [];
+                        const users = memData.included || [];
+
+                        const userMap = new Map<string, string>();
+                        users.forEach((u: any) => {
+                            if (u.type === 'user' && u.attributes?.email) {
+                                userMap.set(u.id, u.attributes.email.toLowerCase());
+                            }
+                        });
+
+                        const matchingMember = members.find((m: any) => {
+                            const memberEmail = m.attributes?.email?.toLowerCase();
+                            const userId = m.relationships?.user?.data?.id;
+                            const linkedUserEmail = userId ? userMap.get(userId) : '';
+                            return memberEmail === normalizedEmail || linkedUserEmail === normalizedEmail;
+                        });
+
+                        if (matchingMember) {
+                            const status = matchingMember.attributes?.patron_status;
+                            if (status === 'active_patron') {
+                                return {
+                                    isAuthorized: true,
+                                    patronName: matchingMember.attributes?.full_name || 'Apoiador Ativo'
+                                };
+                            } else {
+                                return {
+                                    isAuthorized: false,
+                                    patronName: '',
+                                    reason: `A assinatura do e-mail ${normalizedEmail} no Patreon consta como inativa (${status}).`
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: any) {
+            console.error('Erro ao consultar API do Patreon:', e.message);
+        }
+    }
+
+    // Se o e-mail for do criador/admin (ex: para testes locais)
+    const adminEmail = process.env.PATREON_ADMIN_EMAIL?.toLowerCase();
+    if (adminEmail && normalizedEmail === adminEmail) {
+        return { isAuthorized: true, patronName: 'Criador Franga Studio' };
+    }
+
+    // Se o token não estiver configurado ou o e-mail não estiver ativo no Patreon, NEGA O ACESSO!
+    return {
+        isAuthorized: false,
+        patronName: '',
+        reason: `Assinatura no Patreon não encontrada para ${normalizedEmail}. Apenas apoiadores ativos possuem acesso ao repositório.`
+    };
+}
+
 export async function fetchPatreonMemberships(): Promise<PatreonMembership[]> {
     const accessToken = process.env.PATREON_CREATOR_ACCESS_TOKEN;
     if (!accessToken) {
-        throw new Error('PATREON_CREATOR_ACCESS_TOKEN not configured in .env');
+        return [];
     }
 
     const usdBrlRate = await getUsdBrlRate();
-
     const url = "https://www.patreon.com/api/oauth2/v2/identity?include=memberships,memberships.campaign,memberships.currently_entitled_tiers&fields[member]=patron_status,currently_entitled_amount_cents,will_pay_amount_cents,next_charge_date,last_charge_date,last_charge_status&fields[campaign]=name,url&fields[tier]=title,description,amount_cents";
 
     const response = await fetch(url, {
@@ -43,16 +127,14 @@ export async function fetchPatreonMemberships(): Promise<PatreonMembership[]> {
             'Authorization': `Bearer ${accessToken}`,
             'User-Agent': 'FrangaToysAdmin/1.0'
         },
-        next: { revalidate: 300 } // Cache for 5 minutes
+        next: { revalidate: 300 }
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Patreon API HTTP Error ${response.status}: ${errorText}`);
+        return [];
     }
 
     const data = await response.json();
-
     const campaignMap = new Map<string, any>();
     const tierMap = new Map<string, any>();
     const membershipsRaw: any[] = [];
@@ -69,7 +151,7 @@ export async function fetchPatreonMemberships(): Promise<PatreonMembership[]> {
 
     const merchantRegex = /merchant|commercial|comercial|vendedor|revenda|permission to sell|sell physical|sell.*3d print|licence|license|merchant guild|monarch/i;
 
-    const parsedMemberships: PatreonMembership[] = membershipsRaw.map((m: any) => {
+    return membershipsRaw.map((m: any) => {
         const campId = m.relationships?.campaign?.data?.id || '';
         const camp = campaignMap.get(campId) || {};
         const campName = camp.name || 'Desconhecido';
@@ -86,8 +168,6 @@ export async function fetchPatreonMemberships(): Promise<PatreonMembership[]> {
 
         const tiersData = m.relationships?.currently_entitled_tiers?.data || [];
         const tierObjects = tiersData.map((t: any) => tierMap.get(t.id)).filter(Boolean);
-        
-        // Prioritize paid tiers over free tiers
         const paidTiers = tierObjects.filter((t: any) => (t.amount_cents || 0) > 0);
         const primaryTierObj = paidTiers.length > 0 ? paidTiers[0] : tierObjects[0];
 
@@ -101,14 +181,11 @@ export async function fetchPatreonMemberships(): Promise<PatreonMembership[]> {
             merchantRegex.test(t.title || '') || merchantRegex.test(t.description || '')
         ) || merchantRegex.test(campName);
 
-        const isFree = amountCents === 0 || willPayCents === 0 || paidTiers.length === 0;
-        const effectiveStatus = isFree ? 'free_member' : status;
-
         return {
             campaignId: campId,
             campaignName: campName,
             campaignUrl: campUrl,
-            patronStatus: effectiveStatus,
+            patronStatus: status,
             lastChargeStatus: lastCharge,
             amountCents: amountCents,
             amountFormattedUSD: `$${amountUSD.toFixed(2)}`,
@@ -120,6 +197,4 @@ export async function fetchPatreonMemberships(): Promise<PatreonMembership[]> {
             isMerchantTier: isMerchant
         };
     });
-
-    return parsedMemberships;
 }
