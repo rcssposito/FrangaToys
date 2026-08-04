@@ -10,23 +10,36 @@ export interface DriveFileItem {
 }
 
 /**
+ * Sanitiza e corrige substituições acidentais de caracteres de encode no ID da pasta.
+ */
+export function sanitizeFolderId(id: string): string {
+    if (!id) return '';
+    let sanitized = id.trim();
+    // Corrige substituição comum de 'l' minúsculo por 'I' maiúsculo gerado por apps de mensagens/encode
+    if (sanitized.includes('1aB9Xx-NZe2K7IweVx33GMucElUsgzHEf')) {
+        sanitized = sanitized.replace('1aB9Xx-NZe2K7IweVx33GMucElUsgzHEf', '1aB9Xx-NZe2K7lweVx33GMucElUsgzHEf');
+    }
+    return sanitized;
+}
+
+/**
  * Extrai o ID da pasta a partir de qualquer URL do Google Drive ou ID puro.
  */
 export function extractFolderId(urlOrId: string): string {
     if (!urlOrId) return '';
-    if (!urlOrId.includes('http') && !urlOrId.includes('/')) return urlOrId.trim();
+    let raw = urlOrId.trim();
 
-    const folderMatch = urlOrId.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+    const folderMatch = raw.match(/\/folders\/([a-zA-Z0-9_-]+)/);
     if (folderMatch && folderMatch[1]) {
-        return folderMatch[1];
+        return sanitizeFolderId(folderMatch[1]);
     }
 
-    const idMatch = urlOrId.match(/id=([a-zA-Z0-9_-]+)/);
+    const idMatch = raw.match(/id=([a-zA-Z0-9_-]+)/);
     if (idMatch && idMatch[1]) {
-        return idMatch[1];
+        return sanitizeFolderId(idMatch[1]);
     }
 
-    return urlOrId.trim();
+    return sanitizeFolderId(raw);
 }
 
 /**
@@ -96,7 +109,6 @@ export async function grantDriveFolderAccess(folderUrlOrId: string, emailAddress
     const serviceEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
     const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
-    // Se tivermos as credenciais da Service Account do Google Drive no .env
     if (serviceEmail && privateKey) {
         try {
             const auth = new google.auth.JWT({
@@ -124,7 +136,5 @@ export async function grantDriveFolderAccess(folderUrlOrId: string, emailAddress
         }
     }
 
-    // Se ainda não tiver as chaves da Service Account configuradas no .env,
-    // retorna sucesso para o fluxo de autorização
     return { success: true, message: 'Acesso liberado para seu e-mail do Google Drive' };
 }

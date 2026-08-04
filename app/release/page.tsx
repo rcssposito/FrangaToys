@@ -10,18 +10,35 @@ function ReleaseContent() {
     const accessQuery = searchParams.get('access');
     const emailQuery = searchParams.get('email');
     const nameQuery = searchParams.get('name');
+    const folderQuery = searchParams.get('folder');
     const errorQuery = searchParams.get('error');
 
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [patronEmail, setPatronEmail] = useState('');
     const [patronName, setPatronName] = useState('');
-    const [activeRepoUrl, setActiveRepoUrl] = useState('https://drive.google.com/drive/folders/1aB9Xx-NZe2K7IweVx33GMucElUsgzHEf');
+    const [activeRepoUrl, setActiveRepoUrl] = useState('');
 
+    // Carregar a URL ativa do repositório enviada pelo banco de dados
     useEffect(() => {
-        const storedRepo = localStorage.getItem('active_patreon_repo_url');
-        if (storedRepo) {
-            setActiveRepoUrl(storedRepo);
-        }
+        const fetchLiveRepoUrl = async () => {
+            if (folderQuery) {
+                setActiveRepoUrl(folderQuery);
+                return;
+            }
+            try {
+                const res = await fetch('/api/admin/integrations/patreon/repository');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.repoUrl) {
+                        setActiveRepoUrl(data.repoUrl);
+                    }
+                }
+            } catch (e) {
+                console.error('Erro ao buscar repositório ativo:', e);
+            }
+        };
+
+        fetchLiveRepoUrl();
 
         // Se retornou da autenticação do Patreon com acesso liberado
         if (accessQuery === 'granted' && emailQuery) {
@@ -38,7 +55,7 @@ function ReleaseContent() {
                 toast.error('Não foi possível verificar a assinatura no momento.');
             }
         }
-    }, [accessQuery, emailQuery, nameQuery, errorQuery]);
+    }, [accessQuery, emailQuery, nameQuery, folderQuery, errorQuery]);
 
     // Redirecionamento para o Patreon
     const handlePatreonLogin = () => {
@@ -147,7 +164,7 @@ function ReleaseContent() {
 
                     </div>
                 ) : (
-                    /* ESTADO 2: MEMBRO COM ACESSO LIBERADO (HUMANIZADO & ELEGANTE) */
+                    /* ESTADO 2: MEMBRO COM ACESSO LIBERADO (LIDO DINAMICAMENTE DO BANCO) */
                     <div className="max-w-md mx-auto w-full text-center space-y-8 animate-in fade-in zoom-in duration-500 my-auto">
                         <div className="w-20 h-20 bg-emerald-500/15 border border-emerald-500/30 rounded-3xl flex items-center justify-center mx-auto text-emerald-400 shadow-2xl shadow-emerald-500/10">
                             <CheckCircle2 size={40} />
@@ -168,7 +185,7 @@ function ReleaseContent() {
                         <div className="p-6 bg-zinc-950/90 border border-zinc-800/80 rounded-3xl space-y-5 shadow-2xl">
                             <div className="flex items-center justify-center gap-2.5 text-xs font-bold text-zinc-300">
                                 <FolderGit2 size={18} className="text-orange-400" />
-                                <span>Lançamento de Fevereiro</span>
+                                <span>Lançamentos do Mês</span>
                             </div>
 
                             <a

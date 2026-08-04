@@ -5,6 +5,8 @@ import { grantDriveFolderAccess } from '@/lib/integrations/gdrive';
 
 export const dynamic = 'force-dynamic';
 
+const DEFAULT_FALLBACK_REPO = 'https://drive.google.com/drive/folders/1aB9Xx-NZe2K7lweVx33GMucElUsgzHEf';
+
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const code = searchParams.get('code');
@@ -82,11 +84,29 @@ export async function GET(req: NextRequest) {
             return NextResponse.redirect(`${releasePageUrl}?error=not_active_patron`);
         }
 
-        // 4. Conceder permissão de leitor na pasta restrita do Google Drive via Service Account
-        const activeFolderUrl = 'https://drive.google.com/drive/folders/1aB9Xx-NZe2K7IweVx33GMucElUsgzHEf';
+        // 4. Buscar a URL DINÂMICA do repositório salva pelo Criador no banco de dados
+        let activeFolderUrl = DEFAULT_FALLBACK_REPO;
+
+        try {
+            const { data: repoData } = await supabase
+                .from('download_tokens')
+                .select('real_file_url')
+                .eq('figure_id', -999)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (repoData?.real_file_url) {
+                activeFolderUrl = repoData.real_file_url;
+            }
+        } catch (dbErr) {
+            console.error('Usando repositório fallback padrão:', dbErr);
+        }
+
+        // 5. Conceder permissão de leitor na pasta restrita do Google Drive via Service Account
         await grantDriveFolderAccess(activeFolderUrl, email);
 
-        // 5. Registrar Log de Auditoria no Supabase
+        // 6. Registrar Log de Auditoria no Supabase
         const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'desconhecido';
         await supabase
             .from('download_tokens')
@@ -102,8 +122,8 @@ export async function GET(req: NextRequest) {
                 user_ip: clientIp
             });
 
-        // 6. Redirecionar para /release com o acesso liberado
-        const successUrl = `${releasePageUrl}?access=granted&email=${encodeURIComponent(email)}&name=${encodeURIComponent(fullName)}`;
+        // 7. Redirecionar para /release com a URL dinâmica da pasta liberada
+        const successUrl = `${releasePageUrl}?access=granted&email=${encodeURIComponent(email)}&name=${encodeURIComponent(fullName)}&folder=${encodeURIComponent(activeFolderUrl)}`;
         
         const response = NextResponse.redirect(successUrl);
         response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');

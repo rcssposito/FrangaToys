@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FolderGit2, Save, Check, Terminal, RefreshCw, ShieldCheck, Users, Lock, Copy, Sparkles, UserCheck } from 'lucide-react';
+import { FolderGit2, Save, Check, Terminal, RefreshCw, Lock, Copy, Sparkles, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AdminPatreonRepositoryPage() {
     // 1. Repositório Ativo Principal (Patreon)
-    const [patreonRepoUrl, setPatreonRepoUrl] = useState('https://drive.google.com/drive/folders/1EXEMPLO_PASTA_PATREON');
+    const [patreonRepoUrl, setPatreonRepoUrl] = useState('');
     const [savedPatreonRepoUrl, setSavedPatreonRepoUrl] = useState('');
     const [savingPatreonRepo, setSavingPatreonRepo] = useState(false);
+    const [loadingConfig, setLoadingConfig] = useState(true);
 
     // 2. Acesso Direto para Terceirizados / Freelancers
     const [contractorEmail, setContractorEmail] = useState('');
@@ -20,6 +21,26 @@ export default function AdminPatreonRepositoryPage() {
     const [recentLogs, setRecentLogs] = useState<any[]>([]);
     const [loadingLogs, setLoadingLogs] = useState(false);
 
+    // Carregar URL do Repositório Ativo do Banco
+    const fetchActiveRepoConfig = async () => {
+        try {
+            setLoadingConfig(true);
+            const res = await fetch('/api/admin/integrations/patreon/repository');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.repoUrl) {
+                    setPatreonRepoUrl(data.repoUrl);
+                    setSavedPatreonRepoUrl(data.repoUrl);
+                }
+            }
+        } catch (e) {
+            console.error('Erro ao carregar repositório do banco:', e);
+        } finally {
+            setLoadingConfig(false);
+        }
+    };
+
+    // Carregar Logs de Auditoria
     const fetchAuditLogs = async () => {
         try {
             setLoadingLogs(true);
@@ -36,26 +57,35 @@ export default function AdminPatreonRepositoryPage() {
     };
 
     useEffect(() => {
+        fetchActiveRepoConfig();
         fetchAuditLogs();
-        const storedRepo = localStorage.getItem('active_patreon_repo_url');
-        if (storedRepo) {
-            setPatreonRepoUrl(storedRepo);
-            setSavedPatreonRepoUrl(storedRepo);
-        } else {
-            setSavedPatreonRepoUrl(patreonRepoUrl);
-        }
     }, []);
 
-    // Salvar Repositório do Patreon
-    const handleSavePatreonRepo = (e: React.FormEvent) => {
+    // Salvar Repositório do Patreon no Banco de Dados
+    const handleSavePatreonRepo = async (e: React.FormEvent) => {
         e.preventDefault();
         setSavingPatreonRepo(true);
-        localStorage.setItem('active_patreon_repo_url', patreonRepoUrl);
-        setSavedPatreonRepoUrl(patreonRepoUrl);
-        setTimeout(() => {
+
+        try {
+            const res = await fetch('/api/admin/integrations/patreon/repository', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ repoUrl: patreonRepoUrl.trim() })
+            });
+
+            if (!res.ok) {
+                throw new Error('Erro ao salvar repositório no servidor.');
+            }
+
+            const data = await res.json();
+            setSavedPatreonRepoUrl(data.repoUrl);
+            localStorage.setItem('active_patreon_repo_url', data.repoUrl);
+            toast.success('Repositório ativo do Patreon salvo com sucesso no banco!');
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao salvar repositório.');
+        } finally {
             setSavingPatreonRepo(false);
-            toast.success('Repositório ativo do Patreon atualizado!');
-        }, 300);
+        }
     };
 
     // Gerar Link Seguro para Terceirizado
@@ -67,7 +97,7 @@ export default function AdminPatreonRepositoryPage() {
         }
 
         const origin = typeof window !== 'undefined' ? window.location.origin : 'https://frangatoys.com.br';
-        const link = `${origin}/patreon/download?email=${encodeURIComponent(contractorEmail.trim())}&url=${encodeURIComponent(contractorRepoUrl.trim())}&type=contractor`;
+        const link = `${origin}/release?contractor=${encodeURIComponent(contractorEmail.trim())}`;
         setContractorLink(link);
         toast.success(`Link de acesso gerado para o terceirizado: ${contractorEmail}`);
     };
@@ -126,31 +156,32 @@ export default function AdminPatreonRepositoryPage() {
                         <form onSubmit={handleSavePatreonRepo} className="space-y-3 pt-2">
                             <div>
                                 <label className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-1">
-                                    URL da Pasta / Nuvem (Google Drive / Storage)
+                                    URL da Pasta do Google Drive
                                 </label>
                                 <input
                                     type="url"
                                     placeholder="https://drive.google.com/drive/folders/..."
                                     value={patreonRepoUrl}
                                     onChange={e => setPatreonRepoUrl(e.target.value)}
-                                    className="w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500 rounded-xl px-4 py-3 text-xs font-mono text-purple-300 outline-none transition-all"
+                                    disabled={loadingConfig}
+                                    className="w-full bg-zinc-950 border border-zinc-800 focus:border-purple-500 rounded-xl px-4 py-3 text-xs font-mono text-purple-300 outline-none transition-all disabled:opacity-50"
                                     required
                                 />
                             </div>
 
                             <button
                                 type="submit"
-                                disabled={savingPatreonRepo}
-                                className="w-full py-3 bg-purple-600 hover:bg-purple-500 active:scale-98 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-purple-600/20 flex items-center justify-center gap-2"
+                                disabled={savingPatreonRepo || loadingConfig}
+                                className="w-full py-3 bg-purple-600 hover:bg-purple-500 active:scale-98 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-purple-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                             >
                                 <Save size={16} />
-                                Salvar Repositório do Patreon
+                                {savingPatreonRepo ? 'Salvando no Banco...' : 'Salvar Repositório do Patreon'}
                             </button>
                         </form>
 
                         {savedPatreonRepoUrl && (
                             <div className="flex items-center gap-2 text-[11px] text-emerald-400 font-mono pt-1">
-                                <Check size={14} /> Ativo: <span className="underline truncate">{savedPatreonRepoUrl}</span>
+                                <Check size={14} /> Salvo no Banco: <span className="underline truncate">{savedPatreonRepoUrl}</span>
                             </div>
                         )}
                     </div>
@@ -188,7 +219,7 @@ export default function AdminPatreonRepositoryPage() {
 
                             <div>
                                 <label className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-1">
-                                    URL da Pasta / Arquivo do Projeto
+                                    URL da Pasta do Projeto
                                 </label>
                                 <input
                                     type="url"
@@ -202,7 +233,7 @@ export default function AdminPatreonRepositoryPage() {
 
                             <button
                                 type="submit"
-                                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-98 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
+                                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-98 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 cursor-pointer"
                             >
                                 <Sparkles size={16} />
                                 Gerar Link de Acesso do Terceirizado
@@ -221,7 +252,7 @@ export default function AdminPatreonRepositoryPage() {
                                     />
                                     <button
                                         onClick={copyContractorLink}
-                                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs shrink-0 flex items-center gap-1"
+                                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs shrink-0 flex items-center gap-1 cursor-pointer"
                                     >
                                         {copiedContractorLink ? <Check size={12} /> : <Copy size={12} />}
                                         {copiedContractorLink ? 'Copiado' : 'Copiar'}
@@ -241,7 +272,7 @@ export default function AdminPatreonRepositoryPage() {
                                 Rastreamento de Downloads em Tempo Real
                             </h3>
                         </div>
-                        <button onClick={fetchAuditLogs} className="text-xs text-purple-400 hover:text-purple-300 font-bold flex items-center gap-1">
+                        <button onClick={fetchAuditLogs} className="text-xs text-purple-400 hover:text-purple-300 font-bold flex items-center gap-1 cursor-pointer">
                             <RefreshCw size={12} className={loadingLogs ? 'animate-spin' : ''} /> Atualizar Log
                         </button>
                     </div>
