@@ -1,17 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Sparkles, ShieldCheck, Lock, LogOut, FolderGit2, CheckCircle2, ArrowRight, ExternalLink, UserCheck, KeyRound } from 'lucide-react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Sparkles, ShieldCheck, Lock, LogOut, FolderGit2, CheckCircle2, ExternalLink, UserCheck, KeyRound, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function RestrictedFolderReleasePage() {
+function ReleaseContent() {
+    const searchParams = useSearchParams();
+    const accessQuery = searchParams.get('access');
+    const emailQuery = searchParams.get('email');
+    const nameQuery = searchParams.get('name');
+    const errorQuery = searchParams.get('error');
+
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [patronEmail, setPatronEmail] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [granting, setGranting] = useState(false);
-    const [accessGranted, setAccessGranted] = useState(false);
-
-    // Pasta Restrita do Google Drive (Configuração do Criador)
+    const [patronName, setPatronName] = useState('');
     const [activeRepoUrl, setActiveRepoUrl] = useState('https://drive.google.com/drive/folders/1aB9Xx-NZe2K7IweVx33GMucElUsgzHEf');
 
     useEffect(() => {
@@ -19,47 +22,28 @@ export default function RestrictedFolderReleasePage() {
         if (storedRepo) {
             setActiveRepoUrl(storedRepo);
         }
-    }, []);
 
-    // Login com o Patreon e Concessão Automática de Permissão no Google Drive
-    const handlePatreonLoginAndGrant = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-
-        if (!patronEmail.trim()) {
-            toast.error('Informe seu e-mail do Patreon para liberar a pasta.');
-            return;
-        }
-
-        setLoading(true);
-        setGranting(true);
-
-        try {
-            // Dispara a concessão de permissão de leitura na pasta restrita do Google Drive via API
-            const res = await fetch('/api/public/patreon/grant-access', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: patronEmail.trim(),
-                    folderUrl: activeRepoUrl,
-                    allowFree: true
-                })
-            });
-
-            if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.error || 'Assinatura no Patreon não encontrada.');
-            }
-
+        // Se retornou do OAuth2 do Patreon com acesso concedido
+        if (accessQuery === 'granted' && emailQuery) {
             setIsAuthenticated(true);
-            setAccessGranted(true);
-            toast.success(`Permissão concedida! Sua conta (${patronEmail}) agora pode acessar a pasta restrita.`);
-
-        } catch (err: any) {
-            toast.error(err.message || 'Erro ao liberar permissão no Google Drive.');
-        } finally {
-            setLoading(false);
-            setGranting(false);
+            setPatronEmail(emailQuery);
+            setPatronName(nameQuery || 'Apoiador Patreon');
+            toast.success(`Autenticado com sucesso via Patreon! Acesso liberado para ${emailQuery}`);
+        } else if (errorQuery) {
+            if (errorQuery === 'not_active_patron') {
+                toast.error('Assinatura no Patreon não encontrada ou inativa. Apenas apoiadores ativos possuem acesso.');
+            } else if (errorQuery === 'login_cancelled') {
+                toast.error('Login com o Patreon cancelado.');
+            } else {
+                toast.error('Falha na autenticação do Patreon. Tente novamente.');
+            }
         }
+    }, [accessQuery, emailQuery, nameQuery, errorQuery]);
+
+    // Redirecionamento para o OAuth2 Oficial do Patreon
+    const handleRealPatreonOAuthLogin = () => {
+        toast.loading('Redirecionando para o login oficial do Patreon...');
+        window.location.href = '/api/auth/patreon/login';
     };
 
     return (
@@ -82,12 +66,12 @@ export default function RestrictedFolderReleasePage() {
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2.5 bg-zinc-900 border border-zinc-800 px-3.5 py-1.5 rounded-full">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-xs font-bold text-zinc-300">Permissão Concedida ({patronEmail})</span>
+                                <span className="text-xs font-bold text-zinc-300">{patronName}</span>
                             </div>
                             <button
                                 onClick={() => {
                                     setIsAuthenticated(false);
-                                    setAccessGranted(false);
+                                    window.location.href = '/release';
                                 }}
                                 className="text-zinc-500 hover:text-white transition-colors p-2 cursor-pointer"
                                 title="Sair"
@@ -102,26 +86,26 @@ export default function RestrictedFolderReleasePage() {
             {/* Main Content Area */}
             <main className="flex-1 max-w-6xl w-full mx-auto px-4 md:px-8 py-8 md:py-12 flex items-center justify-center">
                 {!isAuthenticated ? (
-                    /* ESTADO 1: AUTENTICAÇÃO E INCLUSÃO DO MEMBRO NA PASTA RESTRITA */
+                    /* ESTADO 1: APENAS BOTÃO OFICIAL DE LOGIN COM PATREON (ZERO CAMPOS DE TEXTO) */
                     <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center my-auto">
                         
                         {/* Lado Esquerdo: Título Direto */}
                         <div className="lg:col-span-7 space-y-4 text-center lg:text-left">
                             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[10px] font-black uppercase tracking-[0.25em]">
                                 <KeyRound size={12} className="text-amber-400" />
-                                Acesso Restrito a Convidados Autorizados
+                                Autenticação Oficial OAuth2 Patreon
                             </div>
                             <h2 className="text-4xl sm:text-6xl font-black uppercase tracking-tight text-white leading-tight">
                                 Lançamentos Exclusivos do Mês
                             </h2>
                             <p className="text-sm text-zinc-400 max-w-md leading-relaxed font-medium">
-                                A pasta do repositório é 100% restrita no Google Drive. Informe seu e-mail do Patreon para ser incluído na lista de permissões da pasta.
+                                Faça login com sua conta do Patreon para validar sua assinatura e liberar o acesso à pasta do repositório no Google Drive.
                             </p>
                         </div>
 
-                        {/* Lado Direito: Formulário de Conexão com o Patreon */}
+                        {/* Lado Direito: Card de Autenticação OAuth2 */}
                         <div className="lg:col-span-5">
-                            <form onSubmit={handlePatreonLoginAndGrant} className="relative bg-zinc-950/90 border border-zinc-800/80 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] space-y-6 text-center">
+                            <div className="relative bg-zinc-950/90 border border-zinc-800/80 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)] space-y-6 text-center">
                                 
                                 <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-orange-500/20 via-zinc-900 to-amber-500/10 border border-orange-500/30 flex items-center justify-center shadow-xl">
                                     <Lock size={28} className="text-orange-400" />
@@ -129,56 +113,41 @@ export default function RestrictedFolderReleasePage() {
 
                                 <div className="space-y-2">
                                     <h3 className="text-xl font-black uppercase tracking-tight text-white">
-                                        Liberar Acesso no Google Drive
+                                        Acesso do Apoiador
                                     </h3>
                                     <p className="text-xs text-zinc-400 leading-relaxed font-medium">
-                                        Sua conta será adicionada dinamicamente à pasta restrita ao confirmar sua assinatura.
+                                        Clique no botão abaixo para se autenticar com sua conta do Patreon de forma 100% segura.
                                     </p>
                                 </div>
 
-                                <div className="space-y-1.5 text-left">
-                                    <label className="block text-[10px] uppercase font-black tracking-widest text-zinc-500">
-                                        E-mail do Patreon / Google
-                                    </label>
-                                    <input
-                                        type="email"
-                                        placeholder="seu-email@gmail.com"
-                                        value={patronEmail}
-                                        onChange={e => setPatronEmail(e.target.value)}
-                                        disabled={loading}
-                                        className="w-full bg-zinc-900 border border-zinc-800 focus:border-orange-500 rounded-2xl px-4 py-3.5 text-sm font-medium text-white outline-none transition-all"
-                                        required
-                                    />
-                                </div>
+                                {errorQuery && (
+                                    <div className="p-3 bg-red-950/30 border border-red-500/30 rounded-2xl text-red-400 text-xs flex items-center gap-2 text-left font-medium">
+                                        <AlertCircle size={16} className="shrink-0" />
+                                        <span>Assinatura no Patreon não encontrada ou inativa.</span>
+                                    </div>
+                                )}
 
-                                {/* Botão Oficial Patreon */}
+                                {/* Botão Oficial Patreon OAuth2 */}
                                 <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="w-full py-4 bg-[#FF424D] hover:bg-[#ff2a37] active:scale-95 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl transition-all shadow-xl shadow-red-600/20 flex items-center justify-center gap-3 cursor-pointer disabled:opacity-50"
+                                    onClick={handleRealPatreonOAuthLogin}
+                                    className="w-full py-4 bg-[#FF424D] hover:bg-[#ff2a37] active:scale-95 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl transition-all shadow-xl shadow-red-600/20 flex items-center justify-center gap-3 cursor-pointer"
                                 >
-                                    {loading ? (
-                                        <span>Liberando Permissão...</span>
-                                    ) : (
-                                        <>
-                                            <svg className="w-5 h-5 fill-current shrink-0" viewBox="0 0 24 24">
-                                                <path d="M15.386 0c-4.764 0-8.64 3.876-8.64 8.64 0 4.75 3.876 8.613 8.64 8.613 4.75 0 8.614-3.864 8.614-8.613C24 3.876 20.136 0 15.386 0zM0 24h4.8V0H0v24z"/>
-                                            </svg>
-                                            <span>CONECTAR & LIBERAR PASTA</span>
-                                        </>
-                                    )}
+                                    <svg className="w-5 h-5 fill-current shrink-0" viewBox="0 0 24 24">
+                                        <path d="M15.386 0c-4.764 0-8.64 3.876-8.64 8.64 0 4.75 3.876 8.613 8.64 8.613 4.75 0 8.614-3.864 8.614-8.613C24 3.876 20.136 0 15.386 0zM0 24h4.8V0H0v24z"/>
+                                    </svg>
+                                    <span>CONECTAR COM O PATREON</span>
                                 </button>
 
                                 <div className="pt-4 border-t border-zinc-900 flex items-center justify-center gap-2 text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
                                     <ShieldCheck size={14} className="text-emerald-400" />
-                                    <span>Inclusão Automática via Google Drive API</span>
+                                    <span>Single Sign-On Oficial do Patreon</span>
                                 </div>
-                            </form>
+                            </div>
                         </div>
 
                     </div>
                 ) : (
-                    /* ESTADO 2: MEMBRO AUTORIZADO NA PASTA RESTRITA */
+                    /* ESTADO 2: MEMBRO AUTORIZADO VIA OAUTH2 */
                     <div className="max-w-xl mx-auto w-full text-center space-y-8 animate-in fade-in zoom-in duration-500">
                         <div className="w-20 h-20 bg-emerald-500/20 border border-emerald-500/40 rounded-3xl flex items-center justify-center mx-auto text-emerald-400 shadow-2xl shadow-emerald-500/10">
                             <CheckCircle2 size={44} />
@@ -186,13 +155,13 @@ export default function RestrictedFolderReleasePage() {
 
                         <div className="space-y-3">
                             <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-[0.3em] px-4 py-1.5 rounded-full">
-                                Permissão Concedida com Sucesso
+                                Autenticado via Patreon OAuth2
                             </span>
                             <h2 className="text-3xl font-black uppercase tracking-tight text-white">
-                                Sua Conta Foi Autorizada!
+                                Bem-vindo, {patronName}!
                             </h2>
                             <p className="text-xs text-zinc-400 leading-relaxed max-w-md mx-auto">
-                                O e-mail <strong className="text-white">{patronEmail}</strong> foi adicionado à lista de permissões da pasta do Google Drive. Somente contas autorizadas conseguem abrir o repositório.
+                                Sua conta <strong className="text-white">{patronEmail}</strong> foi confirmada como apoiador ativo. Sua permissão de acesso à pasta do Google Drive foi liberada.
                             </p>
                         </div>
 
@@ -223,8 +192,20 @@ export default function RestrictedFolderReleasePage() {
 
             {/* Footer Fixo */}
             <footer className="border-t border-zinc-900 py-6 text-center text-xs text-zinc-600 font-bold uppercase tracking-widest">
-                Franga Studio • Restricted Google Drive Identity Permissions
+                Franga Studio • Official Patreon OAuth2 Identity Pipeline
             </footer>
         </div>
+    );
+}
+
+export default function ReleasePage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-[#060608] flex items-center justify-center text-white font-bold text-xs uppercase tracking-widest">
+                Carregando...
+            </div>
+        }>
+            <ReleaseContent />
+        </Suspense>
     );
 }
