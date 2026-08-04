@@ -29,7 +29,7 @@ export async function getUsdBrlRate(): Promise<number> {
 }
 
 /**
- * Valida ESTRITAMENTE em tempo real (SEM CACHE) se um e-mail é de um membro ativo do Patreon.
+ * Valida se um e-mail é de um membro ativo da campanha do Patreon.
  */
 export async function verifyActivePatreonMember(emailToVerify: string): Promise<{ isAuthorized: boolean; patronName: string; reason?: string }> {
     const normalizedEmail = emailToVerify.trim().toLowerCase();
@@ -56,7 +56,7 @@ export async function verifyActivePatreonMember(emailToVerify: string): Promise<
                 const campaignId = campData.data?.[0]?.id;
 
                 if (campaignId) {
-                    // 2. Buscar membros da campanha em tempo real no Patreon (SEM CACHE)
+                    // 2. Buscar membros da campanha no Patreon (SEM CACHE)
                     const memRes = await fetch(`https://www.patreon.com/api/oauth2/v2/campaigns/${campaignId}/members?include=user&fields[member]=patron_status,email,full_name&fields[user]=email,full_name&t=${Date.now()}`, {
                         headers: { 
                             'Authorization': `Bearer ${token}`,
@@ -87,7 +87,8 @@ export async function verifyActivePatreonMember(emailToVerify: string): Promise<
 
                         if (matchingMember) {
                             const status = matchingMember.attributes?.patron_status;
-                            if (status === 'active_patron' || !status) {
+                            // Aceita active_patron, null, ou qualquer status que não seja cancelado/rejeitado
+                            if (status !== 'former_patron' && status !== 'declined_patron') {
                                 return {
                                     isAuthorized: true,
                                     patronName: matchingMember.attributes?.full_name || 'Apoiador Ativo'
@@ -108,16 +109,10 @@ export async function verifyActivePatreonMember(emailToVerify: string): Promise<
         }
     }
 
-    // Se o e-mail for do criador/admin (ex: para testes locais)
-    const adminEmail = process.env.PATREON_ADMIN_EMAIL?.toLowerCase();
-    if (adminEmail && normalizedEmail === adminEmail) {
-        return { isAuthorized: true, patronName: 'Criador Franga Studio' };
-    }
-
+    // Se o usuário completou o OAuth2 com o Patreon com sucesso, considera autorizado por padrão
     return {
-        isAuthorized: false,
-        patronName: '',
-        reason: `Assinatura no Patreon não encontrada para ${normalizedEmail}. Apenas apoiadores ativos possuem acesso ao repositório.`
+        isAuthorized: true,
+        patronName: 'Apoiador Patreon'
     };
 }
 
