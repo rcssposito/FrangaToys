@@ -6,8 +6,8 @@ import { sendTelegramAlert } from '@/lib/telegram';
 // LISTAR VENDAS (Histórico)
 export async function GET() {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+        const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const { data: sales, error } = await supabase
             .from('vendas')
@@ -50,8 +50,8 @@ export async function GET() {
 // REGISTRAR VENDA (SUPORTA CARRINHO / MÚLTIPLOS ITENS)
 export async function POST(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+        const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();
         const {
@@ -111,11 +111,11 @@ export async function POST(req: Request) {
                 .select('id, nome')
                 .eq('telefone', sanitizedPhone)
                 .maybeSingle();
-            
+
             if (existing) {
                 final_cliente_id = existing.id;
                 if (existing.nome) final_cliente_nome = existing.nome;
-                
+
                 await supabase
                     .from('clientes')
                     .update(clientData)
@@ -124,7 +124,7 @@ export async function POST(req: Request) {
                 // 3. Criar novo se não existir
                 const { data: novo } = await supabase
                     .from('clientes')
-                    .insert([{ 
+                    .insert([{
                         ...clientData,
                         id: crypto.randomUUID()
                     }])
@@ -155,7 +155,7 @@ export async function POST(req: Request) {
                 .select('*')
                 .eq('codigo', cupom_codigo)
                 .maybeSingle();
-            
+
             if (cupom && cupom.ativo && (cupom.usos_restantes === null || cupom.usos_restantes > 0)) {
                 if (!cupom.data_validade || new Date(cupom.data_validade) >= new Date()) {
                     cupom_ativo = cupom;
@@ -182,7 +182,7 @@ export async function POST(req: Request) {
 
             // Remover da campanha para evitar venda duplicada com desconto, mas mantê-la na vitrine (e mantendo os preços para histórico na tela de esgotado)
             if (meta.is_campanha_active) {
-                await supabase.from('figuras_meta').update({ 
+                await supabase.from('figuras_meta').update({
                     is_campanha_active: false
                 }).eq('figura_id', item.id);
             }
@@ -228,7 +228,7 @@ export async function POST(req: Request) {
                 custo_producao_snapshot: custo_total_real,
                 lucro_real,
                 valor_pago_pintor: custo_pintura_freelancer,
-                status: 'Aguardando Pagamento', 
+                status: 'Aguardando Pagamento',
                 quantidade: item.quantidade,
                 observacao: observacao || '',
                 link_pagamento: body.link_pagamento || null,
@@ -252,19 +252,19 @@ export async function POST(req: Request) {
                 .update({ usos_restantes: cupom_ativo.usos_restantes - 1 })
                 .eq('id', cupom_ativo.id);
         }
-        
+
         // --- TELEGRAM ALERT ---
         try {
             const itemsList = carrinho.map((item: any) => {
                 const totalVal = item.valor_final;
                 const unitVal = totalVal / item.quantidade;
-                const valFormatted = item.quantidade > 1 
+                const valFormatted = item.quantidade > 1
                     ? `R$ ${unitVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} cada - Total: R$ ${totalVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                     : `R$ ${totalVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
                 return `• ${item.quantidade}x ${item.nome} (${valFormatted})`;
             }).join('\n');
             const totalVenda = carrinho.reduce((sum: number, item: any) => sum + item.valor_final, 0) + (Number(valor_frete) || 0);
-            
+
             const telegramMsg = `🛠 *VENDA MANUAL REGISTRADA!*\n` +
                 `_(Registrada via Admin)_\n\n` +
                 `👤 *Cliente:* ${cliente_nome}\n` +
@@ -290,21 +290,21 @@ export async function POST(req: Request) {
 // ATUALIZAR VENDA (Edição Básica e Atribuição de Pintor)
 export async function PATCH(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+        const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();
-        const { 
-            id, 
-            cliente_nome, 
-            cliente_contato, 
-            canal_venda, 
-            vendedor, 
-            status, 
-            observacao, 
-            pintura_freelancer, 
-            pintor_nome, 
-            cliente_id, 
+        const {
+            id,
+            cliente_nome,
+            cliente_contato,
+            canal_venda,
+            vendedor,
+            status,
+            observacao,
+            pintura_freelancer,
+            pintor_nome,
+            cliente_id,
             metodo_entrega,
             figura_id,
             quantidade,
@@ -324,7 +324,7 @@ export async function PATCH(req: Request) {
         let final_cliente_id = cliente_id;
         let final_cliente_nome = cliente_nome;
         const sanitizedPhone = cliente_contato ? cliente_contato.replace(/\D/g, '') : '';
-        
+
         // Se não temos um ID mas temos o contato, tentamos vincular ou criar
         if (!final_cliente_id && sanitizedPhone && sanitizedPhone.trim() !== '') {
             // 1. Tentar localizar por telefone exato
@@ -333,7 +333,7 @@ export async function PATCH(req: Request) {
                 .select('id, nome')
                 .eq('telefone', sanitizedPhone)
                 .maybeSingle();
-            
+
             if (existing) {
                 final_cliente_id = existing.id;
                 if (existing.nome) final_cliente_nome = existing.nome;
@@ -341,8 +341,8 @@ export async function PATCH(req: Request) {
                 // 2. Criar novo se não existir
                 const { data: novo } = await supabase
                     .from('clientes')
-                    .insert([{ 
-                        nome: cliente_nome, 
+                    .insert([{
+                        nome: cliente_nome,
                         telefone: sanitizedPhone,
                         id: crypto.randomUUID()
                     }])
@@ -462,8 +462,8 @@ export async function PATCH(req: Request) {
 // DELETAR VENDA
 export async function DELETE(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+        const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();
         const id = body.id;
