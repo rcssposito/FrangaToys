@@ -666,6 +666,61 @@ export async function GET(req: Request) {
 
 
 
+        // --- Financial Sankey Flow Breakdown ---
+        const totalGrossRevenue = sales.reduce((acc, s) => acc + (s.valor_venda_final || 0) + (s.valor_frete || 0), 0);
+        const totalProductionCost = sales.reduce((acc, s) => acc + (s.custo_producao_snapshot || 0), 0);
+        const totalPainterCost = sales.reduce((acc, s) => acc + (s.valor_pago_pintor || 0), 0);
+        const totalCommission = sales.reduce((acc, s) => acc + (s.comissao_vendedor || 0), 0);
+        const totalFreight = sales.reduce((acc, s) => acc + (s.valor_frete || 0), 0);
+        const totalNetProfit = sales.reduce((acc, s) => acc + (s.lucro_real || 0), 0);
+
+        const financialFlow = {
+            grossRevenue: totalGrossRevenue,
+            netProfit: Math.max(0, totalNetProfit),
+            painterCost: totalPainterCost,
+            productionCost: totalProductionCost,
+            commissionCost: totalCommission,
+            freightCost: totalFreight,
+        };
+
+        // --- Catalog Flow (Studios -> Series -> Revenue) ---
+        const studioSeriesFlowMap: { [studio: string]: { [series: string]: number } } = {};
+        sales.forEach(sale => {
+            // @ts-ignore
+            const figure = sale.figuras;
+            // @ts-ignore
+            let studioName = figure?.studios?.nome || 'Outros';
+            // @ts-ignore
+            if (Array.isArray(figure?.studios)) studioName = figure?.studios[0]?.nome || 'Outros';
+            // @ts-ignore
+            const seriesName = figure?.series?.nome || 'Outros';
+            const rev = (sale.valor_venda_final || 0);
+            if (rev > 0) {
+                if (!studioSeriesFlowMap[studioName]) studioSeriesFlowMap[studioName] = {};
+                studioSeriesFlowMap[studioName][seriesName] = (studioSeriesFlowMap[studioName][seriesName] || 0) + rev;
+            }
+        });
+
+        const catalogFlow: Array<{ studio: string; series: string; value: number }> = [];
+        Object.entries(studioSeriesFlowMap).forEach(([studio, seriesMap]) => {
+            Object.entries(seriesMap).forEach(([series, value]) => {
+                catalogFlow.push({ studio, series, value });
+            });
+        });
+        catalogFlow.sort((a, b) => b.value - a.value);
+
+        // --- Matriz Estratégica de Estúdios (Faturamento vs Margem vs Volume) ---
+        const studioMatrix = Object.entries(studioSalesMap)
+            .filter(([_, d]) => d.revenue > 0)
+            .map(([studio, d]) => ({
+                name: studio,
+                revenue: d.revenue,
+                profit: d.profit,
+                margin: d.revenue > 0 ? (d.profit / d.revenue) * 100 : 0,
+                itemsSold: d.itemsSold
+            }))
+            .sort((a, b) => b.revenue - a.revenue);
+
         return NextResponse.json({
             kpis: {
                 totalRevenue: currentKPIs.revenue,
@@ -701,6 +756,9 @@ export async function GET(req: Request) {
                 totalPortfolioValue,
                 totalPortfolioBasic,
                 salesBySeller,
+                financialFlow,
+                catalogFlow,
+                studioMatrix,
             },
             lists: {
                 topProducts,

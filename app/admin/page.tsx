@@ -8,6 +8,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { toast } from 'sonner';
 import PatreonWidget from '@/components/Admin/PatreonWidget';
+import ExecutiveAnalyticsHub from '@/components/Admin/ExecutiveAnalyticsHub';
 
 export default function AdminDashboard() {
     const { hasRole, loading: authLoading } = usePermission();
@@ -1409,138 +1410,14 @@ export default function AdminDashboard() {
                 <PatreonWidget />
             </div>
 
-            {/* ROW 3: FINANCIAL ANALYTICS */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all">
-                    <div className="flex justify-between items-start mb-8">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
-                            <Activity size={22} className="text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                            Rendimento vs Custo
-                        </h2>
-                    </div>
-                    <div className="h-[320px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={data?.charts.revenueVsCost} margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
-                                <CartesianGrid strokeDasharray="1 10" stroke="rgba(255,255,255,0.05)" horizontal={true} vertical={false} />
-                                <XAxis dataKey="name" hide />
-                                <YAxis hide />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', borderColor: '#27272a', borderRadius: '12px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(12px)' }}
-                                    itemStyle={{ color: '#f4f4f5', fontWeight: 800 }}
-                                    labelStyle={{ color: '#a1a1aa', fontWeight: 'bold' }}
-                                    formatter={(value: any) => `R$ ${(value || 0).toLocaleString('pt-BR')}`}
-                                />
-                                <Line 
-                                    type="monotone" 
-                                    dataKey="revenue" 
-                                    name="Rendimento" 
-                                    stroke="#10b981" 
-                                    strokeWidth={3}
-                                    dot={{ r: 4, fill: "#10b981" }}
-                                    activeDot={{ r: 6 }}
-                                />
-                                <Line 
-                                    type="monotone" 
-                                    dataKey="cost" 
-                                    name="Custo Mensal" 
-                                    stroke="#ef4444" 
-                                    strokeWidth={3}
-                                    dot={{ r: 4, fill: "#ef4444" }}
-                                    activeDot={{ r: 6 }}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all">
-                    <div className="flex justify-between items-start mb-8">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
-                            <DollarSign size={22} className="text-blue-500 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                            Faturamento / Estúdio
-                        </h2>
-                        <button onClick={() => setExpandedChart('revenueByStudio')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-blue-500 hover:shadow-[0_0_15px_rgba(59,130,246,0.2)] text-zinc-500 hover:text-blue-400 shadow-sm" title="Expandir">
-                            <Maximize2 size={18} />
-                        </button>
-                    </div>
-                    <div className="h-[320px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data?.charts.revenueByStudio.slice(0, 8)} margin={{ left: 0, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="1 10" stroke="rgba(255,255,255,0.05)" horizontal={true} vertical={false} />
-                                <XAxis dataKey="name" tick={{ fill: '#71717a', fontSize: 10, fontWeight: 800 }} interval={0} angle={-45} textAnchor="end" height={60} axisLine={false} tickLine={false} />
-                                <YAxis hide />
-                                <Tooltip content={<CategoryTooltip suffix="" formatter={(v: number) => `R$ ${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
-                                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                    {data?.charts.revenueByStudio.slice(0, 8).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#3b82f6" />)}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-            </div>
-
-            {/* ROW 4: CATALOG ANALYTICS */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all">
-                    <div className="flex justify-between items-start mb-8">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
-                            <Layers size={22} className="text-purple-400 drop-shadow-[0_0_10px_rgba(192,132,252,0.5)]" />
-                            Modelos por Série
-                        </h2>
-                        <button onClick={() => setExpandedChart('inventoryBySeries')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-purple-400 hover:shadow-[0_0_15px_rgba(192,132,252,0.2)] text-zinc-500 hover:text-purple-300 shadow-sm" title="Expandir">
-                            <Maximize2 size={18} />
-                        </button>
-                    </div>
-                    <div className="h-[320px] w-full flex justify-center text-xs">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={(data?.charts.inventoryBySeries || []).slice(0, 5)}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={70}
-                                    outerRadius={100}
-                                    paddingAngle={10}
-                                    dataKey="value"
-                                    stroke="rgba(0,0,0,0.5)"
-                                    strokeWidth={6}
-                                >
-                                    {(data?.charts.inventoryBySeries || []).slice(0, 5).map((entry: any, index: number) => (
-                                        <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#f43f5e', '#a855f7'][index % 5]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip content={<CategoryTooltip suffix="figuras" />} />
-                                <Legend iconType="circle" />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                <div className="bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/50 p-8 rounded-2xl relative group shadow-xl hover:border-zinc-700 transition-all">
-                    <div className="flex justify-between items-start mb-8">
-                        <h2 className="text-xl font-black flex items-center gap-3 text-zinc-100 tracking-tight">
-                            <Layers size={22} className="text-pink-500 drop-shadow-[0_0_10px_rgba(236,72,153,0.5)]" />
-                            Vendas por Série
-                        </h2>
-                        <button onClick={() => setExpandedChart('salesBySeries')} className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:border-pink-500 hover:shadow-[0_0_15px_rgba(236,72,153,0.2)] text-zinc-500 hover:text-pink-400 shadow-sm" title="Expandir">
-                            <Maximize2 size={18} />
-                        </button>
-                    </div>
-                    <div className="h-[320px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={(data?.charts?.salesBySeries || []).slice(0, 10)} layout="vertical" margin={{ left: 20 }}>
-                                <CartesianGrid strokeDasharray="1 10" stroke="rgba(255,255,255,0.05)" horizontal={false} vertical={true} />
-                                <XAxis type="number" hide />
-                                <YAxis dataKey="name" type="category" tick={{ fill: '#71717a', fontSize: 11, fontWeight: 800 }} width={110} axisLine={false} tickLine={false} />
-                                <Tooltip content={<CategoryTooltip suffix="vendas" />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
-                                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                                    {(data?.charts?.salesBySeries || []).slice(0, 10).map((_e: any, index: number) => <Cell key={`cell-${index}`} fill="#ec4899" />)}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-            </div>
+            {/* EXECUTIVE ANALYTICS HUB: CASCATA DRE + MATRIZ BCG DE ESTÚDIOS */}
+            {canViewFinance && (
+                <ExecutiveAnalyticsHub 
+                    financialData={data?.charts?.financialFlow} 
+                    studioMatrix={data?.charts?.studioMatrix}
+                    hideValues={hideValues} 
+                />
+            )}
 
 
 
