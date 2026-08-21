@@ -84,10 +84,7 @@ export async function GET(req: NextRequest) {
                 const cleanKey = s.chave_nfe.startsWith('NFe') ? s.chave_nfe.substring(3) : s.chave_nfe;
                 
                 if (cleanKey.length === 44) {
-                    const yy = cleanKey.substring(2, 4);
-                    const mm = cleanKey.substring(4, 6);
-                    const dateFolder = `20${yy}${mm}`;
-                    linkDanfe = `https://api.focusnfe.com.br/arquivos/67566499000170_225809/${dateFolder}/DANFEs/${cleanKey}.pdf`;
+                    linkDanfe = `https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=completa&tipoConteudo=X/5w46wAfac=`;
                 }
             }
 
