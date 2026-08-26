@@ -16,7 +16,9 @@ import {
   MoveUp, 
   MoveDown,
   Boxes,
-  Swords
+  Swords,
+  Ruler,
+  ChevronDown
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { z } from 'zod';
@@ -40,11 +42,19 @@ const PRICE_RANGES = [
   { label: 'R$ 1800+', value: '1800-+', activeClass: 'border-orange-500 text-orange-400 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.15)]' }
 ];
 
+const SIZE_RANGES = [
+  { label: 'Até 15 cm', value: '0-15', activeClass: 'border-orange-500 text-orange-400 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.15)]' },
+  { label: '15 - 25 cm', value: '15-25', activeClass: 'border-orange-500 text-orange-400 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.15)]' },
+  { label: '25 - 35 cm', value: '25-35', activeClass: 'border-orange-500 text-orange-400 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.15)]' },
+  { label: '35 cm +', value: '35-+', activeClass: 'border-orange-500 text-orange-400 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.15)]' }
+];
+
 export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLoading }: FiltersProps) => {
     const { data: estudios } = useEstudios(true);
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [localSearch, setLocalSearch] = useState(filters.q || '');
     const [debouncedSearch, setDebouncedSearch] = useState(filters.q || '');
+    const [activeDropdown, setActiveDropdown] = useState<'price' | 'size' | 'sort' | null>(null);
     const isUserInteraction = useRef(false);
     const isFocused = useRef(false);
 
@@ -107,6 +117,10 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
         } else {
             onChange({ ...filters, priceRange: newRange });
         }
+    };
+
+    const handleSizeRangeChange = (newRange: string | undefined) => {
+        onChange({ ...filters, sizeRange: newRange });
     };
 
     return (
@@ -253,56 +267,98 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
                 </div>
             )}
 
-            <div className="max-w-6xl mx-auto bg-zinc-950/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 shadow-2xl flex flex-col lg:flex-row items-stretch justify-between gap-6">
-                <div className="flex-1 flex flex-col gap-3 justify-center">
-                    <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                        <Tag size={12} className="text-orange-500" />
-                        <span>Filtrar por Valor</span>
+            {/* Option 1: Compact Inline Layout */}
+            <div className="max-w-6xl mx-auto bg-zinc-950/40 backdrop-blur-md border border-white/5 rounded-2xl p-3.5 px-5 shadow-2xl flex flex-col xl:flex-row items-center justify-between gap-4">
+                <div className="flex-1 flex flex-col gap-2.5 w-full">
+                    {/* Price Filter - Inline Row */}
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-400 uppercase tracking-widest shrink-0 w-20">
+                            <Tag size={11} className="text-orange-500" />
+                            <span>Valor</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5 flex-1">
+                            <button
+                                onClick={() => handlePriceRangeChange(undefined)}
+                                className={clsx(
+                                    "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border",
+                                    !filters.priceRange
+                                        ? "bg-transparent text-orange-400 border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.15)] bg-orange-500/5"
+                                        : "bg-zinc-900/40 text-zinc-500 border-white/5 hover:text-zinc-350"
+                                )}
+                            >
+                                Todos
+                            </button>
+                            {PRICE_RANGES.map((range) => {
+                                const isActive = filters.priceRange === range.value;
+                                return (
+                                    <button
+                                        key={range.value}
+                                        onClick={() => handlePriceRangeChange(isActive ? undefined : range.value)}
+                                        className={clsx(
+                                            "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border",
+                                            isActive
+                                                ? range.activeClass
+                                                : "bg-zinc-900/40 text-zinc-500 border-white/5 hover:text-zinc-350"
+                                        )}
+                                    >
+                                        {range.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <button
-                            onClick={() => handlePriceRangeChange(undefined)}
-                            className={clsx(
-                                "px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border",
-                                !filters.priceRange
-                                    ? "bg-transparent text-orange-400 border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.15)] bg-orange-500/5"
-                                    : "bg-zinc-900/40 text-zinc-500 border-white/5 hover:text-zinc-350"
-                            )}
-                        >
-                            Todos os valores
-                        </button>
-                        {PRICE_RANGES.map((range) => {
-                            const isActive = filters.priceRange === range.value;
-                            return (
-                                <button
-                                    key={range.value}
-                                    onClick={() => handlePriceRangeChange(isActive ? undefined : range.value)}
-                                    className={clsx(
-                                        "px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border",
-                                        isActive
-                                            ? range.activeClass
-                                            : "bg-zinc-900/40 text-zinc-500 border-white/5 hover:text-zinc-350"
-                                    )}
-                                >
-                                    {range.label}
-                                </button>
-                            );
-                        })}
+
+                    {/* Size Filter - Inline Row */}
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-400 uppercase tracking-widest shrink-0 w-20">
+                            <Ruler size={11} className="text-orange-500" />
+                            <span>Tamanho</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5 flex-1">
+                            <button
+                                onClick={() => handleSizeRangeChange(undefined)}
+                                className={clsx(
+                                    "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border",
+                                    !filters.sizeRange
+                                        ? "bg-transparent text-orange-400 border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.15)] bg-orange-500/5"
+                                        : "bg-zinc-900/40 text-zinc-500 border-white/5 hover:text-zinc-350"
+                                )}
+                            >
+                                Todos
+                            </button>
+                            {SIZE_RANGES.map((range) => {
+                                const isActive = filters.sizeRange === range.value;
+                                return (
+                                    <button
+                                        key={range.value}
+                                        onClick={() => handleSizeRangeChange(isActive ? undefined : range.value)}
+                                        className={clsx(
+                                            "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border",
+                                            isActive
+                                                ? range.activeClass
+                                                : "bg-zinc-900/40 text-zinc-500 border-white/5 hover:text-zinc-350"
+                                        )}
+                                    >
+                                        {range.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 
-                <div className="hidden lg:block w-px bg-white/5 self-stretch" />
+                <div className="hidden xl:block w-px bg-white/5 self-stretch my-1" />
 
-                <div className="flex flex-col gap-3 justify-center lg:items-end">
-                    <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                        <SlidersHorizontal size={12} className="text-orange-500" />
-                        <span>Ordenar por</span>
+                <div className="flex items-center gap-3 shrink-0 self-end xl:self-center">
+                    <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-400 uppercase tracking-widest">
+                        <SlidersHorizontal size={11} className="text-orange-500" />
+                        <span>Ordem</span>
                     </div>
-                    <div className="flex items-center gap-1.5 bg-zinc-900/40 border border-white/5 p-1 rounded-xl shadow-inner">
+                    <div className="flex items-center gap-1 bg-zinc-900/40 border border-white/5 p-1 rounded-xl shadow-inner">
                         <button
                             onClick={() => handleSortChange('newest')}
                             className={clsx(
-                                "flex items-center gap-1.5 px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                                "flex items-center gap-1 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
                                 filters.sort === 'newest' ? "bg-orange-500 text-white shadow-lg shadow-orange-500/25" : "text-zinc-500 hover:text-zinc-300"
                             )}
                         >
@@ -311,7 +367,7 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
                         <button
                             onClick={() => handleSortChange('name_asc')}
                             className={clsx(
-                                "flex items-center gap-1.5 px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                                "flex items-center gap-1 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
                                 filters.sort === 'name_asc' ? "bg-orange-500 text-white shadow-lg shadow-orange-500/25" : "text-zinc-500 hover:text-zinc-300"
                             )}
                         >
@@ -320,7 +376,7 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
                         <button
                             onClick={() => handleSortChange('name_desc')}
                             className={clsx(
-                                "flex items-center gap-1.5 px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                                "flex items-center gap-1 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
                                 filters.sort === 'name_desc' ? "bg-orange-500 text-white shadow-lg shadow-orange-500/25" : "text-zinc-500 hover:text-zinc-300"
                             )}
                         >

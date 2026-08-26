@@ -12,7 +12,8 @@ import {
   Sparkles, 
   MoveUp, 
   MoveDown, 
-  Tag 
+  Tag,
+  Ruler
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useState, useEffect, useRef } from 'react';
@@ -31,6 +32,13 @@ const PRICE_RANGES = [
   { label: 'R$ 600 - R$ 1200', value: '600-1200', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
   { label: 'R$ 1200 - R$ 1800', value: '1200-1800', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
   { label: 'R$ 1800+', value: '1800-+', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' }
+];
+
+const SIZE_RANGES = [
+  { label: 'Até 15 cm', value: '0-15', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
+  { label: '15 - 25 cm', value: '15-25', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
+  { label: '25 - 35 cm', value: '25-35', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
+  { label: '35 cm +', value: '35-+', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' }
 ];
 
 interface MobileFiltersProps {
@@ -115,6 +123,10 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
         }
     };
 
+    const handleSizeRangeChange = (newRange: string | undefined) => {
+        onChange({ ...filters, sizeRange: newRange });
+    };
+
     const handleSortChange = (newSort: string) => {
         onChange({ ...filters, sort: newSort });
     };
@@ -124,6 +136,7 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
         if (filters.studioIds) count += filters.studioIds.split(',').filter(Boolean).length;
         if (filters.incluirNaoVendaveis === 'true') count++;
         if (filters.priceRange) count++;
+        if (filters.sizeRange) count++;
         if (filters.sort && filters.sort !== 'newest') count++;
         return count;
     };
@@ -313,6 +326,44 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                                                     <button
                                                         key={range.value}
                                                         onClick={() => handlePriceRangeChange(isActive ? undefined : range.value)}
+                                                        className={clsx(
+                                                            "w-full px-4 py-2.5 rounded-lg text-xs font-bold transition-all border text-center",
+                                                            isActive
+                                                                ? range.activeClass
+                                                                : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--text-muted)]"
+                                                        )}
+                                                    >
+                                                        {range.label}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Tamanho */}
+                                    <div>
+                                        <h4 className="text-sm font-bold text-[var(--text-muted)] mb-3 uppercase tracking-wider flex items-center gap-2">
+                                            <Ruler size={14} className="text-orange-500" />
+                                            Filtrar por Tamanho (Altura)
+                                        </h4>
+                                        <div className="flex flex-col gap-2">
+                                            <button
+                                                onClick={() => handleSizeRangeChange(undefined)}
+                                                className={clsx(
+                                                    "w-full px-4 py-2.5 rounded-lg text-xs font-bold transition-all border text-center",
+                                                    !filters.sizeRange
+                                                        ? "bg-orange-500 text-white border-orange-500 font-bold shadow-md"
+                                                        : "bg-[var(--card-bg)] border-[var(--card-border)] text-[var(--text-muted)]"
+                                                )}
+                                            >
+                                                Todos os tamanhos
+                                            </button>
+                                            {SIZE_RANGES.map((range) => {
+                                                const isActive = filters.sizeRange === range.value;
+                                                return (
+                                                    <button
+                                                        key={range.value}
+                                                        onClick={() => handleSizeRangeChange(isActive ? undefined : range.value)}
                                                         className={clsx(
                                                             "w-full px-4 py-2.5 rounded-lg text-xs font-bold transition-all border text-center",
                                                             isActive

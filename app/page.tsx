@@ -32,6 +32,7 @@ function HomeContent() {
   const showAllParam = searchParams.get('incluirNaoVendaveis');
   const sortParam = searchParams.get('sort');
   const priceRangeParam = searchParams.get('priceRange');
+  const sizeRangeParam = searchParams.get('sizeRange');
 
   const [filters, setFilters] = useState<FilterState>({
     q: qParam || undefined,
@@ -39,7 +40,8 @@ function HomeContent() {
     studioIds: studioParam || undefined,
     incluirNaoVendaveis: showAllParam || undefined,
     sort: sortParam || 'newest',
-    priceRange: priceRangeParam || undefined
+    priceRange: priceRangeParam || undefined,
+    sizeRange: sizeRangeParam || undefined
   });
 
   // Sync state changes to URL query parameters
@@ -51,6 +53,7 @@ function HomeContent() {
     if (filters.incluirNaoVendaveis) params.set('incluirNaoVendaveis', filters.incluirNaoVendaveis);
     if (filters.sort && filters.sort !== 'newest') params.set('sort', filters.sort);
     if (filters.priceRange) params.set('priceRange', filters.priceRange);
+    if (filters.sizeRange) params.set('sizeRange', filters.sizeRange);
 
     const queryString = params.toString();
     const target = queryString ? `${pathname}?${queryString}` : pathname;
@@ -65,6 +68,7 @@ function HomeContent() {
     const incluirNaoVendaveis = searchParams.get('incluirNaoVendaveis') || undefined;
     const sort = searchParams.get('sort') || 'newest';
     const priceRange = searchParams.get('priceRange') || undefined;
+    const sizeRange = searchParams.get('sizeRange') || undefined;
 
     setFilters(prev => {
       if (
@@ -73,11 +77,12 @@ function HomeContent() {
         prev.studioIds === studioIds &&
         prev.incluirNaoVendaveis === incluirNaoVendaveis &&
         prev.sort === sort &&
-        prev.priceRange === priceRange
+        prev.priceRange === priceRange &&
+        prev.sizeRange === sizeRange
       ) {
         return prev;
       }
-      return { q, categoria, studioIds, incluirNaoVendaveis, sort, priceRange };
+      return { q, categoria, studioIds, incluirNaoVendaveis, sort, priceRange, sizeRange };
     });
   }, [searchParams]);
 
@@ -133,7 +138,7 @@ function HomeContent() {
             isFetchingNextPage={isFetchingNextPage}
             hasNextPage={hasNextPage}
             fetchNextPage={fetchNextPage}
-            onClearFilters={() => setFilters({ ...filters, q: undefined, categoria: undefined, studioIds: undefined, sort: 'newest', priceRange: undefined })}
+            onClearFilters={() => setFilters({ ...filters, q: undefined, categoria: undefined, studioIds: undefined, sort: 'newest', priceRange: undefined, sizeRange: undefined })}
           />
         </div>
 

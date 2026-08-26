@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { FiguraDTO } from '@/lib/dto';
 import Image from 'next/image';
 import { clsx } from 'clsx';
-import { Sparkles, Paintbrush, Palette, ChevronRight, Instagram, ArrowLeft, ArrowUpDown, ArrowLeftRight, Box, Shield, Award, ShieldCheck, ShoppingCart, Check } from 'lucide-react';
+import { Sparkles, Paintbrush, Palette, ChevronRight, Instagram, ArrowLeft, ArrowUpDown, ArrowLeftRight, Box, ShoppingCart, Check } from 'lucide-react';
 import Link from 'next/link';
 import imageKitLoader from '@/lib/image-loader';
 import { getOptimizedImageUrl } from '@/lib/image-utils';
@@ -263,31 +263,6 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                                     </div>
                                 )}
                             </div>
- 
-                            {/* Diferenciais Grid */}
-                            <div className="grid grid-cols-4 gap-1.5 border border-white/5 bg-zinc-950/20 rounded-xl p-2">
-                                <div className="flex flex-col items-center text-center">
-                                    <Shield size={12} className="text-orange-400 mb-0.5 stroke-[2.5]" />
-                                    <span className="text-[5px] sm:text-[6px] text-zinc-500 font-bold uppercase tracking-wider leading-none">Qualidade</span>
-                                    <span className="text-[6px] sm:text-[7px] text-orange-400 font-black uppercase tracking-wider leading-none mt-0.5">Premium</span>
-                                </div>
-                                <div className="flex flex-col items-center text-center border-l border-white/5">
-                                    <Sparkles size={12} className="text-orange-400 mb-0.5 stroke-[2.5]" />
-                                    <span className="text-[5px] sm:text-[6px] text-zinc-500 font-bold uppercase tracking-wider leading-none">Acabamento</span>
-                                    <span className="text-[6px] sm:text-[7px] text-orange-400 font-black uppercase tracking-wider leading-none mt-0.5">Detalhado</span>
-                                </div>
-                                <div className="flex flex-col items-center text-center border-l border-white/5">
-                                    <Award size={12} className="text-orange-400 mb-0.5 stroke-[2.5]" />
-                                    <span className="text-[5px] sm:text-[6px] text-zinc-500 font-bold uppercase tracking-wider leading-none">Pintura</span>
-                                    <span className="text-[6px] sm:text-[7px] text-orange-400 font-black uppercase tracking-wider leading-none mt-0.5">Artesanal</span>
-                                </div>
-                                <div className="flex flex-col items-center text-center border-l border-white/5">
-                                    <ShieldCheck size={12} className="text-orange-400 mb-0.5 stroke-[2.5]" />
-                                    <span className="text-[5px] sm:text-[6px] text-zinc-500 font-bold uppercase tracking-wider leading-none">Embalagem</span>
-                                    <span className="text-[6px] sm:text-[7px] text-orange-400 font-black uppercase tracking-wider leading-none mt-0.5">Segura</span>
-                                </div>
-                            </div>
- 
                             {/* CTA Action Button */}
                             <div className="w-full mt-auto">
                                 <div className="w-full flex items-center justify-center bg-gradient-to-r from-orange-500 to-amber-500 text-white py-3.5 sm:py-4 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] shadow-lg shadow-orange-500/15 hover:from-orange-400 hover:to-amber-400 active:scale-98 transition-all">

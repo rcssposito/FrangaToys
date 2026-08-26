@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
         const seriesJoin = shouldFilterCategory ? 'series:series!inner' : 'series:series';
         const categoryJoin = shouldFilterCategory ? 'categorias:categorias!inner' : 'categorias:categorias';
         const isCampanhaActive = searchParams.get('campanha') === 'true';
-        const metaJoin = isCampanhaActive ? 'figuras_meta!inner' : 'figuras_meta';
+        const metaJoin = (isCampanhaActive || filters.sizeRange) ? 'figuras_meta!inner' : 'figuras_meta';
 
         let query = supabase
             .from('figuras')
@@ -129,6 +129,19 @@ export async function GET(req: NextRequest) {
             const ids = filters.studioIds.split(',').map(Number).filter(n => !isNaN(n));
             if (ids.length > 0) {
                 query = query.in('studio_id', ids);
+            }
+        }
+
+        if (filters.sizeRange) {
+            const parts = filters.sizeRange.split('-');
+            const minH = parseFloat(parts[0]);
+            const maxH = parts[1] === '+' || parts[1] === '' ? Infinity : parseFloat(parts[1]);
+
+            if (!isNaN(minH)) {
+                query = query.gte('figuras_meta.altura_cm', minH);
+            }
+            if (maxH !== Infinity && !isNaN(maxH)) {
+                query = query.lte('figuras_meta.altura_cm', maxH);
             }
         }
 
