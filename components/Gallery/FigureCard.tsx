@@ -182,89 +182,93 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                             </button>
                         </div>
  
-                        <div className="flex-1 px-4 sm:px-5 flex flex-col justify-between py-4 sm:py-5 gap-3">
+                        <div className="flex-1 px-4 sm:px-5 flex flex-col justify-between py-4 sm:py-5 gap-4">
                             {/* Dimensions Grid */}
-                            <div className="grid grid-cols-3 gap-2">
-                                <div className="flex items-center gap-2 bg-zinc-950/40 border border-white/5 p-1.5 rounded-xl">
-                                    <div className="w-7 h-7 bg-zinc-900 border border-zinc-800 rounded-lg flex items-center justify-center text-orange-400 flex-shrink-0">
-                                        <ArrowUpDown size={13} className="stroke-[2.5]" />
+                            <div className="space-y-1.5">
+                                <h4 className="text-[9px] sm:text-[10px] text-zinc-400 font-black uppercase tracking-widest ml-0.5">Dimensões</h4>
+                                <div className="grid grid-cols-3 gap-1.5">
+                                    <div className="flex items-center gap-1.5 bg-zinc-950/60 border border-white/10 p-1.5 sm:p-2 rounded-xl">
+                                        <div className="w-5.5 h-5.5 bg-orange-500/10 border border-orange-500/20 rounded-md flex items-center justify-center text-orange-400 flex-shrink-0">
+                                            <ArrowUpDown size={10} className="stroke-[2.5]" />
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-[8px] sm:text-[9px] text-zinc-400 font-extrabold uppercase tracking-tight leading-none mb-0.5 truncate">Altura</span>
+                                            <span className="text-xs sm:text-sm font-black text-white leading-none">{figure.altura_cm || '-'}<small className="text-[9px] sm:text-[10px] text-zinc-400 font-bold ml-0.5">cm</small></span>
+                                        </div>
                                     </div>
-                                    <div className="flex flex-col min-w-0">
-                                        <span className="text-[6px] sm:text-[7px] text-zinc-500 font-bold uppercase tracking-wider leading-none mb-0.5">Altura</span>
-                                        <span className="text-[10px] sm:text-xs font-black text-white leading-none">{figure.altura_cm || '-'}<small className="text-[8px] text-zinc-500 font-bold ml-0.5">cm</small></span>
+                                    <div className="flex items-center gap-1.5 bg-zinc-950/60 border border-white/10 p-1.5 sm:p-2 rounded-xl">
+                                        <div className="w-5.5 h-5.5 bg-orange-500/10 border border-orange-500/20 rounded-md flex items-center justify-center text-orange-400 flex-shrink-0">
+                                            <ArrowLeftRight size={10} className="stroke-[2.5]" />
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-[8px] sm:text-[9px] text-zinc-400 font-extrabold uppercase tracking-tight leading-none mb-0.5 truncate">Largura</span>
+                                            <span className="text-xs sm:text-sm font-black text-white leading-none">{figure.largura_cm || '-'}<small className="text-[9px] sm:text-[10px] text-zinc-400 font-bold ml-0.5">cm</small></span>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-2 bg-zinc-950/40 border border-white/5 p-1.5 rounded-xl">
-                                    <div className="w-7 h-7 bg-zinc-900 border border-zinc-800 rounded-lg flex items-center justify-center text-orange-400 flex-shrink-0">
-                                        <ArrowLeftRight size={13} className="stroke-[2.5]" />
-                                    </div>
-                                    <div className="flex flex-col min-w-0">
-                                        <span className="text-[6px] sm:text-[7px] text-zinc-500 font-bold uppercase tracking-wider leading-none mb-0.5">Largura</span>
-                                        <span className="text-[10px] sm:text-xs font-black text-white leading-none">{figure.largura_cm || '-'}<small className="text-[8px] text-zinc-500 font-bold ml-0.5">cm</small></span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2 bg-zinc-950/40 border border-white/5 p-1.5 rounded-xl">
-                                    <div className="w-7 h-7 bg-zinc-900 border border-zinc-800 rounded-lg flex items-center justify-center text-orange-400 flex-shrink-0">
-                                        <Box size={13} className="stroke-[2.5]" />
-                                    </div>
-                                    <div className="flex flex-col min-w-0">
-                                        <span className="text-[6px] sm:text-[7px] text-zinc-500 font-bold uppercase tracking-wider leading-none mb-0.5">Profund.</span>
-                                        <span className="text-[10px] sm:text-xs font-black text-white leading-none">{figure.profundidade_cm || '-'}<small className="text-[8px] text-zinc-500 font-bold ml-0.5">cm</small></span>
+                                    <div className="flex items-center gap-1.5 bg-zinc-950/60 border border-white/10 p-1.5 sm:p-2 rounded-xl">
+                                        <div className="w-5.5 h-5.5 bg-orange-500/10 border border-orange-500/20 rounded-md flex items-center justify-center text-orange-400 flex-shrink-0">
+                                            <Box size={10} className="stroke-[2.5]" />
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-[8px] sm:text-[9px] text-zinc-400 font-extrabold uppercase tracking-tight leading-none mb-0.5 truncate">Profund.</span>
+                                            <span className="text-xs sm:text-sm font-black text-white leading-none">{figure.profundidade_cm || '-'}<small className="text-[9px] sm:text-[10px] text-zinc-400 font-bold ml-0.5">cm</small></span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
- 
+
                             {/* Price Options */}
-                            <div className="space-y-1.5">
-                                <h4 className="text-[8px] sm:text-[9px] text-zinc-400 font-black uppercase tracking-widest ml-1 mb-0.5">Opções de Pintura</h4>
+                            <div className="space-y-2 flex-1 flex flex-col justify-center">
+                                <h4 className="text-[9px] sm:text-[10px] text-zinc-400 font-black uppercase tracking-widest ml-0.5">Opções de Pintura</h4>
                                 
                                 {figure.precos ? (
-                                    <div className="space-y-1.5">
+                                    <div className="space-y-2.5">
                                         {/* Sem Pintura */}
-                                        <div className="flex items-center justify-between p-2 rounded-xl bg-zinc-950/40 border border-white/5 hover:border-orange-500/10 transition-all">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 flex-shrink-0">
-                                                    <Paintbrush size={13} className="stroke-[2.5]" />
+                                        <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-950/60 border border-white/10 hover:border-orange-500/20 transition-all">
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 flex-shrink-0">
+                                                    <Paintbrush size={14} className="stroke-[2.5]" />
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <div className="text-[9px] sm:text-[10px] font-black text-white uppercase tracking-tighter">Sem Pintura</div>
-                                                    <div className="text-[7px] text-zinc-500 uppercase tracking-wider leading-none truncate">Apenas Impresso & Limpo</div>
+                                                    <div className="text-[10px] sm:text-[11px] font-black text-white uppercase tracking-tight">Sem Pintura</div>
+                                                    <div className="text-[8px] text-zinc-400 uppercase tracking-wider leading-none truncate mt-0.5">Apenas Impresso & Limpo</div>
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <div className="text-[11px] sm:text-xs font-black text-white leading-none">{formatPrice(figure.precos.estilizado)}</div>
-                                                <div className="text-[8px] font-extrabold text-emerald-500 tracking-tighter mt-0.5">PIX: {formatPrice(figure.precos.pix_estilizado)}</div>
+                                                <div className="text-xs sm:text-sm font-black text-white leading-none">{formatPrice(figure.precos.estilizado)}</div>
+                                                <div className="text-[9px] font-extrabold text-emerald-400 tracking-tight mt-1">PIX: {formatPrice(figure.precos.pix_estilizado)}</div>
                                             </div>
                                         </div>
-  
+
                                         {/* Colorido */}
-                                        <div className="flex items-center justify-between p-2 rounded-xl bg-zinc-950/40 border border-orange-500/20 hover:border-orange-500/40 transition-all relative shadow-[0_0_15px_rgba(249,115,22,0.03)]">
-                                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center text-black border border-[#09090b] shadow-md z-30">
-                                                <Check size={8} className="stroke-[4]" />
+                                        <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-950/60 border border-orange-500/30 hover:border-orange-500/50 transition-all relative shadow-[0_0_20px_rgba(249,115,22,0.06)]">
+                                            <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center text-black border border-[#09090b] shadow-md z-30">
+                                                <Check size={9} className="stroke-[4]" />
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-amber-500 flex-shrink-0">
-                                                    <Palette size={13} className="stroke-[2.5]" />
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-amber-400 flex-shrink-0">
+                                                    <Palette size={14} className="stroke-[2.5]" />
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <div className="text-[9px] sm:text-[10px] font-black text-white uppercase tracking-tighter">Colorido</div>
-                                                    <div className="text-[7px] text-zinc-400 font-bold uppercase tracking-wider leading-none truncate">Pintura Premium</div>
+                                                    <div className="text-[10px] sm:text-[11px] font-black text-white uppercase tracking-tight">Colorido</div>
+                                                    <div className="text-[8px] text-zinc-400 font-bold uppercase tracking-wider leading-none truncate mt-0.5">Pintura Premium</div>
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <div className="text-[11px] sm:text-xs font-black text-white leading-none">{formatPrice(figure.precos.colorido)}</div>
-                                                <div className="text-[8px] font-extrabold text-emerald-500 tracking-tighter mt-0.5">PIX: {formatPrice(figure.precos.pix_colorido)}</div>
+                                                <div className="text-xs sm:text-sm font-black text-white leading-none">{formatPrice(figure.precos.colorido)}</div>
+                                                <div className="text-[9px] font-extrabold text-emerald-400 tracking-tight mt-1">PIX: {formatPrice(figure.precos.pix_colorido)}</div>
                                             </div>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="text-center py-3 bg-zinc-950/40 rounded-xl border border-dashed border-zinc-800 text-zinc-600 text-[8px] uppercase font-black tracking-widest">
+                                    <div className="text-center py-4 bg-zinc-950/60 rounded-xl border border-dashed border-zinc-800 text-zinc-500 text-[9px] uppercase font-black tracking-widest">
                                         Preços Sob Consulta
                                     </div>
                                 )}
                             </div>
+
                             {/* CTA Action Button */}
-                            <div className="w-full mt-auto">
+                            <div className="w-full mt-auto pt-1">
                                 <div className="w-full flex items-center justify-center bg-gradient-to-r from-orange-500 to-amber-500 text-white py-3.5 sm:py-4 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] shadow-lg shadow-orange-500/15 hover:from-orange-400 hover:to-amber-400 active:scale-98 transition-all">
                                     <span>{figure.is_merchant ? 'Detalhes' : 'Falar com o Ateliê'}</span>
                                 </div>
