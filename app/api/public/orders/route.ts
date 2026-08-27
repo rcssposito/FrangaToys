@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
 
         const selectFields = `
             id,
+            checkout_id,
             access_token,
             status,
             data_venda,
@@ -90,6 +91,7 @@ export async function GET(req: NextRequest) {
 
             return {
                 id: s.id,
+                checkout_id: s.checkout_id || s.id,
                 token: s.access_token,
                 status: s.status,
                 data: s.data_venda,

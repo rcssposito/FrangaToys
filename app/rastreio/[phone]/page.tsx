@@ -21,13 +21,23 @@ function PixPaymentWidget({ order }: { order: any }) {
     const total = finalVal + freteVal;
     const remaining = Math.max(0, total - pagoVal);
 
+    const checkoutId = order.checkout_id || order.id;
+
     useEffect(() => {
         if (remaining > 0 && !order.link_pagamento) {
             // Chave E-mail da loja, nome Bianca Machado Mastrocollo
-            const payload = generatePixPayload("contato@frangatoys.com.br", "Bianca Machado Mastrocollo", remaining, order.checkout_id);
+            const payload = generatePixPayload("contato@frangatoys.com.br", "Bianca Machado Mastrocollo", remaining, checkoutId);
             setPixPayload(payload);
+
+            if (checkoutId) {
+                fetch('/api/public/orders/notify-pix-copied', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ checkout_id: checkoutId, action: 'view' })
+                }).catch(err => console.error('Erro ao notificar visualização Pix:', err));
+            }
         }
-    }, [remaining, order.link_pagamento]);
+    }, [remaining, order.link_pagamento, checkoutId]);
 
     const copyPix = () => {
         if (!pixPayload) return;
@@ -35,6 +45,14 @@ function PixPaymentWidget({ order }: { order: any }) {
         setCopied(true);
         toast.success('Chave PIX copiada!');
         setTimeout(() => setCopied(false), 3000);
+
+        if (checkoutId) {
+            fetch('/api/public/orders/notify-pix-copied', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ checkout_id: checkoutId, action: 'copy' })
+            }).catch(err => console.error('Erro ao notificar cópia Pix:', err));
+        }
     };
 
     if (remaining <= 0) return null;
