@@ -25,11 +25,12 @@ const STAGES = [
 ];
 
 const DEFAULT_STEPS = [
-    { id: 'suportes', label: 'Suportes removidos', phase: 'Polimento' },
-    { id: 'cura', label: 'Cura UV finalizada', phase: 'Polimento' },
-    { id: 'primer', label: 'Lixamento & Primer', phase: 'Polimento' },
-    { id: 'pintura', label: 'Pintura & Detalhes', phase: 'Pintura' },
-    { id: 'verniz', label: 'Verniz & Montagem', phase: 'Pintura' }
+    { id: 'lixamento', label: 'Lixamento', phase: 'Preparo' },
+    { id: 'primer', label: 'Primer', phase: 'Preparo' },
+    { id: 'pintura', label: 'Pintura', phase: 'Pintura' },
+    { id: 'detalhe', label: 'Detalhe', phase: 'Pintura' },
+    { id: 'montagem', label: 'Montagem', phase: 'Acabamento' },
+    { id: 'verniz', label: 'Verniz', phase: 'Finalização' }
 ];
 
 export function OrderTracker({ status, checklist }: OrderTrackerProps) {
@@ -41,9 +42,18 @@ export function OrderTracker({ status, checklist }: OrderTrackerProps) {
     // Se não encontrar (status legado ou erro), assume o primeiro
     const activeIdx = currentIdx === -1 ? (isCompleted ? STAGES.length - 1 : 0) : currentIdx;
 
-    // Normalizar itens do checklist
+    // Normalizar itens do checklist com compatibilidade retroativa
     const mergedChecklist = DEFAULT_STEPS.map((def) => {
-        const found = checklist?.find(c => c.id === def.id);
+        let found = checklist?.find(c => c.id === def.id);
+        if (!found) {
+            if (def.id === 'lixamento' || def.id === 'primer') {
+                found = checklist?.find(c => c.id === 'primer');
+            } else if (def.id === 'pintura' || def.id === 'detalhe') {
+                found = checklist?.find(c => c.id === 'pintura');
+            } else if (def.id === 'montagem' || def.id === 'verniz') {
+                found = checklist?.find(c => c.id === 'verniz');
+            }
+        }
         return {
             ...def,
             done: isReadyOrDone || (found ? Boolean(found.done) : false)
@@ -59,13 +69,13 @@ export function OrderTracker({ status, checklist }: OrderTrackerProps) {
     // o avanço de cada etapa de checklist move a barra visualmente
     let stepOffset = 0;
     if (activeIdx === 3) {
-        // Fase 3: Lavagem e Cura (passos 0, 1 e 2)
-        const polimentoDone = [mergedChecklist[0].done, mergedChecklist[1].done, mergedChecklist[2].done].filter(Boolean).length;
-        stepOffset = (polimentoDone / 3) * (1 / (STAGES.length - 1)) * 100 * 0.75;
+        // Fase 3: Lavagem e Cura (passos 0 e 1: lixamento e primer)
+        const preparoDone = [mergedChecklist[0]?.done, mergedChecklist[1]?.done].filter(Boolean).length;
+        stepOffset = (preparoDone / 2) * (1 / (STAGES.length - 1)) * 100 * 0.75;
     } else if (activeIdx === 4) {
-        // Fase 4: Pintura Secagem (passos 3 e 4)
-        const pinturaDone = [mergedChecklist[3].done, mergedChecklist[4].done].filter(Boolean).length;
-        stepOffset = (pinturaDone / 2) * (1 / (STAGES.length - 1)) * 100 * 0.75;
+        // Fase 4: Pintura Secagem (passos 2, 3, 4 e 5: pintura, detalhe, montagem, verniz)
+        const pinturaDone = [mergedChecklist[2]?.done, mergedChecklist[3]?.done, mergedChecklist[4]?.done, mergedChecklist[5]?.done].filter(Boolean).length;
+        stepOffset = (pinturaDone / 4) * (1 / (STAGES.length - 1)) * 100 * 0.75;
     }
 
     const calculatedProgressWidth = isCompleted 
@@ -96,11 +106,11 @@ export function OrderTracker({ status, checklist }: OrderTrackerProps) {
                     // Badges de sub-etapas para Polimento e Pintura
                     let stageSubInfo = null;
                     if (stage.id === 'Lavagem e Cura') {
-                        const count = [mergedChecklist[0].done, mergedChecklist[1].done, mergedChecklist[2].done].filter(Boolean).length;
-                        stageSubInfo = `${count}/3 etapas`;
-                    } else if (stage.id === 'Pintura Secagem') {
-                        const count = [mergedChecklist[3].done, mergedChecklist[4].done].filter(Boolean).length;
+                        const count = [mergedChecklist[0]?.done, mergedChecklist[1]?.done].filter(Boolean).length;
                         stageSubInfo = `${count}/2 etapas`;
+                    } else if (stage.id === 'Pintura Secagem') {
+                        const count = [mergedChecklist[2]?.done, mergedChecklist[3]?.done, mergedChecklist[4]?.done, mergedChecklist[5]?.done].filter(Boolean).length;
+                        stageSubInfo = `${count}/4 etapas`;
                     }
 
                     return (
@@ -178,8 +188,8 @@ export function OrderTracker({ status, checklist }: OrderTrackerProps) {
                         </div>
                     </div>
 
-                    {/* Stepper dos 5 itens de check */}
-                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
+                    {/* Stepper dos 6 itens de check */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
                         {mergedChecklist.map((step, idx) => {
                             // Encontrar o primeiro que não está pronto como 'atual' caso esteja em produção
                             const isFirstPending = !step.done && (idx === 0 || mergedChecklist[idx - 1].done);

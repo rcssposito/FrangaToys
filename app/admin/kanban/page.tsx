@@ -22,11 +22,12 @@ export interface ChecklistItem {
 }
 
 const DEFAULT_CHECKLIST_STEPS = [
-    { id: 'suportes', label: 'Suportes removidos' },
-    { id: 'cura', label: 'Cura UV finalizada' },
-    { id: 'primer', label: 'Lixamento & Primer' },
-    { id: 'pintura', label: 'Pintura & Detalhes' },
-    { id: 'verniz', label: 'Verniz & Montagem' }
+    { id: 'lixamento', label: 'Lixamento' },
+    { id: 'primer', label: 'Primer' },
+    { id: 'pintura', label: 'Pintura' },
+    { id: 'detalhe', label: 'Detalhe' },
+    { id: 'montagem', label: 'Montagem' },
+    { id: 'verniz', label: 'Verniz' }
 ];
 
 interface Sale {
@@ -1256,9 +1257,11 @@ export default function KanbanPage() {
                                                             {/* Checklist de Produção */}
                                                             {(() => {
                                                                 const checklist = Array.isArray(task.checklist) ? task.checklist : [];
+                                                                const totalSteps = DEFAULT_CHECKLIST_STEPS.length;
                                                                 const doneCount = DEFAULT_CHECKLIST_STEPS.filter(def => checklist.find(c => c.id === def.id)?.done).length;
+                                                                const isAllDone = doneCount === totalSteps && totalSteps > 0;
                                                                 const isExpanded = expandedChecklistSaleId === task.id;
-                                                                const pct = Math.round((doneCount / DEFAULT_CHECKLIST_STEPS.length) * 100);
+                                                                const pct = Math.round((doneCount / totalSteps) * 100);
 
                                                                 return (
                                                                     <div className="mt-2.5 pt-2 border-t border-zinc-800/60">
@@ -1271,12 +1274,12 @@ export default function KanbanPage() {
                                                                             title="Clique para ver ou marcar etapas de produção"
                                                                         >
                                                                             <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-zinc-400 group-hover/chk:text-white transition-colors">
-                                                                                <ListChecks size={11} className={doneCount === 5 ? "text-emerald-400" : "text-blue-400"} />
-                                                                                <span>Etapas: <strong className={doneCount === 5 ? "text-emerald-400" : "text-zinc-200"}>{doneCount}/5</strong></span>
+                                                                                <ListChecks size={11} className={isAllDone ? "text-emerald-400" : "text-blue-400"} />
+                                                                                <span>Etapas: <strong className={isAllDone ? "text-emerald-400" : "text-zinc-200"}>{doneCount}/{totalSteps}</strong></span>
                                                                             </div>
                                                                             <div className="flex-1 max-w-[85px] h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                                                                                 <div 
-                                                                                    className={`h-full transition-all duration-300 ${doneCount === 5 ? "bg-emerald-400" : "bg-gradient-to-r from-blue-500 to-indigo-500"}`} 
+                                                                                    className={`h-full transition-all duration-300 ${isAllDone ? "bg-emerald-400" : "bg-gradient-to-r from-blue-500 to-indigo-500"}`} 
                                                                                     style={{ width: `${pct}%` }} 
                                                                                 />
                                                                             </div>
