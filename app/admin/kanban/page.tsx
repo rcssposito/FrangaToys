@@ -2,10 +2,32 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle, Receipt, X, Download, Check, Maximize2 } from 'lucide-react';
+import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle, Receipt, X, Download, Check, Maximize2, Camera, Search, CheckSquare, Square, ListChecks, Trash2, Plus } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
+
+export interface WipPhoto {
+    id: string;
+    url: string;
+    file_id?: string;
+    caption?: string;
+    created_at: string;
+}
+
+export interface ChecklistItem {
+    id: string;
+    label: string;
+    done: boolean;
+}
+
+const DEFAULT_CHECKLIST_STEPS = [
+    { id: 'suportes', label: 'Suportes removidos' },
+    { id: 'cura', label: 'Cura UV finalizada' },
+    { id: 'primer', label: 'Lixamento & Primer' },
+    { id: 'pintura', label: 'Pintura & Detalhes' },
+    { id: 'verniz', label: 'Verniz & Montagem' }
+];
 
 interface Sale {
     id: number;
@@ -35,6 +57,8 @@ interface Sale {
     valor_venda_final?: number;
     status_pagamento?: string;
     valor_pago_parcial?: number;
+    checklist?: ChecklistItem[];
+    wip_fotos?: WipPhoto[];
 }
 
 const COLUMNS = [
@@ -125,6 +149,18 @@ export default function KanbanPage() {
     const [nfeNumber, setNfeNumber] = useState<number | string>(2);
     const [nfeNumberAlreadyAssigned, setNfeNumberAlreadyAssigned] = useState(false);
 
+    // Search and Quick Filter states
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedFilter, setSelectedFilter] = useState<'all' | 'my_paintings' | 'available_paintings' | 'urgent' | 'retirada' | 'correios'>('all');
+
+    // Checklist expanded card state
+    const [expandedChecklistSaleId, setExpandedChecklistSaleId] = useState<number | null>(null);
+
+    // WIP Photos modal states
+    const [wipModalSale, setWipModalSale] = useState<Sale | null>(null);
+    const [isUploadingWip, setIsUploadingWip] = useState(false);
+    const [wipCaption, setWipCaption] = useState('');
+
     // Expanded image modal state
     const [expandedImage, setExpandedImage] = useState<{
         url: string;
@@ -134,10 +170,14 @@ export default function KanbanPage() {
         valorPintura?: number;
     } | null>(null);
 
-    // Close expanded image on Escape key
+    // Close modals on Escape key
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setExpandedImage(null);
+            if (e.key === 'Escape') {
+                setExpandedImage(null);
+                setWipModalSale(null);
+                setExpandedChecklistSaleId(null);
+            }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
@@ -679,6 +719,98 @@ export default function KanbanPage() {
         }
     };
 
+    const handleToggleChecklistItem = async (saleId: number, stepId: string) => {
+        const sale = sales.find(s => s.id === saleId);
+        if (!sale) return;
+
+        const existingChecklist = Array.isArray(sale.checklist) ? [...sale.checklist] : [];
+        const itemIndex = existingChecklist.findIndex(i => i.id === stepId);
+        
+        let updatedChecklist: ChecklistItem[];
+        if (itemIndex >= 0) {
+            updatedChecklist = existingChecklist.map((item, idx) => 
+                idx === itemIndex ? { ...item, done: !item.done } : item
+            );
+        } else {
+            const def = DEFAULT_CHECKLIST_STEPS.find(s => s.id === stepId);
+            updatedChecklist = [
+                ...existingChecklist,
+                { id: stepId, label: def?.label || stepId, done: true }
+            ];
+        }
+
+        // Optimistic update
+        setSales(prev => prev.map(s => s.id === saleId ? { ...s, checklist: updatedChecklist } : s));
+
+        try {
+            const res = await fetch('/api/admin/kanban', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: saleId, checklist: updatedChecklist })
+            });
+            if (!res.ok) throw new Error();
+        } catch (err) {
+            toast.error('Erro ao atualizar etapa de produção');
+            fetchTasks();
+        }
+    };
+
+    const handleUploadWipPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !wipModalSale) return;
+
+        setIsUploadingWip(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('saleId', String(wipModalSale.id));
+            if (wipCaption) formData.append('caption', wipCaption);
+
+            const res = await fetch('/api/admin/kanban/wip', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Falha no upload da foto');
+            }
+
+            const data = await res.json();
+            toast.success('Foto dos bastidores enviada!');
+            setWipCaption('');
+            
+            const updatedWip = data.wip_fotos;
+            setSales(prev => prev.map(s => s.id === wipModalSale.id ? { ...s, wip_fotos: updatedWip } : s));
+            setWipModalSale(prev => prev ? { ...prev, wip_fotos: updatedWip } : null);
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao enviar foto');
+        } finally {
+            setIsUploadingWip(false);
+            e.target.value = '';
+        }
+    };
+
+    const handleDeleteWipPhoto = async (photoId: string) => {
+        if (!wipModalSale || !confirm('Deseja excluir esta foto dos bastidores?')) return;
+        try {
+            const res = await fetch('/api/admin/kanban/wip', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ saleId: wipModalSale.id, photoId })
+            });
+
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            toast.success('Foto removida!');
+            const updatedWip = data.wip_fotos;
+            setSales(prev => prev.map(s => s.id === wipModalSale.id ? { ...s, wip_fotos: updatedWip } : s));
+            setWipModalSale(prev => prev ? { ...prev, wip_fotos: updatedWip } : null);
+        } catch (err) {
+            toast.error('Erro ao excluir foto');
+        }
+    };
+
     const myPaintings = sales.filter(s => {
         if (!s.pintor_nome) return false;
         const p = s.pintor_nome.toLowerCase();
@@ -688,6 +820,56 @@ export default function KanbanPage() {
     const myPaintingsCount = myPaintings.length;
     const myPaintingsTotal = myPaintings.reduce((sum, s) => sum + (Number(s.valor_pago_pintor) || Number(s.valor_estimado_pintor) || 0), 0);
 
+    const filteredSales = sales.filter(task => {
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase().trim();
+            const clienteMatch = (task.cliente_nome || '').toLowerCase().includes(q);
+            const figuraMatch = (task.figuras?.nome || '').toLowerCase().includes(q);
+            const contatoMatch = (task.cliente_contato || '').includes(q);
+            const studioName = Array.isArray(task.figuras?.studios) 
+                ? task.figuras.studios[0]?.nome 
+                : task.figuras?.studios?.nome;
+            const studioMatch = (studioName || '').toLowerCase().includes(q);
+            const vendedorMatch = (task.vendedor_nome || task.vendedor || '').toLowerCase().includes(q);
+            const pintorMatch = (task.pintor_nome || '').toLowerCase().includes(q);
+
+            if (!clienteMatch && !figuraMatch && !contatoMatch && !studioMatch && !vendedorMatch && !pintorMatch) {
+                return false;
+            }
+        }
+
+        if (selectedFilter === 'my_paintings') {
+            if (!task.pintor_nome) return false;
+            const p = task.pintor_nome.toLowerCase();
+            const u = currentUserName.toLowerCase();
+            return p === u || (u && (p.includes(u) || u.includes(p)));
+        }
+
+        if (selectedFilter === 'available_paintings') {
+            return !task.pintor_nome;
+        }
+
+        if (selectedFilter === 'urgent') {
+            if (!task.data_venda) return false;
+            const dataVenda = new Date(task.data_venda);
+            const deadlineDate = new Date(dataVenda);
+            deadlineDate.setDate(deadlineDate.getDate() + 45);
+            const today = new Date();
+            const diffDays = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            return diffDays <= 7;
+        }
+
+        if (selectedFilter === 'retirada') {
+            return task.metodo_entrega === 'retirada';
+        }
+
+        if (selectedFilter === 'correios') {
+            return task.metodo_entrega === 'envio';
+        }
+
+        return true;
+    });
+
     return (
         <div className="min-h-screen bg-black text-white p-4 md:p-8 flex flex-col transition-colors duration-300 relative overflow-hidden">
             {/* Background UV/Water Blobs for Scifi Theme */}
@@ -696,7 +878,7 @@ export default function KanbanPage() {
                 <div className="absolute top-[40%] right-[-10%] w-[30%] h-[30%] bg-indigo-500 rounded-full blur-[150px] mix-blend-screen" />
             </div>
 
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-4">
                     <div className="p-3.5 bg-zinc-900 border border-zinc-800 text-blue-500 rounded-2xl shadow-[0_0_15px_rgba(59,130,246,0.2)]">
                         <KanbanSquare size={32} />
@@ -727,6 +909,108 @@ export default function KanbanPage() {
                 )}
             </div>
 
+            {/* Search and Quick Filters Toolbar */}
+            <div className="relative z-10 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 mb-6 bg-zinc-950/80 border border-zinc-900 rounded-2xl p-3 backdrop-blur-md shadow-xl">
+                {/* Search Input */}
+                <div className="relative flex-1 max-w-md">
+                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder="Buscar por cliente, figura, estúdio, telefone..."
+                        className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl pl-10 pr-9 py-2 text-xs text-white placeholder-zinc-500 outline-none focus:border-blue-500/70 transition-all font-medium"
+                    />
+                    {searchQuery && (
+                        <button
+                            type="button"
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
+                        >
+                            <X size={13} />
+                        </button>
+                    )}
+                </div>
+
+                {/* Filter Chips */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 custom-scrollbar">
+                    <button
+                        type="button"
+                        onClick={() => setSelectedFilter('all')}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
+                            selectedFilter === 'all'
+                                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                                : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-850'
+                        }`}
+                    >
+                        Todos ({sales.length})
+                    </button>
+
+                    {isPainter && (
+                        <button
+                            type="button"
+                            onClick={() => setSelectedFilter('my_paintings')}
+                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 ${
+                                selectedFilter === 'my_paintings'
+                                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                                    : 'bg-purple-950/40 text-purple-300 border border-purple-500/20 hover:bg-purple-900/40'
+                            }`}
+                        >
+                            <Paintbrush size={11} />
+                            Minhas Pinturas ({myPaintingsCount})
+                        </button>
+                    )}
+
+                    <button
+                        type="button"
+                        onClick={() => setSelectedFilter('available_paintings')}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
+                            selectedFilter === 'available_paintings'
+                                ? 'bg-zinc-100 text-black shadow-md'
+                                : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-850'
+                        }`}
+                    >
+                        Pinturas Disponíveis
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setSelectedFilter('urgent')}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
+                            selectedFilter === 'urgent'
+                                ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
+                                : 'bg-red-950/40 text-red-400 border border-red-500/20 hover:bg-red-900/40'
+                        }`}
+                    >
+                        ⚠️ Urgentes
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setSelectedFilter('retirada')}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
+                            selectedFilter === 'retirada'
+                                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
+                                : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-850'
+                        }`}
+                    >
+                        Retirada
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setSelectedFilter('correios')}
+                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
+                            selectedFilter === 'correios'
+                                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                                : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-850'
+                        }`}
+                    >
+                        Correios
+                    </button>
+                </div>
+            </div>
+
             {loading ? (
                 <div className="relative z-10 flex-1 flex items-center justify-center p-12">
                     <Loader2 className="animate-spin text-blue-500 w-12 h-12 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
@@ -734,7 +1018,7 @@ export default function KanbanPage() {
             ) : (
                 <div className="relative z-10 flex-1 flex gap-5 overflow-x-auto pb-6 custom-scrollbar pr-4">
                     {COLUMNS.map((col) => {
-                        const columnTasks = sales.filter(s => s.status === col.id || (!s.status && col.id === 'Aguardando Pagamento'));
+                        const columnTasks = filteredSales.filter(s => s.status === col.id || (!s.status && col.id === 'Aguardando Pagamento'));
 
                         return (
                             <div
@@ -968,6 +1252,71 @@ export default function KanbanPage() {
                                                                     </div>
                                                                 );
                                                             })()}
+
+                                                            {/* Checklist de Produção */}
+                                                            {(() => {
+                                                                const checklist = Array.isArray(task.checklist) ? task.checklist : [];
+                                                                const doneCount = DEFAULT_CHECKLIST_STEPS.filter(def => checklist.find(c => c.id === def.id)?.done).length;
+                                                                const isExpanded = expandedChecklistSaleId === task.id;
+                                                                const pct = Math.round((doneCount / DEFAULT_CHECKLIST_STEPS.length) * 100);
+
+                                                                return (
+                                                                    <div className="mt-2.5 pt-2 border-t border-zinc-800/60">
+                                                                        <div 
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setExpandedChecklistSaleId(isExpanded ? null : task.id);
+                                                                            }}
+                                                                            className="flex items-center justify-between gap-2 cursor-pointer group/chk select-none"
+                                                                            title="Clique para ver ou marcar etapas de produção"
+                                                                        >
+                                                                            <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-zinc-400 group-hover/chk:text-white transition-colors">
+                                                                                <ListChecks size={11} className={doneCount === 5 ? "text-emerald-400" : "text-blue-400"} />
+                                                                                <span>Etapas: <strong className={doneCount === 5 ? "text-emerald-400" : "text-zinc-200"}>{doneCount}/5</strong></span>
+                                                                            </div>
+                                                                            <div className="flex-1 max-w-[85px] h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                                                                                <div 
+                                                                                    className={`h-full transition-all duration-300 ${doneCount === 5 ? "bg-emerald-400" : "bg-gradient-to-r from-blue-500 to-indigo-500"}`} 
+                                                                                    style={{ width: `${pct}%` }} 
+                                                                                />
+                                                                            </div>
+                                                                            <span className="text-[8px] font-bold text-zinc-500 group-hover/chk:text-zinc-300">
+                                                                                {isExpanded ? '▲' : '▼'}
+                                                                            </span>
+                                                                        </div>
+
+                                                                        {isExpanded && (
+                                                                            <div 
+                                                                                onClick={e => e.stopPropagation()}
+                                                                                className="mt-2 p-2 bg-zinc-900/95 border border-zinc-800 rounded-xl space-y-1 shadow-xl animate-in fade-in duration-150"
+                                                                            >
+                                                                                {DEFAULT_CHECKLIST_STEPS.map(step => {
+                                                                                    const isDone = checklist.find(c => c.id === step.id)?.done || false;
+                                                                                    return (
+                                                                                        <button
+                                                                                            key={step.id}
+                                                                                            type="button"
+                                                                                            onClick={() => handleToggleChecklistItem(task.id, step.id)}
+                                                                                            className={`w-full flex items-center gap-2 p-1.5 rounded-lg text-left text-[9px] font-bold transition-all ${
+                                                                                                isDone 
+                                                                                                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" 
+                                                                                                    : "hover:bg-zinc-800/80 text-zinc-400"
+                                                                                            }`}
+                                                                                        >
+                                                                                            {isDone ? (
+                                                                                                <CheckSquare size={12} className="text-emerald-400 shrink-0" />
+                                                                                            ) : (
+                                                                                                <Square size={12} className="text-zinc-600 shrink-0" />
+                                                                                            )}
+                                                                                            <span className={isDone ? "line-through opacity-85" : ""}>{step.label}</span>
+                                                                                        </button>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })()}
                                                         </div>
 
                                                         {/* Observation block at the bottom */}
@@ -980,6 +1329,27 @@ export default function KanbanPage() {
 
                                                     {/* Right side: Action buttons stacked vertically */}
                                                     <div className="flex flex-col gap-1.5 justify-start shrink-0 z-20">
+                                                        {/* Botão Fotos dos Bastidores / WIP */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setWipModalSale(task);
+                                                            }}
+                                                            title={`Fotos dos Bastidores / WIP (${(task.wip_fotos || []).length} fotos)`}
+                                                            className={`w-9 h-9 rounded-lg transition-all duration-200 active:scale-90 flex items-center justify-center relative ${
+                                                                (task.wip_fotos && task.wip_fotos.length > 0)
+                                                                    ? "text-amber-400 bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 hover:shadow-[0_0_10px_rgba(245,158,11,0.3)]"
+                                                                    : "text-zinc-400 hover:text-amber-400 bg-zinc-900/60 hover:bg-amber-500/10 border border-zinc-800/80 hover:border-amber-500/30"
+                                                            }`}
+                                                        >
+                                                            <Camera size={13} />
+                                                            {(task.wip_fotos && task.wip_fotos.length > 0) && (
+                                                                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-500 text-black text-[8px] font-black rounded-full flex items-center justify-center shadow-sm">
+                                                                    {task.wip_fotos.length}
+                                                                </span>
+                                                            )}
+                                                        </button>
                                                         <Link
                                                             href={`/os/${task.id}`}
                                                             target="_blank"
@@ -1459,6 +1829,159 @@ export default function KanbanPage() {
                                     Fechar
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Fotos dos Bastidores (WIP) */}
+            {wipModalSale && (
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6 bg-black/90 backdrop-blur-xl animate-in fade-in duration-200"
+                    onClick={() => setWipModalSale(null)}
+                >
+                    <div 
+                        className="relative max-w-2xl w-full bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl shadow-black/90 flex flex-col max-h-[90vh]"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="p-6 border-b border-zinc-850 flex items-center justify-between bg-zinc-900/40">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+                                    <Camera size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-white flex items-center gap-2">
+                                        Fotos de Produção (Bastidores)
+                                    </h3>
+                                    <p className="text-xs text-zinc-400">
+                                        {wipModalSale.figuras?.nome || 'Figura'} • <span className="text-zinc-300 font-semibold">{wipModalSale.cliente_nome}</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setWipModalSale(null)}
+                                className="w-9 h-9 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-300 hover:text-white rounded-full flex items-center justify-center transition-all"
+                                title="Fechar (Esc)"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        {/* Banner Informativo */}
+                        <div className="px-6 py-2.5 bg-cyan-950/20 border-b border-cyan-500/20 flex items-center gap-2.5 text-[11px] text-cyan-300">
+                            <span className="shrink-0 text-base">📸</span>
+                            <span>Estas fotos ficam visíveis instantaneamente para o cliente na página pública de rastreio da encomenda dele.</span>
+                        </div>
+
+                        {/* Upload Form */}
+                        <div className="p-6 border-b border-zinc-850 bg-zinc-950 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                            <input
+                                type="text"
+                                placeholder="Legenda opcional (ex: Primer aplicado, olhos pintados...)"
+                                value={wipCaption}
+                                onChange={e => setWipCaption(e.target.value)}
+                                className="flex-1 bg-zinc-900 border border-zinc-800 text-xs text-white px-3.5 py-2.5 rounded-xl placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                            />
+                            <label className={`cursor-pointer shrink-0 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all border ${
+                                isUploadingWip 
+                                    ? 'bg-zinc-900 border-zinc-800 text-zinc-500 cursor-not-allowed'
+                                    : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white border-cyan-500/40 shadow-lg shadow-cyan-500/20 hover:scale-[1.02] active:scale-[0.98]'
+                            }`}>
+                                {isUploadingWip ? (
+                                    <>
+                                        <Loader2 size={14} className="animate-spin" />
+                                        Enviando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus size={14} />
+                                        Adicionar Foto
+                                    </>
+                                )}
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    disabled={isUploadingWip}
+                                    onChange={handleUploadWipPhoto}
+                                    className="hidden"
+                                />
+                            </label>
+                        </div>
+
+                        {/* Gallery / Photos List */}
+                        <div className="p-6 overflow-y-auto max-h-[420px] custom-scrollbar">
+                            {(!wipModalSale.wip_fotos || wipModalSale.wip_fotos.length === 0) ? (
+                                <div className="py-12 text-center flex flex-col items-center justify-center gap-3">
+                                    <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-600">
+                                        <Camera size={26} />
+                                    </div>
+                                    <p className="text-sm font-semibold text-zinc-400">Nenhuma foto de bastidores ainda</p>
+                                    <p className="text-xs text-zinc-500 max-w-sm">
+                                        Envie fotos do processo de cura, lixamento, primer ou pintura. O cliente vai adorar acompanhar a produção!
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    {wipModalSale.wip_fotos.map((photo) => (
+                                        <div 
+                                            key={photo.id}
+                                            className="group relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-md flex flex-col justify-end"
+                                        >
+                                            <img
+                                                src={photo.url}
+                                                alt={photo.caption || 'Foto WIP'}
+                                                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                            />
+                                            {/* Gradient overlay */}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent opacity-80 group-hover:opacity-95 transition-opacity" />
+
+                                            {/* Actions on hover */}
+                                            <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                                <a
+                                                    href={photo.url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="p-1.5 bg-black/70 hover:bg-black text-zinc-300 hover:text-white rounded-lg border border-white/10 backdrop-blur-md transition-colors"
+                                                    title="Ver original"
+                                                >
+                                                    <ExternalLink size={12} />
+                                                </a>
+                                                <button
+                                                    onClick={() => handleDeleteWipPhoto(photo.id)}
+                                                    className="p-1.5 bg-red-950/80 hover:bg-red-900 text-red-300 hover:text-red-100 rounded-lg border border-red-500/30 backdrop-blur-md transition-colors"
+                                                    title="Excluir foto"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            </div>
+
+                                            {/* Caption & Date */}
+                                            <div className="relative z-10 p-2.5 text-left">
+                                                {photo.caption && (
+                                                    <p className="text-[11px] font-medium text-white line-clamp-2 mb-0.5 drop-shadow-sm">
+                                                        {photo.caption}
+                                                    </p>
+                                                )}
+                                                <p className="text-[9px] text-zinc-400">
+                                                    {new Date(photo.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-zinc-850 bg-zinc-900/30 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setWipModalSale(null)}
+                                className="bg-zinc-900 hover:bg-zinc-850 text-zinc-300 hover:text-white font-bold py-2 px-5 rounded-xl text-xs transition-all border border-zinc-800"
+                            >
+                                Concluir
+                            </button>
                         </div>
                     </div>
                 </div>

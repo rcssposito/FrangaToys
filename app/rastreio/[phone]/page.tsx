@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw, ShoppingBag, Copy, QrCode, Check } from 'lucide-react';
+import { ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw, ShoppingBag, Copy, QrCode, Check, Camera, X, Eye } from 'lucide-react';
 import { OrderTracker } from '@/components/OrderTracker';
 import Image from 'next/image';
 import imageKitLoader from '@/lib/image-loader';
@@ -227,6 +227,124 @@ function NfeWidget({ order }: { order: any }) {
     );
 }
 
+function WipGalleryWidget({ photos }: { photos: any[] }) {
+    const [selectedPhoto, setSelectedPhoto] = useState<any | null>(null);
+
+    if (!photos || photos.length === 0) return null;
+
+    return (
+        <div className="mt-6 bg-zinc-950/80 border border-zinc-800/80 rounded-3xl p-6 md:p-8 space-y-5 shadow-lg backdrop-blur-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                        <Camera size={20} />
+                    </div>
+                    <div>
+                        <h4 className="text-xs font-black uppercase tracking-widest text-zinc-300">
+                            Bastidores da Produção (Fotos Reais)
+                        </h4>
+                        <p className="text-[10px] text-zinc-500 font-medium">
+                            Acompanhe os estágios de impressão, limpeza e pintura artesanal no ateliê
+                        </p>
+                    </div>
+                </div>
+                <span className="self-start sm:self-auto bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                    {photos.length} {photos.length === 1 ? 'Foto' : 'Fotos'}
+                </span>
+            </div>
+
+            {/* Grid de Fotos */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {photos.map((photo: any, index: number) => (
+                    <div
+                        key={photo.id || index}
+                        onClick={() => setSelectedPhoto(photo)}
+                        className="group relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 cursor-pointer shadow-md"
+                    >
+                        <img
+                            src={photo.url}
+                            alt={photo.caption || 'Foto dos bastidores'}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 group-hover:opacity-95 transition-opacity" />
+                        
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 backdrop-blur-[2px]">
+                            <span className="p-2 bg-black/70 text-white rounded-full border border-white/20">
+                                <Eye size={16} />
+                            </span>
+                        </div>
+
+                        <div className="absolute bottom-0 inset-x-0 p-2 text-left z-10">
+                            {photo.caption && (
+                                <p className="text-[10px] font-semibold text-white line-clamp-1 drop-shadow-sm">
+                                    {photo.caption}
+                                </p>
+                            )}
+                            {photo.created_at && (
+                                <p className="text-[9px] text-zinc-400">
+                                    {new Date(photo.created_at).toLocaleDateString('pt-BR')}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Lightbox Modal */}
+            {selectedPhoto && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-in fade-in duration-200"
+                    onClick={() => setSelectedPhoto(null)}
+                >
+                    <div
+                        className="relative max-w-2xl w-full bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={() => setSelectedPhoto(null)}
+                            className="absolute top-4 right-4 z-20 w-9 h-9 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-300 hover:text-white rounded-full flex items-center justify-center transition-all"
+                        >
+                            <X size={16} />
+                        </button>
+
+                        <div className="bg-zinc-900 flex items-center justify-center p-4 max-h-[65vh] overflow-hidden">
+                            <img
+                                src={selectedPhoto.url}
+                                alt={selectedPhoto.caption || 'Foto dos bastidores'}
+                                className="max-h-[60vh] w-auto max-w-full object-contain rounded-xl"
+                            />
+                        </div>
+
+                        <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-zinc-950 border-t border-zinc-850">
+                            <div>
+                                {selectedPhoto.caption && (
+                                    <h5 className="text-sm font-bold text-white mb-0.5">
+                                        {selectedPhoto.caption}
+                                    </h5>
+                                )}
+                                {selectedPhoto.created_at && (
+                                    <p className="text-xs text-zinc-400">
+                                        Registrado em {new Date(selectedPhoto.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                )}
+                            </div>
+                            <a
+                                href={selectedPhoto.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white text-xs font-bold px-3.5 py-2 rounded-xl border border-zinc-700 transition-colors"
+                            >
+                                <ExternalLink size={13} />
+                                Abrir Original
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function CustomerDashboard() {
     const params = useParams();
     const router = useRouter();
@@ -353,6 +471,11 @@ export default function CustomerDashboard() {
                                     <div className="pt-4 border-t border-zinc-800/50">
                                         <OrderTracker status={order.status} />
                                     </div>
+
+                                    {/* Fotos dos Bastidores / WIP se houver */}
+                                    {order.wip_fotos && order.wip_fotos.length > 0 && (
+                                        <WipGalleryWidget photos={order.wip_fotos} />
+                                    )}
 
                                     {/* Seção de Nota Fiscal (NF-e) se disponível */}
                                     {order.chave_nfe && (

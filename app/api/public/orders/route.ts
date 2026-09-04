@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
             valor_frete,
             link_pagamento,
             chave_nfe,
+            wip_fotos,
             figuras (
                 nome,
                 imagem_url,
@@ -108,7 +109,8 @@ export async function GET(req: NextRequest) {
                 valor_frete: s.valor_frete,
                 link_pagamento: s.link_pagamento,
                 chave_nfe: s.chave_nfe,
-                link_danfe: linkDanfe
+                link_danfe: linkDanfe,
+                wip_fotos: Array.isArray(s.wip_fotos) ? s.wip_fotos : []
             };
         });
 

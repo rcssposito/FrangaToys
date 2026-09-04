@@ -53,6 +53,8 @@ export async function GET() {
 
             return {
                 ...s,
+                checklist: Array.isArray(s.checklist) ? s.checklist : [],
+                wip_fotos: Array.isArray(s.wip_fotos) ? s.wip_fotos : [],
                 horas_pintura: horasPintura,
                 valor_estimado_pintor: valorPinturaCalculado,
                 valor_pago_pintor: Number(s.valor_pago_pintor) || (s.pintura_freelancer ? valorPinturaCalculado : 0),
@@ -83,7 +85,8 @@ export async function PATCH(req: Request) {
             status_pagamento: newStatusPagamento, 
             valor_pago_parcial: newValorPagoParcial,
             action,
-            pintor_nome: customPintorNome
+            pintor_nome: customPintorNome,
+            checklist: newChecklist
         } = body;
 
         if (!id) {
@@ -172,8 +175,8 @@ export async function PATCH(req: Request) {
             }
         }
 
-        if (newStatus === undefined && newStatusPagamento === undefined && newValorPagoParcial === undefined) {
-            return NextResponse.json({ error: 'Status, Status de Pagamento ou Valor Pago Parcial é obrigatório' }, { status: 400 });
+        if (newStatus === undefined && newStatusPagamento === undefined && newValorPagoParcial === undefined && newChecklist === undefined) {
+            return NextResponse.json({ error: 'Status, Status de Pagamento, Valor Pago Parcial ou Checklist é obrigatório' }, { status: 400 });
         }
 
         // 2. Executar automação de resina se o status logístico mudou
@@ -250,6 +253,7 @@ export async function PATCH(req: Request) {
         if (newStatus !== undefined) updateFields.status = newStatus;
         if (calculatedStatusPagamento !== undefined) updateFields.status_pagamento = calculatedStatusPagamento;
         if (newValorPagoParcial !== undefined) updateFields.valor_pago_parcial = newValorPagoParcial;
+        if (newChecklist !== undefined) updateFields.checklist = newChecklist;
 
         const { data, error } = await supabase
             .from('vendas')
