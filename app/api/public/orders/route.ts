@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
             link_pagamento,
             chave_nfe,
             wip_fotos,
+            checklist,
             figuras (
                 nome,
                 imagem_url,
@@ -110,7 +111,8 @@ export async function GET(req: NextRequest) {
                 link_pagamento: s.link_pagamento,
                 chave_nfe: s.chave_nfe,
                 link_danfe: linkDanfe,
-                wip_fotos: Array.isArray(s.wip_fotos) ? s.wip_fotos : []
+                wip_fotos: Array.isArray(s.wip_fotos) ? s.wip_fotos : [],
+                checklist: Array.isArray(s.checklist) ? s.checklist : []
             };
         });
 

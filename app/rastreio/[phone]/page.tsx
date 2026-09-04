@@ -469,7 +469,7 @@ export default function CustomerDashboard() {
 
                                     {/* The Visual Tracker */}
                                     <div className="pt-4 border-t border-zinc-800/50">
-                                        <OrderTracker status={order.status} />
+                                        <OrderTracker status={order.status} checklist={order.checklist} />
                                     </div>
 
                                     {/* Fotos dos Bastidores / WIP se houver */}
