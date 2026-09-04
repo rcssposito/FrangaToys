@@ -15,7 +15,7 @@ const routeRoles: Record<string, string[]> = {
     '/admin/campaigns': ['admin', 'sales', 'pricing'],
     '/admin/sales': ['admin', 'sales', 'finance'],
     '/admin/sales/new': ['admin', 'sales', 'finance'],
-    '/admin/kanban': ['admin', 'sales', 'production'],
+    '/admin/kanban': ['admin', 'sales', 'production', 'painter'],
     '/admin/customers': ['admin', 'sales', 'finance'],
     '/admin/commissions': ['admin', 'finance', 'sales'],
     '/admin/studios': ['admin', 'pricing'],

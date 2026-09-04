@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle, Receipt, X, Download, Check } from 'lucide-react';
+import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle, Receipt, X, Download, Check, Maximize2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
@@ -16,6 +16,10 @@ interface Sale {
     status: string;
     quantidade: number;
     pintura_freelancer?: boolean;
+    pintor_nome?: string | null;
+    valor_pago_pintor?: number;
+    horas_pintura?: number;
+    valor_estimado_pintor?: number;
     observacao?: string;
     vendedor?: string;
     vendedor_nome?: string;
@@ -25,6 +29,7 @@ interface Sale {
         nome: string;
         imagem_url: string;
         studios: { nome: string } | { nome: string }[];
+        figuras_meta?: { horas_pintura?: number; resina_kg?: number } | { horas_pintura?: number; resina_kg?: number }[];
     };
     metodo_entrega?: string;
     valor_venda_final?: number;
@@ -90,8 +95,10 @@ export default function KanbanPage() {
     const [sales, setSales] = useState<Sale[]>([]);
     const [draggedSaleId, setDraggedSaleId] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
-    const { hasRole } = usePermission();
+    const { user, hasRole } = usePermission();
     const canSeeValues = hasRole('finance');
+    const isPainter = hasRole('painter') || hasRole('admin');
+    const currentUserName = user?.nome || user?.email || '';
     
     // States for inline partial payment editing
     const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
@@ -117,6 +124,24 @@ export default function KanbanPage() {
     const [manualNfeKey, setManualNfeKey] = useState('');
     const [nfeNumber, setNfeNumber] = useState<number | string>(2);
     const [nfeNumberAlreadyAssigned, setNfeNumberAlreadyAssigned] = useState(false);
+
+    // Expanded image modal state
+    const [expandedImage, setExpandedImage] = useState<{
+        url: string;
+        title: string;
+        studio?: string;
+        horasPintura?: number;
+        valorPintura?: number;
+    } | null>(null);
+
+    // Close expanded image on Escape key
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setExpandedImage(null);
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     // Auto-fill address details based on CEP in NF-e modal
     useEffect(() => {
@@ -588,6 +613,81 @@ export default function KanbanPage() {
         }
     };
 
+    const handleAssignPainter = async (saleId: number) => {
+        try {
+            const painterName = user?.nome || user?.email || 'Bianca M';
+            const res = await fetch('/api/admin/kanban', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: saleId,
+                    action: 'assign_painter',
+                    pintor_nome: painterName
+                })
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Erro ao assumir pintura');
+            }
+            const data = await res.json();
+            toast.success('Pintura assumida com sucesso!');
+            setSales(prev => prev.map(s => {
+                if (s.id === saleId) {
+                    return {
+                        ...s,
+                        pintor_nome: painterName,
+                        pintura_freelancer: true,
+                        valor_pago_pintor: data.sale?.valor_pago_pintor || s.valor_estimado_pintor || 0
+                    };
+                }
+                return s;
+            }));
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao assumir pintura');
+        }
+    };
+
+    const handleReleasePainter = async (saleId: number) => {
+        if (!confirm('Deseja realmente desvincular a pintura desta peça?')) return;
+        try {
+            const res = await fetch('/api/admin/kanban', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: saleId,
+                    action: 'release_painter'
+                })
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Erro ao liberar pintura');
+            }
+            toast.success('Pintura liberada!');
+            setSales(prev => prev.map(s => {
+                if (s.id === saleId) {
+                    return {
+                        ...s,
+                        pintor_nome: null,
+                        pintura_freelancer: false,
+                        valor_pago_pintor: 0
+                    };
+                }
+                return s;
+            }));
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao liberar pintura');
+        }
+    };
+
+    const myPaintings = sales.filter(s => {
+        if (!s.pintor_nome) return false;
+        const p = s.pintor_nome.toLowerCase();
+        const u = currentUserName.toLowerCase();
+        return p === u || (u && (p.includes(u) || u.includes(p)));
+    });
+    const myPaintingsCount = myPaintings.length;
+    const myPaintingsTotal = myPaintings.reduce((sum, s) => sum + (Number(s.valor_pago_pintor) || Number(s.valor_estimado_pintor) || 0), 0);
+
     return (
         <div className="min-h-screen bg-black text-white p-4 md:p-8 flex flex-col transition-colors duration-300 relative overflow-hidden">
             {/* Background UV/Water Blobs for Scifi Theme */}
@@ -596,17 +696,35 @@ export default function KanbanPage() {
                 <div className="absolute top-[40%] right-[-10%] w-[30%] h-[30%] bg-indigo-500 rounded-full blur-[150px] mix-blend-screen" />
             </div>
 
-            <div className="relative z-10 flex items-center gap-4 mb-8">
-                <div className="p-3.5 bg-zinc-900 border border-zinc-800 text-blue-500 rounded-2xl shadow-[0_0_15px_rgba(59,130,246,0.2)]">
-                    <KanbanSquare size={32} />
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <div className="flex items-center gap-4">
+                    <div className="p-3.5 bg-zinc-900 border border-zinc-800 text-blue-500 rounded-2xl shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+                        <KanbanSquare size={32} />
+                    </div>
+                    <div>
+                        <h1 className="text-3xl font-black tracking-tight text-zinc-100 flex items-center gap-3">
+                            Linha de Produção
+                            <span className="text-[10px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-400 border border-blue-500/20 px-3 py-1 rounded-full">Ativa</span>
+                        </h1>
+                        <p className="text-zinc-500 text-sm font-medium mt-1">Gerencie a logística de impressão, pós-cura e finalização dos modelos no laboratório.</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 className="text-3xl font-black tracking-tight text-zinc-100 flex items-center gap-3">
-                        Linha de Produção
-                        <span className="text-[10px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-400 border border-blue-500/20 px-3 py-1 rounded-full">Ativa</span>
-                    </h1>
-                    <p className="text-zinc-500 text-sm font-medium mt-1">Gerencie a logística de impressão, pós-cura e finalização dos modelos no laboratório.</p>
-                </div>
+
+                {isPainter && (
+                    <div className="flex items-center gap-3.5 bg-purple-950/40 border border-purple-500/30 px-5 py-3 rounded-2xl backdrop-blur-md shadow-lg shadow-purple-950/20 self-start md:self-auto">
+                        <div className="p-2.5 bg-purple-500/20 text-purple-400 rounded-xl border border-purple-500/30">
+                            <Paintbrush size={22} />
+                        </div>
+                        <div>
+                            <div className="text-[10px] font-black uppercase tracking-wider text-purple-300">Minhas Pinturas Ativas</div>
+                            <div className="text-sm font-black text-white flex items-center gap-2">
+                                <span>{myPaintingsCount} {myPaintingsCount === 1 ? 'peça' : 'peças'}</span>
+                                <span className="text-zinc-500">•</span>
+                                <span className="text-emerald-400">R$ {myPaintingsTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} a receber</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {loading ? (
@@ -752,20 +870,104 @@ export default function KanbanPage() {
                                                     <div className="flex-1 flex flex-col justify-end min-w-0 gap-2">
                                                         {/* Product & Client info on glass panel */}
                                                         <div className="bg-zinc-950/70 backdrop-blur-md border border-zinc-900/60 rounded-xl p-3 shadow-md group-hover:bg-zinc-950/85 group-hover:border-zinc-800/85 transition-all duration-300">
-                                                            <h4 className={`text-[13px] font-black text-white leading-snug tracking-tight mb-2 transition-colors ${accent.titleHover}`}>
-                                                                {task.figuras?.nome || 'Item Desconhecido'}
-                                                            </h4>
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (task.figuras?.imagem_url) {
+                                                                        const studioName = Array.isArray(task.figuras.studios)
+                                                                            ? task.figuras.studios[0]?.nome
+                                                                            : task.figuras.studios?.nome;
+                                                                        setExpandedImage({
+                                                                            url: task.figuras.imagem_url,
+                                                                            title: task.figuras?.nome || 'Figura',
+                                                                            studio: studioName,
+                                                                            horasPintura: Number(task.horas_pintura) || 0,
+                                                                            valorPintura: Number(task.valor_pago_pintor) || Number(task.valor_estimado_pintor) || 0
+                                                                        });
+                                                                    }
+                                                                }}
+                                                                className={`text-left text-[13px] font-black text-white leading-snug tracking-tight mb-2 transition-all cursor-pointer hover:underline flex items-center justify-between gap-1.5 w-full group/name ${accent.titleHover}`}
+                                                                title="Clique para expandir a imagem da figura"
+                                                            >
+                                                                <span className="truncate">{task.figuras?.nome || 'Item Desconhecido'}</span>
+                                                                {task.figuras?.imagem_url && (
+                                                                    <Maximize2 size={12} className="text-zinc-500 group-hover/name:text-white shrink-0 opacity-70 group-hover/name:opacity-100 transition-all" />
+                                                                )}
+                                                            </button>
                                                             
                                                             <div className="text-[11.5px] text-zinc-400 font-semibold flex items-center gap-1.5">
                                                                 <span className="text-[8px] font-black uppercase tracking-wider text-zinc-500">Cliente</span>
                                                                 <span className="text-zinc-200 font-black tracking-tight">{task.cliente_nome}</span>
                                                             </div>
 
-                                                            {task.pintura_freelancer && (
-                                                                <span className="inline-flex items-center gap-1 text-[8px] font-black px-1.5 py-0.5 bg-purple-500/10 border border-purple-500/20 rounded text-purple-400 mt-2 w-fit shadow-inner">
-                                                                    <Paintbrush size={8} className="shrink-0" /> PINTURA TERCEIRIZADA
-                                                                </span>
-                                                            )}
+                                                            {/* Pintura info e ação rápida */}
+                                                            {(() => {
+                                                                const valorPintura = Number(task.valor_pago_pintor) || Number(task.valor_estimado_pintor) || 0;
+                                                                const horasPintura = Number(task.horas_pintura) || 0;
+                                                                const hasPainter = Boolean(task.pintor_nome);
+                                                                const isAssignedToMe = Boolean(
+                                                                    hasPainter && currentUserName && (
+                                                                        task.pintor_nome?.toLowerCase() === currentUserName.toLowerCase() ||
+                                                                        currentUserName.toLowerCase().includes(task.pintor_nome!.toLowerCase()) ||
+                                                                        task.pintor_nome!.toLowerCase().includes(currentUserName.toLowerCase())
+                                                                    )
+                                                                );
+
+                                                                if (hasPainter) {
+                                                                    return (
+                                                                        <div className="flex items-center justify-between gap-1.5 mt-2.5 pt-2 border-t border-zinc-800/60">
+                                                                            <div className="flex items-center gap-1.5 text-[9px] font-black text-purple-300 bg-purple-950/60 border border-purple-500/30 px-2 py-1 rounded-lg backdrop-blur-sm shadow-inner">
+                                                                                <Paintbrush size={10} className="text-purple-400 shrink-0" />
+                                                                                <span className="truncate max-w-[110px]">@{task.pintor_nome}</span>
+                                                                                {valorPintura > 0 && (
+                                                                                    <span className="text-emerald-400 font-bold ml-0.5">R$ {valorPintura.toFixed(2)}</span>
+                                                                                )}
+                                                                            </div>
+                                                                            {(isAssignedToMe || hasRole('admin')) && (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleReleasePainter(task.id);
+                                                                                    }}
+                                                                                    title="Liberar pintura desta peça"
+                                                                                    className="text-[8px] font-bold text-zinc-500 hover:text-red-400 hover:underline transition-colors px-1 py-0.5"
+                                                                                >
+                                                                                    Liberar
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                }
+
+                                                                return (
+                                                                    <div className="flex items-center justify-between gap-1.5 mt-2.5 pt-2 border-t border-zinc-800/60">
+                                                                        <div className="flex items-center gap-1 text-[9px] font-black text-zinc-400">
+                                                                            <Paintbrush size={10} className="text-zinc-500 shrink-0" />
+                                                                            {valorPintura > 0 ? (
+                                                                                <span>Pintura: <strong className="text-emerald-400 font-black">R$ {valorPintura.toFixed(2)}</strong> {horasPintura > 0 && <span className="text-zinc-500 font-normal">({horasPintura}h)</span>}</span>
+                                                                            ) : (
+                                                                                <span className="text-zinc-500">Pintura s/ horas</span>
+                                                                            )}
+                                                                        </div>
+                                                                        {isPainter && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleAssignPainter(task.id);
+                                                                                }}
+                                                                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-200 active:scale-95 shadow-md shadow-purple-900/30 hover:shadow-purple-700/50 shrink-0"
+                                                                                title="Assumir a pintura desta peça para mim"
+                                                                            >
+                                                                                <Paintbrush size={9} />
+                                                                                Puxar p/ mim
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })()}
                                                         </div>
 
                                                         {/* Observation block at the bottom */}
@@ -1178,6 +1380,86 @@ export default function KanbanPage() {
                                 </div>
                             </form>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Imagem Expandida (Lightbox) */}
+            {expandedImage && (
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/90 backdrop-blur-xl animate-in fade-in duration-200"
+                    onClick={() => setExpandedImage(null)}
+                >
+                    <div 
+                        className="relative max-w-4xl w-full bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl shadow-black/90 flex flex-col md:flex-row max-h-[90vh]"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Close button */}
+                        <button
+                            onClick={() => setExpandedImage(null)}
+                            className="absolute top-4 right-4 z-20 w-10 h-10 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-300 hover:text-white rounded-full flex items-center justify-center transition-all backdrop-blur-md shadow-lg"
+                            title="Fechar (Esc)"
+                        >
+                            <X size={18} />
+                        </button>
+
+                        {/* Imagem em destaque */}
+                        <div className="flex-1 bg-zinc-900/40 flex items-center justify-center p-4 md:p-6 overflow-hidden min-h-[300px] md:min-h-[500px]">
+                            <img
+                                src={expandedImage.url.split('?')[0]}
+                                alt={expandedImage.title}
+                                className="max-h-[60vh] md:max-h-[78vh] w-auto max-w-full object-contain rounded-2xl shadow-xl transition-all"
+                            />
+                        </div>
+
+                        {/* Painel lateral de detalhes */}
+                        <div className="w-full md:w-80 p-6 flex flex-col justify-between border-t md:border-t-0 md:border-l border-zinc-850 bg-zinc-950">
+                            <div className="space-y-4">
+                                {expandedImage.studio && (
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-md inline-block">
+                                        {expandedImage.studio}
+                                    </span>
+                                )}
+
+                                <h3 className="text-xl font-black text-white leading-tight">
+                                    {expandedImage.title}
+                                </h3>
+
+                                {(expandedImage.valorPintura !== undefined && expandedImage.valorPintura > 0) && (
+                                    <div className="p-3.5 bg-purple-950/40 border border-purple-500/30 rounded-2xl">
+                                        <div className="flex items-center gap-2 text-[10px] font-black text-purple-300 uppercase tracking-wider mb-1">
+                                            <Paintbrush size={13} className="text-purple-400" />
+                                            Remuneração da Pintura
+                                        </div>
+                                        <div className="text-lg font-black text-emerald-400">
+                                            R$ {expandedImage.valorPintura.toFixed(2)}
+                                            {expandedImage.horasPintura && expandedImage.horasPintura > 0 && (
+                                                <span className="text-xs font-normal text-zinc-400 ml-1.5">({expandedImage.horasPintura}h)</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="pt-6 mt-4 border-t border-zinc-900 flex flex-col gap-2">
+                                <a
+                                    href={expandedImage.url.split('?')[0]}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="w-full bg-zinc-900 hover:bg-zinc-850 text-zinc-300 hover:text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all border border-zinc-800 text-center"
+                                >
+                                    <ExternalLink size={14} />
+                                    Abrir Imagem em Alta Resolução
+                                </a>
+                                <button
+                                    type="button"
+                                    onClick={() => setExpandedImage(null)}
+                                    className="w-full bg-zinc-950 hover:bg-zinc-900 text-zinc-400 font-bold py-2 px-4 rounded-xl text-xs transition-all text-center"
+                                >
+                                    Fechar
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

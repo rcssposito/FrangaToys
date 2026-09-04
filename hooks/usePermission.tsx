@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 interface User {
     id: number;
     email: string;
+    nome?: string;
     roles?: string[];
 }
 

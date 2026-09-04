@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 export interface AdminSession {
     id: number;
     email: string;
+    nome?: string;
     roles?: string[];
 }
 
@@ -20,7 +21,7 @@ export const getServerSession = async (): Promise<AdminSession | null> => {
 
         const { data: adminUser } = await supabaseAdmin
             .from('admin_users')
-            .select('id, email, roles')
+            .select('id, email, nome, roles')
             .eq('email', user.email)
             .single();
 

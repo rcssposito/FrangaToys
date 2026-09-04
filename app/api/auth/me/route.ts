@@ -15,7 +15,7 @@ export async function GET(req: Request) {
         // Fetch roles from admin_users table using Service Role (bypass RLS)
         const { data: adminUser, error: dbError } = await supabaseAdmin
             .from('admin_users')
-            .select('id, email, roles')
+            .select('id, email, nome, roles')
             .eq('email', user.email)
             .single();
 
@@ -29,6 +29,7 @@ export async function GET(req: Request) {
                 id: adminUser.id, // Keep numeric ID for compatibility
                 auth_id: user.id, // Supabase UUID
                 email: adminUser.email,
+                nome: adminUser.nome,
                 roles: adminUser.roles || []
             }
         });

@@ -3,17 +3,30 @@ import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 // LER TAREFAS DO KANBAN
-// Retorna todas as vendas ativas (Não concluídas)
+// Retorna todas as vendas ativas (Não concluídas) com horas e remuneração de pintura
 export async function GET() {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'sales', 'production']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+        const sessionOrResponse = await requireRoles(['admin', 'sales', 'production', 'painter']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+
+        // Fetch pricing params to calculate painter remuneration
+        const { data: pricing } = await supabase
+            .from('pricing_params')
+            .select('custo_h_pintura')
+            .eq('id', 1)
+            .single();
+        const custoHPintura = Number(pricing?.custo_h_pintura) || 50;
 
         const { data: kanbanData, error } = await supabase
             .from('vendas')
             .select(`
                 *,
-                figuras ( nome, imagem_url, studios ( nome ) )
+                figuras ( 
+                    nome, 
+                    imagem_url, 
+                    studios ( nome ),
+                    figuras_meta ( horas_pintura, resina_kg )
+                )
             `)
             .neq('status', 'Concluída') // Esconde as já finalizadas
             .order('data_venda', { ascending: true }); // Mais antigas primeiro
@@ -31,13 +44,24 @@ export async function GET() {
             return acc;
         }, {});
 
-        const formatted = kanbanData.map(s => ({
-            ...s,
-            vendedor_nome: (() => {
-                const name = userMap[s.vendedor] || userMap[(s.vendedor || '').toLowerCase()] || 'Ateliê';
-                return name.toLowerCase().includes('rodrigo') ? '@frangatoys' : name;
-            })()
-        }));
+        const formatted = kanbanData.map(s => {
+            const figure = Array.isArray(s.figuras) ? s.figuras[0] : s.figuras;
+            const meta = Array.isArray(figure?.figuras_meta) ? figure?.figuras_meta[0] : figure?.figuras_meta;
+            const horasPintura = Number(meta?.horas_pintura) || 0;
+            const quantidade = Number(s.quantidade) || 1;
+            const valorPinturaCalculado = Math.ceil(horasPintura * custoHPintura) * quantidade;
+
+            return {
+                ...s,
+                horas_pintura: horasPintura,
+                valor_estimado_pintor: valorPinturaCalculado,
+                valor_pago_pintor: Number(s.valor_pago_pintor) || (s.pintura_freelancer ? valorPinturaCalculado : 0),
+                vendedor_nome: (() => {
+                    const name = userMap[s.vendedor] || userMap[(s.vendedor || '').toLowerCase()] || 'Ateliê';
+                    return name.toLowerCase().includes('rodrigo') ? '@frangatoys' : name;
+                })()
+            };
+        });
 
         return NextResponse.json(formatted);
     } catch (error: any) {
@@ -45,23 +69,114 @@ export async function GET() {
     }
 }
 
-// ATUALIZAR STATUS NO KANBAN COM AUTOMAÇÃO DE RESINA
+// ATUALIZAR STATUS NO KANBAN COM AUTOMAÇÃO DE RESINA E ATRIBUIÇÃO DE PINTOR
 export async function PATCH(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'sales', 'production']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+        const sessionOrResponse = await requireRoles(['admin', 'sales', 'production', 'painter']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+        const session = sessionOrResponse;
 
-        const { id, status: newStatus, status_pagamento: newStatusPagamento, valor_pago_parcial: newValorPagoParcial } = await req.json();
+        const body = await req.json();
+        const { 
+            id, 
+            status: newStatus, 
+            status_pagamento: newStatusPagamento, 
+            valor_pago_parcial: newValorPagoParcial,
+            action,
+            pintor_nome: customPintorNome
+        } = body;
 
         if (!id) {
             return NextResponse.json({ error: 'ID é obrigatório' }, { status: 400 });
+        }
+
+        // 1. AÇÃO ESPECÍFICA: ASSUMIR OU LIBERAR PINTURA
+        if (action === 'assign_painter' || action === 'release_painter') {
+            const { data: sale, error: fetchError } = await supabase
+                .from('vendas')
+                .select(`
+                    id,
+                    quantidade,
+                    valor_venda_final,
+                    custo_producao_snapshot,
+                    comissao_vendedor,
+                    valor_pago_pintor,
+                    pintor_nome,
+                    figuras (
+                        figuras_meta ( horas_pintura )
+                    )
+                `)
+                .eq('id', id)
+                .single();
+
+            if (fetchError || !sale) throw new Error('Venda não encontrada');
+
+            if (action === 'assign_painter') {
+                const targetPintor = (customPintorNome || session.nome || session.email || 'Pintor').trim();
+                
+                // Buscar custo_h_pintura
+                const { data: pricing } = await supabase
+                    .from('pricing_params')
+                    .select('custo_h_pintura')
+                    .eq('id', 1)
+                    .single();
+                const custoHPintura = Number(pricing?.custo_h_pintura) || 50;
+
+                const figure = Array.isArray(sale.figuras) ? sale.figuras[0] : sale.figuras;
+                const meta = Array.isArray(figure?.figuras_meta) ? figure?.figuras_meta[0] : figure?.figuras_meta;
+                const horasPintura = Number(meta?.horas_pintura) || 0;
+                const quantidade = Number(sale.quantidade) || 1;
+                const valorPagoPintor = Math.ceil(horasPintura * custoHPintura) * quantidade;
+
+                const valorVendaFinal = Number(sale.valor_venda_final) || 0;
+                const custoProducao = Number(sale.custo_producao_snapshot) || 0;
+                const comissao = Number(sale.comissao_vendedor) || 0;
+                const novoLucroReal = valorVendaFinal - custoProducao - valorPagoPintor - comissao;
+
+                const { data: updatedSale, error: updateError } = await supabase
+                    .from('vendas')
+                    .update({
+                        pintor_nome: targetPintor,
+                        pintura_freelancer: true,
+                        valor_pago_pintor: valorPagoPintor,
+                        lucro_real: novoLucroReal
+                    })
+                    .eq('id', id)
+                    .select()
+                    .single();
+
+                if (updateError) throw updateError;
+                return NextResponse.json({ success: true, sale: updatedSale });
+            }
+
+            if (action === 'release_painter') {
+                const valorVendaFinal = Number(sale.valor_venda_final) || 0;
+                const custoProducao = Number(sale.custo_producao_snapshot) || 0;
+                const comissao = Number(sale.comissao_vendedor) || 0;
+                const novoLucroReal = valorVendaFinal - custoProducao - comissao;
+
+                const { data: updatedSale, error: updateError } = await supabase
+                    .from('vendas')
+                    .update({
+                        pintor_nome: null,
+                        pintura_freelancer: false,
+                        valor_pago_pintor: 0,
+                        lucro_real: novoLucroReal
+                    })
+                    .eq('id', id)
+                    .select()
+                    .single();
+
+                if (updateError) throw updateError;
+                return NextResponse.json({ success: true, sale: updatedSale });
+            }
         }
 
         if (newStatus === undefined && newStatusPagamento === undefined && newValorPagoParcial === undefined) {
             return NextResponse.json({ error: 'Status, Status de Pagamento ou Valor Pago Parcial é obrigatório' }, { status: 400 });
         }
 
-        // 1. Executar automação de resina se o status logístico mudou
+        // 2. Executar automação de resina se o status logístico mudou
         if (newStatus) {
             // Buscar status atual e peso de resina para calcular automação
             const { data: sale, error: fetchError } = await supabase
@@ -74,19 +189,17 @@ export async function PATCH(req: Request) {
 
             const oldStatus = sale.status;
             const figure = Array.isArray(sale.figuras) ? sale.figuras[0] : sale.figuras;
-            const meta = Array.isArray(figure?.figuras_meta) ? figure.figuras_meta[0] : figure?.figuras_meta;
+            const meta = Array.isArray(figure?.figuras_meta) ? figure?.figuras_meta[0] : figure?.figuras_meta;
             const resinaWeight = Number(meta?.resina_kg) || 0;
             const totalUsed = resinaWeight * (sale.quantidade || 1);
 
-            // 2. Definir lógica de consumo
-            // Status que indicam que a resina já foi gasta (Pós-Impressão)
+            // Definir lógica de consumo (Pós-Impressão)
             const consumedStatuses = ['Lavagem e Cura', 'Pintura Secagem', 'Pronto p/ Entrega', 'Concluída'];
             const wasConsumed = consumedStatuses.includes(oldStatus);
             const isConsumedNow = consumedStatuses.includes(newStatus);
 
-            // 3. Executar Automação de Estoque
+            // Executar Automação de Estoque
             if (totalUsed > 0 && wasConsumed !== isConsumedNow) {
-                // Buscar estoque atual
                 const { data: settings } = await supabase
                     .from('pricing_params')
                     .select('estoque_resina_kg')
@@ -97,14 +210,11 @@ export async function PATCH(req: Request) {
                 let newStock = currentStock;
 
                 if (!wasConsumed && isConsumedNow) {
-                    // MOVEU PARA FRENTE: Gasta resina
                     newStock = Math.max(0, currentStock - totalUsed);
                 } else if (wasConsumed && !isConsumedNow) {
-                    // MOVEU PARA TRÁS: Estorna resina
                     newStock = currentStock + totalUsed;
                 }
 
-                // Atualizar estoque
                 await supabase
                     .from('pricing_params')
                     .update({ estoque_resina_kg: newStock })
@@ -115,7 +225,6 @@ export async function PATCH(req: Request) {
         let calculatedStatusPagamento = newStatusPagamento;
 
         if (newValorPagoParcial !== undefined) {
-            // Buscar valor total da venda para calcular o status de pagamento
             const { data: saleData, error: saleError } = await supabase
                 .from('vendas')
                 .select('valor_venda_final')
@@ -136,7 +245,7 @@ export async function PATCH(req: Request) {
             }
         }
 
-        // 4. Salvar novas propriedades da venda
+        // 3. Salvar novas propriedades da venda
         const updateFields: any = {};
         if (newStatus !== undefined) updateFields.status = newStatus;
         if (calculatedStatusPagamento !== undefined) updateFields.status_pagamento = calculatedStatusPagamento;

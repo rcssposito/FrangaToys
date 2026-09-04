@@ -73,7 +73,7 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             name: 'Kanban',
             href: '/admin/kanban',
             icon: KanbanSquare,
-            roles: ['admin', 'sales', 'production']
+            roles: ['admin', 'sales', 'production', 'painter']
         },
         {
             name: 'Clientes',
