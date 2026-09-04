@@ -52,13 +52,13 @@ export async function GET() {
 // ATUALIZAR CONFIGURAÇÕES
 export async function PUT(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+        const sessionOrResponse = await requireRoles(['admin']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();
 
         // Validação básica
-        if (body.margem_basica < 1 || body.margem_premium < 1 || (body.margem_pobre && body.margem_pobre < 1)) {
+        if (body.margem_basica < 1 || (body.margem_premium && body.margem_premium < 1) || (body.margem_pobre && body.margem_pobre < 1)) {
             return NextResponse.json({ error: 'Margens devem ser maiores que 1.0' }, { status: 400 });
         }
 

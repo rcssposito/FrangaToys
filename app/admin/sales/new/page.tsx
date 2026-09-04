@@ -15,7 +15,6 @@ interface CatalogItem {
     studio: string;
     "Estilizado (R$)": number;
     "Colorido (R$)": number;
-    "2D (R$)": number;
     resina_kg: number;
     horas_pintura: number;
     custo_producao: number;
@@ -27,7 +26,7 @@ interface CatalogItem {
 interface CartItem extends CatalogItem {
     quantidade: number;
     valor_final: number; // Valor Unitário selecionado (já com markup se for crédito)
-    selectedTier: 'estilizado' | 'colorido' | '2D';
+    selectedTier: 'estilizado' | 'colorido';
     altura_cm?: number;
     largura_cm?: number;
     profundidade_cm?: number;
@@ -260,8 +259,7 @@ function NewSaleContent() {
         const taxaCard = settings?.taxa_cartao || 1.15;
         
         setCart(prev => prev.map(i => {
-            const tierPrice = i.selectedTier === 'estilizado' ? i["Estilizado (R$)"] : 
-                             i.selectedTier === 'colorido' ? i["Colorido (R$)"] : i["2D (R$)"];
+            const tierPrice = i.selectedTier === 'estilizado' ? i["Estilizado (R$)"] : i["Colorido (R$)"];
             const unitPrice = paymentMethod === 'credit' ? Number(((tierPrice || 0) * taxaCard).toFixed(2)) : (tierPrice || 0);
             return { ...i, valor_final: Number((unitPrice * i.quantidade).toFixed(2)) };
         }));
@@ -277,8 +275,7 @@ function NewSaleContent() {
         setCart(cart.map(i => {
             if (i.id === id) {
                 const taxaCard = settings?.taxa_cartao || 1.15;
-                const tierPrice = i.selectedTier === 'estilizado' ? i["Estilizado (R$)"] : 
-                                 i.selectedTier === 'colorido' ? i["Colorido (R$)"] : i["2D (R$)"];
+                const tierPrice = i.selectedTier === 'estilizado' ? i["Estilizado (R$)"] : i["Colorido (R$)"];
                 const unitPrice = paymentMethod === 'credit' ? Number(((tierPrice || 0) * taxaCard).toFixed(2)) : (tierPrice || 0);
                 return { ...i, quantidade: qty, valor_final: Number((unitPrice * qty).toFixed(2)) };
             }
@@ -287,12 +284,11 @@ function NewSaleContent() {
         setShippingQuotes([]);
     };
 
-    const updateItemTier = (id: number, tier: 'estilizado' | 'colorido' | '2D') => {
+    const updateItemTier = (id: number, tier: 'estilizado' | 'colorido') => {
         setCart(cart.map(i => {
             if (i.id === id) {
                 const taxaCard = settings?.taxa_cartao || 1.15;
-                const tierPrice = tier === 'estilizado' ? i["Estilizado (R$)"] : 
-                                 tier === 'colorido' ? i["Colorido (R$)"] : i["2D (R$)"];
+                const tierPrice = tier === 'estilizado' ? i["Estilizado (R$)"] : i["Colorido (R$)"];
                 const unitPrice = paymentMethod === 'credit' ? Number(((tierPrice || 0) * taxaCard).toFixed(2)) : (tierPrice || 0);
                 return { ...i, selectedTier: tier, valor_final: Number((unitPrice * i.quantidade).toFixed(2)) };
             }
@@ -826,8 +822,7 @@ function NewSaleContent() {
                                 ) : (
                                     cart.map((item) => {
                                         const taxaMarkup = settings?.taxa_cartao || 1.15;
-                                        const tierKey = item.selectedTier === 'estilizado' ? "Estilizado (R$)" : 
-                                                         item.selectedTier === 'colorido' ? "Colorido (R$)" : "2D (R$)";
+                                        const tierKey = item.selectedTier === 'estilizado' ? "Estilizado (R$)" : "Colorido (R$)";
                                         const baseTierPrice = item[tierKey] || 0;
                                         const isOutros = item.studio === 'Outros';
                                         

@@ -99,8 +99,7 @@ export async function GET(req: Request) {
                     preco_fixo_campanha: meta.preco_fixo_campanha,
                     desconto_campanha: meta.desconto_campanha,
                     "Estilizado (R$)": estilizadoFinal,
-                    "Colorido (R$)": roundTo5(custoBase * (settings.margem_basica || 1.30)),
-                    "2D (R$)": roundTo5(custoBase * (settings.margem_premium || 1.60))
+                    "Colorido (R$)": roundTo5(custoBase * (settings.margem_basica || 1.30))
                 };
             });
 
@@ -182,8 +181,7 @@ export async function GET(req: Request) {
                 preco_fixo_campanha: meta.preco_fixo_campanha,
                 desconto_campanha: meta.desconto_campanha,
                 "Estilizado (R$)": estilizadoFinal,
-                "Colorido (R$)": roundTo5(custoBase * (settings.margem_basica || 1.30)),
-                "2D (R$)": roundTo5(custoBase * (settings.margem_premium || 1.60))
+                "Colorido (R$)": roundTo5(custoBase * (settings.margem_basica || 1.30))
             };
         });
 

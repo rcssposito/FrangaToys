@@ -124,26 +124,19 @@ const FigureMobileCard = ({
             </div>
 
             {/* Tabela de Preços Renovada (Visual Dashboard) */}
-            <div className="grid grid-cols-3 gap-1 bg-zinc-950/40 rounded-xl p-3 border border-zinc-900/60 shadow-inner">
+            <div className="grid grid-cols-2 gap-2 bg-zinc-950/40 rounded-xl p-3 border border-zinc-900/60 shadow-inner">
                 {/* Estilizado */}
-                <div className="flex flex-col items-center justify-between text-center py-0.5 border-r border-zinc-900/60">
+                <div className="flex flex-col items-center justify-between text-center py-0.5 border-r border-zinc-900/60 pr-2">
                     <span className="text-[9px] font-black tracking-widest text-zinc-500 uppercase">Estilizado</span>
                     <span className="text-xs font-black text-emerald-400 mt-1">R$ {prices.basic}</span>
                     <span className="text-[9px] font-bold text-zinc-500/70">Cartão R$ {prices.basicCredito}</span>
                 </div>
                 
                 {/* Colorido */}
-                <div className="flex flex-col items-center justify-between text-center py-0.5 border-r border-zinc-900/60">
+                <div className="flex flex-col items-center justify-between text-center py-0.5 pl-2">
                     <span className="text-[9px] font-black tracking-widest text-zinc-500 uppercase">Colorido</span>
                     <span className="text-xs font-black text-fuchsia-400 mt-1">R$ {prices.premium}</span>
                     <span className="text-[9px] font-bold text-zinc-500/70">Cartão R$ {prices.premiumCredito}</span>
-                </div>
-
-                {/* 2D */}
-                <div className="flex flex-col items-center justify-between text-center py-0.5">
-                    <span className="text-[9px] font-black tracking-widest text-zinc-500 uppercase">Estátua 2D</span>
-                    <span className="text-xs font-black text-orange-500 mt-1">R$ {prices.twoD || 0}</span>
-                    <span className="text-[9px] font-bold text-zinc-500/70">Cartão R$ {prices.twoDCredito || 0}</span>
                 </div>
             </div>
 
@@ -756,7 +749,7 @@ function DataGridContent() {
     };
 
     const calculatePrices = (f: Figure) => {
-        if (!settings) return { basic: 0, premium: 0, twoD: 0, basicCredito: 0, premiumCredito: 0, twoDCredito: 0 };
+        if (!settings) return { basic: 0, premium: 0, basicCredito: 0, premiumCredito: 0 };
 
         const h_imp = Number(f.horas_impressao);
         const res_kg = Number(f.resina_kg);
@@ -781,10 +774,8 @@ function DataGridContent() {
         return {
             basic: roundTo5(custoBaseEstilizado * mEstilizado),
             premium: roundTo5(custoBase * mColorido),
-            twoD: 0,
             basicCredito: roundTo5(custoBaseEstilizado * mEstilizado * (settings.taxa_cartao || 1.15)),
-            premiumCredito: roundTo5(custoBase * mColorido * (settings.taxa_cartao || 1.15)),
-            twoDCredito: 0
+            premiumCredito: roundTo5(custoBase * mColorido * (settings.taxa_cartao || 1.15))
         };
     };
 
