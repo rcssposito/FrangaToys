@@ -89,7 +89,7 @@ export default function StudiosPage() {
 
     const fetchPatreon = async () => {
         try {
-            const res = await fetch('/api/admin/integrations/patreon/licenses');
+            const res = await fetch('/api/admin/integrations/patreon/licenses', { cache: 'no-store' });
             if (res.ok) {
                 const data = await res.json();
                 setPatreonData(data);
@@ -647,7 +647,7 @@ export default function StudiosPage() {
                                                             const updated = {
                                                                 ...studio,
                                                                 social_url: studio.social_url || patreonMembership.campaignUrl || '',
-                                                                custo_mensal: (studio.custo_mensal && studio.custo_mensal > 0) ? studio.custo_mensal : patreonMembership.amountBRL
+                                                                custo_mensal: patreonMembership.amountBRL
                                                             };
                                                             setStudios(prev => prev.map(s => s.id === studio.id ? updated : s));
                                                             handleUpdate(updated);

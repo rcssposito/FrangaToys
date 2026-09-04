@@ -3,6 +3,8 @@ import { requireRoles } from '@/lib/server-auth';
 import { fetchPatreonMemberships } from '@/lib/integrations/patreon';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
     try {
         const sessionOrResponse = await requireRoles(['admin', 'pricing']);
@@ -31,8 +33,9 @@ export async function GET() {
                 s.norm && (s.norm.includes(normCamp) || normCamp.includes(s.norm))
             );
 
-            const dbCost = Number(matchedStudio?.custo_mensal);
-            const finalBRL = (dbCost && dbCost > 0) ? dbCost : m.amountBRL;
+            const isPatreonActive = m.patronStatus === 'active_patron' && (m.amountCents || 0) > 0;
+            // Para estúdios com Patreon ativo, o valor ao vivo do Patreon deve prevalecer (Patreon Sync)
+            const finalBRL = (isPatreonActive && m.amountBRL > 0) ? m.amountBRL : (Number(matchedStudio?.custo_mensal) || 0);
             const finalFormattedBRL = `R$ ${finalBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
             return {
