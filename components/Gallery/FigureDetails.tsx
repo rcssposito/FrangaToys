@@ -392,7 +392,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                             </button>
                         ) : (
                             <a
-                                href={`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5511988781670'}&text=${encodeURIComponent(`Olá! Tenho interesse na figura ${figure.nome} (${selectedFinish}). Poderia me passar mais informações?`)}`}
+                                href={`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ''}&text=${encodeURIComponent(`Olá! Tenho interesse na figura ${figure.nome} (${selectedFinish}). Poderia me passar mais informações?`)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex-1 flex items-center justify-center gap-3 w-full px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-500 shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-[0.98] relative z-10 bg-emerald-600 text-white hover:bg-emerald-500"

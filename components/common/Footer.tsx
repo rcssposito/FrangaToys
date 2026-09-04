@@ -14,8 +14,19 @@ export default function Footer() {
 
   const currentYear = new Date().getFullYear();
   const cnpj = process.env.NEXT_PUBLIC_CNPJ || '67.566.499/0001-70';
-  const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5511988781670';
+  const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '';
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=Ol%C3%A1!%20Gostaria%20de%20saber%20mais%20sobre%20as%20figures%20personalizadas.`;
+
+  const formatPhone = (phone: string) => {
+    const digits = phone.replace(/\D/g, '').replace(/^55/, '');
+    if (digits.length === 11) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    }
+    if (digits.length === 10) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+    return phone;
+  };
 
   return (
     <footer className="w-full border-t border-zinc-200/50 dark:border-zinc-800/50 bg-[var(--background)] mt-16 transition-colors duration-500">
@@ -90,7 +101,7 @@ export default function Footer() {
                 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-emerald-500 transition-colors flex items-center gap-2 self-start"
               >
                 <MessageSquare size={14} className="text-emerald-500" />
-                WhatsApp: (11) 98878-1670
+                WhatsApp: {whatsappNumber ? formatPhone(whatsappNumber) : 'Fale Conosco'}
               </a>
               <a
                 href="mailto:contato@frangatoys.com.br"

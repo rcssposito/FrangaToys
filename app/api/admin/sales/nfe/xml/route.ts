@@ -396,6 +396,7 @@ export async function POST(req: NextRequest) {
       : `<CPF>${cleanCpfCnpj}</CPF>`;
 
     const destIETag = '';
+    const emitenteFone = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '').replace(/\D/g, '').replace(/^55/, '');
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
@@ -435,7 +436,7 @@ export async function POST(req: NextRequest) {
         <CEP>02755090</CEP>
         <cPais>1058</cPais>
         <xPais>BRASIL</xPais>
-        <fone>11988781670</fone>
+        ${emitenteFone ? `<fone>${emitenteFone}</fone>` : ''}
       </enderEmit>
       <IE>${payload.inscricao_estadual_emitente}</IE>
       <CRT>4</CRT>
