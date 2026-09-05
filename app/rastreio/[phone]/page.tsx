@@ -244,7 +244,7 @@ function WipGalleryWidget({ photos }: { photos: any[] }) {
                             Bastidores da Produção (Fotos Reais)
                         </h4>
                         <p className="text-[10px] text-zinc-500 font-medium">
-                            Acompanhe os estágios de impressão, limpeza e pintura artesanal no ateliê
+                            Acompanhe os bastidores de confecção da sua peça • Baixe suas fotos favoritas (salvas por até 15 dias após a conclusão)
                         </p>
                     </div>
                 </div>

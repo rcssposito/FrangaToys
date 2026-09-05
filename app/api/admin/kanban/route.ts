@@ -250,7 +250,14 @@ export async function PATCH(req: Request) {
 
         // 3. Salvar novas propriedades da venda
         const updateFields: any = {};
-        if (newStatus !== undefined) updateFields.status = newStatus;
+        if (newStatus !== undefined) {
+            updateFields.status = newStatus;
+            if (newStatus === 'Concluída') {
+                updateFields.data_conclusao = new Date().toISOString();
+            } else {
+                updateFields.data_conclusao = null;
+            }
+        }
         if (calculatedStatusPagamento !== undefined) updateFields.status_pagamento = calculatedStatusPagamento;
         if (newValorPagoParcial !== undefined) updateFields.valor_pago_parcial = newValorPagoParcial;
         if (newChecklist !== undefined) updateFields.checklist = newChecklist;

@@ -6,6 +6,7 @@ import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factor
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
+import { compressImageForUpload } from '@/lib/image-utils';
 
 export interface WipPhoto {
     id: string;
@@ -123,6 +124,7 @@ export default function KanbanPage() {
     const { user, hasRole } = usePermission();
     const canSeeValues = hasRole('finance');
     const isPainter = hasRole('painter') || hasRole('admin');
+    const isAdmin = hasRole('admin');
     const currentUserName = user?.nome || user?.email || '';
     
     // States for inline partial payment editing
@@ -161,6 +163,8 @@ export default function KanbanPage() {
     const [wipModalSale, setWipModalSale] = useState<Sale | null>(null);
     const [isUploadingWip, setIsUploadingWip] = useState(false);
     const [wipCaption, setWipCaption] = useState('');
+    const [cleanupStats, setCleanupStats] = useState<{ eligibleOrdersCount: number; eligiblePhotosCount: number } | null>(null);
+    const [isCleaningWip, setIsCleaningWip] = useState(false);
 
     // Expanded image modal state
     const [expandedImage, setExpandedImage] = useState<{
@@ -490,6 +494,45 @@ export default function KanbanPage() {
             toast.error('Erro ao carregar fila de produção');
         } finally {
             setLoading(false);
+            checkWipCleanup();
+        }
+    };
+
+    const checkWipCleanup = async () => {
+        try {
+            const res = await fetch('/api/admin/kanban/wip/cleanup');
+            if (res.ok) {
+                const data = await res.json();
+                setCleanupStats({
+                    eligibleOrdersCount: data.eligibleOrdersCount || 0,
+                    eligiblePhotosCount: data.eligiblePhotosCount || 0
+                });
+            }
+        } catch {
+            // Silencioso em caso de falha de rede
+        }
+    };
+
+    const handleRunWipCleanup = async () => {
+        if (!cleanupStats || cleanupStats.eligiblePhotosCount === 0) return;
+        if (!confirm(`Deseja excluir ${cleanupStats.eligiblePhotosCount} foto(s) de pedidos concluídos há mais de 15 dias para liberar espaço no ImageKit?`)) return;
+
+        setIsCleaningWip(true);
+        try {
+            const res = await fetch('/api/admin/kanban/wip/cleanup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Falha ao executar limpeza');
+
+            toast.success(data.message || 'Fotos expiradas excluídas do ImageKit com sucesso!');
+            setCleanupStats(null);
+            checkWipCleanup();
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao executar limpeza');
+        } finally {
+            setIsCleaningWip(false);
         }
     };
 
@@ -757,11 +800,14 @@ export default function KanbanPage() {
     };
 
     const handleUploadWipPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file || !wipModalSale) return;
+        const rawFile = e.target.files?.[0];
+        if (!rawFile || !wipModalSale) return;
 
         setIsUploadingWip(true);
         try {
+            // Compressão automática no navegador (reduz fotos de celulares em ~95% antes de enviar ao ImageKit)
+            const file = await compressImageForUpload(rawFile);
+
             const formData = new FormData();
             formData.append('file', file);
             formData.append('saleId', String(wipModalSale.id));
@@ -1009,6 +1055,19 @@ export default function KanbanPage() {
                     >
                         Correios
                     </button>
+
+                    {isAdmin && cleanupStats && cleanupStats.eligiblePhotosCount > 0 && (
+                        <button
+                            type="button"
+                            onClick={handleRunWipCleanup}
+                            disabled={isCleaningWip}
+                            className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 bg-red-950/60 text-red-300 border border-red-500/40 hover:bg-red-900/60 shadow-md shadow-red-950/40"
+                            title="Excluir do ImageKit fotos de pedidos concluídos há mais de 15 dias"
+                        >
+                            {isCleaningWip ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                            Limpar Fotos Expiradas ({cleanupStats.eligiblePhotosCount})
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -1871,10 +1930,16 @@ export default function KanbanPage() {
                             </button>
                         </div>
 
-                        {/* Banner Informativo */}
-                        <div className="px-6 py-2.5 bg-cyan-950/20 border-b border-cyan-500/20 flex items-center gap-2.5 text-[11px] text-cyan-300">
-                            <span className="shrink-0 text-base">📸</span>
-                            <span>Estas fotos ficam visíveis instantaneamente para o cliente na página pública de rastreio da encomenda dele.</span>
+                        {/* Banner Informativo & Retenção */}
+                        <div className="px-6 py-2.5 bg-cyan-950/20 border-b border-cyan-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] text-cyan-300">
+                            <div className="flex items-center gap-2">
+                                <span className="shrink-0 text-base">📸</span>
+                                <span>Fotos visíveis instantaneamente para o cliente na página pública de rastreio.</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-zinc-400 bg-zinc-900/60 border border-zinc-800 px-2.5 py-1 rounded-full text-[10px] shrink-0">
+                                <Clock size={11} className="text-amber-400" />
+                                <span>Retenção de <strong>15 dias</strong> após conclusão</span>
+                            </div>
                         </div>
 
                         {/* Upload Form */}

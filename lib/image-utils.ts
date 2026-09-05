@@ -34,3 +34,95 @@ export function getOptimizedImageUrl(url: string | null): string {
     return url;
   }
 }
+
+/**
+ * Redimensiona e comprime uma imagem no navegador antes do upload.
+ * Reduz fotos de câmeras de celular (geralmente 4MB-10MB) para ~100KB-250KB WebP,
+ * economizando espaço no ImageKit e agilizando o upload.
+ */
+export async function compressImageForUpload(
+  file: File,
+  maxDimension = 1280,
+  quality = 0.75
+): Promise<File> {
+  // Se não estiver em ambiente de navegador ou se o arquivo não for imagem, retorna original
+  if (typeof window === 'undefined' || !file || !file.type.startsWith('image/')) {
+    return file;
+  }
+
+  // Não comprime SVGs ou GIFs animados
+  if (file.type === 'image/svg+xml' || file.type === 'image/gif') {
+    return file;
+  }
+
+  return new Promise((resolve) => {
+    try {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+
+          // Se a imagem já for menor que a dimensão máxima e for menor que 300KB, mantém original
+          if (width <= maxDimension && height <= maxDimension && file.size < 300 * 1024) {
+            resolve(file);
+            return;
+          }
+
+          // Calcula proporção para manter aspect ratio
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.round((height * maxDimension) / width);
+              width = maxDimension;
+            } else {
+              width = Math.round((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+
+          if (!ctx) {
+            resolve(file);
+            return;
+          }
+
+          // Renderiza imagem redimensionada
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Tenta exportar para WebP com fallback para JPEG
+          canvas.toBlob(
+            (blob) => {
+              if (!blob || blob.size >= file.size) {
+                // Se a compressão não reduziu o tamanho, mantém o original
+                resolve(file);
+                return;
+              }
+
+              const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+              const newFile = new File([blob], `${baseName}.webp`, {
+                type: 'image/webp',
+                lastModified: Date.now(),
+              });
+
+              resolve(newFile);
+            },
+            'image/webp',
+            quality
+          );
+        };
+
+        img.onerror = () => resolve(file);
+        img.src = e.target?.result as string;
+      };
+
+      reader.onerror = () => resolve(file);
+      reader.readAsDataURL(file);
+    } catch {
+      resolve(file);
+    }
+  });
+}
