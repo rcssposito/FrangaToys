@@ -54,44 +54,8 @@ export async function GET() {
         const totalMonthlyUSD = activeMemberships.reduce((acc, m) => acc + (m.amountCents / 100), 0);
         const totalMonthlyBRL = activeMemberships.reduce((acc, m) => acc + m.amountBRL, 0);
 
-        // Auto-sync Supabase studios table with Patreon live state
-        for (const m of enriched) {
-            if (!m.matchedStudioId) continue;
-
-            const isPatreonActive = m.patronStatus === 'active_patron' && (m.amountCents || 0) > 0;
-            const targetAtivo = isPatreonActive;
-            const targetCusto = isPatreonActive ? m.amountBRL : 0;
-
-            const studio = dbStudiosList.find(s => s.id === m.matchedStudioId);
-            if (!studio) continue;
-
-            // Check if DB state differs from Patreon live state
-            const needsUpdate = 
-                studio.ativo !== targetAtivo || 
-                (targetAtivo && studio.custo_mensal !== targetCusto) ||
-                (targetAtivo && m.isMerchantTier && !studio.merchant);
-
-            if (needsUpdate) {
-                const targetMerchant = targetAtivo ? (m.isMerchantTier || studio.merchant) : studio.merchant;
-
-                await supabase
-                    .from('studios')
-                    .update({
-                        ativo: targetAtivo,
-                        merchant: targetMerchant,
-                        custo_mensal: targetCusto
-                    })
-                    .eq('id', studio.id);
-
-                // Cascata: Se o estúdio é merchant, habilita as figuras no catálogo (disponivel = true)
-                if (targetMerchant) {
-                    await supabase
-                        .from('figuras')
-                        .update({ disponivel: true })
-                        .eq('studio_id', studio.id);
-                }
-            }
-        }
+        // Patreon live integration: apenas fornece os dados financeiros e memberships
+        // (A alteração de ativo/pausado e merchant/vitrine é 100% manual pelo usuário para evitar sobrescritas indevidas)
 
         return NextResponse.json({
             memberships: enriched,

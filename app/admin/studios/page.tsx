@@ -421,9 +421,10 @@ export default function StudiosPage() {
                                             </div>
                                         </div>
 
-                                        {/* Compact Square Menu Button */}
+                                        {/* Botão dos Três Pontos */}
                                         <div className="relative shrink-0">
                                             <button
+                                                type="button"
                                                 onClick={() => setOpenMenuId(openMenuId === studio.id ? null : studio.id)}
                                                 className={clsx(
                                                     "w-9 h-9 rounded-2xl flex items-center justify-center transition-all cursor-pointer border shadow-md",
@@ -436,77 +437,81 @@ export default function StudiosPage() {
                                                 <MoreVertical size={16} />
                                             </button>
 
-                                            {openMenuId === studio.id && (
-                                                <>
-                                                    <div 
-                                                        className="fixed inset-0 z-40" 
-                                                        onClick={() => setOpenMenuId(null)} 
-                                                    />
-                                                    <div className="absolute right-0 top-11 z-50 bg-zinc-950/95 border border-zinc-800 rounded-2xl p-2 shadow-2xl backdrop-blur-xl w-52 space-y-1 animate-[fadeIn_0.15s_ease-out]">
-                                                        {/* Vitrine Toggle */}
-                                                        <button
-                                                            onClick={() => {
-                                                                const newVal = !studio.merchant;
-                                                                handleChange(studio.id, 'merchant', newVal);
-                                                                handleUpdate({ ...studio, merchant: newVal });
-                                                            }}
-                                                            className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-zinc-900 text-xs font-bold text-zinc-300 transition-colors cursor-pointer"
-                                                        >
-                                                            <div className="flex items-center gap-2">
-                                                                <ShoppingBag size={14} className={studio.merchant ? "text-purple-400" : "text-zinc-500"} />
-                                                                <span>Exibir na Vitrine</span>
-                                                            </div>
-                                                            <span className={clsx("text-[10px] font-black uppercase px-2 py-0.5 rounded-md", studio.merchant ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : "bg-zinc-800 text-zinc-500")}>
-                                                                {studio.merchant ? 'Sim' : 'Não'}
-                                                            </span>
-                                                        </button>
+                                                {openMenuId === studio.id && (
+                                                    <>
+                                                        <div 
+                                                            className="fixed inset-0 z-40" 
+                                                            onClick={() => setOpenMenuId(null)} 
+                                                        />
+                                                        <div className="absolute right-0 top-10 z-50 bg-zinc-950/95 border border-zinc-800 rounded-2xl p-2 shadow-2xl backdrop-blur-xl w-52 space-y-1 animate-[fadeIn_0.15s_ease-out]">
+                                                            {/* Vitrine Toggle */}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const newVal = !studio.merchant;
+                                                                    handleChange(studio.id, 'merchant', newVal);
+                                                                    handleUpdate({ ...studio, merchant: newVal });
+                                                                }}
+                                                                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-zinc-900 text-xs font-bold text-zinc-300 transition-colors cursor-pointer"
+                                                            >
+                                                                <div className="flex items-center gap-2">
+                                                                    <ShoppingBag size={14} className={studio.merchant ? "text-purple-400" : "text-zinc-500"} />
+                                                                    <span>Exibir na Vitrine</span>
+                                                                </div>
+                                                                <span className={clsx("text-[10px] font-black uppercase px-2 py-0.5 rounded-md", studio.merchant ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : "bg-zinc-800 text-zinc-500")}>
+                                                                    {studio.merchant ? 'Sim' : 'Não'}
+                                                                </span>
+                                                            </button>
 
-                                                        {/* Operação Switch */}
-                                                        <button
-                                                            onClick={() => {
-                                                                const newVal = !studio.ativo;
-                                                                handleChange(studio.id, 'ativo', newVal);
-                                                                handleUpdate({ ...studio, ativo: newVal });
-                                                            }}
-                                                            className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-zinc-900 text-xs font-bold text-zinc-300 transition-colors cursor-pointer"
-                                                        >
-                                                            <div className="flex items-center gap-2">
-                                                                <Sparkles size={14} className={studio.ativo ? "text-blue-400" : "text-zinc-500"} />
-                                                                <span>Status da Operação</span>
-                                                            </div>
-                                                            <span className={clsx("text-[10px] font-black uppercase px-2 py-0.5 rounded-md", studio.ativo ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-zinc-800 text-zinc-500")}>
-                                                                {studio.ativo ? 'Ativo' : 'Pausado'}
-                                                            </span>
-                                                        </button>
+                                                            {/* Operação Switch */}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const newVal = !studio.ativo;
+                                                                    handleChange(studio.id, 'ativo', newVal);
+                                                                    handleUpdate({ ...studio, ativo: newVal });
+                                                                }}
+                                                                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-zinc-900 text-xs font-bold text-zinc-300 transition-colors cursor-pointer"
+                                                            >
+                                                                <div className="flex items-center gap-2">
+                                                                    <Sparkles size={14} className={studio.ativo ? "text-blue-400" : "text-zinc-500"} />
+                                                                    <span>Status da Operação</span>
+                                                                </div>
+                                                                <span className={clsx("text-[10px] font-black uppercase px-2 py-0.5 rounded-md", studio.ativo ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-zinc-800 text-zinc-500")}>
+                                                                    {studio.ativo ? 'Ativo' : 'Pausado'}
+                                                                </span>
+                                                            </button>
 
-                                                        {/* Settings Expand */}
-                                                        <button
-                                                            onClick={() => {
-                                                                toggleExpand(studio.id);
-                                                                setOpenMenuId(null);
-                                                            }}
-                                                            className="w-full flex items-center gap-2 p-2.5 rounded-xl hover:bg-zinc-900 text-xs font-bold text-zinc-300 transition-colors cursor-pointer"
-                                                        >
-                                                            <Settings size={14} className="text-zinc-400" />
-                                                            <span>Configurações & Links</span>
-                                                        </button>
+                                                            {/* Settings Expand */}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    toggleExpand(studio.id);
+                                                                    setOpenMenuId(null);
+                                                                }}
+                                                                className="w-full flex items-center gap-2 p-2.5 rounded-xl hover:bg-zinc-900 text-xs font-bold text-zinc-300 transition-colors cursor-pointer"
+                                                            >
+                                                                <Settings size={14} className="text-zinc-400" />
+                                                                <span>Configurações & Links</span>
+                                                            </button>
 
-                                                        <div className="border-t border-zinc-900 my-1" />
+                                                            <div className="border-t border-zinc-900 my-1" />
 
-                                                        {/* Delete Button */}
-                                                        <button
-                                                            onClick={() => {
-                                                                handleDelete(studio.id, studio.total_figuras || 0);
-                                                                setOpenMenuId(null);
-                                                            }}
-                                                            className="w-full flex items-center gap-2 p-2.5 rounded-xl hover:bg-rose-500/10 text-xs font-bold text-rose-400 transition-colors cursor-pointer"
-                                                        >
-                                                            <Trash size={14} />
-                                                            <span>Excluir Estúdio</span>
-                                                        </button>
-                                                    </div>
-                                                </>
-                                            )}
+                                                            {/* Delete Button */}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    handleDelete(studio.id, studio.total_figuras || 0);
+                                                                    setOpenMenuId(null);
+                                                                }}
+                                                                className="w-full flex items-center gap-2 p-2.5 rounded-xl hover:bg-rose-500/10 text-xs font-bold text-rose-400 transition-colors cursor-pointer"
+                                                            >
+                                                                <Trash size={14} />
+                                                                <span>Excluir Estúdio</span>
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                )}
                                         </div>
                                     </div>
 
