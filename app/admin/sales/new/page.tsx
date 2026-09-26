@@ -232,19 +232,24 @@ function NewSaleContent() {
         }
     };
 
+    const getItemUnitPrice = (item: CatalogItem | CartItem, tier: 'estilizado' | 'colorido', method = paymentMethod) => {
+        const taxaCard = settings?.taxa_cartao || 1.15;
+        const tierPrice = tier === 'estilizado' ? (item["Estilizado (R$)"] || 0) : (item["Colorido (R$)"] || item["Estilizado (R$)"] || 0);
+        const isOutros = item.studio === 'Outros';
+        return method === 'credit' ? (isOutros ? tierPrice : Number((tierPrice * taxaCard).toFixed(2))) : tierPrice;
+    };
+
     const addToCart = (item: CatalogItem) => {
         if (cart.find(i => i.id === item.id)) {
             updateItemQuantity(item.id, cart.find(i => i.id === item.id)!.quantidade + 1);
         } else {
-            const taxaCard = settings?.taxa_cartao || 1.15;
-            const isCampanha = item.is_campanha;
-            const basePrice = (isCampanha && item["Estilizado (R$)"]) ? item["Estilizado (R$)"] : (item["Estilizado (R$)"] || 0);
-            const unitPrice = paymentMethod === 'credit' ? Number((basePrice * taxaCard).toFixed(2)) : basePrice;
+            const defaultTier: 'estilizado' | 'colorido' = 'colorido';
+            const unitPrice = getItemUnitPrice(item, defaultTier);
             
             setCart([...cart, { 
                 ...item, 
                 quantidade: 1, 
-                selectedTier: 'colorido',
+                selectedTier: defaultTier,
                 valor_final: Number((unitPrice * 1).toFixed(2)) 
             }]);
         }
@@ -256,11 +261,9 @@ function NewSaleContent() {
     // Efeito para sincronizar todos os itens do carrinho quando mudar o método global de pagamento
     useEffect(() => {
         if (cart.length === 0) return;
-        const taxaCard = settings?.taxa_cartao || 1.15;
         
         setCart(prev => prev.map(i => {
-            const tierPrice = i.selectedTier === 'estilizado' ? i["Estilizado (R$)"] : i["Colorido (R$)"];
-            const unitPrice = paymentMethod === 'credit' ? Number(((tierPrice || 0) * taxaCard).toFixed(2)) : (tierPrice || 0);
+            const unitPrice = getItemUnitPrice(i, i.selectedTier);
             return { ...i, valor_final: Number((unitPrice * i.quantidade).toFixed(2)) };
         }));
     }, [paymentMethod, settings?.taxa_cartao]);
@@ -274,9 +277,7 @@ function NewSaleContent() {
         if (qty < 1) return;
         setCart(cart.map(i => {
             if (i.id === id) {
-                const taxaCard = settings?.taxa_cartao || 1.15;
-                const tierPrice = i.selectedTier === 'estilizado' ? i["Estilizado (R$)"] : i["Colorido (R$)"];
-                const unitPrice = paymentMethod === 'credit' ? Number(((tierPrice || 0) * taxaCard).toFixed(2)) : (tierPrice || 0);
+                const unitPrice = getItemUnitPrice(i, i.selectedTier);
                 return { ...i, quantidade: qty, valor_final: Number((unitPrice * qty).toFixed(2)) };
             }
             return i;
@@ -287,9 +288,7 @@ function NewSaleContent() {
     const updateItemTier = (id: number, tier: 'estilizado' | 'colorido') => {
         setCart(cart.map(i => {
             if (i.id === id) {
-                const taxaCard = settings?.taxa_cartao || 1.15;
-                const tierPrice = tier === 'estilizado' ? i["Estilizado (R$)"] : i["Colorido (R$)"];
-                const unitPrice = paymentMethod === 'credit' ? Number(((tierPrice || 0) * taxaCard).toFixed(2)) : (tierPrice || 0);
+                const unitPrice = getItemUnitPrice(i, tier);
                 return { ...i, selectedTier: tier, valor_final: Number((unitPrice * i.quantidade).toFixed(2)) };
             }
             return i;
@@ -821,13 +820,8 @@ function NewSaleContent() {
                                     </div>
                                 ) : (
                                     cart.map((item) => {
-                                        const taxaMarkup = settings?.taxa_cartao || 1.15;
-                                        const tierKey = item.selectedTier === 'estilizado' ? "Estilizado (R$)" : "Colorido (R$)";
-                                        const baseTierPrice = item[tierKey] || 0;
-                                        const isOutros = item.studio === 'Outros';
-                                        
-                                        // Cálculo sugerido (Baseado no Tier selecionado e Método de Pagto)
-                                        const suggestedUnit = paymentMethod === 'credit' ? (isOutros ? baseTierPrice : baseTierPrice * taxaMarkup) : baseTierPrice;
+                                        const baseTierPrice = getItemUnitPrice(item, item.selectedTier, 'pix');
+                                        const suggestedUnit = getItemUnitPrice(item, item.selectedTier);
                                         const suggestedTotal = Number((suggestedUnit * item.quantidade).toFixed(2));
                                         const isSynced = Math.abs((item.valor_final || 0) - suggestedTotal) < 0.1;
 

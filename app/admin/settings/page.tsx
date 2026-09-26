@@ -50,7 +50,6 @@ export default function SettingsPage() {
 
     // Estados da ferramenta de Sincronização de Imagens
     const [selectedTab, setSelectedTab] = useState<string>('ALL');
-    const [onlyVersions, setOnlyVersions] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
     const [scanResult, setScanResult] = useState<{
@@ -120,7 +119,7 @@ export default function SettingsPage() {
         setIsScanning(true);
         setSyncResults(null);
         try {
-            const res = await fetch(`/api/admin/tools/sync-images?tab=${selectedTab}&onlyVersions=${onlyVersions}`);
+            const res = await fetch(`/api/admin/tools/sync-images?tab=${selectedTab}`);
             if (!res.ok) {
                 const err = await res.json();
                 throw new Error(err.error || 'Erro ao analisar imagens');
@@ -320,34 +319,22 @@ export default function SettingsPage() {
                         </div>
                     </div>
 
-                    {/* Seleção de Abas & Filtros */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex flex-wrap gap-2">
-                            {['ALL', 'Games', 'Marvel', 'DC', 'Random', 'Anime'].map(tab => (
-                                <button
-                                    key={tab}
-                                    type="button"
-                                    onClick={() => { setSelectedTab(tab); setScanResult(null); setSyncResults(null); }}
-                                    className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                                        selectedTab === tab
-                                            ? 'bg-orange-500 text-white shadow-sm'
-                                            : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
-                                    }`}
-                                >
-                                    {tab === 'ALL' ? 'Todas as Abas' : tab}
-                                </button>
-                            ))}
-                        </div>
-
-                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-zinc-400 hover:text-zinc-200">
-                            <input
-                                type="checkbox"
-                                checked={onlyVersions}
-                                onChange={e => { setOnlyVersions(e.target.checked); setScanResult(null); setSyncResults(null); }}
-                                className="w-4 h-4 rounded accent-orange-500 cursor-pointer"
-                            />
-                            Apenas versões divergentes (v1 vs v2)
-                        </label>
+                    {/* Seleção de Abas */}
+                    <div className="flex flex-wrap gap-2">
+                        {['ALL', 'Games', 'Marvel', 'DC', 'Random', 'Anime'].map(tab => (
+                            <button
+                                key={tab}
+                                type="button"
+                                onClick={() => { setSelectedTab(tab); setScanResult(null); setSyncResults(null); }}
+                                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                                    selectedTab === tab
+                                        ? 'bg-orange-500 text-white shadow-sm'
+                                        : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                {tab === 'ALL' ? 'Todas as Abas' : tab}
+                            </button>
+                        ))}
                     </div>
 
                     {/* Botão de Análise */}

@@ -30,6 +30,15 @@ function toImageKitFileName(name: string) {
         .replace(/_+/g, '_');
 }
 
+function cleanBase(str: string) {
+    return str
+        .replace(/\s*v\d+\b.*$/i, '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]/g, '');
+}
+
 export interface MismatchItem {
     id?: number;
     sheet: string;
@@ -53,7 +62,6 @@ export async function GET(req: NextRequest) {
 
         const { searchParams } = new URL(req.url);
         const requestedTab = searchParams.get('tab') || 'ALL';
-        const onlyVersions = searchParams.get('onlyVersions') === 'true';
 
         const sheets = getGoogleSheetsClient();
         const tabsToScan = requestedTab === 'ALL' 
@@ -83,18 +91,26 @@ export async function GET(req: NextRequest) {
                 if (!figureName || !currentUrl || !currentUrl.includes('imagekit.io')) continue;
 
                 const urlWithoutQuery = currentUrl.split('?')[0];
-                const currentFileNameWithExt = urlWithoutQuery.split('/').pop() || '';
+                const rawFileName = urlWithoutQuery.split('/').pop() || '';
+                let currentFileNameWithExt = rawFileName;
+                try {
+                    currentFileNameWithExt = decodeURIComponent(rawFileName);
+                } catch {}
+
                 const extMatch = currentFileNameWithExt.match(/\.(webp|png|jpg|jpeg)$/i);
                 const ext = extMatch ? extMatch[0] : '';
                 const currentFileNameWithoutExt = ext ? currentFileNameWithExt.slice(0, -ext.length) : currentFileNameWithExt;
                 const expectedFileNameWithoutExt = toImageKitFileName(figureName);
 
-                const vName = figureName.match(/v(\d+)/i)?.[1] || null;
-                const vFile = currentFileNameWithoutExt.match(/v(\d+)/i)?.[1] || null;
-                const isVersionMismatch = Boolean(vName && vFile && vName !== vFile);
-                const isNameMismatch = currentFileNameWithoutExt.toLowerCase() !== expectedFileNameWithoutExt.toLowerCase();
+                const vName = figureName.match(/v(\d+)\b/i)?.[1] || null;
+                const vFile = currentFileNameWithoutExt.match(/v(\d+)\b/i)?.[1] || null;
+                const isVersionMismatch = Boolean(vName && vFile && vName.toLowerCase() !== vFile.toLowerCase());
 
-                if (onlyVersions ? isVersionMismatch : (isVersionMismatch || isNameMismatch)) {
+                const baseName = cleanBase(figureName);
+                const baseFile = cleanBase(currentFileNameWithoutExt);
+                const isBaseMismatch = baseName !== '' && baseFile !== '' && baseName !== baseFile;
+
+                if (isVersionMismatch || isBaseMismatch) {
                     let currentFilePath = '';
                     try {
                         const parsed = new URL(urlWithoutQuery);
