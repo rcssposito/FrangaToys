@@ -22,13 +22,21 @@ import {
     Sparkles,
     ArrowRight,
     Search,
-    ChevronDown
+    ChevronDown,
+    CreditCard,
+    QrCode,
+    Copy,
+    ExternalLink,
+    MessageCircle,
+    CheckCircle2,
+    RotateCw
 } from 'lucide-react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { usePermission } from '@/hooks/usePermission';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
+import { generatePixPayload } from '@/lib/pix';
 
 interface Sale {
     id: number;
@@ -56,6 +64,7 @@ interface Sale {
     cliente_contato?: string;
     cliente_id?: string;
     metodo_entrega?: string;
+    access_token?: string;
 }
 
 interface MonthGroup {
@@ -82,6 +91,19 @@ function SalesContent() {
     const [allSales, setAllSales] = useState<Sale[]>([]);
     const [groups, setGroups] = useState<MonthGroup[]>([]);
     const [editingSale, setEditingSale] = useState<Sale | null>(null);
+    const [editPaymentMethod, setEditPaymentMethod] = useState<'pix' | 'credit'>('pix');
+    const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+    const [settings, setSettings] = useState<any>(null);
+    const [postEditResult, setPostEditResult] = useState<{
+        id: number;
+        type: 'pix' | 'credit';
+        link?: string | null;
+        pixCode?: string | null;
+        amount: number;
+        clientName?: string;
+        clientPhone?: string;
+        tokenOrId: string;
+    } | null>(null);
     const [vendedores, setVendedores] = useState<any[]>([]);
     const [isUpdating, setIsUpdating] = useState(false);
 
@@ -104,7 +126,17 @@ function SalesContent() {
         fetchSales();
         fetchVendedores();
         fetchCatalogItems();
+        fetchSettings();
     }, []);
+
+    const fetchSettings = async () => {
+        try {
+            const res = await fetch('/api/admin/settings');
+            if (res.ok) setSettings(await res.json());
+        } catch (err) {
+            console.error('Erro ao buscar configurações:', err);
+        }
+    };
 
     const fetchCatalogItems = async () => {
         try {
@@ -244,21 +276,130 @@ function SalesContent() {
         }
     };
 
+    const handleStartEdit = (sale: Sale) => {
+        setEditingSale({ ...sale });
+        setEditPaymentMethod(sale.link_pagamento ? 'credit' : 'pix');
+    };
+
+    const handleSwitchPaymentMethod = (newMethod: 'pix' | 'credit') => {
+        if (!editingSale || newMethod === editPaymentMethod) return;
+
+        const taxa = Number(settings?.taxa_cartao || 1.15);
+
+        if (newMethod === 'credit') {
+            // PIX -> Crédito: adiciona taxa de cartão
+            const newPrice = Number((editingSale.valor_venda_final * taxa).toFixed(2));
+            setEditingSale({
+                ...editingSale,
+                valor_venda_final: newPrice
+            });
+            setEditPaymentMethod('credit');
+            toast.info(`Forma alterada para Crédito (+${((taxa - 1) * 100).toFixed(0)}% taxa aplicada)`);
+        } else {
+            // Crédito -> PIX: remove taxa de cartão
+            const newPrice = Number((editingSale.valor_venda_final / taxa).toFixed(2));
+            setEditingSale({
+                ...editingSale,
+                valor_venda_final: newPrice,
+                link_pagamento: undefined
+            });
+            setEditPaymentMethod('pix');
+            toast.info('Forma alterada para PIX (taxa de cartão removida)');
+        }
+    };
+
+    const handleGenerateMpLink = async (targetSale = editingSale) => {
+        if (!targetSale) return null;
+        setIsGeneratingLink(true);
+        try {
+            const checkoutId = targetSale.checkout_id || crypto.randomUUID();
+            const res = await fetch('/api/admin/checkout/mp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    carrinho: [{
+                        id: String(targetSale.figura_id || targetSale.id),
+                        nome: targetSale.figuras?.nome || 'Action Figure Sob Encomenda',
+                        quantidade: targetSale.quantidade || 1,
+                        valor_final: targetSale.valor_venda_final
+                    }],
+                    cliente_nome: targetSale.cliente_nome || 'Cliente Franga Toys',
+                    reference_id: checkoutId,
+                    valor_frete: 0
+                })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || 'Erro ao gerar link no Mercado Pago');
+            }
+
+            const data = await res.json();
+            const newLink = data.init_point;
+            setEditingSale(prev => prev ? ({ ...prev, link_pagamento: newLink, checkout_id: checkoutId }) : null);
+            toast.success('Novo link Mercado Pago gerado com sucesso!');
+            return { newLink, checkoutId };
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao gerar link no Mercado Pago');
+            return null;
+        } finally {
+            setIsGeneratingLink(false);
+        }
+    };
+
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingSale) return;
 
         setIsUpdating(true);
         try {
+            let updatedSale = { ...editingSale };
+
+            // Se for crédito e não tiver link de pagamento ainda gerado, gera agora
+            if (editPaymentMethod === 'credit' && !updatedSale.link_pagamento) {
+                const genResult = await handleGenerateMpLink(updatedSale);
+                if (!genResult?.newLink) {
+                    setIsUpdating(false);
+                    return;
+                }
+                updatedSale.link_pagamento = genResult.newLink;
+                updatedSale.checkout_id = genResult.checkoutId;
+            } else if (editPaymentMethod === 'pix') {
+                // Ao salvar como PIX, desvincula o link do Mercado Pago
+                updatedSale.link_pagamento = null as any;
+            }
+
             const res = await fetch('/api/admin/sales', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editingSale)
+                body: JSON.stringify(updatedSale)
             });
 
-            if (!res.ok) throw new Error('Erro ao atualizar');
+            if (!res.ok) throw new Error('Erro ao atualizar venda');
 
             toast.success('Venda atualizada com sucesso!');
+
+            const tokenOrId = updatedSale.access_token || (updatedSale.cliente_contato ? updatedSale.cliente_contato.replace(/\D/g, '') : String(updatedSale.id));
+            const pixCode = editPaymentMethod === 'pix'
+                ? generatePixPayload(
+                    "contato@frangatoys.com.br",
+                    "Bianca Machado Mastrocollo",
+                    updatedSale.valor_venda_final,
+                    updatedSale.checkout_id || String(updatedSale.id)
+                )
+                : undefined;
+
+            setPostEditResult({
+                id: updatedSale.id,
+                type: editPaymentMethod,
+                link: updatedSale.link_pagamento || null,
+                pixCode: pixCode || null,
+                amount: updatedSale.valor_venda_final,
+                clientName: updatedSale.cliente_nome,
+                clientPhone: updatedSale.cliente_contato,
+                tokenOrId
+            });
+
             setEditingSale(null);
             fetchSales();
         } catch (err) {
@@ -425,7 +566,36 @@ function SalesContent() {
                                                         >
                                                             <Plus size={16} />
                                                         </Link>
-                                                        <button onClick={() => setEditingSale(sale)} className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-amber-400 transition-colors shadow-sm" title="Editar Venda">
+                                                        {sale.link_pagamento ? (
+                                                            <button
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(sale.link_pagamento!);
+                                                                    toast.success('Link Mercado Pago copiado!');
+                                                                }}
+                                                                className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-blue-400 transition-colors shadow-sm"
+                                                                title="Copiar Link Mercado Pago (Cartão)"
+                                                            >
+                                                                <CreditCard size={16} />
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => {
+                                                                    const pix = generatePixPayload(
+                                                                        "contato@frangatoys.com.br",
+                                                                        "Bianca Machado Mastrocollo",
+                                                                        sale.valor_venda_final,
+                                                                        sale.checkout_id || String(sale.id)
+                                                                    );
+                                                                    navigator.clipboard.writeText(pix);
+                                                                    toast.success('Código PIX copiado!');
+                                                                }}
+                                                                className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-emerald-400 transition-colors shadow-sm"
+                                                                title="Copiar PIX Copia e Cola"
+                                                            >
+                                                                <QrCode size={16} />
+                                                            </button>
+                                                        )}
+                                                        <button onClick={() => handleStartEdit(sale)} className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-amber-400 transition-colors shadow-sm" title="Editar Venda">
                                                             <Edit3 size={16} />
                                                         </button>
                                                         <button onClick={() => handleDelete(sale.id)} className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-red-400 transition-colors shadow-sm" title="Excluir Venda">
@@ -565,6 +735,151 @@ function SalesContent() {
                                         </div>
                                     )}
                                 </div>
+                                {/* Seletor de Forma de Pagamento */}
+                                <div className="space-y-3 p-4 bg-zinc-900/70 border border-zinc-800/80 rounded-2xl">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] uppercase font-black text-zinc-400 tracking-widest flex items-center gap-2">
+                                            Forma de Pagamento
+                                        </label>
+                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-wider ${editPaymentMethod === 'credit' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+                                            {editPaymentMethod === 'credit' ? `Taxa Cartão: ${(((Number(settings?.taxa_cartao || 1.15)) - 1) * 100).toFixed(0)}%` : 'À Vista / Sem Taxa'}
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSwitchPaymentMethod('pix')}
+                                            className={`p-3.5 rounded-xl border font-black text-xs flex items-center justify-center gap-2.5 transition-all ${
+                                                editPaymentMethod === 'pix'
+                                                    ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
+                                                    : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300'
+                                            }`}
+                                        >
+                                            <QrCode size={16} />
+                                            PIX
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSwitchPaymentMethod('credit')}
+                                            className={`p-3.5 rounded-xl border font-black text-xs flex items-center justify-center gap-2.5 transition-all ${
+                                                editPaymentMethod === 'credit'
+                                                    ? 'bg-blue-500/10 border-blue-500/50 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)]'
+                                                    : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300'
+                                            }`}
+                                        >
+                                            <CreditCard size={16} />
+                                            CRÉDITO (MP)
+                                        </button>
+                                    </div>
+
+                                    {/* Seletor Crédito - Informações de Link */}
+                                    {editPaymentMethod === 'credit' && (
+                                        <div className="space-y-2 pt-2 border-t border-zinc-800/60 animate-in fade-in duration-200">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-black uppercase text-blue-400/80 tracking-widest">
+                                                    Link Mercado Pago
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleGenerateMpLink()}
+                                                    disabled={isGeneratingLink}
+                                                    className="text-[10px] font-black uppercase flex items-center gap-1.5 text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-50"
+                                                >
+                                                    <RotateCw size={11} className={isGeneratingLink ? 'animate-spin' : ''} />
+                                                    {editingSale.link_pagamento ? 'Regerar Novo Link' : 'Gerar Link'}
+                                                </button>
+                                            </div>
+
+                                            {editingSale.link_pagamento ? (
+                                                <div className="flex gap-2 items-center">
+                                                    <input
+                                                        readOnly
+                                                        value={editingSale.link_pagamento}
+                                                        className="w-full bg-zinc-950 border border-blue-500/30 rounded-xl px-3 py-2 text-xs text-blue-400 font-mono outline-none truncate"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(editingSale.link_pagamento!);
+                                                            toast.success('Link do Mercado Pago copiado!');
+                                                        }}
+                                                        className="p-2.5 bg-blue-600 hover:bg-blue-500 text-black rounded-xl transition-all shrink-0 active:scale-95"
+                                                        title="Copiar Link"
+                                                    >
+                                                        <Copy size={16} />
+                                                    </button>
+                                                    <a
+                                                        href={editingSale.link_pagamento}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="p-2.5 bg-zinc-950 border border-zinc-800 hover:border-blue-500/50 text-blue-400 rounded-xl transition-all shrink-0 active:scale-95"
+                                                        title="Abrir Link"
+                                                    >
+                                                        <ExternalLink size={16} />
+                                                    </a>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center justify-between p-2.5 bg-zinc-950/80 border border-dashed border-blue-500/30 rounded-xl text-xs">
+                                                    <span className="text-zinc-500 text-[11px]">Nenhum link ativo gerado ainda.</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleGenerateMpLink()}
+                                                        disabled={isGeneratingLink}
+                                                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-black font-black text-[10px] uppercase rounded-lg transition-all flex items-center gap-1.5 disabled:opacity-50"
+                                                    >
+                                                        {isGeneratingLink ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                                                        Gerar Link Agora
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Seletor PIX - Informações de PIX Copia e Cola */}
+                                    {editPaymentMethod === 'pix' && (
+                                        <div className="space-y-2 pt-2 border-t border-zinc-800/60 animate-in fade-in duration-200">
+                                            <span className="text-[10px] font-black uppercase text-emerald-400/80 tracking-widest block">
+                                                PIX Copia e Cola (Atualizado)
+                                            </span>
+                                            {(() => {
+                                                const pix = generatePixPayload(
+                                                    "contato@frangatoys.com.br",
+                                                    "Bianca Machado Mastrocollo",
+                                                    editingSale.valor_venda_final,
+                                                    editingSale.checkout_id || String(editingSale.id)
+                                                );
+                                                return (
+                                                    <div className="flex gap-2 items-center">
+                                                        <input
+                                                            readOnly
+                                                            value={pix}
+                                                            className="w-full bg-zinc-950 border border-emerald-500/30 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono outline-none truncate"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                navigator.clipboard.writeText(pix);
+                                                                toast.success('Código PIX copiado!');
+                                                            }}
+                                                            className="p-2.5 bg-emerald-600 hover:bg-emerald-500 text-black rounded-xl transition-all shrink-0 active:scale-95"
+                                                            title="Copiar PIX"
+                                                        >
+                                                            <Copy size={16} />
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })()}
+                                            {editingSale.link_pagamento && (
+                                                <p className="text-[10px] text-amber-500/80 font-medium">
+                                                    ⚠️ Ao salvar como PIX, o link anterior do Mercado Pago será desvinculado.
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="col-span-1">
                                         <label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest ml-1">Quantidade</label>
@@ -683,6 +998,107 @@ function SalesContent() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Conclusão / Compartilhamento de Pagamento */}
+            {postEditResult && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="relative w-full max-w-md bg-zinc-950 border border-zinc-800 p-6 md:p-8 rounded-3xl text-center space-y-5 shadow-2xl">
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto border ${postEditResult.type === 'credit' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'}`}>
+                            <CheckCircle2 size={36} />
+                        </div>
+
+                        <div>
+                            <h3 className="text-xl font-black text-white">Venda #{postEditResult.id} Atualizada!</h3>
+                            <p className="text-zinc-500 text-xs mt-1">Forma de pagamento atualizada para <strong className={postEditResult.type === 'credit' ? 'text-blue-400' : 'text-emerald-400'}>{postEditResult.type === 'credit' ? 'Crédito (Mercado Pago)' : 'PIX'}</strong>.</p>
+                            <div className="mt-2 text-2xl font-black text-white">
+                                R$ {postEditResult.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </div>
+                        </div>
+
+                        {postEditResult.type === 'credit' && postEditResult.link && (
+                            <div className="bg-black/60 border border-blue-500/30 p-4 rounded-2xl text-left space-y-2">
+                                <label className="text-[10px] font-black text-blue-400 tracking-widest uppercase">Link Mercado Pago</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        readOnly
+                                        value={postEditResult.link}
+                                        className="w-full bg-zinc-950 border border-blue-500/20 rounded-xl px-3 py-2.5 text-xs text-blue-400 font-mono outline-none"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(postEditResult.link!);
+                                            toast.success('Link copiado!');
+                                        }}
+                                        className="bg-blue-600 hover:bg-blue-500 p-2.5 rounded-xl text-black transition-colors shrink-0 active:scale-95"
+                                        title="Copiar Link"
+                                    >
+                                        <Copy size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {postEditResult.type === 'pix' && postEditResult.pixCode && (
+                            <div className="bg-black/60 border border-emerald-500/30 p-4 rounded-2xl text-left space-y-2">
+                                <label className="text-[10px] font-black text-emerald-400 tracking-widest uppercase">PIX Copia e Cola</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        readOnly
+                                        value={postEditResult.pixCode}
+                                        className="w-full bg-zinc-950 border border-emerald-500/20 rounded-xl px-3 py-2.5 text-xs text-emerald-400 font-mono outline-none"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(postEditResult.pixCode!);
+                                            toast.success('PIX copiado!');
+                                        }}
+                                        className="bg-emerald-600 hover:bg-emerald-500 p-2.5 rounded-xl text-black transition-colors shrink-0 active:scale-95"
+                                        title="Copiar PIX"
+                                    >
+                                        <Copy size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="pt-2 flex flex-col gap-2.5">
+                            <button
+                                onClick={() => {
+                                    const cleanPhone = (postEditResult.clientPhone || '').replace(/\D/g, '');
+                                    if (!cleanPhone || cleanPhone.length < 10) {
+                                        toast.error('Telefone do cliente não cadastrado ou inválido');
+                                        return;
+                                    }
+                                    const firstName = postEditResult.clientName ? postEditResult.clientName.trim().split(' ')[0] : 'Cliente';
+                                    let msg = `Olá ${firstName}, tudo bem? Aqui é da Franga Toys! 🚀\n\n`;
+                                    if (postEditResult.type === 'credit' && postEditResult.link) {
+                                        msg += `Segue o link atualizado para pagamento via Cartão de Crédito:\n${postEditResult.link}\n\n`;
+                                    } else if (postEditResult.type === 'pix' && postEditResult.pixCode) {
+                                        msg += `Segue a chave PIX atualizada para pagamento:\n${postEditResult.pixCode}\n\n`;
+                                    }
+                                    msg += `Valor Total: R$ ${postEditResult.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`;
+                                    msg += `Acompanhe seu pedido pelo painel:\n${window.location.origin}/rastreio/${postEditResult.tokenOrId}`;
+
+                                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                                    const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+                                    window.open(`${baseUrl}?phone=55${cleanPhone}&text=${encodeURIComponent(msg)}`, '_blank');
+                                }}
+                                className="w-full bg-emerald-600 hover:bg-emerald-500 text-black font-black py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-widest text-xs active:scale-95"
+                            >
+                                <MessageCircle size={18} />
+                                Enviar WhatsApp para Cliente
+                            </button>
+
+                            <button
+                                onClick={() => setPostEditResult(null)}
+                                className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold py-3 rounded-2xl transition-all text-xs uppercase tracking-widest"
+                            >
+                                Concluir e Fechar
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

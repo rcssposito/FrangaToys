@@ -315,7 +315,9 @@ export async function PATCH(req: Request) {
             numero,
             bairro,
             cidade,
-            uf
+            uf,
+            link_pagamento,
+            checkout_id
         } = body;
 
         if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 });
@@ -446,7 +448,9 @@ export async function PATCH(req: Request) {
                 quantidade: finalQuantidade,
                 valor_venda_final: finalValorVendaFinal,
                 cliente_id: final_cliente_id === undefined ? currentSale.cliente_id : final_cliente_id,
-                metodo_entrega: metodo_entrega === undefined ? currentSale.metodo_entrega : metodo_entrega
+                metodo_entrega: metodo_entrega === undefined ? currentSale.metodo_entrega : metodo_entrega,
+                link_pagamento: link_pagamento === undefined ? currentSale.link_pagamento : (link_pagamento || null),
+                checkout_id: checkout_id === undefined ? currentSale.checkout_id : (checkout_id || null)
             })
             .eq('id', id)
             .select();

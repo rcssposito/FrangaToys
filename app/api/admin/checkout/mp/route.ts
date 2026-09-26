@@ -4,7 +4,7 @@ import { MercadoPagoConfig, Preference } from 'mercadopago';
 
 export async function POST(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin']);
+    const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();

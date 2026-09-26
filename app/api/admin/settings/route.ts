@@ -6,7 +6,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabase';
 // LER CONFIGURAÇÕES
 export async function GET() {
     try {
-    const sessionOrResponse = await requireRoles(['admin']);
+    const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
     if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         let { data, error } = await supabase
