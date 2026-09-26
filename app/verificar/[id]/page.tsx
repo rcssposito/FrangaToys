@@ -76,12 +76,6 @@ export default async function VerificarPage({
 
             <main className="relative z-10 max-w-2xl mx-auto px-6 py-12 md:py-20 flex flex-col items-center">
 
-                {/* Header Logo */}
-                <div className="mb-12 transition-transform hover:scale-105 duration-500">
-                    <div className="bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800/50 shadow-2xl backdrop-blur-xl">
-                        <img src="/logobranca.png" alt="FrangaToys" className="h-8 w-auto opacity-90" />
-                    </div>
-                </div>
 
                 {/* Certificate Card - WHITE BACKGROUND */}
                 <div className="w-full bg-white rounded-[2.5rem] overflow-hidden shadow-[0_30px_100px_-20px_rgba(0,0,0,0.6)] border border-white/10">
