@@ -282,9 +282,52 @@ export default function KanbanPage() {
             } finally {
                 setIsFetchingCustomer(false);
             }
+        } else if (sale.cliente_contato) {
+            try {
+                const cleanPhone = sale.cliente_contato.replace(/\D/g, '');
+                if (cleanPhone.length >= 8) {
+                    const res = await fetch(`/api/admin/customers?q=${cleanPhone.slice(-8)}`);
+                    if (res.ok) {
+                        const list = await res.json();
+                        if (list && list.length > 0) {
+                            const data = list[0];
+                            setNfeClienteId(data.id);
+                            setNfeCustomerNome(data.nome || sale.cliente_nome || '');
+                            setNfeCustomerCpf(data.cpf || '');
+                            setNfeCustomerCep(data.cep || '');
+                            setNfeCustomerLogradouro(data.logradouro || '');
+                            setNfeCustomerNumero(data.numero || '');
+                            setNfeCustomerBairro(data.bairro || '');
+                            setNfeCustomerCidade(data.cidade || '');
+                            setNfeCustomerUf(data.uf || '');
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Erro ao buscar dados do cliente por telefone:', err);
+            } finally {
+                setIsFetchingCustomer(false);
+            }
         } else {
             setIsFetchingCustomer(false);
         }
+    };
+
+    const handleRequestNfeDataWhatsApp = () => {
+        if (!selectedNfeSale) return;
+        const phone = (selectedNfeSale.cliente_contato || '').replace(/\D/g, '');
+        if (!phone || phone.length < 8) {
+            toast.error('Telefone do cliente não encontrado nesta venda.');
+            return;
+        }
+        const trackingParam = selectedNfeSale.access_token || phone;
+        const trackingUrl = `${window.location.origin}/rastreio/${trackingParam}`;
+        const primeiroNome = (nfeCustomerNome || selectedNfeSale.cliente_nome || 'Cliente').trim().split(' ')[0];
+        const msg = `Olá ${primeiroNome}! Sua peça na Franga Toys já está em produção! 🚀\n\nPara emitirmos a sua Nota Fiscal (NF-e) e prepararmos o envio com segurança, por favor preencha seus dados de faturamento (CPF e Endereço) no seu link de acompanhamento:\n\n👉 ${trackingUrl}\n\n(Leva menos de 1 minuto!)`;
+
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+        window.open(`${baseUrl}?phone=55${phone}&text=${encodeURIComponent(msg)}`, '_blank');
     };
 
     const handleDownloadXml = async () => {
@@ -1624,6 +1667,25 @@ export default function KanbanPage() {
                             </div>
                         ) : (
                             <form onSubmit={handleSaveAndEmitNfe} className="space-y-5">
+                                {(!nfeCustomerCpf || !nfeCustomerCep) && selectedNfeSale.cliente_contato && !isManualNfe && (
+                                    <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+                                        <div className="flex items-center gap-2.5">
+                                            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                                            <p className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">
+                                                CPF ou Endereço pendentes no cadastro
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleRequestNfeDataWhatsApp}
+                                            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider transition-all shadow-sm shrink-0 cursor-pointer"
+                                        >
+                                            <MessageCircle size={13} />
+                                            Pedir Dados no WhatsApp
+                                        </button>
+                                    </div>
+                                )}
+
                                 <div className="flex items-center gap-2 mb-2 p-3 bg-zinc-900/50 border border-zinc-850 rounded-xl">
                                     <input
                                         type="checkbox"

@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { isValidCpfOrCnpj, VALID_UFS_SET } from '@/lib/fiscal-validation';
 
 export async function GET(req: NextRequest) {
     try {
@@ -19,6 +20,8 @@ export async function GET(req: NextRequest) {
             status,
             data_venda,
             cliente_nome,
+            cliente_contato,
+            cliente_id,
             quantidade,
             figura_id,
             metodo_entrega,
@@ -79,6 +82,45 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ items: [], message: 'Nenhum pedido encontrado.' });
         }
 
+        // Buscar dados cadastrais do cliente (para conferência da NFe)
+        const clientIds = [...new Set(sales.map((s: any) => s.cliente_id).filter(Boolean))];
+        let clientMap: Record<string, any> = {};
+
+        if (clientIds.length > 0) {
+            const { data: clients } = await supabase
+                .from('clientes')
+                .select('id, nome, telefone, cpf, cep, logradouro, numero, complemento, bairro, cidade, uf')
+                .in('id', clientIds);
+            
+            (clients || []).forEach((c: any) => {
+                clientMap[c.id] = c;
+            });
+        }
+
+        // Para vendas que ainda não foram vinculadas por cliente_id, buscar pelo telefone
+        const unlinkedSales = sales.filter((s: any) => !s.cliente_id && s.cliente_contato);
+        if (unlinkedSales.length > 0) {
+            const phoneList: string[] = [];
+            for (const s of unlinkedSales) {
+                const clean = String(s.cliente_contato || '').replace(/\D/g, '');
+                if (clean.length >= 8 && !phoneList.includes(clean)) {
+                    phoneList.push(clean);
+                }
+            }
+            for (const p of phoneList) {
+                const { data: foundClient } = await supabase
+                    .from('clientes')
+                    .select('id, nome, telefone, cpf, cep, logradouro, numero, complemento, bairro, cidade, uf')
+                    .ilike('telefone', `%${p.slice(-8)}%`)
+                    .limit(1)
+                    .maybeSingle();
+
+                if (foundClient) {
+                    clientMap[`phone_${p}`] = foundClient;
+                }
+            }
+        }
+
         // Filtramos os dados finais para garantir que apenas o essencial seja enviado
         const formatted = sales.map((s: any) => {
             let linkDanfe = null;
@@ -90,6 +132,35 @@ export async function GET(req: NextRequest) {
                     linkDanfe = `https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=completa&tipoConteudo=X/5w46wAfac=`;
                 }
             }
+
+            const cleanPhone = (s.cliente_contato || '').replace(/\D/g, '');
+            const clientData = s.cliente_id 
+                ? clientMap[s.cliente_id] 
+                : (cleanPhone ? clientMap[`phone_${cleanPhone}`] : null);
+
+            const rawCpf = (clientData?.cpf || '').replace(/\D/g, '');
+            const rawCep = (clientData?.cep || '').replace(/\D/g, '');
+            const rawUf = (clientData?.uf || '').trim().toUpperCase();
+            const isNfeReady = Boolean(
+                (clientData?.nome || s.cliente_nome) &&
+                isValidCpfOrCnpj(rawCpf) &&
+                rawCep.length === 8 &&
+                clientData?.logradouro &&
+                clientData?.numero &&
+                clientData?.bairro &&
+                clientData?.cidade &&
+                VALID_UFS_SET.has(rawUf)
+            );
+
+            const rawNome = (clientData?.nome || s.cliente_nome || '').trim();
+            const nomeParts = rawNome.split(' ');
+            const nomeExibicao = nomeParts.length > 1 
+                ? `${nomeParts[0]} ${nomeParts[nomeParts.length - 1][0]}.` 
+                : rawNome;
+
+            const cpfFinal = rawCpf.length >= 2 ? rawCpf.slice(-2) : '';
+            const cpfMascarado = cpfFinal ? `***.***.***-${cpfFinal}` : '';
+            const cepMascarado = rawCep.length === 8 ? `${rawCep.slice(0, 5)}-***` : '';
 
             return {
                 id: s.id,
@@ -112,7 +183,16 @@ export async function GET(req: NextRequest) {
                 chave_nfe: s.chave_nfe,
                 link_danfe: linkDanfe,
                 wip_fotos: Array.isArray(s.wip_fotos) ? s.wip_fotos : [],
-                checklist: Array.isArray(s.checklist) ? s.checklist : []
+                checklist: Array.isArray(s.checklist) ? s.checklist : [],
+                cliente_contato: s.cliente_contato,
+                cliente: {
+                    is_nfe_ready: isNfeReady,
+                    nome_exibicao: isNfeReady ? nomeExibicao : (s.cliente_nome || ''),
+                    cpf_mascarado: cpfMascarado,
+                    cep_mascarado: cepMascarado,
+                    cidade: clientData?.cidade || '',
+                    uf: clientData?.uf || ''
+                }
             };
         });
 

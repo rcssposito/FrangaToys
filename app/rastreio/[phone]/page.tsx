@@ -3,13 +3,14 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw, ShoppingBag, Copy, QrCode, Check, Camera, X, Eye } from 'lucide-react';
+import { ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw, ShoppingBag, Copy, QrCode, Check, Camera, X, Eye, FileText, CheckCircle2, AlertCircle, Edit3, MapPin, ShieldCheck } from 'lucide-react';
 import { OrderTracker } from '@/components/OrderTracker';
 import Image from 'next/image';
 import imageKitLoader from '@/lib/image-loader';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { generatePixPayload } from '@/lib/pix';
+import { isValidCpfOrCnpj, isValidFullName, VALID_UFS_SET, BRAZILIAN_UFS } from '@/lib/fiscal-validation';
 
 function PixPaymentWidget({ order }: { order: any }) {
     const [copied, setCopied] = useState(false);
@@ -222,6 +223,389 @@ function NfeWidget({ order }: { order: any }) {
                     <ExternalLink size={12} strokeWidth={2.5} />
                     Visualizar DANFE (PDF)
                 </a>
+            )}
+        </div>
+    );
+}
+
+function NfeDataFormWidget({ order, identifier, onSaved }: { order: any; identifier: string; onSaved: () => void }) {
+    const client = order.cliente || {};
+    const isReady = !!client.is_nfe_ready;
+    const [isEditing, setIsEditing] = useState(!isReady);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isSearchingCep, setIsSearchingCep] = useState(false);
+
+    const [formData, setFormData] = useState({
+        nome: client.nome_exibicao || order.cliente_nome || '',
+        cpf: '',
+        cep: '',
+        logradouro: '',
+        numero: '',
+        complemento: '',
+        bairro: '',
+        cidade: '',
+        uf: ''
+    });
+
+    useEffect(() => {
+        setFormData(prev => ({
+            ...prev,
+            nome: prev.nome || client.nome_exibicao || order.cliente_nome || ''
+        }));
+        if (client.is_nfe_ready) {
+            setIsEditing(false);
+        } else {
+            setIsEditing(true);
+        }
+    }, [client.is_nfe_ready, client.nome_exibicao, order.cliente_nome]);
+
+    const formatCpfCnpj = (value: string) => {
+        const digits = value.replace(/\D/g, '');
+        if (digits.length <= 11) {
+            return digits
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        } else {
+            return digits
+                .slice(0, 14)
+                .replace(/(\d{2})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d)/, '$1/$2')
+                .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+        }
+    };
+
+    const formatCep = (value: string) => {
+        const digits = value.replace(/\D/g, '').slice(0, 8);
+        return digits.replace(/(\d{5})(\d)/, '$1-$2');
+    };
+
+    const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const formatted = formatCep(e.target.value);
+        setFormData(prev => ({ ...prev, cep: formatted }));
+
+        const clean = formatted.replace(/\D/g, '');
+        if (clean.length === 8) {
+            setIsSearchingCep(true);
+            try {
+                const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (!data.erro) {
+                        setFormData(prev => ({
+                            ...prev,
+                            logradouro: data.logradouro || prev.logradouro,
+                            bairro: data.bairro || prev.bairro,
+                            cidade: data.localidade || prev.cidade,
+                            uf: data.uf || prev.uf
+                        }));
+                        toast.success('Endereço localizado via CEP!');
+                        const numInput = document.getElementById(`numero-input-${order.id}`);
+                        if (numInput) numInput.focus();
+                    } else {
+                        toast.error('CEP não localizado');
+                    }
+                }
+            } catch {
+                toast.error('Erro ao consultar CEP');
+            } finally {
+                setIsSearchingCep(false);
+            }
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!isValidFullName(formData.nome)) {
+            toast.error('Informe seu nome completo (com sobrenome) para a emissão da NF-e.');
+            return;
+        }
+
+        const cleanCpf = formData.cpf.replace(/\D/g, '');
+        if (!isValidCpfOrCnpj(cleanCpf)) {
+            toast.error('Informe um CPF ou CNPJ válido com dígitos corretos.');
+            return;
+        }
+
+        const cleanCep = formData.cep.replace(/\D/g, '');
+        if (cleanCep.length !== 8) {
+            toast.error('Informe um CEP válido (8 dígitos).');
+            return;
+        }
+
+        if (!formData.logradouro.trim() || !formData.numero.trim() || !formData.bairro.trim() || !formData.cidade.trim() || !formData.uf.trim()) {
+            toast.error('Por favor, preencha todos os campos obrigatórios de endereço.');
+            return;
+        }
+
+        const cleanUf = formData.uf.trim().toUpperCase();
+        if (!VALID_UFS_SET.has(cleanUf)) {
+            toast.error('Selecione uma UF (Estado) válida.');
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const isToken = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+            const res = await fetch('/api/public/orders/nfe-data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: isToken ? identifier : (order.token || undefined),
+                    phone: isToken ? (order.cliente_contato || undefined) : identifier,
+                    sale_id: order.id,
+                    ...formData
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erro ao salvar dados');
+
+            toast.success('Dados cadastrais salvos com sucesso!');
+            setIsEditing(false);
+            onSaved();
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao salvar dados cadastrais');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <div className="mt-6 bg-zinc-950/80 border border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6 shadow-lg backdrop-blur-sm relative overflow-hidden">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                        <FileText size={20} />
+                    </div>
+                    <div>
+                        <h4 className="text-xs font-black uppercase tracking-widest text-zinc-300">
+                            Dados para a Nota Fiscal (NF-e)
+                        </h4>
+                        <p className="text-[10px] text-zinc-500 font-medium">
+                            {isReady 
+                                ? 'Dados registrados para emissão da Nota Fiscal e envio da sua peça.' 
+                                : 'Complete seus dados para emissão da sua Nota Fiscal e finalizarmos sua entrega.'}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="shrink-0">
+                    {isReady ? (
+                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                            <CheckCircle2 size={13} className="text-emerald-400" />
+                            Pronto para a NF-e
+                        </span>
+                    ) : (
+                        <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm animate-pulse">
+                            <AlertCircle size={13} className="text-amber-400" />
+                            Dados Pendentes
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            {/* Visualização Resumida quando já está Pronto (Proteção LGPD) */}
+            {isReady && !isEditing ? (
+                <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1 text-xs text-zinc-300">
+                        <div className="flex items-center gap-2">
+                            <span className="font-bold text-white">{client.nome_exibicao || 'Cliente'}</span>
+                            <span className="text-zinc-600">•</span>
+                            <span className="font-mono text-zinc-400 font-bold">{client.cpf_mascarado || 'Documento Registrado'}</span>
+                        </div>
+                        {client.cidade && client.uf && (
+                            <p className="text-zinc-400 text-[11px] flex items-center gap-1.5">
+                                <MapPin size={12} className="text-purple-400 shrink-0" />
+                                {client.cidade} / {client.uf} {client.cep_mascarado ? `• CEP ${client.cep_mascarado}` : ''}
+                            </p>
+                        )}
+                        <p className="text-[10px] text-emerald-400/80 font-medium flex items-center gap-1.5 pt-0.5">
+                            <ShieldCheck size={12} className="text-emerald-400 shrink-0" />
+                            Dados de faturamento e entrega salvos com segurança (Proteção LGPD).
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setIsEditing(true)}
+                        className="self-start sm:self-center flex items-center gap-2 text-[10px] font-black uppercase tracking-wider px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-zinc-700/60 text-zinc-300 hover:text-white transition-all cursor-pointer shrink-0"
+                    >
+                        <Edit3 size={12} />
+                        Atualizar Dados
+                    </button>
+                </div>
+            ) : (
+                /* Formulário */
+                <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+                    {!isReady && (
+                        <div className="p-3.5 bg-amber-500/5 border border-amber-500/20 rounded-xl text-amber-300 text-xs font-medium flex items-center gap-2.5">
+                            <AlertCircle size={16} className="shrink-0 text-amber-400" />
+                            <span>Por favor, preencha os dados abaixo para que possamos emitir sua Nota Fiscal e finalizarmos sua entrega.</span>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-[10px] text-zinc-400 uppercase font-black mb-1 tracking-wider">Nome Completo</label>
+                            <input
+                                type="text"
+                                required
+                                value={formData.nome}
+                                onChange={e => setFormData(prev => ({ ...prev, nome: e.target.value }))}
+                                placeholder="Nome como no documento"
+                                className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl px-3.5 py-2.5 outline-none focus:border-purple-500 text-xs text-zinc-200 font-bold transition-all shadow-inner"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-[10px] text-zinc-400 uppercase font-black mb-1 tracking-wider">CPF ou CNPJ</label>
+                            <input
+                                type="text"
+                                required
+                                value={formData.cpf}
+                                onChange={e => setFormData(prev => ({ ...prev, cpf: formatCpfCnpj(e.target.value) }))}
+                                placeholder="000.000.000-00"
+                                className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl px-3.5 py-2.5 outline-none focus:border-purple-500 text-xs text-zinc-200 font-bold transition-all shadow-inner"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="block text-[10px] text-zinc-400 uppercase font-black tracking-wider">CEP</label>
+                                {isSearchingCep && (
+                                    <span className="text-[9px] font-bold text-purple-400 flex items-center gap-1">
+                                        <Loader2 size={10} className="animate-spin" /> Buscando...
+                                    </span>
+                                )}
+                            </div>
+                            <input
+                                type="text"
+                                required
+                                maxLength={9}
+                                value={formData.cep}
+                                onChange={handleCepChange}
+                                placeholder="00000-000"
+                                className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl px-3.5 py-2.5 outline-none focus:border-purple-500 text-xs text-zinc-200 font-bold transition-all shadow-inner"
+                            />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                            <label className="block text-[10px] text-zinc-400 uppercase font-black mb-1 tracking-wider">Rua / Logradouro</label>
+                            <input
+                                type="text"
+                                required
+                                value={formData.logradouro}
+                                onChange={e => setFormData(prev => ({ ...prev, logradouro: e.target.value }))}
+                                placeholder="Ex: Av. Paulista"
+                                className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl px-3.5 py-2.5 outline-none focus:border-purple-500 text-xs text-zinc-200 font-bold transition-all shadow-inner"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div>
+                            <label className="block text-[10px] text-zinc-400 uppercase font-black mb-1 tracking-wider">Número</label>
+                            <input
+                                id={`numero-input-${order.id}`}
+                                type="text"
+                                required
+                                value={formData.numero}
+                                onChange={e => setFormData(prev => ({ ...prev, numero: e.target.value }))}
+                                placeholder="Ex: 123 ou S/N"
+                                className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl px-3.5 py-2.5 outline-none focus:border-purple-500 text-xs text-zinc-200 font-bold transition-all shadow-inner"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-[10px] text-zinc-400 uppercase font-black mb-1 tracking-wider">Complemento (Opt)</label>
+                            <input
+                                type="text"
+                                value={formData.complemento}
+                                onChange={e => setFormData(prev => ({ ...prev, complemento: e.target.value }))}
+                                placeholder="Apto 42"
+                                className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl px-3.5 py-2.5 outline-none focus:border-purple-500 text-xs text-zinc-200 font-bold transition-all shadow-inner"
+                            />
+                        </div>
+
+                        <div className="col-span-2 sm:col-span-2">
+                            <label className="block text-[10px] text-zinc-400 uppercase font-black mb-1 tracking-wider">Bairro</label>
+                            <input
+                                type="text"
+                                required
+                                value={formData.bairro}
+                                onChange={e => setFormData(prev => ({ ...prev, bairro: e.target.value }))}
+                                placeholder="Bairro"
+                                className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl px-3.5 py-2.5 outline-none focus:border-purple-500 text-xs text-zinc-200 font-bold transition-all shadow-inner"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="col-span-2">
+                            <label className="block text-[10px] text-zinc-400 uppercase font-black mb-1 tracking-wider">Cidade</label>
+                            <input
+                                type="text"
+                                required
+                                value={formData.cidade}
+                                onChange={e => setFormData(prev => ({ ...prev, cidade: e.target.value }))}
+                                placeholder="Cidade"
+                                className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl px-3.5 py-2.5 outline-none focus:border-purple-500 text-xs text-zinc-200 font-bold transition-all shadow-inner"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-[10px] text-zinc-400 uppercase font-black mb-1 tracking-wider">UF (Estado)</label>
+                            <select
+                                required
+                                value={formData.uf}
+                                onChange={e => setFormData(prev => ({ ...prev, uf: e.target.value.toUpperCase() }))}
+                                className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl px-3 py-2.5 outline-none focus:border-purple-500 text-xs text-zinc-200 font-bold uppercase transition-all shadow-inner text-center cursor-pointer appearance-none"
+                            >
+                                <option value="" disabled className="text-zinc-500">UF</option>
+                                {BRAZILIAN_UFS.map(uf => (
+                                    <option key={uf} value={uf} className="bg-zinc-900 text-zinc-200 font-bold">
+                                        {uf}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 pt-2">
+                        {isReady && (
+                            <button
+                                type="button"
+                                onClick={() => setIsEditing(false)}
+                                className="px-4 py-2.5 text-xs font-bold text-zinc-400 hover:text-white rounded-xl transition-colors cursor-pointer"
+                            >
+                                Cancelar
+                            </button>
+                        )}
+                        <button
+                            type="submit"
+                            disabled={isSaving}
+                            className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-black uppercase tracking-wider px-6 py-2.5 rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                        >
+                            {isSaving ? (
+                                <>
+                                    <Loader2 size={14} className="animate-spin" />
+                                    Salvando...
+                                </>
+                            ) : (
+                                <>
+                                    <Check size={14} />
+                                    Salvar Dados da Nota Fiscal
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </form>
             )}
         </div>
     );
@@ -477,9 +861,11 @@ export default function CustomerDashboard() {
                                         <WipGalleryWidget photos={order.wip_fotos} />
                                     )}
 
-                                    {/* Seção de Nota Fiscal (NF-e) se disponível */}
-                                    {order.chave_nfe && (
+                                    {/* Seção de Nota Fiscal (NF-e) emitida ou formulário de preenchimento */}
+                                    {order.chave_nfe ? (
                                         <NfeWidget order={order} />
+                                    ) : (
+                                        <NfeDataFormWidget order={order} identifier={identifier} onSaved={fetchOrders} />
                                     )}
 
                                     {/* Seção de Pagamento PIX */}
