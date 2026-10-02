@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Truck, Flame, Settings, Instagram, LibraryBig, Palette } from 'lucide-react';
+import { Truck, Flame, Settings, Instagram, LibraryBig, Palette, Compass } from 'lucide-react';
 import ThemeToggle from '@/components/common/ThemeToggle';
 import { CartIndicator } from '@/components/Cart/CartIndicator';
 import { useCart } from '@/context/CartContext';
@@ -13,8 +13,8 @@ export default function Header() {
   const { setIsCartOpen } = useCart();
   const pathname = usePathname();
 
-  // Don't show header in admin pages
-  if (pathname?.startsWith('/admin')) {
+  // Don't show header in admin pages or full-screen universe
+  if (pathname?.startsWith('/admin') || pathname === '/universo') {
     return null;
   }
 
@@ -81,6 +81,25 @@ export default function Header() {
             />
             <span className="hidden lg:inline">Estúdios</span>
           </Link>
+
+          <div className="h-4 w-px bg-zinc-800/30 hidden md:block" />
+
+          <Link
+            href="/universo"
+            className={clsx(
+              "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group whitespace-nowrap",
+              pathname === '/universo'
+                ? "text-orange-400"
+                : "text-zinc-400 hover:text-orange-400"
+            )}
+            title="Explorar Universo 3D em Grafo"
+          >
+            <Compass
+              size={16}
+              className="text-orange-400 group-hover:rotate-45 transition-transform"
+            />
+            <span className="hidden lg:inline">Universo 3D</span>
+          </Link>
         </div>
 
         {/* Right Menu / Utilities */}
@@ -123,6 +142,9 @@ export default function Header() {
           </Link>
           <Link href="/campanha" className="p-1 text-purple-500" title="Campanha Especial">
             <Flame size={20} />
+          </Link>
+          <Link href="/universo" className="p-1 text-amber-500" title="Universo 3D">
+            <Compass size={20} />
           </Link>
         </div>
         <Link href="/" className="flex-shrink-0 flex justify-center">
