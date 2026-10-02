@@ -10,6 +10,7 @@ export async function GET(req: Request) {
 
         const { searchParams } = new URL(req.url);
         const query = searchParams.get('q'); // Para autocomplete
+        const tag = searchParams.get('tag'); // Filtro por tag
         const id = searchParams.get('id'); // Para busca especifica por id
 
         if (id) {
@@ -38,10 +39,14 @@ export async function GET(req: Request) {
             `);
 
         if (query) {
-            supabaseQuery = supabaseQuery.or(`nome.ilike.%${query}%,telefone.ilike.%${query}%`);
+            supabaseQuery = supabaseQuery.or(`nome.ilike.%${query}%,telefone.ilike.%${query}%,email.ilike.%${query}%`);
         }
 
-        const { data, error } = await supabaseQuery.order('nome', { ascending: true }).limit(50);
+        if (tag && tag !== 'all') {
+            supabaseQuery = supabaseQuery.contains('tags', [tag]);
+        }
+
+        const { data, error } = await supabaseQuery.order('nome', { ascending: true }).limit(100);
 
         if (error) throw error;
 
@@ -62,6 +67,8 @@ export async function GET(req: Request) {
             const { vendas, ...customerData } = c;
             return {
                 ...customerData,
+                email: c.email || '',
+                tags: Array.isArray(c.tags) ? c.tags : [],
                 total_pedidos: stats.total_pedidos,
                 total_gasto: stats.total_gasto,
                 ultima_venda_em: stats.ultima_venda_em ? stats.ultima_venda_em.toISOString() : null
@@ -77,11 +84,11 @@ export async function GET(req: Request) {
 // CRIAR CLIENTE
 export async function POST(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+        const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();
-        const { nome, telefone, instagram, notas, cpf, cep, logradouro, numero, bairro, cidade, uf } = body;
+        const { nome, telefone, email, tags, instagram, notas, cpf, cep, logradouro, numero, bairro, cidade, uf } = body;
 
         if (!nome || !telefone) {
             return NextResponse.json({ error: 'Nome e telefone são obrigatórios' }, { status: 400 });
@@ -89,7 +96,21 @@ export async function POST(req: Request) {
 
         const { data, error } = await supabase
             .from('clientes')
-            .insert([{ nome, telefone, instagram, notas, cpf, cep, logradouro, numero, bairro, cidade, uf }])
+            .insert([{ 
+                nome, 
+                telefone, 
+                email: email || null,
+                tags: Array.isArray(tags) ? tags : [],
+                instagram, 
+                notas, 
+                cpf, 
+                cep, 
+                logradouro, 
+                numero, 
+                bairro, 
+                cidade, 
+                uf 
+            }])
             .select()
             .single();
 
@@ -104,17 +125,34 @@ export async function POST(req: Request) {
 // ATUALIZAR CLIENTE
 export async function PATCH(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+        const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const body = await req.json();
-        const { id, nome, telefone, instagram, notas, cpf, cep, logradouro, numero, bairro, cidade, uf } = body;
+        const { id, nome, telefone, email, tags, instagram, notas, cpf, cep, logradouro, numero, bairro, cidade, uf } = body;
 
         if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 });
 
+        const updateData: any = { 
+            nome, 
+            telefone, 
+            instagram, 
+            notas, 
+            cpf, 
+            cep, 
+            logradouro, 
+            numero, 
+            bairro, 
+            cidade, 
+            uf 
+        };
+
+        if (email !== undefined) updateData.email = email || null;
+        if (tags !== undefined) updateData.tags = Array.isArray(tags) ? tags : [];
+
         const { data, error } = await supabase
             .from('clientes')
-            .update({ nome, telefone, instagram, notas, cpf, cep, logradouro, numero, bairro, cidade, uf })
+            .update(updateData)
             .eq('id', id)
             .select()
             .single();
@@ -122,7 +160,6 @@ export async function PATCH(req: Request) {
         if (error) throw error;
 
         // --- Sincronização Global (Opção B do Usuário) ---
-        // Se o nome foi alterado, atualizamos em todas as vendas vinculadas a esse ID
         if (nome) {
             const { error: syncError } = await supabase
                 .from('vendas')
@@ -131,7 +168,6 @@ export async function PATCH(req: Request) {
             
             if (syncError) {
                 console.error('Falha na sincronização de nomes nas vendas:', syncError);
-                // Não travamos a resposta principal por isso, mas logamos o erro
             }
         }
 

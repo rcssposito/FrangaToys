@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
     Users, 
     Search, 
@@ -11,30 +11,64 @@ import {
     ArrowRight, 
     MessageCircle, 
     Instagram as InstagramIcon,
-    Loader2,
-    UserPlus,
-    Filter,
-    MoreHorizontal,
-    TrendingUp,
-    Clock,
-    Award,
-    Edit2,
-    X as CloseIcon,
-    Save,
-    Copy,
-    Check,
-    Gift,
-    Wand2,
-    Trash2,
-    Download
+    Loader2, 
+    UserPlus, 
+    Filter, 
+    TrendingUp, 
+    Clock, 
+    Award, 
+    Edit2, 
+    X as CloseIcon, 
+    Save, 
+    Copy, 
+    Check, 
+    Gift, 
+    Wand2, 
+    Trash2, 
+    Download,
+    Tag,
+    Mail,
+    Send,
+    Play,
+    Pause,
+    RefreshCw,
+    Sparkles,
+    CheckCircle2,
+    AlertCircle,
+    Plus,
+    ExternalLink
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePermission } from '@/hooks/usePermission';
+
+export const DEFAULT_SUGGESTED_TAGS = [
+    'VIP',
+    'Colecionador Anime',
+    'Gamer',
+    'Lead Quente',
+    'Inativo',
+    'Comprador Recorrente',
+    'Atacado'
+];
+
+export const getTagBadgeStyle = (tag: string) => {
+    const lower = (tag || '').toLowerCase();
+    if (lower.includes('vip')) return 'bg-amber-500/15 border-amber-500/40 text-amber-400';
+    if (lower.includes('anime')) return 'bg-pink-500/15 border-pink-500/40 text-pink-400';
+    if (lower.includes('game') || lower.includes('gamer')) return 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400';
+    if (lower.includes('lead') || lower.includes('quente')) return 'bg-orange-500/15 border-orange-500/40 text-orange-400';
+    if (lower.includes('inativo')) return 'bg-zinc-700/30 border-zinc-600/40 text-zinc-400';
+    if (lower.includes('atacado')) return 'bg-purple-500/15 border-purple-500/40 text-purple-400';
+    if (lower.includes('recorrente')) return 'bg-blue-500/15 border-blue-500/40 text-blue-400';
+    return 'bg-sky-500/15 border-sky-500/40 text-sky-400';
+};
 
 interface Customer {
     id: string;
     nome: string;
     telefone: string;
+    email?: string;
+    tags?: string[];
     instagram?: string;
     notas?: string;
     data_cadastro: string;
@@ -50,32 +84,93 @@ interface Customer {
     uf?: string;
 }
 
+interface Cadencia {
+    id: string;
+    nome: string;
+    descricao?: string;
+    target_tags: string[];
+    status: 'rascunho' | 'ativa' | 'pausada' | 'concluida';
+    tipo_canal: 'email' | 'sistema' | 'misto';
+    cupom_codigo?: string;
+    desconto_percentual?: number;
+    assunto_email?: string;
+    conteudo_email?: string;
+    total_impactados: number;
+    total_enviados: number;
+    total_convertidos: number;
+    created_at: string;
+}
+
 export default function CustomersPage() {
     const { hasRole } = usePermission();
     const router = useRouter();
+
+    // Mode Switcher (Clientes vs Cadências)
+    const [viewMode, setViewMode] = useState<'clientes' | 'cadencias'>('clientes');
+
+    // Clientes State
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [activeFilter, setActiveFilter] = useState<'all' | 'vips' | 'inactives' | 'new'>('all');
+    const [selectedTagFilter, setSelectedTagFilter] = useState<string>('all');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
     const [isCopying, setIsCopying] = useState(false);
+    const [newTagInput, setNewTagInput] = useState('');
 
     // Coupon Gift States
     const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
     const [giftCustomer, setGiftCustomer] = useState<Customer | null>(null);
     const [giftTipo, setGiftTipo] = useState<'porcentagem' | 'fixo'>('porcentagem');
-    const [giftValor, setGiftValor] = useState('');
+    const [giftValor, setGiftValor] = useState('10');
     const [giftMinimo, setGiftMinimo] = useState('');
     const [giftMaximo, setGiftMaximo] = useState('');
     const [isGeneratingGift, setIsGeneratingGift] = useState(false);
     const [generatedCoupon, setGeneratedCoupon] = useState('');
 
+    // Cadências de Promoções State
+    const [cadencias, setCadencias] = useState<Cadencia[]>([]);
+    const [loadingCadencias, setLoadingCadencias] = useState(false);
+    const [isCadenceModalOpen, setIsCadenceModalOpen] = useState(false);
+    const [cadenceForm, setCadenceForm] = useState<{
+        id?: string;
+        nome: string;
+        descricao: string;
+        target_tags: string[];
+        cupom_codigo: string;
+        desconto_percentual: string;
+        assunto_email: string;
+        conteudo_email: string;
+        status: 'rascunho' | 'ativa' | 'pausada';
+    }>({
+        nome: '',
+        descricao: '',
+        target_tags: ['VIP'],
+        cupom_codigo: '',
+        desconto_percentual: '15',
+        assunto_email: '🎉 Presente Especial da Franga Toys: Desconto Exclusivo!',
+        conteudo_email: 'Olá, {primeiro_nome}!\n\nPreparamos uma seleção exclusiva para você em nosso acervo de colecionáveis.\n\nUse o cupom {cupom} e garanta {desconto}% OFF!\n\nAcesse agora: {loja_link}',
+        status: 'ativa'
+    });
+    const [isSavingCadence, setIsSavingCadence] = useState(false);
+
+    // Modal de Disparo / Fila da Cadência
+    const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
+    const [activeDispatchCadence, setActiveDispatchCadence] = useState<any>(null);
+    const [loadingDispatchDetails, setLoadingDispatchDetails] = useState(false);
+    const [isExecutingDispatch, setIsExecutingDispatch] = useState(false);
+
+    // 1. Carregar Clientes
     const fetchCustomers = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/admin/customers?q=${encodeURIComponent(search)}`);
+            const queryParams = new URLSearchParams();
+            if (search) queryParams.set('q', search);
+            if (selectedTagFilter && selectedTagFilter !== 'all') queryParams.set('tag', selectedTagFilter);
+
+            const res = await fetch(`/api/admin/customers?${queryParams.toString()}`);
             const data = await res.json();
             
             if (res.ok && Array.isArray(data)) {
@@ -91,13 +186,38 @@ export default function CustomersPage() {
         }
     };
 
+    // 2. Carregar Cadências
+    const fetchCadencias = async () => {
+        setLoadingCadencias(true);
+        try {
+            const res = await fetch('/api/admin/crm/cadencias');
+            const data = await res.json();
+            if (res.ok && Array.isArray(data)) {
+                setCadencias(data);
+            } else {
+                setCadencias([]);
+            }
+        } catch (err) {
+            toast.error('Erro ao carregar cadências');
+        } finally {
+            setLoadingCadencias(false);
+        }
+    };
+
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchCustomers();
         }, 300);
         return () => clearTimeout(timer);
-    }, [search]);
+    }, [search, selectedTagFilter]);
 
+    useEffect(() => {
+        if (viewMode === 'cadencias') {
+            fetchCadencias();
+        }
+    }, [viewMode]);
+
+    // CEP Auto-complete no Modal
     useEffect(() => {
         if (!selectedCustomer?.cep) return;
         const cleanCep = selectedCustomer.cep.replace(/\D/g, '');
@@ -152,6 +272,30 @@ export default function CustomersPage() {
         }
     };
 
+    // Gestão de Tags do Cliente
+    const handleAddCustomerTag = (tagToAdd: string) => {
+        if (!selectedCustomer) return;
+        const trimmed = tagToAdd.trim();
+        if (!trimmed) return;
+        const current = selectedCustomer.tags || [];
+        if (!current.some(t => t.toLowerCase() === trimmed.toLowerCase())) {
+            setSelectedCustomer({
+                ...selectedCustomer,
+                tags: [...current, trimmed]
+            });
+        }
+        setNewTagInput('');
+    };
+
+    const handleRemoveCustomerTag = (tagToRemove: string) => {
+        if (!selectedCustomer) return;
+        const current = selectedCustomer.tags || [];
+        setSelectedCustomer({
+            ...selectedCustomer,
+            tags: current.filter(t => t.toLowerCase() !== tagToRemove.toLowerCase())
+        });
+    };
+
     const handleUpdateCustomer = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedCustomer || isUpdating) return;
@@ -166,7 +310,7 @@ export default function CustomersPage() {
 
             if (!res.ok) throw new Error('Erro ao atualizar');
 
-            toast.success('Cliente atualizado com sucesso!');
+            toast.success('Cliente e tags atualizados com sucesso!');
             setIsEditModalOpen(false);
             fetchCustomers();
         } catch (err: any) {
@@ -240,7 +384,6 @@ export default function CustomersPage() {
 
         setIsGeneratingGift(true);
         try {
-            // Gera um código único ex: JOAO15-8A2F
             const prefix = giftCustomer.nome.split(' ')[0].toUpperCase().replace(/[^A-Z]/g, '').substring(0, 5);
             const valStr = giftTipo === 'porcentagem' ? giftValor : 'OFF';
             const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -250,7 +393,7 @@ export default function CustomersPage() {
                 codigo: codigoUnico,
                 tipo: giftTipo,
                 valor: Number(giftValor),
-                usos_restantes: 1, // Exclusivo para 1 uso
+                usos_restantes: 1,
                 data_validade: null,
                 valor_minimo: giftMinimo ? Number(giftMinimo) : null,
                 desconto_maximo: giftMaximo ? Number(giftMaximo) : null,
@@ -299,7 +442,7 @@ export default function CustomersPage() {
         setIsGiftModalOpen(true);
     };
 
-    // Cálculos de Métricas em Tempo Real - Protegidos contra erros de tipo
+    // Cálculos de Métricas de Clientes
     const customersArray = Array.isArray(customers) ? customers : [];
     const totalCustomers = customersArray.length;
     const currentMonth = new Date().getMonth();
@@ -312,17 +455,57 @@ export default function CustomersPage() {
 
     const topCustomer = [...customersArray].sort((a,b) => (b.total_gasto || 0) - (a.total_gasto || 0))[0];
 
+    const filteredCustomers = useMemo(() => {
+        return customersArray.filter(c => {
+            // Filtro por Tag
+            if (selectedTagFilter !== 'all') {
+                const cTags = c.tags || [];
+                if (!cTags.some(t => t.toLowerCase() === selectedTagFilter.toLowerCase())) {
+                    return false;
+                }
+            }
+
+            // Filtro por Status
+            if (activeFilter === 'all') return true;
+            if (activeFilter === 'vips') return (c.total_gasto || 0) > 500;
+            if (activeFilter === 'new') {
+                const regDate = new Date(c.data_cadastro);
+                return regDate.getMonth() === currentMonth && regDate.getFullYear() === currentYear;
+            }
+            if (activeFilter === 'inactives') {
+                if (!c.ultima_venda_em) return true;
+                const lastSale = new Date(c.ultima_venda_em);
+                const sixtyDaysAgo = new Date();
+                sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+                return lastSale < sixtyDaysAgo;
+            }
+            return true;
+        });
+    }, [customersArray, selectedTagFilter, activeFilter, currentMonth, currentYear]);
+
+    // Todas as tags em uso na base
+    const allTagsInUse = useMemo(() => {
+        const tagMap = new Map<string, number>();
+        customersArray.forEach(c => {
+            (c.tags || []).forEach(t => {
+                const tr = t.trim();
+                if (tr) tagMap.set(tr, (tagMap.get(tr) || 0) + 1);
+            });
+        });
+        return Array.from(tagMap.entries()).map(([tag, count]) => ({ tag, count }));
+    }, [customersArray]);
+
     const handleCopyList = async () => {
         if (filteredCustomers.length === 0 || isCopying) return;
         
         setIsCopying(true);
         try {
             const listText = filteredCustomers
-                .map(c => `${c.nome} - ${c.telefone}`)
+                .map(c => `${c.nome} - ${c.telefone}${c.email ? ` - ${c.email}` : ''}`)
                 .join('\n');
             
             await navigator.clipboard.writeText(listText);
-            toast.success(`${filteredCustomers.length} contatos copiados para a área de transferência!`);
+            toast.success(`${filteredCustomers.length} contatos copiados!`);
             
             setTimeout(() => {
                 setIsCopying(false);
@@ -333,22 +516,110 @@ export default function CustomersPage() {
         }
     };
 
-    const filteredCustomers = customersArray.filter(c => {
-        if (activeFilter === 'all') return true;
-        if (activeFilter === 'vips') return (c.total_gasto || 0) > 500;
-        if (activeFilter === 'new') {
-            const regDate = new Date(c.data_cadastro);
-            return regDate.getMonth() === currentMonth && regDate.getFullYear() === currentYear;
+    // Cadência: Criar / Editar
+    const openCreateCadenceModal = () => {
+        setCadenceForm({
+            nome: '',
+            descricao: '',
+            target_tags: ['VIP'],
+            cupom_codigo: 'PROMO15',
+            desconto_percentual: '15',
+            assunto_email: '🎉 Presente Especial da Franga Toys: Desconto Exclusivo!',
+            conteudo_email: 'Olá, {primeiro_nome}!\n\nPreparamos uma condição exclusiva especialmente para você em nosso acervo de colecionáveis.\n\nUse o cupom {cupom} e garanta {desconto}% OFF!\n\nAcesse agora: {loja_link}',
+            status: 'ativa'
+        });
+        setIsCadenceModalOpen(true);
+    };
+
+    const handleSaveCadence = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!cadenceForm.nome.trim() || cadenceForm.target_tags.length === 0) {
+            toast.error('Informe um nome e ao menos uma tag-alvo para a cadência');
+            return;
         }
-        if (activeFilter === 'inactives') {
-            if (!c.ultima_venda_em) return true;
-            const lastSale = new Date(c.ultima_venda_em);
-            const sixtyDaysAgo = new Date();
-            sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-            return lastSale < sixtyDaysAgo;
+
+        setIsSavingCadence(true);
+        try {
+            const isEditing = !!cadenceForm.id;
+            const res = await fetch('/api/admin/crm/cadencias', {
+                method: isEditing ? 'PATCH' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(cadenceForm)
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erro ao salvar cadência');
+
+            toast.success(isEditing ? 'Cadência atualizada!' : `Cadência criada com ${data.total_impactados || 0} clientes matriculados!`);
+            setIsCadenceModalOpen(false);
+            fetchCadencias();
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao processar cadência');
+        } finally {
+            setIsSavingCadence(false);
         }
-        return true;
-    });
+    };
+
+    const handleDeleteCadence = async (id: string, name: string) => {
+        if (!confirm(`Deseja realmente excluir a cadência "${name}"?`)) return;
+        try {
+            const res = await fetch(`/api/admin/crm/cadencias?id=${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Erro ao excluir cadência');
+            toast.success('Cadência removida!');
+            fetchCadencias();
+        } catch (err: any) {
+            toast.error(err.message || 'Falha ao remover cadência');
+        }
+    };
+
+    const openDispatchModal = async (cadenciaId: string) => {
+        setLoadingDispatchDetails(true);
+        setIsDispatchModalOpen(true);
+        try {
+            const res = await fetch(`/api/admin/crm/cadencias?id=${cadenciaId}`);
+            const data = await res.json();
+            if (res.ok) {
+                setActiveDispatchCadence(data);
+            } else {
+                toast.error('Erro ao carregar detalhes');
+                setIsDispatchModalOpen(false);
+            }
+        } catch (err) {
+            toast.error('Falha ao carregar fila');
+            setIsDispatchModalOpen(false);
+        } finally {
+            setLoadingDispatchDetails(false);
+        }
+    };
+
+    const handleExecuteDispatch = async () => {
+        if (!activeDispatchCadence) return;
+        setIsExecutingDispatch(true);
+        try {
+            const res = await fetch(`/api/admin/crm/cadencias/${activeDispatchCadence.id}/disparar`, {
+                method: 'POST'
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Falha no disparo');
+
+            toast.success(data.message || 'Disparo concluído com sucesso!');
+            setIsDispatchModalOpen(false);
+            fetchCadencias();
+        } catch (err: any) {
+            toast.error(err.message || 'Erro durante o disparo');
+        } finally {
+            setIsExecutingDispatch(false);
+        }
+    };
+
+    // Contador de clientes impactados pela seleção de tags na cadência
+    const targetTagImpactCount = useMemo(() => {
+        if (!cadenceForm.target_tags.length) return 0;
+        return customersArray.filter(c => {
+            const cTags = (c.tags || []).map(t => t.toLowerCase());
+            return cadenceForm.target_tags.some(tt => cTags.includes(tt.toLowerCase()));
+        }).length;
+    }, [customersArray, cadenceForm.target_tags]);
 
     return (
         <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
@@ -359,372 +630,983 @@ export default function CustomersPage() {
                         <div className="p-2 bg-orange-500 rounded-xl text-white shadow-lg shadow-orange-500/20">
                             <Users size={28} strokeWidth={2.5} />
                         </div>
-                        CRM DE <span className="text-orange-500">CLIENTES</span>
+                        CRM & <span className="text-orange-500">FIDELIZAÇÃO</span>
                     </h1>
                     <p className="text-zinc-500 text-xs font-black uppercase tracking-widest pl-1 opacity-70">
-                        Gestão de relacionamento e fidelidade Franga Toys
+                        Segmentação por tags, automações e cadências de promoções Franga Toys
                     </p>
                 </div>
 
-                <div className="flex flex-col md:flex-row items-center gap-4">
-                    <div className="relative group w-full md:w-80">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-orange-500 transition-colors" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Buscar nome ou WhatsApp..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="bg-black border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-6 outline-none focus:border-orange-500 w-full text-sm font-medium transition-all shadow-inner"
-                        />
-                    </div>
+                {/* Tab Switcher: Clientes vs Cadências */}
+                <div className="flex items-center gap-2 bg-zinc-900/60 p-1.5 rounded-2xl border border-zinc-800">
+                    <button
+                        onClick={() => setViewMode('clientes')}
+                        className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                            viewMode === 'clientes'
+                                ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                                : 'text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                        <Users size={16} />
+                        Clientes & Tags ({totalCustomers})
+                    </button>
+                    <button
+                        onClick={() => setViewMode('cadencias')}
+                        className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                            viewMode === 'cadencias'
+                                ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                                : 'text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                        <Sparkles size={16} />
+                        Cadências de Promoções ({cadencias.length})
+                    </button>
                 </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 bg-zinc-900/10 p-3 rounded-3xl border border-zinc-800/50">
-                    <button 
-                        onClick={() => setActiveFilter('all')}
-                        className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${activeFilter === 'all' ? 'bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
-                    >
-                        Todos
-                    </button>
-                    <button 
-                        onClick={() => setActiveFilter('vips')}
-                        className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 ${activeFilter === 'vips' ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
-                    >
-                        <Award size={14} /> VIPs (LTV &gt; 500)
-                    </button>
-                    <button 
-                        onClick={() => setActiveFilter('inactives')}
-                        className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 ${activeFilter === 'inactives' ? 'bg-zinc-200 border-zinc-200 text-black shadow-lg shadow-white/20' : 'bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
-                    >
-                        <Clock size={14} /> Inativos (+60 dias)
-                    </button>
-                    <button 
-                        onClick={() => setActiveFilter('new')}
-                        className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 ${activeFilter === 'new' ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-transparent border-zinc-800 text-zinc-500 hover:border-zinc-700'}`}
-                    >
-                        <UserPlus size={14} /> Novos (Este Mês)
-                    </button>
+            {/* ABA 1: BASE DE CLIENTES & TAGS */}
+            {viewMode === 'clientes' && (
+                <div className="space-y-6">
+                    {/* Barra de Busca e Filtro de Tags */}
+                    <div className="flex flex-col md:flex-row items-center gap-4">
+                        <div className="relative group w-full md:flex-1">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-orange-500 transition-colors" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Buscar cliente por nome, telefone ou e-mail..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="bg-black border border-zinc-800 rounded-2xl py-3.5 pl-12 pr-6 outline-none focus:border-orange-500 w-full text-sm font-medium transition-all shadow-inner text-white placeholder-zinc-500"
+                            />
+                        </div>
 
-                    <div className="flex-1" />
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <button 
+                                onClick={handleCopyList}
+                                disabled={filteredCustomers.length === 0}
+                                className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 ${
+                                    isCopying 
+                                        ? 'bg-emerald-500 border-emerald-500 text-white' 
+                                        : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700 active:scale-95 disabled:opacity-50 cursor-pointer'
+                                }`}
+                            >
+                                {isCopying ? <Check size={14} /> : <Copy size={14} />}
+                                {isCopying ? 'Copiados!' : `Copiar ${filteredCustomers.length} Contatos`}
+                            </button>
+                        </div>
+                    </div>
 
-                    <button 
-                        onClick={handleCopyList}
-                        disabled={filteredCustomers.length === 0}
-                        className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 ${isCopying ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 active:scale-95 disabled:opacity-50'}`}
-                    >
-                        {isCopying ? <Check size={14} /> : <Copy size={14} />}
-                        {isCopying ? 'Contatos Copiados' : `Copiar ${filteredCustomers.length} Contatos para WhatsApp`}
-                    </button>
-                </div>
+                    {/* Chips Rápidos de Tags e Status */}
+                    <div className="space-y-3 bg-zinc-900/30 p-4 rounded-3xl border border-zinc-800/60">
+                        {/* Linha 1: Status Base */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-500 mr-2 flex items-center gap-1">
+                                <Filter size={12} /> Status:
+                            </span>
+                            <button 
+                                onClick={() => setActiveFilter('all')}
+                                className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${activeFilter === 'all' ? 'bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-500/20' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}
+                            >
+                                Todos
+                            </button>
+                            <button 
+                                onClick={() => setActiveFilter('vips')}
+                                className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-1.5 ${activeFilter === 'vips' ? 'bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-500/20' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}
+                            >
+                                <Award size={12} /> VIPs (LTV &gt; 500)
+                            </button>
+                            <button 
+                                onClick={() => setActiveFilter('inactives')}
+                                className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-1.5 ${activeFilter === 'inactives' ? 'bg-zinc-200 border-zinc-200 text-black shadow-md' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}
+                            >
+                                <Clock size={12} /> Inativos (+60 dias)
+                            </button>
+                            <button 
+                                onClick={() => setActiveFilter('new')}
+                                className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-1.5 ${activeFilter === 'new' ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}
+                            >
+                                <UserPlus size={12} /> Novos (Este Mês)
+                            </button>
+                        </div>
 
-            {/* Loyalty Quick Stats (Placeholders for now) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded-3xl space-y-4 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-125 transition-transform">
-                        <TrendingUp size={80} />
+                        {/* Linha 2: Tags Sugeridas para Filtro Rápido */}
+                        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-zinc-800/40">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-500 mr-2 flex items-center gap-1">
+                                <Tag size={12} /> Tags:
+                            </span>
+                            <button 
+                                onClick={() => setSelectedTagFilter('all')}
+                                className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border ${
+                                    selectedTagFilter === 'all' 
+                                        ? 'bg-orange-500/20 border-orange-500 text-orange-400 font-black' 
+                                        : 'bg-zinc-900 border-zinc-800/80 text-zinc-500 hover:text-zinc-300'
+                                }`}
+                            >
+                                Todas as Tags
+                            </button>
+                            {DEFAULT_SUGGESTED_TAGS.map(tag => {
+                                const isSelected = selectedTagFilter === tag;
+                                return (
+                                    <button
+                                        key={tag}
+                                        onClick={() => setSelectedTagFilter(isSelected ? 'all' : tag)}
+                                        className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border flex items-center gap-1.5 cursor-pointer ${
+                                            isSelected 
+                                                ? 'ring-2 ring-orange-500 font-black ' + getTagBadgeStyle(tag)
+                                                : getTagBadgeStyle(tag) + ' opacity-70 hover:opacity-100'
+                                        }`}
+                                    >
+                                        <Tag size={10} />
+                                        {tag}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
-                    <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 w-fit">
-                        <Award size={20} />
-                    </div>
-                    <div>
-                        <p className="text-3xl font-black tracking-tight">{customers.length}</p>
-                        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">Clientes Cadastrados</p>
-                    </div>
-                </div>
-                
-                <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded-3xl space-y-4 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-125 transition-transform text-blue-500">
-                        <Clock size={80} />
-                    </div>
-                    <div className="p-2 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 w-fit">
-                        <Calendar size={20} />
-                    </div>
-                    <div>
-                        <p className="text-3xl font-black tracking-tight">{newCustomersThisMonth}</p>
-                        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">Registrados em {new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date())}</p>
-                    </div>
-                </div>
 
-                <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded-3xl space-y-4 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-125 transition-transform text-orange-500">
-                        <ShoppingBag size={80} />
-                    </div>
-                    <div className="p-2 bg-orange-500/10 border border-orange-500/20 rounded-xl text-orange-400 w-fit">
-                        <Award size={20} />
-                    </div>
-                    <div>
-                        <p className="text-xl font-black tracking-tight truncate max-w-[200px]">
-                            {topCustomer?.nome || 'Iniciando...'}
-                        </p>
-                        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">Maior Fidelidade (LTV)</p>
-                    </div>
-                </div>
-            </div>
+                    {/* Loyalty Quick Stats */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded-3xl space-y-4 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-125 transition-transform">
+                                <TrendingUp size={80} />
+                            </div>
+                            <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 w-fit">
+                                <Award size={20} />
+                            </div>
+                            <div>
+                                <p className="text-3xl font-black tracking-tight">{filteredCustomers.length}</p>
+                                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">Clientes Selecionados</p>
+                            </div>
+                        </div>
+                        
+                        <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded-3xl space-y-4 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-125 transition-transform text-blue-500">
+                                <Clock size={80} />
+                            </div>
+                            <div className="p-2 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 w-fit">
+                                <Calendar size={20} />
+                            </div>
+                            <div>
+                                <p className="text-3xl font-black tracking-tight">{newCustomersThisMonth}</p>
+                                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">Registrados este Mês</p>
+                            </div>
+                        </div>
 
-            {/* Customers List */}
-            <div className="bg-zinc-900/20 border border-zinc-800 rounded-[2rem] overflow-hidden backdrop-blur-sm shadow-2xl">
-                {loading ? (
-                    <div className="p-20 flex flex-col items-center justify-center gap-4">
-                        <Loader2 className="animate-spin text-orange-500" size={40} />
-                        <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-600">Sincronizando Base de Dados...</p>
+                        <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded-3xl space-y-4 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-125 transition-transform text-orange-500">
+                                <ShoppingBag size={80} />
+                            </div>
+                            <div className="p-2 bg-orange-500/10 border border-orange-500/20 rounded-xl text-orange-400 w-fit">
+                                <Award size={20} />
+                            </div>
+                            <div>
+                                <p className="text-xl font-black tracking-tight truncate max-w-[200px]">
+                                    {topCustomer?.nome || 'Iniciando...'}
+                                </p>
+                                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">Maior Fidelidade (LTV)</p>
+                            </div>
+                        </div>
                     </div>
-                ) : filteredCustomers.length === 0 ? (
-                    <div className="p-20 text-center space-y-4">
-                        <Users size={60} className="mx-auto text-zinc-800" />
-                        <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Nenhum cliente encontrado com esses critérios.</p>
-                        {activeFilter !== 'all' && (
-                            <button onClick={() => setActiveFilter('all')} className="text-orange-500 text-[10px] font-black uppercase tracking-widest hover:underline">Limpar Filtros</button>
+
+                    {/* Tabela de Clientes */}
+                    <div className="bg-zinc-900/20 border border-zinc-800 rounded-[2rem] overflow-hidden backdrop-blur-sm shadow-2xl">
+                        {loading ? (
+                            <div className="p-20 flex flex-col items-center justify-center gap-4">
+                                <Loader2 className="animate-spin text-orange-500" size={40} />
+                                <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-600">Sincronizando Base de Dados...</p>
+                            </div>
+                        ) : filteredCustomers.length === 0 ? (
+                            <div className="p-20 text-center space-y-4">
+                                <Users size={60} className="mx-auto text-zinc-800" />
+                                <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Nenhum cliente encontrado com esses critérios.</p>
+                                {(activeFilter !== 'all' || selectedTagFilter !== 'all') && (
+                                    <button 
+                                        onClick={() => { setActiveFilter('all'); setSelectedTagFilter('all'); }} 
+                                        className="text-orange-500 text-[10px] font-black uppercase tracking-widest hover:underline cursor-pointer"
+                                    >
+                                        Limpar Filtros
+                                    </button>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-zinc-800/50 bg-black/40">
+                                            <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Cliente / Contato</th>
+                                            <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Tags & Segmentação</th>
+                                            <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden md:table-cell">Última Compra</th>
+                                            <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden md:table-cell">Total Gasto (LTV)</th>
+                                            <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] text-right">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-800/30">
+                                        {filteredCustomers.map((customer) => (
+                                            <tr key={customer.id} className="group hover:bg-zinc-800/30 transition-colors">
+                                                <td className="px-8 py-5">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 font-black text-lg shadow-inner group-hover:border-orange-500/50 transition-colors">
+                                                            {customer.nome[0].toUpperCase()}
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-bold text-zinc-100 group-hover:text-white transition-colors">{customer.nome}</span>
+                                                                {customer.cpf && customer.cep && (
+                                                                    <span className="text-[7.5px] font-black uppercase tracking-widest bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1.5 py-0.5 rounded shadow-sm" title="Dados cadastrais para NF-e completos">
+                                                                        NF-e OK
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-3 mt-0.5">
+                                                                <a 
+                                                                    href="#"
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        const cleanPhone = customer.telefone.replace(/\D/g, '');
+                                                                        const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+                                                                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                                                                        const url = isMobile 
+                                                                            ? `https://wa.me/${phoneWithCountry}`
+                                                                            : `https://web.whatsapp.com/send?phone=${phoneWithCountry}`;
+                                                                        window.open(url, '_blank');
+                                                                    }}
+                                                                    className="text-[11px] font-mono text-zinc-500 flex items-center gap-1 hover:text-emerald-400 transition-colors"
+                                                                >
+                                                                    <MessageCircle size={12} />
+                                                                    {customer.telefone}
+                                                                </a>
+                                                                {customer.email && (
+                                                                    <span className="text-[11px] text-zinc-500 flex items-center gap-1 truncate max-w-[160px]">
+                                                                        <Mail size={11} className="text-zinc-600" />
+                                                                        {customer.email}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-5">
+                                                    <div className="flex flex-wrap items-center gap-1.5 max-w-xs">
+                                                        {customer.tags && customer.tags.length > 0 ? (
+                                                            customer.tags.map(t => (
+                                                                <span 
+                                                                    key={t} 
+                                                                    className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${getTagBadgeStyle(t)}`}
+                                                                >
+                                                                    {t}
+                                                                </span>
+                                                            ))
+                                                        ) : (
+                                                            <span className="text-[10px] text-zinc-600 italic">Sem tags</span>
+                                                        )}
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedCustomer(customer);
+                                                                setIsEditModalOpen(true);
+                                                            }}
+                                                            className="text-[10px] text-zinc-500 hover:text-orange-400 p-1 rounded hover:bg-zinc-800 transition-colors cursor-pointer"
+                                                            title="Gerenciar tags"
+                                                        >
+                                                            <Plus size={12} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-5 hidden md:table-cell">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[11px] font-bold text-zinc-400">
+                                                            {customer.ultima_venda_em ? new Date(customer.ultima_venda_em).toLocaleDateString('pt-BR') : 'Nenhuma'}
+                                                        </span>
+                                                        <span className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">
+                                                            {customer.total_pedidos || 0} Pedidos
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-5 hidden md:table-cell">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[11px] font-bold text-emerald-500">R$ {(customer.total_gasto || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                        <span className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">
+                                                            LTV Acumulado
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-5 text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <button
+                                                            onClick={() => openGiftModal(customer)}
+                                                            className="p-2.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-xl transition-colors border border-purple-500/20 shadow-sm cursor-pointer"
+                                                            title="Presentear com Cupom Exclusivo"
+                                                        >
+                                                            <Gift size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedCustomer(customer);
+                                                                setIsEditModalOpen(true);
+                                                            }}
+                                                            className="p-2.5 bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl transition-colors border border-zinc-700/60 shadow-sm cursor-pointer"
+                                                            title="Editar Dados e Tags"
+                                                        >
+                                                            <Edit2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
                     </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-zinc-800/50 bg-black/40">
-                                    <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Cliente / Contato</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden md:table-cell">Última Compra</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden md:table-cell">Total Gasto (LTV)</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] text-right">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-zinc-800/30">
-                                {filteredCustomers.map((customer) => (
-                                    <tr key={customer.id} className="group hover:bg-zinc-800/30 transition-colors">
-                                        <td className="px-8 py-5">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 font-black text-lg shadow-inner group-hover:border-orange-500/50 transition-colors">
-                                                    {customer.nome[0].toUpperCase()}
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-bold text-zinc-100 group-hover:text-white transition-colors">{customer.nome}</span>
-                                                        {customer.cpf && customer.cep && (
-                                                            <span className="text-[7.5px] font-black uppercase tracking-widest bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1.5 py-0.5 rounded shadow-sm" title="Dados cadastrais para NF-e completos">
-                                                                NF-e OK
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <a 
-                                                        href="#"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            const cleanPhone = customer.telefone.replace(/\D/g, '');
-                                                            const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
-                                                            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                                                            const url = isMobile 
-                                                                ? `https://wa.me/${phoneWithCountry}`
-                                                                : `https://web.whatsapp.com/send?phone=${phoneWithCountry}`;
-                                                            window.open(url, '_blank');
-                                                        }}
-                                                        className="text-[11px] font-mono text-zinc-500 flex items-center gap-1 hover:text-emerald-400 transition-colors"
-                                                    >
-                                                        <MessageCircle size={12} />
-                                                        {customer.telefone}
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5 hidden md:table-cell">
-                                            <div className="flex flex-col">
-                                                <span className="text-[11px] font-bold text-zinc-400">
-                                                    {customer.ultima_venda_em ? new Date(customer.ultima_venda_em).toLocaleDateString('pt-BR') : 'Nenhuma'}
-                                                </span>
-                                                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">
-                                                    {customer.total_pedidos || 0} Pedidos
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5 hidden md:table-cell">
-                                            <div className="flex flex-col">
-                                                <span className="text-[11px] font-bold text-emerald-500">R$ {(customer.total_gasto || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                                <span className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">Ticket Acumulado</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button 
-                                                    onClick={() => router.push(`/admin/sales?cliente_id=${customer.id}`)}
-                                                    className="px-4 py-2 bg-zinc-900 hover:bg-orange-500 text-zinc-500 hover:text-white rounded-xl border border-zinc-800 transition-all active:scale-95 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
-                                                    title="Ver Vendas"
-                                                >
-                                                    <ShoppingBag size={14} />
-                                                    Vendas
-                                                </button>
-                                                <button 
-                                                    onClick={() => openGiftModal(customer)}
-                                                    className="p-2.5 bg-purple-500/10 hover:bg-purple-500 text-purple-500 hover:text-white rounded-xl border border-purple-500/20 transition-all active:scale-95"
-                                                    title="Presentear com Cupom Exclusivo"
-                                                >
-                                                    <Gift size={14} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => {
-                                                        setSelectedCustomer(customer);
-                                                        setIsEditModalOpen(true);
-                                                    }}
-                                                    className="p-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-500 hover:text-white rounded-xl border border-zinc-800 transition-all active:scale-95"
-                                                    title="Editar Cliente"
-                                                >
-                                                    <Edit2 size={14} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
+                </div>
+            )}
 
-            {/* Edit Customer Modal */}
-            {isEditModalOpen && selectedCustomer && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="bg-zinc-950 border border-zinc-800 w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl relative animate-in zoom-in-95 duration-200">
+            {/* ABA 2: CADÊNCIAS DE PROMOÇÕES */}
+            {viewMode === 'cadencias' && (
+                <div className="space-y-6">
+                    {/* Header da Aba com Ação Primária */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-900/30 p-6 rounded-3xl border border-zinc-800/60">
+                        <div>
+                            <h2 className="text-xl font-black text-white flex items-center gap-2">
+                                <Sparkles className="text-orange-500" size={20} />
+                                Cadências Automáticas de Promoções
+                            </h2>
+                            <p className="text-xs text-zinc-400 mt-1">
+                                Crie fluxos automáticos com descontos e cupons exclusivos disparados para clientes segmentados por tags.
+                            </p>
+                        </div>
+                        <button
+                            onClick={openCreateCadenceModal}
+                            className="bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-widest px-6 py-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 transition-all active:scale-[0.98] cursor-pointer"
+                        >
+                            <Plus size={16} />
+                            Nova Cadência
+                        </button>
+                    </div>
+
+                    {/* Grid de Cadências */}
+                    {loadingCadencias ? (
+                        <div className="p-20 flex flex-col items-center justify-center gap-4">
+                            <Loader2 className="animate-spin text-orange-500" size={40} />
+                            <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-600">Carregando cadências promocionais...</p>
+                        </div>
+                    ) : cadencias.length === 0 ? (
+                        <div className="bg-zinc-900/20 border border-zinc-800 p-16 rounded-3xl text-center space-y-4">
+                            <Sparkles size={50} className="mx-auto text-zinc-700" />
+                            <h3 className="text-lg font-black text-zinc-300">Nenhuma cadência criada ainda</h3>
+                            <p className="text-xs text-zinc-500 max-w-md mx-auto">
+                                Cadências permitem enviar automaticamente e-mails e promoções com cupons personalizados para clientes marcados com tags específicas (ex: VIP, Gamer, Anime).
+                            </p>
+                            <button
+                                onClick={openCreateCadenceModal}
+                                className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-xl transition-all cursor-pointer inline-flex items-center gap-2"
+                            >
+                                <Plus size={14} /> Criar Primeira Cadência
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {cadencias.map(cad => (
+                                <div 
+                                    key={cad.id}
+                                    className="bg-zinc-900/40 border border-zinc-800 hover:border-zinc-700 rounded-3xl p-6 flex flex-col justify-between space-y-6 shadow-xl relative group transition-all"
+                                >
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${
+                                                cad.status === 'ativa'
+                                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                                                    : (cad.status === 'pausada' 
+                                                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' 
+                                                    : 'bg-zinc-800 border-zinc-700 text-zinc-400')
+                                            }`}>
+                                                {cad.status.toUpperCase()}
+                                            </span>
+                                            <span className="text-[10px] font-mono text-zinc-500 flex items-center gap-1">
+                                                <Mail size={11} /> E-mail / Notificação
+                                            </span>
+                                        </div>
+
+                                        <div>
+                                            <h3 className="text-lg font-black text-white leading-tight">{cad.nome}</h3>
+                                            {cad.descricao && (
+                                                <p className="text-xs text-zinc-400 mt-1 line-clamp-2">{cad.descricao}</p>
+                                            )}
+                                        </div>
+
+                                        {/* Tags Alvo */}
+                                        <div className="space-y-1.5">
+                                            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Tags Segmentadas:</span>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {cad.target_tags.map(t => (
+                                                    <span key={t} className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${getTagBadgeStyle(t)}`}>
+                                                        {t}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Cupom / Desconto */}
+                                        {cad.cupom_codigo && (
+                                            <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-2xl flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Gift size={16} className="text-purple-400" />
+                                                    <span className="text-xs font-mono font-black text-purple-300">{cad.cupom_codigo}</span>
+                                                </div>
+                                                {cad.desconto_percentual && (
+                                                    <span className="text-xs font-black text-emerald-400">{cad.desconto_percentual}% OFF</span>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Estatísticas de Envio */}
+                                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800/60 text-center">
+                                            <div className="bg-zinc-950/60 p-2.5 rounded-xl border border-zinc-800/40">
+                                                <span className="text-xs font-black text-white">{cad.total_impactados}</span>
+                                                <p className="text-[9px] text-zinc-500 uppercase font-black tracking-wider">Matriculados</p>
+                                            </div>
+                                            <div className="bg-zinc-950/60 p-2.5 rounded-xl border border-zinc-800/40">
+                                                <span className="text-xs font-black text-emerald-400">{cad.total_enviados}</span>
+                                                <p className="text-[9px] text-zinc-500 uppercase font-black tracking-wider">Disparados</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Ações */}
+                                    <div className="pt-4 border-t border-zinc-800/60 flex items-center gap-2">
+                                        <button
+                                            onClick={() => openDispatchModal(cad.id)}
+                                            className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs uppercase tracking-wider py-3 rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 cursor-pointer"
+                                        >
+                                            <Send size={14} /> Disparar
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setCadenceForm({
+                                                    id: cad.id,
+                                                    nome: cad.nome,
+                                                    descricao: cad.descricao || '',
+                                                    target_tags: cad.target_tags || [],
+                                                    cupom_codigo: cad.cupom_codigo || '',
+                                                    desconto_percentual: cad.desconto_percentual ? String(cad.desconto_percentual) : '',
+                                                    assunto_email: cad.assunto_email || '',
+                                                    conteudo_email: cad.conteudo_email || '',
+                                                    status: cad.status as any
+                                                });
+                                                setIsCadenceModalOpen(true);
+                                            }}
+                                            className="p-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-xl transition-colors cursor-pointer"
+                                            title="Editar Cadência"
+                                        >
+                                            <Edit2 size={14} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteCadence(cad.id, cad.nome)}
+                                            className="p-3 bg-red-950/30 hover:bg-red-950/60 border border-red-900/40 text-red-400 rounded-xl transition-colors cursor-pointer"
+                                            title="Excluir Cadência"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* MODAL 1: CRIAR / EDITAR CADÊNCIA */}
+            {isCadenceModalOpen && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                    <div className="bg-zinc-950 border border-orange-500/30 w-full max-w-2xl rounded-[2.5rem] p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
                         <button 
-                            onClick={() => setIsEditModalOpen(false)}
-                            className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors"
+                            onClick={() => setIsCadenceModalOpen(false)}
+                            className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors cursor-pointer"
                         >
                             <CloseIcon size={24} />
                         </button>
 
-                        <div className="mb-8">
-                            <h2 className="text-2xl font-black tracking-tighter uppercase italic">Editar <span className="text-orange-500">Perfil</span></h2>
-                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Atualize os dados e notas do cliente</p>
+                        <div className="mb-6">
+                            <div className="w-14 h-14 bg-orange-500/10 border border-orange-500/20 rounded-2xl flex items-center justify-center text-orange-500 mb-3 shadow-inner">
+                                <Sparkles size={28} />
+                            </div>
+                            <h2 className="text-2xl font-black tracking-tight text-white">
+                                {cadenceForm.id ? 'Editar' : 'Nova'} <span className="text-orange-500">Cadência de Promoção</span>
+                            </h2>
+                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">
+                                Defina o público pelas tags e configure o disparo automatizado
+                            </p>
                         </div>
 
-                        <form onSubmit={handleUpdateCustomer} className="space-y-6">
-                            <div className="space-y-4">
+                        <form onSubmit={handleSaveCadence} className="space-y-5">
+                            {/* Nome & Descrição */}
+                            <div className="space-y-3">
                                 <div>
-                                    <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Nome Completo</label>
+                                    <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Nome da Cadência</label>
                                     <input
                                         type="text"
                                         required
-                                        value={selectedCustomer.nome}
-                                        onChange={e => setSelectedCustomer({ ...selectedCustomer, nome: e.target.value })}
-                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200"
+                                        placeholder="Ex: Semana Gamer - 15% OFF"
+                                        value={cadenceForm.nome}
+                                        onChange={e => setCadenceForm({ ...cadenceForm, nome: e.target.value })}
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold text-white transition-all"
                                     />
                                 </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">WhatsApp</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={selectedCustomer.telefone}
-                                            onChange={e => setSelectedCustomer({ ...selectedCustomer, telefone: e.target.value })}
-                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Instagram (@)</label>
-                                        <input
-                                            type="text"
-                                            value={selectedCustomer.instagram || ''}
-                                            onChange={e => setSelectedCustomer({ ...selectedCustomer, instagram: e.target.value })}
-                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200"
-                                            placeholder="ex: afkak_oficial"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="text-[10px] font-black text-zinc-600 uppercase tracking-widest border-t border-zinc-800/80 pt-4 mt-2">Dados de Faturamento (NF-e)</div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">CPF ou CNPJ</label>
-                                        <input
-                                            type="text"
-                                            value={selectedCustomer.cpf || ''}
-                                            onChange={e => handleModalCpfChange(e.target.value)}
-                                            placeholder="Ex: 000.000.000-00"
-                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">CEP</label>
-                                        <input
-                                            type="text"
-                                            value={selectedCustomer.cep || ''}
-                                            onChange={e => handleModalCepChange(e.target.value)}
-                                            placeholder="Ex: 00000-000"
-                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-4 gap-4">
-                                    <div className="col-span-3">
-                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Logradouro</label>
-                                        <input
-                                            type="text"
-                                            value={selectedCustomer.logradouro || ''}
-                                            onChange={e => setSelectedCustomer({ ...selectedCustomer, logradouro: e.target.value })}
-                                            placeholder="Ex: Rua das Flores"
-                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Número</label>
-                                        <input
-                                            type="text"
-                                            value={selectedCustomer.numero || ''}
-                                            onChange={e => setSelectedCustomer({ ...selectedCustomer, numero: e.target.value })}
-                                            placeholder="Ex: 123"
-                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200"
-                                        />
-                                    </div>
-                                </div>
-
                                 <div>
+                                    <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Descrição / Objetivo</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ex: Reengajar fãs de jogos com cupom de desconto em peças selecionadas"
+                                        value={cadenceForm.descricao}
+                                        onChange={e => setCadenceForm({ ...cadenceForm, descricao: e.target.value })}
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-orange-500 text-xs font-medium text-zinc-300 transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Seleção de Tags Alvo */}
+                            <div className="p-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[10px] text-orange-400 uppercase font-black tracking-widest flex items-center gap-1.5">
+                                        <Tag size={12} /> Tags Alvo (Segmentação)
+                                    </label>
+                                    <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
+                                        🎯 Alcançará {targetTagImpactCount} clientes
+                                    </span>
+                                </div>
+                                <div className="flex flex-wrap gap-2 pt-1">
+                                    {DEFAULT_SUGGESTED_TAGS.map(tag => {
+                                        const isSelected = cadenceForm.target_tags.includes(tag);
+                                        return (
+                                            <button
+                                                key={tag}
+                                                type="button"
+                                                onClick={() => {
+                                                    const current = cadenceForm.target_tags;
+                                                    const updated = isSelected 
+                                                        ? current.filter(t => t !== tag)
+                                                        : [...current, tag];
+                                                    setCadenceForm({ ...cadenceForm, target_tags: updated });
+                                                }}
+                                                className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border flex items-center gap-1.5 cursor-pointer ${
+                                                    isSelected
+                                                        ? 'bg-orange-500 border-orange-500 text-white font-black shadow-md shadow-orange-500/30'
+                                                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
+                                                }`}
+                                            >
+                                                {isSelected ? <Check size={12} /> : <Plus size={12} />}
+                                                {tag}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Cupom e Desconto */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Código do Cupom</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ex: GAMER15"
+                                        value={cadenceForm.cupom_codigo}
+                                        onChange={e => setCadenceForm({ ...cadenceForm, cupom_codigo: e.target.value.toUpperCase() })}
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-sm font-mono font-bold text-purple-300 uppercase transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Desconto (%)</label>
+                                    <input
+                                        type="number"
+                                        placeholder="Ex: 15"
+                                        min="1"
+                                        max="100"
+                                        value={cadenceForm.desconto_percentual}
+                                        onChange={e => setCadenceForm({ ...cadenceForm, desconto_percentual: e.target.value })}
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-orange-500 text-sm font-bold text-white transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Assunto do E-mail */}
+                            <div>
+                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Assunto do E-mail</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={cadenceForm.assunto_email}
+                                    onChange={e => setCadenceForm({ ...cadenceForm, assunto_email: e.target.value })}
+                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-orange-500 text-sm font-bold text-white transition-all"
+                                />
+                            </div>
+
+                            {/* Template do Conteúdo */}
+                            <div>
+                                <div className="flex items-center justify-between mb-1.5 pl-1">
+                                    <label className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Template da Mensagem</label>
+                                    <div className="flex items-center gap-1.5 text-[9px] font-mono text-zinc-500">
+                                        Tags: 
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setCadenceForm(p => ({ ...p, conteudo_email: p.conteudo_email + ' {primeiro_nome}' }))}
+                                            className="text-orange-400 hover:underline cursor-pointer"
+                                        >
+                                            {'{primeiro_nome}'}
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setCadenceForm(p => ({ ...p, conteudo_email: p.conteudo_email + ' {cupom}' }))}
+                                            className="text-purple-400 hover:underline cursor-pointer"
+                                        >
+                                            {'{cupom}'}
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setCadenceForm(p => ({ ...p, conteudo_email: p.conteudo_email + ' {desconto}%' }))}
+                                            className="text-emerald-400 hover:underline cursor-pointer"
+                                        >
+                                            {'{desconto}'}
+                                        </button>
+                                    </div>
+                                </div>
+                                <textarea
+                                    required
+                                    rows={5}
+                                    value={cadenceForm.conteudo_email}
+                                    onChange={e => setCadenceForm({ ...cadenceForm, conteudo_email: e.target.value })}
+                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-xs font-medium text-zinc-200 resize-none transition-all leading-relaxed"
+                                />
+                            </div>
+
+                            {/* Botão de Envio */}
+                            <button
+                                type="submit"
+                                disabled={isSavingCadence}
+                                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 uppercase tracking-widest transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                            >
+                                {isSavingCadence ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                                {cadenceForm.id ? 'Salvar Alterações' : 'Criar e Matricular Clientes'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL 2: DISPARO / FILA DA CADÊNCIA */}
+            {isDispatchModalOpen && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                    <div className="bg-zinc-950 border border-orange-500/30 w-full max-w-xl rounded-[2.5rem] p-8 shadow-2xl relative max-h-[85vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+                        <button 
+                            onClick={() => setIsDispatchModalOpen(false)}
+                            className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                        >
+                            <CloseIcon size={24} />
+                        </button>
+
+                        <div className="mb-6">
+                            <div className="w-14 h-14 bg-orange-500/10 border border-orange-500/20 rounded-2xl flex items-center justify-center text-orange-500 mb-3 shadow-inner">
+                                <Send size={28} />
+                            </div>
+                            <h2 className="text-2xl font-black tracking-tight text-white">
+                                Disparar <span className="text-orange-500">{activeDispatchCadence?.nome}</span>
+                            </h2>
+                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">
+                                Disparo automatizado de e-mails / notificações para clientes com as tags selecionadas
+                            </p>
+                        </div>
+
+                        {loadingDispatchDetails ? (
+                            <div className="p-12 flex flex-col items-center justify-center gap-3">
+                                <Loader2 className="animate-spin text-orange-500" size={32} />
+                                <span className="text-xs text-zinc-500">Carregando lista de matriculados...</span>
+                            </div>
+                        ) : activeDispatchCadence && (
+                            <div className="space-y-6">
+                                {/* Resumo de Impacto */}
+                                <div className="grid grid-cols-2 gap-3 p-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl">
+                                    <div>
+                                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-wider">Total de Clientes</span>
+                                        <p className="text-xl font-black text-white">{activeDispatchCadence.crm_cadencia_envios?.length || 0}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-wider">Pendentes de Envio</span>
+                                        <p className="text-xl font-black text-orange-400">
+                                            {(activeDispatchCadence.crm_cadencia_envios || []).filter((e: any) => e.status === 'pendente').length}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Preview da Mensagem */}
+                                <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-2xl space-y-2">
+                                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Prévia do Assunto:</span>
+                                    <p className="text-xs font-bold text-white">{activeDispatchCadence.assunto_email}</p>
+                                    <div className="pt-2 border-t border-zinc-800 text-[11px] text-zinc-300 font-mono whitespace-pre-wrap leading-relaxed">
+                                        {activeDispatchCadence.conteudo_email}
+                                    </div>
+                                </div>
+
+                                {/* Botão de Disparo */}
+                                <button
+                                    onClick={handleExecuteDispatch}
+                                    disabled={isExecutingDispatch}
+                                    className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 uppercase tracking-widest transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                                >
+                                    {isExecutingDispatch ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                                    Executar Disparo Automatizado Agora
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL 3: EDIÇÃO DE CLIENTE & TAGS */}
+            {isEditModalOpen && selectedCustomer && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                    <div className="bg-zinc-950 border border-zinc-800 w-full max-w-xl rounded-[2.5rem] p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+                        <button 
+                            onClick={() => setIsEditModalOpen(false)}
+                            className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                        >
+                            <CloseIcon size={24} />
+                        </button>
+
+                        <div className="mb-6">
+                            <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                                <Edit2 size={22} className="text-orange-500" />
+                                Editar Cliente & Tags
+                            </h2>
+                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">
+                                Atualize dados cadastrais, e-mail e tags de segmentação
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleUpdateCustomer} className="space-y-5">
+                            {/* Nome */}
+                            <div>
+                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Nome Completo</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={selectedCustomer.nome}
+                                    onChange={e => setSelectedCustomer({ ...selectedCustomer, nome: e.target.value })}
+                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold text-zinc-200"
+                                />
+                            </div>
+
+                            {/* WhatsApp & Instagram */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">WhatsApp</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={selectedCustomer.telefone}
+                                        onChange={e => setSelectedCustomer({ ...selectedCustomer, telefone: e.target.value })}
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold text-zinc-200"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Instagram (@)</label>
+                                    <input
+                                        type="text"
+                                        value={selectedCustomer.instagram || ''}
+                                        onChange={e => setSelectedCustomer({ ...selectedCustomer, instagram: e.target.value })}
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold text-zinc-200"
+                                        placeholder="ex: afkak_oficial"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* E-mail (Importante para cadências) */}
+                            <div>
+                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1 flex items-center gap-1.5">
+                                    <Mail size={12} className="text-orange-500" /> E-mail para Notificações & Promoções
+                                </label>
+                                <input
+                                    type="email"
+                                    placeholder="exemplo@gmail.com"
+                                    value={selectedCustomer.email || ''}
+                                    onChange={e => setSelectedCustomer({ ...selectedCustomer, email: e.target.value })}
+                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-medium text-zinc-200"
+                                />
+                            </div>
+
+                            {/* GESTOR DE TAGS DO CLIENTE */}
+                            <div className="p-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl space-y-3">
+                                <label className="text-[10px] text-orange-400 uppercase font-black tracking-widest flex items-center gap-1.5">
+                                    <Tag size={12} /> Tags de Segmentação
+                                </label>
+
+                                {/* Tags Atuais */}
+                                <div className="flex flex-wrap items-center gap-1.5 min-h-[32px]">
+                                    {selectedCustomer.tags && selectedCustomer.tags.length > 0 ? (
+                                        selectedCustomer.tags.map(t => (
+                                            <span 
+                                                key={t}
+                                                className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${getTagBadgeStyle(t)}`}
+                                            >
+                                                {t}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveCustomerTag(t)}
+                                                    className="hover:text-red-400 transition-colors cursor-pointer"
+                                                >
+                                                    <CloseIcon size={10} />
+                                                </button>
+                                            </span>
+                                        ))
+                                    ) : (
+                                        <span className="text-xs text-zinc-500 italic">Nenhuma tag atribuída a este cliente.</span>
+                                    )}
+                                </div>
+
+                                {/* Sugestões Rápidas de 1 Clique */}
+                                <div className="pt-2 border-t border-zinc-800/60">
+                                    <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 block">
+                                        Sugestões Rápidas:
+                                    </span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {DEFAULT_SUGGESTED_TAGS.map(st => {
+                                            const isAlreadyAdded = (selectedCustomer.tags || []).some(t => t.toLowerCase() === st.toLowerCase());
+                                            return (
+                                                <button
+                                                    key={st}
+                                                    type="button"
+                                                    disabled={isAlreadyAdded}
+                                                    onClick={() => handleAddCustomerTag(st)}
+                                                    className={`text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg border transition-all cursor-pointer ${
+                                                        isAlreadyAdded
+                                                            ? 'opacity-30 border-zinc-800 text-zinc-600 cursor-not-allowed'
+                                                            : 'bg-zinc-900 border-zinc-700/80 text-zinc-300 hover:text-white hover:border-orange-500'
+                                                    }`}
+                                                >
+                                                    + {st}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Adicionar Tag Customizada */}
+                                <div className="flex items-center gap-2 pt-1">
+                                    <input
+                                        type="text"
+                                        placeholder="Digitar nova tag..."
+                                        value={newTagInput}
+                                        onChange={e => setNewTagInput(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                handleAddCustomerTag(newTagInput);
+                                            }
+                                        }}
+                                        className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-orange-500"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => handleAddCustomerTag(newTagInput)}
+                                        className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs px-3.5 py-2 rounded-xl transition-colors cursor-pointer"
+                                    >
+                                        Adicionar
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Dados de Faturamento (NF-e) */}
+                            <div className="text-[10px] font-black text-zinc-600 uppercase tracking-widest border-t border-zinc-800/80 pt-4 mt-2">Dados de Faturamento (NF-e)</div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">CPF ou CNPJ</label>
+                                    <input
+                                        type="text"
+                                        value={selectedCustomer.cpf || ''}
+                                        onChange={e => handleModalCpfChange(e.target.value)}
+                                        placeholder="Ex: 000.000.000-00"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold text-zinc-200"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">CEP</label>
+                                    <input
+                                        type="text"
+                                        value={selectedCustomer.cep || ''}
+                                        onChange={e => handleModalCepChange(e.target.value)}
+                                        placeholder="Ex: 00000-000"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold text-zinc-200"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-4 gap-4">
+                                <div className="col-span-3">
+                                    <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Logradouro</label>
+                                    <input
+                                        type="text"
+                                        value={selectedCustomer.logradouro || ''}
+                                        onChange={e => setSelectedCustomer({ ...selectedCustomer, logradouro: e.target.value })}
+                                        placeholder="Ex: Rua das Flores"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold text-zinc-200"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Número</label>
+                                    <input
+                                        type="text"
+                                        value={selectedCustomer.numero || ''}
+                                        onChange={e => setSelectedCustomer({ ...selectedCustomer, numero: e.target.value })}
+                                        placeholder="Ex: 123"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold text-zinc-200"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-4 gap-4">
+                                <div className="col-span-3">
                                     <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Bairro</label>
                                     <input
                                         type="text"
                                         value={selectedCustomer.bairro || ''}
                                         onChange={e => setSelectedCustomer({ ...selectedCustomer, bairro: e.target.value })}
                                         placeholder="Ex: Centro"
-                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold text-zinc-200"
                                     />
                                 </div>
-
-                                <div className="grid grid-cols-4 gap-4">
-                                    <div className="col-span-3">
-                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Cidade</label>
-                                        <input
-                                            type="text"
-                                            value={selectedCustomer.cidade || ''}
-                                            onChange={e => setSelectedCustomer({ ...selectedCustomer, cidade: e.target.value })}
-                                            placeholder="Ex: São Paulo"
-                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">UF</label>
-                                        <input
-                                            type="text"
-                                            value={selectedCustomer.uf || ''}
-                                            onChange={e => setSelectedCustomer({ ...selectedCustomer, uf: e.target.value.toUpperCase() })}
-                                            maxLength={2}
-                                            placeholder="SP"
-                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold transition-all text-zinc-200 text-center"
-                                        />
-                                    </div>
-                                </div>
-
                                 <div>
-                                    <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Notas e Observações</label>
-                                    <textarea
-                                        value={selectedCustomer.notas || ''}
-                                        onChange={e => setSelectedCustomer({ ...selectedCustomer, notas: e.target.value })}
-                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-medium transition-all text-zinc-200 h-24 resize-none"
-                                        placeholder="Preferências, feedbacks ou avisos importantes..."
+                                    <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">UF</label>
+                                    <input
+                                        type="text"
+                                        value={selectedCustomer.uf || ''}
+                                        onChange={e => setSelectedCustomer({ ...selectedCustomer, uf: e.target.value.toUpperCase() })}
+                                        maxLength={2}
+                                        placeholder="SP"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold text-zinc-200 text-center"
                                     />
                                 </div>
                             </div>
 
-                            <div className="flex flex-col gap-3">
+                            <div>
+                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Cidade</label>
+                                <input
+                                    type="text"
+                                    value={selectedCustomer.cidade || ''}
+                                    onChange={e => setSelectedCustomer({ ...selectedCustomer, cidade: e.target.value })}
+                                    placeholder="Ex: São Paulo"
+                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-bold text-zinc-200"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Notas e Observações</label>
+                                <textarea
+                                    value={selectedCustomer.notas || ''}
+                                    onChange={e => setSelectedCustomer({ ...selectedCustomer, notas: e.target.value })}
+                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-medium text-zinc-200 h-20 resize-none"
+                                    placeholder="Preferências, animes favoritos ou avisos..."
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-3 pt-2">
                                 <button
                                     type="submit"
                                     disabled={isUpdating}
@@ -759,13 +1641,13 @@ export default function CustomersPage() {
                 </div>
             )}
 
-            {/* Gift Coupon Modal */}
+            {/* MODAL 4: GIFT CUPOM WHATSAPP */}
             {isGiftModalOpen && giftCustomer && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
                     <div className="bg-zinc-950 border border-purple-500/30 w-full max-w-lg rounded-[2.5rem] p-8 shadow-[0_0_50px_rgba(168,85,247,0.1)] relative animate-in zoom-in-95 duration-200">
                         <button 
                             onClick={() => setIsGiftModalOpen(false)}
-                            className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors"
+                            className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors cursor-pointer"
                         >
                             <CloseIcon size={24} />
                         </button>
@@ -840,7 +1722,7 @@ export default function CustomersPage() {
                                 <button
                                     type="submit"
                                     disabled={isGeneratingGift}
-                                    className="w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50 uppercase tracking-widest shadow-lg shadow-purple-500/20"
+                                    className="w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50 uppercase tracking-widest shadow-lg shadow-purple-500/20 cursor-pointer"
                                 >
                                     {isGeneratingGift ? <Loader2 size={18} className="animate-spin" /> : <Wand2 size={18} />}
                                     Gerar Cupom Mágico
@@ -854,14 +1736,14 @@ export default function CustomersPage() {
                                 </div>
                                 <button
                                     onClick={sendWhatsAppGift}
-                                    className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-black font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] uppercase tracking-widest shadow-lg shadow-[#25D366]/20"
+                                    className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-black font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] uppercase tracking-widest shadow-lg shadow-[#25D366]/20 cursor-pointer"
                                 >
                                     <MessageCircle size={18} />
                                     Enviar no WhatsApp
                                 </button>
                                 <button
                                     onClick={() => setIsGiftModalOpen(false)}
-                                    className="w-full text-[10px] text-zinc-500 uppercase font-black tracking-widest hover:text-white"
+                                    className="w-full text-[10px] text-zinc-500 uppercase font-black tracking-widest hover:text-white cursor-pointer"
                                 >
                                     Fechar
                                 </button>
