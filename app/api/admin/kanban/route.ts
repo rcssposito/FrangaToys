@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { notificarMudancaStatusKanban } from '@/lib/kanban-email';
 
 // LER TAREFAS DO KANBAN
 // Retorna todas as vendas ativas (Não concluídas) com horas e remuneração de pintura
@@ -26,6 +27,12 @@ export async function GET() {
                     imagem_url, 
                     studios ( nome ),
                     figuras_meta ( horas_pintura, resina_kg )
+                ),
+                clientes:cliente_id (
+                    id,
+                    nome,
+                    email,
+                    telefone
                 )
             `)
             .neq('status', 'Concluída') // Esconde as já finalizadas
@@ -50,9 +57,12 @@ export async function GET() {
             const horasPintura = Number(meta?.horas_pintura) || 0;
             const quantidade = Number(s.quantidade) || 1;
             const valorPinturaCalculado = Math.ceil(horasPintura * custoHPintura) * quantidade;
+            const clienteObj = Array.isArray(s.clientes) ? s.clientes[0] : s.clientes;
+            const clienteEmail = (clienteObj as any)?.email || null;
 
             return {
                 ...s,
+                cliente_email: clienteEmail,
                 checklist: Array.isArray(s.checklist) ? s.checklist : [],
                 wip_fotos: Array.isArray(s.wip_fotos) ? s.wip_fotos : [],
                 horas_pintura: horasPintura,
@@ -93,7 +103,25 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ error: 'ID é obrigatório' }, { status: 400 });
         }
 
-        // 1. AÇÃO ESPECÍFICA: ASSUMIR OU LIBERAR PINTURA
+        // 1. AÇÃO ESPECÍFICA: DISPARO MANUAL DE E-MAIL DE STATUS
+        if (action === 'send_status_email') {
+            const { data: sale, error: fetchErr } = await supabase
+                .from('vendas')
+                .select('status')
+                .eq('id', id)
+                .single();
+            if (fetchErr || !sale) throw new Error('Venda não encontrada');
+
+            const targetStatus = newStatus || sale.status;
+            const emailResult = await notificarMudancaStatusKanban({
+                saleId: id,
+                newStatus: targetStatus,
+                force: true
+            });
+            return NextResponse.json({ success: true, notificacao_email: emailResult });
+        }
+
+        // 2. AÇÃO ESPECÍFICA: ASSUMIR OU LIBERAR PINTURA
         if (action === 'assign_painter' || action === 'release_painter') {
             const { data: sale, error: fetchError } = await supabase
                 .from('vendas')
@@ -179,7 +207,8 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ error: 'Status, Status de Pagamento, Valor Pago Parcial ou Checklist é obrigatório' }, { status: 400 });
         }
 
-        // 2. Executar automação de resina se o status logístico mudou
+        // 3. Executar automação de resina se o status logístico mudou
+        let oldStatusForEmail: string | undefined = undefined;
         if (newStatus) {
             // Buscar status atual e peso de resina para calcular automação
             const { data: sale, error: fetchError } = await supabase
@@ -191,6 +220,7 @@ export async function PATCH(req: Request) {
             if (fetchError || !sale) throw new Error('Venda não encontrada');
 
             const oldStatus = sale.status;
+            oldStatusForEmail = oldStatus;
             const figure = Array.isArray(sale.figuras) ? sale.figuras[0] : sale.figuras;
             const meta = Array.isArray(figure?.figuras_meta) ? figure?.figuras_meta[0] : figure?.figuras_meta;
             const resinaWeight = Number(meta?.resina_kg) || 0;
@@ -248,7 +278,7 @@ export async function PATCH(req: Request) {
             }
         }
 
-        // 3. Salvar novas propriedades da venda
+        // 4. Salvar novas propriedades da venda
         const updateFields: any = {};
         if (newStatus !== undefined) {
             updateFields.status = newStatus;
@@ -271,7 +301,25 @@ export async function PATCH(req: Request) {
 
         if (error) throw error;
 
-        return NextResponse.json(data);
+        // 5. Automação de E-mail de Notificação de Status ao Cliente
+        let notificacaoEmailResult = null;
+        if (newStatus !== undefined && oldStatusForEmail !== newStatus && body.notificar_email !== false) {
+            try {
+                notificacaoEmailResult = await notificarMudancaStatusKanban({
+                    saleId: id,
+                    oldStatus: oldStatusForEmail,
+                    newStatus
+                });
+            } catch (emailErr: any) {
+                console.error('[Kanban Route Email Error]:', emailErr);
+                notificacaoEmailResult = { success: false, error: emailErr.message };
+            }
+        }
+
+        return NextResponse.json({
+            ...data,
+            notificacao_email: notificacaoEmailResult
+        });
     } catch (error: any) {
         console.error('Kanban Update Error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });

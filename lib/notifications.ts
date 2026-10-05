@@ -65,3 +65,5 @@ export async function enviarReciboAutomatico(checkoutId: string): Promise<{ succ
     return { success: false, message: err.message || 'Erro interno ao enviar recibo' };
   }
 }
+
+export { notificarMudancaStatusKanban } from './kanban-email';

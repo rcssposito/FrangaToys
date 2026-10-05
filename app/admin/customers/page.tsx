@@ -236,6 +236,48 @@ export default function CustomersPage() {
         status: 'ativa'
     });
     const [isSavingCadence, setIsSavingCadence] = useState(false);
+    const [cadenceNewTagInput, setCadenceNewTagInput] = useState('');
+
+    // Cupons disponíveis no sistema (Apenas cupons existentes são permitidos na cadência)
+    interface AvailableCoupon {
+        id: string;
+        codigo: string;
+        tipo: 'porcentagem' | 'fixo';
+        valor: number;
+        ativo: boolean;
+        usos_restantes?: number | null;
+        data_validade?: string | null;
+    }
+    const [availableCoupons, setAvailableCoupons] = useState<AvailableCoupon[]>([]);
+    const [loadingCoupons, setLoadingCoupons] = useState(false);
+
+    const fetchAvailableCoupons = async () => {
+        setLoadingCoupons(true);
+        try {
+            const res = await fetch('/api/admin/coupons');
+            const data = await res.json();
+            if (res.ok && Array.isArray(data)) {
+                // Filtra apenas cupons ativos
+                setAvailableCoupons(data.filter((c: any) => c.ativo));
+            }
+        } catch (err) {
+            console.error('Erro ao buscar cupons:', err);
+        } finally {
+            setLoadingCoupons(false);
+        }
+    };
+
+    const handleAddCadenceCustomTag = () => {
+        const trimmed = cadenceNewTagInput.trim();
+        if (!trimmed) return;
+        if (!cadenceForm.target_tags.some(t => t.toLowerCase() === trimmed.toLowerCase())) {
+            setCadenceForm(prev => ({
+                ...prev,
+                target_tags: [...prev.target_tags, trimmed]
+            }));
+        }
+        setCadenceNewTagInput('');
+    };
 
     // Modal de Disparo / Fila da Cadência
     const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
@@ -243,13 +285,12 @@ export default function CustomersPage() {
     const [loadingDispatchDetails, setLoadingDispatchDetails] = useState(false);
     const [isExecutingDispatch, setIsExecutingDispatch] = useState(false);
 
-    // 1. Carregar Clientes
+    // 1. Carregar Clientes (Mantém a base completa em memória para que filtros e tags dinâmicas funcionem instantaneamente)
     const fetchCustomers = async () => {
         setLoading(true);
         try {
             const queryParams = new URLSearchParams();
             if (search) queryParams.set('q', search);
-            if (selectedTagFilter && selectedTagFilter !== 'all') queryParams.set('tag', selectedTagFilter);
 
             const res = await fetch(`/api/admin/customers?${queryParams.toString()}`);
             const data = await res.json();
@@ -290,11 +331,12 @@ export default function CustomersPage() {
             fetchCustomers();
         }, 300);
         return () => clearTimeout(timer);
-    }, [search, selectedTagFilter]);
+    }, [search]);
 
     useEffect(() => {
         if (viewMode === 'cadencias') {
             fetchCadencias();
+            fetchAvailableCoupons();
         }
     }, [viewMode]);
 
@@ -624,6 +666,40 @@ export default function CustomersPage() {
         return Array.from(tagMap.entries()).map(([tag, count]) => ({ tag, count }));
     }, [customersArray]);
 
+    // Todas as tags disponíveis no sistema (tags sugeridas + tags cadastradas nos clientes + tags ativas da cadência)
+    const allAvailableTags = useMemo(() => {
+        const seen = new Set<string>();
+        const list: string[] = [];
+
+        const add = (raw: string) => {
+            if (!raw) return;
+            const trimmed = raw.trim();
+            if (!trimmed) return;
+            const lower = trimmed.toLowerCase();
+            if (!seen.has(lower)) {
+                seen.add(lower);
+                list.push(trimmed);
+            }
+        };
+
+        // 1. Tags padrão sugeridas
+        DEFAULT_SUGGESTED_TAGS.forEach(add);
+
+        // 2. Tags que já existem nos clientes da base
+        customersArray.forEach(c => {
+            if (Array.isArray(c.tags)) {
+                c.tags.forEach(add);
+            }
+        });
+
+        // 3. Tags já incluídas na cadência atual
+        if (Array.isArray(cadenceForm.target_tags)) {
+            cadenceForm.target_tags.forEach(add);
+        }
+
+        return list;
+    }, [customersArray, cadenceForm.target_tags]);
+
     const handleCopyList = async () => {
         if (filteredCustomers.length === 0 || isCopying) return;
         
@@ -647,17 +723,21 @@ export default function CustomersPage() {
 
     // Cadência: Criar / Editar
     const openCreateCadenceModal = () => {
+        const defaultCoupon = availableCoupons[0];
         setCadenceForm({
             nome: '',
             descricao: '',
             target_tags: ['VIP'],
-            cupom_codigo: 'PROMO15',
-            desconto_percentual: '15',
+            cupom_codigo: defaultCoupon ? defaultCoupon.codigo : '',
+            desconto_percentual: defaultCoupon ? String(defaultCoupon.valor) : '15',
             assunto_email: '🎉 Presente Especial da Franga Toys: Desconto Exclusivo!',
             conteudo_email: 'Olá, {primeiro_nome}!\n\nPreparamos uma condição exclusiva especialmente para você em nosso acervo de colecionáveis.\n\nUse o cupom {cupom} e garanta {desconto}% OFF!\n\nAcesse agora: {loja_link}',
             status: 'ativa'
         });
         setIsCadenceModalOpen(true);
+        if (availableCoupons.length === 0) {
+            fetchAvailableCoupons();
+        }
     };
 
     const handleSaveCadence = async (e: React.FormEvent) => {
@@ -667,13 +747,21 @@ export default function CustomersPage() {
             return;
         }
 
+        if (cadenceForm.cupom_codigo && availableCoupons.length > 0) {
+            const exists = availableCoupons.some(c => c.codigo.toUpperCase() === cadenceForm.cupom_codigo.toUpperCase());
+            if (!exists) {
+                toast.error(`O cupom "${cadenceForm.cupom_codigo}" não existe ou está inativo. Selecione um cupom cadastrado no sistema.`);
+                return;
+            }
+        }
+
         setIsSavingCadence(true);
         try {
             const isEditing = !!cadenceForm.id;
             const res = await fetch('/api/admin/crm/cadencias', {
                 method: isEditing ? 'PATCH' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(cadenceForm)
+                body: JSON.stringify({ ...cadenceForm, syncClients: true })
             });
 
             const data = await res.json();
@@ -721,6 +809,29 @@ export default function CustomersPage() {
         }
     };
 
+    const handleRemoveRecipient = async (envioId: string, nomeCliente: string) => {
+        if (!confirm(`Deseja remover "${nomeCliente || 'este cliente'}" desta cadência?`)) return;
+        try {
+            const res = await fetch(`/api/admin/crm/cadencias?envio_id=${envioId}`, {
+                method: 'DELETE'
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Falha ao remover cliente');
+
+            toast.success('Cliente removido da cadência!');
+            setActiveDispatchCadence((prev: any) => {
+                if (!prev) return null;
+                return {
+                    ...prev,
+                    crm_cadencia_envios: (prev.crm_cadencia_envios || []).filter((e: any) => e.id !== envioId)
+                };
+            });
+            fetchCadencias();
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao remover cliente');
+        }
+    };
+
     const handleExecuteDispatch = async () => {
         if (!activeDispatchCadence) return;
         setIsExecutingDispatch(true);
@@ -744,9 +855,10 @@ export default function CustomersPage() {
     // Contador de clientes impactados pela seleção de tags na cadência
     const targetTagImpactCount = useMemo(() => {
         if (!cadenceForm.target_tags.length) return 0;
+        const normalizedTargets = cadenceForm.target_tags.map(t => (t || '').trim().toLowerCase()).filter(Boolean);
         return customersArray.filter(c => {
-            const cTags = (c.tags || []).map(t => t.toLowerCase());
-            return cadenceForm.target_tags.some(tt => cTags.includes(tt.toLowerCase()));
+            const cTags = (c.tags || []).map(t => (t || '').trim().toLowerCase());
+            return normalizedTargets.some(tt => cTags.includes(tt));
         }).length;
     }, [customersArray, cadenceForm.target_tags]);
 
@@ -890,8 +1002,8 @@ export default function CustomersPage() {
                             >
                                 Todas as Tags
                             </button>
-                            {DEFAULT_SUGGESTED_TAGS.map(tag => {
-                                const isSelected = selectedTagFilter === tag;
+                            {allAvailableTags.map(tag => {
+                                const isSelected = selectedTagFilter.toLowerCase().trim() === tag.toLowerCase().trim();
                                 return (
                                     <button
                                         key={tag}
@@ -1337,12 +1449,12 @@ export default function CustomersPage() {
                                         <Tag size={12} /> Tags Alvo (Segmentação)
                                     </label>
                                     <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
-                                        🎯 Alcançará {targetTagImpactCount} clientes
+                                        🎯 Alcançará {targetTagImpactCount} {targetTagImpactCount === 1 ? 'cliente' : 'clientes'}
                                     </span>
                                 </div>
-                                <div className="flex flex-wrap gap-2 pt-1">
-                                    {DEFAULT_SUGGESTED_TAGS.map(tag => {
-                                        const isSelected = cadenceForm.target_tags.includes(tag);
+                                <div className="flex flex-wrap gap-2 pt-1 max-h-48 overflow-y-auto pr-1">
+                                    {allAvailableTags.map(tag => {
+                                        const isSelected = cadenceForm.target_tags.some(t => t.toLowerCase().trim() === tag.toLowerCase().trim());
                                         return (
                                             <button
                                                 key={tag}
@@ -1350,7 +1462,7 @@ export default function CustomersPage() {
                                                 onClick={() => {
                                                     const current = cadenceForm.target_tags;
                                                     const updated = isSelected 
-                                                        ? current.filter(t => t !== tag)
+                                                        ? current.filter(t => t.toLowerCase().trim() !== tag.toLowerCase().trim())
                                                         : [...current, tag];
                                                     setCadenceForm({ ...cadenceForm, target_tags: updated });
                                                 }}
@@ -1366,32 +1478,114 @@ export default function CustomersPage() {
                                         );
                                     })}
                                 </div>
+
+                                {/* Adicionar tag personalizada diretamente na cadência */}
+                                <div className="flex items-center gap-2 pt-2 border-t border-zinc-800/60 mt-2">
+                                    <div className="relative flex-1">
+                                        <Tag size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                                        <input
+                                            type="text"
+                                            placeholder="Criar ou buscar outra tag... (Pressione Enter para adicionar)"
+                                            value={cadenceNewTagInput}
+                                            onChange={e => setCadenceNewTagInput(e.target.value)}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    handleAddCadenceCustomTag();
+                                                }
+                                            }}
+                                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-zinc-500 outline-none focus:border-orange-500 transition-all font-medium"
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleAddCadenceCustomTag}
+                                        className="bg-zinc-800 hover:bg-orange-500 hover:text-white text-zinc-300 font-bold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                                    >
+                                        <Plus size={13} />
+                                        Adicionar
+                                    </button>
+                                </div>
                             </div>
 
-                            {/* Cupom e Desconto */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Código do Cupom</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Ex: GAMER15"
-                                        value={cadenceForm.cupom_codigo}
-                                        onChange={e => setCadenceForm({ ...cadenceForm, cupom_codigo: e.target.value.toUpperCase() })}
-                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-sm font-mono font-bold text-purple-300 uppercase transition-all"
-                                    />
+                            {/* Cupom e Desconto (Apenas Cupons Existentes) */}
+                            <div className="p-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[10px] text-purple-400 uppercase font-black tracking-widest flex items-center gap-1.5">
+                                        <Gift size={12} /> Cupom Promocional Vinculado
+                                    </label>
+                                    <a
+                                        href="/admin/coupons"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[10px] font-black text-zinc-400 hover:text-orange-400 flex items-center gap-1 transition-colors"
+                                    >
+                                        <ExternalLink size={11} /> Gerenciar Cupons ↗
+                                    </a>
                                 </div>
-                                <div>
-                                    <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Desconto (%)</label>
-                                    <input
-                                        type="number"
-                                        placeholder="Ex: 15"
-                                        min="1"
-                                        max="100"
-                                        value={cadenceForm.desconto_percentual}
-                                        onChange={e => setCadenceForm({ ...cadenceForm, desconto_percentual: e.target.value })}
-                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 outline-none focus:border-orange-500 text-sm font-bold text-white transition-all"
-                                    />
-                                </div>
+
+                                {loadingCoupons ? (
+                                    <div className="flex items-center gap-2 text-xs text-zinc-500 py-2">
+                                        <Loader2 size={14} className="animate-spin text-orange-500" />
+                                        Carregando cupons cadastrados...
+                                    </div>
+                                ) : availableCoupons.length === 0 ? (
+                                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-2">
+                                        <p className="text-xs text-amber-300 font-bold flex items-center gap-1.5">
+                                            <AlertCircle size={14} /> Nenhum cupom ativo encontrado no sistema
+                                        </p>
+                                        <p className="text-[11px] text-zinc-400">
+                                            Para vincular um cupom a esta cadência, você precisa primeiro criar um cupom ativo na aba de Cupons.
+                                        </p>
+                                        <a
+                                            href="/admin/coupons"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white font-bold text-[10px] uppercase px-3 py-1.5 rounded-lg transition-all"
+                                        >
+                                            <Plus size={12} /> Criar Cupom no Painel de Cupons
+                                        </a>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <div className="md:col-span-2 space-y-1">
+                                            <label className="block text-[10px] text-zinc-500 uppercase font-black tracking-widest pl-1">
+                                                Selecionar Cupom Existente
+                                            </label>
+                                            <select
+                                                value={cadenceForm.cupom_codigo}
+                                                onChange={e => {
+                                                    const selectedCode = e.target.value;
+                                                    const found = availableCoupons.find(c => c.codigo.toUpperCase() === selectedCode.toUpperCase());
+                                                    setCadenceForm({
+                                                        ...cadenceForm,
+                                                        cupom_codigo: selectedCode,
+                                                        desconto_percentual: found ? String(found.valor) : cadenceForm.desconto_percentual
+                                                    });
+                                                }}
+                                                required
+                                                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 outline-none focus:border-purple-500 text-xs font-mono font-bold text-purple-300 uppercase transition-all cursor-pointer"
+                                            >
+                                                <option value="" disabled>-- Selecione um cupom cadastrado --</option>
+                                                {availableCoupons.map(coupon => (
+                                                    <option key={coupon.id} value={coupon.codigo}>
+                                                        {coupon.codigo} — {coupon.tipo === 'porcentagem' ? `${coupon.valor}% OFF` : `R$ ${coupon.valor} OFF`} {coupon.usos_restantes !== null && coupon.usos_restantes !== undefined ? `(${coupon.usos_restantes} usos)` : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <label className="block text-[10px] text-zinc-500 uppercase font-black tracking-widest pl-1">
+                                                Desconto Aplicado
+                                            </label>
+                                            <div className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-xs font-black text-emerald-400 flex items-center justify-between">
+                                                <span>{cadenceForm.desconto_percentual ? `${cadenceForm.desconto_percentual}%` : '—'}</span>
+                                                <span className="text-[9px] text-zinc-500 uppercase">Automático</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Assunto do E-mail */}
@@ -1721,16 +1915,88 @@ export default function CustomersPage() {
                         ) : activeDispatchCadence && (
                             <div className="space-y-6">
                                 {/* Resumo de Impacto */}
-                                <div className="grid grid-cols-2 gap-3 p-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl">
+                                <div className="grid grid-cols-3 gap-3 p-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl text-center">
                                     <div>
-                                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-wider">Total de Clientes</span>
+                                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-wider block">Matriculados</span>
                                         <p className="text-xl font-black text-white">{activeDispatchCadence.crm_cadencia_envios?.length || 0}</p>
                                     </div>
                                     <div>
-                                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-wider">Pendentes de Envio</span>
-                                        <p className="text-xl font-black text-orange-400">
-                                            {(activeDispatchCadence.crm_cadencia_envios || []).filter((e: any) => e.status === 'pendente').length}
+                                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-wider block">Com E-mail</span>
+                                        <p className="text-xl font-black text-emerald-400">
+                                            {(activeDispatchCadence.crm_cadencia_envios || []).filter((e: any) => !!e.clientes?.email).length}
                                         </p>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-wider block">Sem E-mail</span>
+                                        <p className="text-xl font-black text-amber-400">
+                                            {(activeDispatchCadence.crm_cadencia_envios || []).filter((e: any) => !e.clientes?.email).length}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Lista de Destinatários & Status */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                                            Destinatários Matriculados ({activeDispatchCadence.crm_cadencia_envios?.length || 0}):
+                                        </span>
+                                        <a 
+                                            href="https://resend.com/emails" 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="text-[10px] font-black text-orange-400 hover:text-orange-300 flex items-center gap-1 transition-colors"
+                                        >
+                                            <ExternalLink size={11} /> Painel Resend (Logs)
+                                        </a>
+                                    </div>
+
+                                    <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl max-h-48 overflow-y-auto divide-y divide-zinc-800/60">
+                                        {(activeDispatchCadence.crm_cadencia_envios || []).map((envio: any) => {
+                                            const cliente = envio.clientes || {};
+                                            const hasEmail = !!cliente.email;
+                                            const isEnviado = envio.status === 'enviado';
+                                            const isSemEmail = envio.status === 'sem_email' || (!hasEmail && isEnviado);
+                                            const isFalha = envio.status === 'falha';
+
+                                            return (
+                                                <div key={envio.id} className="p-3 flex items-center justify-between text-xs gap-3">
+                                                    <div className="min-w-0">
+                                                        <p className="font-bold text-white truncate">{cliente.nome || 'Cliente'}</p>
+                                                        <p className="text-[11px] text-zinc-400 font-mono truncate">
+                                                            {hasEmail ? cliente.email : '⚠️ Sem e-mail cadastrado'}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="shrink-0 flex items-center gap-2">
+                                                        {isFalha ? (
+                                                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-red-500/15 text-red-400 border border-red-500/30">
+                                                                Falha
+                                                            </span>
+                                                        ) : isSemEmail ? (
+                                                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                                                                Sem E-mail
+                                                            </span>
+                                                        ) : isEnviado ? (
+                                                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                                                Enviado
+                                                            </span>
+                                                        ) : (
+                                                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-zinc-800 text-zinc-400 border border-zinc-700">
+                                                                Pendente
+                                                            </span>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveRecipient(envio.id, cliente.nome)}
+                                                            className="p-1 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                                                            title="Remover este cliente da cadência"
+                                                        >
+                                                            <Trash2 size={13} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
@@ -1935,8 +2201,8 @@ export default function CustomersPage() {
                                     <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 block">
                                         Sugestões Rápidas:
                                     </span>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {DEFAULT_SUGGESTED_TAGS.map(st => {
+                                    <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                                        {allAvailableTags.map(st => {
                                             const isAlreadyAdded = (selectedCustomer.tags || []).some(t => t.toLowerCase() === st.toLowerCase());
                                             return (
                                                 <button

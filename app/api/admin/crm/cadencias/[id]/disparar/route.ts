@@ -81,9 +81,12 @@ export async function POST(
 
             let envioStatus = 'enviado';
             let erroMsg: string | null = null;
+            let resendEmailId: string | null = null;
 
-            // Se Resend estiver configurado e o cliente tiver e-mail, enviar via Resend
-            if (resendKey && cliente.email) {
+            if (!cliente.email) {
+                envioStatus = 'sem_email';
+                erroMsg = 'Cliente não possui e-mail cadastrado';
+            } else if (resendKey) {
                 try {
                     const res = await fetch('https://api.resend.com/emails', {
                         method: 'POST',
@@ -92,7 +95,7 @@ export async function POST(
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            from: 'Franga Toys <contato@frangatoys.com.br>',
+                            from: process.env.RESEND_FROM_EMAIL || 'Franga Toys <contato@frangatoys.com.br>',
                             to: cliente.email,
                             subject: assunto,
                             html: `
@@ -114,19 +117,21 @@ ${conteudo}
                         })
                     });
 
+                    const resData = await res.json();
                     if (!res.ok) {
-                        const errData = await res.json();
-                        throw new Error(errData.message || 'Falha no envio de e-mail');
+                        throw new Error(resData.message || 'Falha no envio de e-mail');
                     }
+                    resendEmailId = resData.id || null;
+                    disparadosSucesso++;
                 } catch (e: any) {
                     envioStatus = 'falha';
                     erroMsg = e.message;
                     falhas++;
                 }
-            }
-
-            if (envioStatus === 'enviado') {
-                disparadosSucesso++;
+            } else {
+                envioStatus = 'falha';
+                erroMsg = 'Chave do Resend não configurada';
+                falhas++;
             }
 
             // Atualizar status do envio
@@ -134,13 +139,14 @@ ${conteudo}
                 .from('crm_cadencia_envios')
                 .update({
                     status: envioStatus,
-                    enviado_em: new Date().toISOString(),
+                    enviado_em: envioStatus === 'enviado' ? new Date().toISOString() : null,
                     erro_mensagem: erroMsg,
                     metadados: {
                         ...(envio.metadados || {}),
+                        resend_id: resendEmailId,
                         assunto_renderizado: assunto,
                         conteudo_renderizado: conteudo,
-                        canal_utilizado: cliente.email ? 'email' : 'notificacao_sistema'
+                        canal_utilizado: cliente.email ? 'email' : 'sem_email'
                     }
                 })
                 .eq('id', envio.id);
@@ -156,17 +162,27 @@ ${conteudo}
         await supabase
             .from('crm_cadencias')
             .update({
-                total_enviados: totalEnviadosCount || disparadosSucesso,
+                total_enviados: totalEnviadosCount || 0,
                 status: 'ativa',
                 updated_at: new Date().toISOString()
             })
             .eq('id', cadenciaId);
 
+        const semEmailTotal = envios.filter(e => !(e.clientes as any)?.email).length;
+        let responseMsg = `${disparadosSucesso} e-mail(s) enviado(s) com sucesso.`;
+        if (semEmailTotal > 0) {
+            responseMsg += ` (${semEmailTotal} cliente(s) ignorados por não terem e-mail cadastrado)`;
+        }
+        if (falhas > 0) {
+            responseMsg += ` [${falhas} falha(s)]`;
+        }
+
         return NextResponse.json({
             success: true,
             disparados: disparadosSucesso,
+            semEmail: semEmailTotal,
             falhas,
-            message: `${disparadosSucesso} notificações/e-mails processados com sucesso.`
+            message: responseMsg
         });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });

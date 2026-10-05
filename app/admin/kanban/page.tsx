@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle, Receipt, X, Download, Check, Maximize2, Camera, Search, CheckSquare, Square, ListChecks, Trash2, Plus } from 'lucide-react';
+import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle, Receipt, X, Download, Check, Maximize2, Camera, Search, CheckSquare, Square, ListChecks, Trash2, Plus, Mail } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import { compressImageForUpload } from '@/lib/image-utils';
+import { clsx } from 'clsx';
 
 export interface WipPhoto {
     id: string;
@@ -36,7 +37,8 @@ interface Sale {
     data_venda: string;
     cliente_nome: string;
     cliente_contato: string;
-    cliente_id?: number;
+    cliente_id?: number | string;
+    cliente_email?: string | null;
     status: string;
     quantidade: number;
     pintura_freelancer?: boolean;
@@ -146,7 +148,7 @@ export default function KanbanPage() {
     const [nfeCustomerBairro, setNfeCustomerBairro] = useState('');
     const [nfeCustomerCidade, setNfeCustomerCidade] = useState('');
     const [nfeCustomerUf, setNfeCustomerUf] = useState('');
-    const [nfeClienteId, setNfeClienteId] = useState<number | null>(null);
+    const [nfeClienteId, setNfeClienteId] = useState<number | string | null>(null);
     const [isManualNfe, setIsManualNfe] = useState(false);
     const [manualNfeKey, setManualNfeKey] = useState('');
     const [nfeNumber, setNfeNumber] = useState<number | string>(2);
@@ -155,6 +157,56 @@ export default function KanbanPage() {
     // Search and Quick Filter states
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedFilter, setSelectedFilter] = useState<'all' | 'my_paintings' | 'available_paintings' | 'urgent' | 'retirada' | 'correios'>('all');
+
+    // Auto notify customer by email state
+    const [autoNotifyEmail, setAutoNotifyEmail] = useState<boolean>(true);
+    const [sendingEmailSaleId, setSendingEmailSaleId] = useState<number | null>(null);
+
+    useEffect(() => {
+        const saved = localStorage.getItem('kanban_auto_notify_email');
+        if (saved !== null) {
+            setAutoNotifyEmail(saved === 'true');
+        }
+    }, []);
+
+    const toggleAutoNotifyEmail = () => {
+        const next = !autoNotifyEmail;
+        setAutoNotifyEmail(next);
+        localStorage.setItem('kanban_auto_notify_email', String(next));
+        if (next) {
+            toast.success('Envio automático de e-mail ao cliente ativado!');
+        } else {
+            toast.info('Envio automático de e-mail pausado');
+        }
+    };
+
+    const handleManualSendEmail = async (sale: Sale) => {
+        if (sendingEmailSaleId) return;
+        setSendingEmailSaleId(sale.id);
+        const toastId = toast.loading(`Enviando e-mail de status "${sale.status}"...`);
+        try {
+            const res = await fetch('/api/admin/kanban', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: sale.id,
+                    action: 'send_status_email',
+                    status: sale.status
+                })
+            });
+            const data = await res.json();
+            if (data.notificacao_email?.success) {
+                toast.success(`E-mail de status "${sale.status}" enviado para ${data.notificacao_email.email}!`, { id: toastId });
+            } else {
+                const motivo = data.notificacao_email?.motivo || data.notificacao_email?.error || 'Não foi possível enviar o e-mail';
+                toast.error(motivo, { id: toastId });
+            }
+        } catch (err: any) {
+            toast.error('Erro ao enviar e-mail', { id: toastId });
+        } finally {
+            setSendingEmailSaleId(null);
+        }
+    };
 
     // Checklist expanded card state
     const [expandedChecklistSaleId, setExpandedChecklistSaleId] = useState<number | null>(null);
@@ -623,15 +675,29 @@ export default function KanbanPage() {
             const res = await fetch('/api/admin/kanban', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: Number(saleId), status: toStatus })
+                body: JSON.stringify({ 
+                    id: Number(saleId), 
+                    status: toStatus,
+                    notificar_email: autoNotifyEmail
+                })
             });
             if (!res.ok) throw new Error('Failed');
+            const resData = await res.json();
 
             // Find the task to get customer details
             const task = prevTask || previousSales.find(s => s.id.toString() === saleId);
             if (task && prevTask?.status !== toStatus && toStatus !== 'Aguardando Pagamento') {
                 const clientWhatsApp = (task.cliente_contato || '').replace(/\D/g, '');
                 
+                let desc: string | undefined = undefined;
+                if (resData.notificacao_email?.success) {
+                    desc = `📧 E-mail de atualização enviado para ${resData.notificacao_email.email}`;
+                } else if (resData.notificacao_email && !resData.notificacao_email.success && autoNotifyEmail) {
+                    desc = resData.notificacao_email.motivo === 'Cliente sem e-mail cadastrado'
+                        ? 'Cliente sem e-mail cadastrado'
+                        : undefined;
+                }
+
                 if (clientWhatsApp && clientWhatsApp.length >= 10) {
                     let msg = '';
                     const primeiroNome = task.cliente_nome ? task.cliente_nome.trim().split(' ')[0] : 'Cliente';
@@ -639,25 +705,26 @@ export default function KanbanPage() {
                     else if (toStatus === 'Imprimindo') msg = `Olá, ${primeiroNome}! Nossas máquinas já começaram a imprimir o seu ${task.figuras.nome}! 🏭`;
                     else if (toStatus === 'Lavagem e Cura') msg = `A impressão concluiu, ${primeiroNome}! Seu ${task.figuras.nome} agora está no pós processamento. 💧`;
                     else if (toStatus === 'Pintura Secagem') msg = `Saindo do forno! Seu ${task.figuras.nome} agora está na fase de pintura e acabamento. 🎨`;
+                    else if (toStatus === 'Pronto p/ Entrega') msg = `Obra finalizada, ${primeiroNome}! Seu ${task.figuras.nome} está pronto para entrega/envio! 🎉`;
                     
-                    if (msg) {
-                        toast.success(`Movido para ${toStatus}`, {
-                            action: {
-                                label: 'Avisar Cliente no WhatsApp',
-                                onClick: () => {
-                                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                                    const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
-                                    const waLink = `${baseUrl}?phone=55${clientWhatsApp}&text=${encodeURIComponent(msg)}`;
-                                    window.open(waLink, '_blank');
-                                }
-                            },
-                            duration: 8000 // Mantém na tela por 8 segundos
-                        });
-                    } else {
-                        toast.success(`Status atualizado para ${toStatus}`);
-                    }
+                    toast.success(`Movido para ${toStatus}`, {
+                        description: desc,
+                        action: msg ? {
+                            label: 'Avisar no WhatsApp',
+                            onClick: () => {
+                                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                                const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+                                const waLink = `${baseUrl}?phone=55${clientWhatsApp}&text=${encodeURIComponent(msg)}`;
+                                window.open(waLink, '_blank');
+                            }
+                        } : undefined,
+                        duration: 8000 // Mantém na tela por 8 segundos
+                    });
                 } else {
-                    toast.success(`Status atualizado para ${toStatus}`);
+                    toast.success(`Status atualizado para ${toStatus}`, {
+                        description: desc,
+                        duration: 6000
+                    });
                 }
             }
         } catch (err) {
@@ -673,10 +740,18 @@ export default function KanbanPage() {
             const res = await fetch('/api/admin/kanban', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: saleId, status: 'Concluída' })
+                body: JSON.stringify({ 
+                    id: saleId, 
+                    status: 'Concluída',
+                    notificar_email: autoNotifyEmail
+                })
             });
             if (res.ok) {
-                toast.success('Pedido Concluído e Entregue!');
+                const resData = await res.json();
+                const desc = resData.notificacao_email?.success
+                    ? `📧 E-mail de conclusão enviado para ${resData.notificacao_email.email}`
+                    : undefined;
+                toast.success('Pedido Concluído e Entregue!', { description: desc });
                 setSales(prev => prev.filter(s => s.id !== saleId));
             } else {
                 throw new Error();
@@ -1111,6 +1186,25 @@ export default function KanbanPage() {
                             Limpar Fotos Expiradas ({cleanupStats.eligiblePhotosCount})
                         </button>
                     )}
+
+                    {/* Auto-Notify Customer Email Toggle */}
+                    <button
+                        type="button"
+                        onClick={toggleAutoNotifyEmail}
+                        className={clsx(
+                            "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 border",
+                            autoNotifyEmail
+                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.15)]"
+                                : "bg-zinc-900 text-zinc-500 border-zinc-800 hover:text-zinc-300"
+                        )}
+                        title={autoNotifyEmail ? "Envio automático de e-mail ao cliente ativo ao mover cards. Clique para pausar." : "Envio automático de e-mail ao cliente pausado. Clique para ativar."}
+                    >
+                        <Mail size={12} className={autoNotifyEmail ? "text-emerald-400 animate-pulse" : "text-zinc-500"} />
+                        <span className="hidden sm:inline">E-mail:</span>
+                        <span className={clsx("px-1.5 py-0.5 rounded text-[9px]", autoNotifyEmail ? "bg-emerald-500/20 text-emerald-300" : "bg-zinc-800 text-zinc-500")}>
+                            {autoNotifyEmail ? 'Ativo' : 'Pausado'}
+                        </span>
+                    </button>
                 </div>
             </div>
 
@@ -1517,6 +1611,23 @@ export default function KanbanPage() {
                                                             className="w-9 h-9 text-zinc-400 hover:text-purple-400 bg-zinc-900/60 hover:bg-purple-500/10 border border-zinc-800/80 hover:border-purple-500/30 rounded-lg transition-all duration-200 active:scale-90 flex items-center justify-center hover:shadow-[0_0_10px_rgba(168,85,247,0.2)]"
                                                         >
                                                             <Receipt size={13} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleManualSendEmail(task)}
+                                                            disabled={sendingEmailSaleId === task.id}
+                                                            title={task.cliente_email ? `Enviar e-mail de atualização (${task.cliente_email})` : 'Disparar e-mail de atualização de status'}
+                                                            className={clsx(
+                                                                "w-9 h-9 rounded-lg transition-all duration-200 active:scale-90 flex items-center justify-center border",
+                                                                task.cliente_email
+                                                                    ? "text-zinc-400 hover:text-orange-400 bg-zinc-900/60 hover:bg-orange-500/10 border-zinc-800/80 hover:border-orange-500/30 hover:shadow-[0_0_10px_rgba(249,115,22,0.2)]"
+                                                                    : "text-zinc-600 hover:text-zinc-400 bg-zinc-900/30 border-zinc-850 hover:bg-zinc-800/50"
+                                                            )}
+                                                        >
+                                                            {sendingEmailSaleId === task.id ? (
+                                                                <Loader2 size={13} className="animate-spin text-orange-500" />
+                                                            ) : (
+                                                                <Mail size={13} />
+                                                            )}
                                                         </button>
                                                     </div>
                                                 </div>

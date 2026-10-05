@@ -21,6 +21,7 @@ export async function GET(req: Request) {
                         status,
                         enviado_em,
                         erro_mensagem,
+                        metadados,
                         clientes (
                             id,
                             nome,
@@ -76,6 +77,33 @@ export async function POST(req: Request) {
             }, { status: 400 });
         }
 
+        let validCupomCodigo: string | null = null;
+        let validDescontoPercentual: number | null = null;
+
+        if (cupom_codigo) {
+            const normalizedCodigo = cupom_codigo.trim().toUpperCase();
+            const { data: cupomDb } = await supabase
+                .from('cupoms_desconto')
+                .select('id, codigo, tipo, valor, ativo')
+                .eq('codigo', normalizedCodigo)
+                .maybeSingle();
+
+            if (!cupomDb) {
+                return NextResponse.json({ 
+                    error: `O cupom "${cupom_codigo}" não existe no sistema. Crie-o primeiro na aba de Cupons.` 
+                }, { status: 400 });
+            }
+
+            if (!cupomDb.ativo) {
+                return NextResponse.json({ 
+                    error: `O cupom "${cupom_codigo}" está inativo. Ative-o em Cupons antes de usá-lo na cadência.` 
+                }, { status: 400 });
+            }
+
+            validCupomCodigo = cupomDb.codigo;
+            validDescontoPercentual = Number(cupomDb.valor);
+        }
+
         // 1. Criar o registro da cadência
         const { data: cadencia, error: cadenciaErr } = await supabase
             .from('crm_cadencias')
@@ -84,8 +112,8 @@ export async function POST(req: Request) {
                 descricao,
                 target_tags,
                 tipo_canal,
-                cupom_codigo: cupom_codigo ? cupom_codigo.trim().toUpperCase() : null,
-                desconto_percentual: desconto_percentual ? Number(desconto_percentual) : null,
+                cupom_codigo: validCupomCodigo,
+                desconto_percentual: validDescontoPercentual,
                 assunto_email: assunto_email || `Presente Especial da Franga Toys: Promoção Exclusiva!`,
                 conteudo_email: conteudo_email || `Olá, {primeiro_nome}!\n\nPreparamos uma condição exclusiva especialmente para você em nosso acervo de colecionáveis.\n\nUse o cupom {cupom} e garanta {desconto}% OFF!\n\nAcesse agora: {loja_link}`,
                 status
@@ -96,12 +124,19 @@ export async function POST(req: Request) {
         if (cadenciaErr) throw cadenciaErr;
 
         // 2. Localizar clientes elegíveis (aqueles que possuem ao menos uma das target_tags)
-        const { data: eligibleClients, error: clientErr } = await supabase
+        const { data: allClients, error: clientErr } = await supabase
             .from('clientes')
-            .select('id, nome, email, telefone, tags')
-            .overlaps('tags', target_tags);
+            .select('id, nome, email, telefone, tags');
 
         if (clientErr) throw clientErr;
+
+        const normalizedTargets = target_tags.map((t: string) => (t || '').trim().toLowerCase()).filter(Boolean);
+        const eligibleClients = (allClients || []).filter((client: any) => {
+            const clientTags = Array.isArray(client.tags)
+                ? client.tags.map((t: string) => (t || '').trim().toLowerCase())
+                : [];
+            return normalizedTargets.some((tt: string) => clientTags.includes(tt));
+        });
 
         let totalImpactados = 0;
 
@@ -156,10 +191,27 @@ export async function PATCH(req: Request) {
         if (!id) return NextResponse.json({ error: 'ID da cadência obrigatório' }, { status: 400 });
 
         if (updateFields.cupom_codigo) {
-            updateFields.cupom_codigo = updateFields.cupom_codigo.trim().toUpperCase();
-        }
-        if (updateFields.desconto_percentual !== undefined) {
-            updateFields.desconto_percentual = updateFields.desconto_percentual ? Number(updateFields.desconto_percentual) : null;
+            const normalizedCodigo = updateFields.cupom_codigo.trim().toUpperCase();
+            const { data: cupomDb } = await supabase
+                .from('cupoms_desconto')
+                .select('id, codigo, tipo, valor, ativo')
+                .eq('codigo', normalizedCodigo)
+                .maybeSingle();
+
+            if (!cupomDb) {
+                return NextResponse.json({ 
+                    error: `O cupom "${updateFields.cupom_codigo}" não existe no sistema. Crie-o primeiro na aba de Cupons.` 
+                }, { status: 400 });
+            }
+
+            if (!cupomDb.ativo) {
+                return NextResponse.json({ 
+                    error: `O cupom "${updateFields.cupom_codigo}" está inativo.` 
+                }, { status: 400 });
+            }
+
+            updateFields.cupom_codigo = cupomDb.codigo;
+            updateFields.desconto_percentual = Number(cupomDb.valor);
         }
 
         updateFields.updated_at = new Date().toISOString();
@@ -175,12 +227,21 @@ export async function PATCH(req: Request) {
 
         // Se solicitado, sincronizar novos clientes baseado nas tags
         if (syncClients && Array.isArray(cadencia.target_tags) && cadencia.target_tags.length > 0) {
-            const { data: eligibleClients } = await supabase
+            const { data: allClients } = await supabase
                 .from('clientes')
-                .select('id, nome, email, telefone')
-                .overlaps('tags', cadencia.target_tags);
+                .select('id, nome, email, telefone, tags');
+
+            const normalizedTargets = cadencia.target_tags.map((t: string) => (t || '').trim().toLowerCase()).filter(Boolean);
+            const eligibleClients = (allClients || []).filter((client: any) => {
+                const clientTags = Array.isArray(client.tags)
+                    ? client.tags.map((t: string) => (t || '').trim().toLowerCase())
+                    : [];
+                return normalizedTargets.some((tt: string) => clientTags.includes(tt));
+            });
 
             if (eligibleClients) {
+                const eligibleIds = eligibleClients.map((c: any) => c.id);
+
                 for (const client of eligibleClients) {
                     await supabase
                         .from('crm_cadencia_envios')
@@ -190,6 +251,20 @@ export async function PATCH(req: Request) {
                             canal: cadencia.tipo_canal,
                             status: 'pendente'
                         }, { onConflict: 'cadencia_id,cliente_id' });
+                }
+
+                // Remover da fila clientes que não têm mais as tags atuais da cadência
+                if (eligibleIds.length > 0) {
+                    await supabase
+                        .from('crm_cadencia_envios')
+                        .delete()
+                        .eq('cadencia_id', id)
+                        .not('cliente_id', 'in', `(${eligibleIds.map(eid => `"${eid}"`).join(',')})`);
+                } else {
+                    await supabase
+                        .from('crm_cadencia_envios')
+                        .delete()
+                        .eq('cadencia_id', id);
                 }
 
                 const { count } = await supabase
@@ -210,7 +285,7 @@ export async function PATCH(req: Request) {
     }
 }
 
-// DELETAR CADÊNCIA
+// DELETAR CADÊNCIA OU REMOVER DESTINATÁRIO
 export async function DELETE(req: Request) {
     try {
         const sessionOrResponse = await requireRoles(['admin']);
@@ -218,6 +293,36 @@ export async function DELETE(req: Request) {
 
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
+        const envioId = searchParams.get('envio_id');
+
+        if (envioId) {
+            const { data: envio } = await supabase
+                .from('crm_cadencia_envios')
+                .select('cadencia_id')
+                .eq('id', envioId)
+                .single();
+
+            const { error: delErr } = await supabase
+                .from('crm_cadencia_envios')
+                .delete()
+                .eq('id', envioId);
+
+            if (delErr) throw delErr;
+
+            if (envio?.cadencia_id) {
+                const { count } = await supabase
+                    .from('crm_cadencia_envios')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('cadencia_id', envio.cadencia_id);
+
+                await supabase
+                    .from('crm_cadencias')
+                    .update({ total_impactados: count || 0 })
+                    .eq('id', envio.cadencia_id);
+            }
+
+            return NextResponse.json({ success: true, message: 'Destinatário removido da cadência' });
+        }
 
         if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 });
 
