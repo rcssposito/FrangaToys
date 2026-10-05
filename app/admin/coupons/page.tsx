@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Tag, Calendar, Activity, Check, X, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Tag, Calendar, Activity, Check, X, Loader2, Sparkles, Flame, Film, Palette, TrendingUp, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -47,6 +47,10 @@ export default function AdminCouponsPage() {
     const [searchFigQuery, setSearchFigQuery] = useState('');
     const [searchFigResults, setSearchFigResults] = useState<any[]>([]);
 
+    // Suggestions state
+    const [suggestions, setSuggestions] = useState<any>(null);
+    const [loadingSuggestions, setLoadingSuggestions] = useState(true);
+
     const router = useRouter();
 
     const fetchCupons = async () => {
@@ -75,6 +79,21 @@ export default function AdminCouponsPage() {
         }
     };
 
+    const fetchSuggestions = async () => {
+        try {
+            setLoadingSuggestions(true);
+            const res = await fetch('/api/admin/coupons/suggestions');
+            if (res.ok) {
+                const data = await res.json();
+                setSuggestions(data);
+            }
+        } catch (err) {
+            console.error('Erro ao buscar sugestões:', err);
+        } finally {
+            setLoadingSuggestions(false);
+        }
+    };
+
     const handleSearchFigures = async (q: string) => {
         if (!q.trim()) {
             setSearchFigResults([]);
@@ -94,6 +113,7 @@ export default function AdminCouponsPage() {
     useEffect(() => {
         fetchCupons();
         fetchSeries();
+        fetchSuggestions();
     }, []);
 
     const fetchFigurasPermitidasDetails = async (ids: number[]) => {
@@ -173,6 +193,37 @@ export default function AdminCouponsPage() {
         setIsModalOpen(true);
     };
 
+    const applySuggestion = async (suggestion: any) => {
+        if (!suggestion) return;
+        setEditingCupom(null);
+        setCodigo(suggestion.codigoSugerido || '');
+        setTipo(suggestion.tipo || 'porcentagem');
+        setValor(suggestion.valorSugerido?.toString() || '10');
+        setUsosRestantes('50');
+
+        // Validade sugerida: 30 dias a partir de hoje
+        const expiry = new Date();
+        expiry.setDate(expiry.getDate() + 30);
+        setDataValidade(expiry.toISOString().slice(0, 16));
+
+        setValorMinimo('');
+        setDescontoMaximo('');
+        setSerieId(suggestion.serieId ? suggestion.serieId.toString() : '');
+        setAtivo(true);
+
+        const pIds = suggestion.figurasPermitidas || [];
+        setFigurasPermitidas(pIds);
+        if (pIds.length > 0) {
+            const details = await fetchFigurasPermitidasDetails(pIds);
+            setFigurasPermitidasObj(details);
+        } else {
+            setFigurasPermitidasObj([]);
+        }
+
+        setIsModalOpen(true);
+        toast.info(`Sugestão "${suggestion.titulo}" aplicada no formulário!`);
+    };
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
@@ -250,6 +301,181 @@ export default function AdminCouponsPage() {
                 >
                     <Plus size={18} /> Novo Cupom
                 </button>
+            </div>
+
+            {/* WIDGET DE SUGESTÕES INTELIGENTES */}
+            <div className="bg-gradient-to-br from-zinc-900/95 via-zinc-900/60 to-zinc-950 border border-zinc-800 rounded-3xl p-6 md:p-8 backdrop-blur-xl relative overflow-hidden shadow-2xl">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-600/10 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 relative z-10">
+                    <div>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-black uppercase tracking-widest mb-2">
+                            <Sparkles size={14} className="animate-pulse" /> Sugestões Inteligentes de Cupons
+                        </div>
+                        <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
+                            Ideias Promocionais Baseadas em Acessos Reais
+                        </h2>
+                        <p className="text-xs text-zinc-400 mt-1 max-w-2xl">
+                            O sistema analisou os colecionáveis, séries e estúdios mais visualizados pelos seus clientes na loja. Aplique uma sugestão com 1 clique para gerar o cupom otimizado!
+                        </p>
+                    </div>
+                    <button
+                        onClick={fetchSuggestions}
+                        disabled={loadingSuggestions}
+                        className="self-start md:self-auto text-xs font-bold text-zinc-400 hover:text-white px-3.5 py-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/50 transition-all flex items-center gap-1.5 active:scale-95"
+                    >
+                        <Activity size={14} className={loadingSuggestions ? "animate-spin text-blue-400" : ""} />
+                        {loadingSuggestions ? 'Analisando...' : 'Recalcular Sugestões'}
+                    </button>
+                </div>
+
+                {loadingSuggestions ? (
+                    <div className="flex items-center justify-center py-10">
+                        <Loader2 size={32} className="animate-spin text-blue-500" />
+                    </div>
+                ) : suggestions ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 relative z-10">
+                        {/* CARD 1: TOP 5 PERSONAGENS */}
+                        {suggestions.topFiguresCombo && (
+                            <div className="bg-zinc-900/90 hover:bg-zinc-900 border border-zinc-800 hover:border-amber-500/40 rounded-2xl p-5 flex flex-col justify-between transition-all group shadow-lg">
+                                <div>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                            <Sparkles size={12} /> {suggestions.topFiguresCombo.badge}
+                                        </span>
+                                        <span className="text-xs font-black text-zinc-400">
+                                            {suggestions.topFiguresCombo.totalViews} views
+                                        </span>
+                                    </div>
+                                    <h3 className="text-base font-black text-white group-hover:text-amber-400 transition-colors">
+                                        {suggestions.topFiguresCombo.titulo}
+                                    </h3>
+                                    <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
+                                        {suggestions.topFiguresCombo.descricao}
+                                    </p>
+
+                                    {/* Miniaturas dos Top 5 */}
+                                    <div className="flex items-center gap-1.5 my-4 overflow-x-auto pb-1">
+                                        {suggestions.topFiguresCombo.figuras?.map((fig: any) => (
+                                            <div key={fig.id} className="relative group/fig shrink-0" title={`${fig.nome} (${fig.views} views)`}>
+                                                <img
+                                                    src={fig.imagem_url}
+                                                    alt={fig.nome}
+                                                    className="w-10 h-10 rounded-xl object-cover border border-zinc-700 bg-zinc-800 group-hover/fig:border-amber-400 transition-colors"
+                                                />
+                                                <div className="absolute -bottom-1 -right-1 bg-black/80 backdrop-blur-sm text-[8px] font-black text-amber-400 px-1 rounded border border-amber-500/30">
+                                                    {fig.views}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-between gap-3">
+                                    <div>
+                                        <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Código & Desconto</span>
+                                        <span className="text-xs font-black text-amber-400 tracking-wider font-mono">
+                                            {suggestions.topFiguresCombo.codigoSugerido} • {suggestions.topFiguresCombo.valorSugerido}% OFF
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={() => applySuggestion(suggestions.topFiguresCombo)}
+                                        className="bg-amber-500 hover:bg-amber-400 text-black px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+                                    >
+                                        Criar Cupom <ArrowRight size={13} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* CARD 2: SÉRIE MAIS VISTA */}
+                        {suggestions.topSeriesPromo && (
+                            <div className="bg-zinc-900/90 hover:bg-zinc-900 border border-zinc-800 hover:border-blue-500/40 rounded-2xl p-5 flex flex-col justify-between transition-all group shadow-lg">
+                                <div>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                            <Film size={12} /> {suggestions.topSeriesPromo.badge}
+                                        </span>
+                                        <span className="text-xs font-black text-zinc-400">
+                                            {suggestions.topSeriesPromo.totalViews} views
+                                        </span>
+                                    </div>
+                                    <h3 className="text-base font-black text-white group-hover:text-blue-400 transition-colors">
+                                        {suggestions.topSeriesPromo.titulo}
+                                    </h3>
+                                    <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
+                                        {suggestions.topSeriesPromo.descricao}
+                                    </p>
+                                    <div className="my-4 py-2 px-3 rounded-xl bg-blue-500/5 border border-blue-500/10 flex items-center gap-2">
+                                        <Film size={16} className="text-blue-400 shrink-0" />
+                                        <span className="text-xs font-bold text-zinc-300">
+                                            Cupom restrito à série: <strong className="text-blue-400">{suggestions.topSeriesPromo.serieNome}</strong>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-between gap-3">
+                                    <div>
+                                        <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Código & Desconto</span>
+                                        <span className="text-xs font-black text-blue-400 tracking-wider font-mono">
+                                            {suggestions.topSeriesPromo.codigoSugerido} • {suggestions.topSeriesPromo.valorSugerido}% OFF
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={() => applySuggestion(suggestions.topSeriesPromo)}
+                                        className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 shadow-[0_0_15px_rgba(37,99,235,0.2)]"
+                                    >
+                                        Criar Cupom <ArrowRight size={13} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* CARD 3: ESTÚDIO MAIS VISTO */}
+                        {suggestions.topStudioPromo && (
+                            <div className="bg-zinc-900/90 hover:bg-zinc-900 border border-zinc-800 hover:border-purple-500/40 rounded-2xl p-5 flex flex-col justify-between transition-all group shadow-lg">
+                                <div>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                                            <Palette size={12} /> {suggestions.topStudioPromo.badge}
+                                        </span>
+                                        <span className="text-xs font-black text-zinc-400">
+                                            {suggestions.topStudioPromo.totalViews} views
+                                        </span>
+                                    </div>
+                                    <h3 className="text-base font-black text-white group-hover:text-purple-400 transition-colors">
+                                        {suggestions.topStudioPromo.titulo}
+                                    </h3>
+                                    <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
+                                        {suggestions.topStudioPromo.descricao}
+                                    </p>
+                                    <div className="my-4 py-2 px-3 rounded-xl bg-purple-500/5 border border-purple-500/10 flex items-center gap-2">
+                                        <Palette size={16} className="text-purple-400 shrink-0" />
+                                        <span className="text-xs font-bold text-zinc-300">
+                                            Desconto para modelos de: <strong className="text-purple-400">{suggestions.topStudioPromo.studioNome}</strong>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-between gap-3">
+                                    <div>
+                                        <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Código & Desconto</span>
+                                        <span className="text-xs font-black text-purple-400 tracking-wider font-mono">
+                                            {suggestions.topStudioPromo.codigoSugerido} • {suggestions.topStudioPromo.valorSugerido}% OFF
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={() => applySuggestion(suggestions.topStudioPromo)}
+                                        className="bg-purple-600 hover:bg-purple-500 text-white px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
+                                    >
+                                        Criar Cupom <ArrowRight size={13} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : null}
             </div>
 
             {loading ? (

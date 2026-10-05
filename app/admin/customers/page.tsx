@@ -36,7 +36,14 @@ import {
     CheckCircle2,
     AlertCircle,
     Plus,
-    ExternalLink
+    ExternalLink,
+    Radio,
+    Globe,
+    Smartphone,
+    Monitor,
+    Compass,
+    Eye,
+    MapPin
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePermission } from '@/hooks/usePermission';
@@ -75,6 +82,10 @@ interface Customer {
     total_pedidos?: number;
     total_gasto?: number;
     ultima_venda_em?: string;
+    ultimo_acesso_em?: string;
+    total_acessos?: number;
+    cidade_ultimo_acesso?: string;
+    uf_ultimo_acesso?: string;
     cpf?: string;
     cep?: string;
     logradouro?: string;
@@ -105,8 +116,34 @@ export default function CustomersPage() {
     const { hasRole } = usePermission();
     const router = useRouter();
 
-    // Mode Switcher (Clientes vs Cadências)
-    const [viewMode, setViewMode] = useState<'clientes' | 'cadencias'>('clientes');
+    // Mode Switcher (Clientes vs Cadências vs Telemetria)
+    const [viewMode, setViewMode] = useState<'clientes' | 'cadencias' | 'telemetria'>('clientes');
+
+    // Radar de Acessos (Telemetria Beacon)
+    const [telemetriaLogs, setTelemetriaLogs] = useState<any[]>([]);
+    const [loadingTelemetria, setLoadingTelemetria] = useState(false);
+
+    const fetchTelemetria = async () => {
+        try {
+            setLoadingTelemetria(true);
+            const res = await fetch('/api/admin/crm/acessos?limit=50');
+            if (res.ok) {
+                const data = await res.json();
+                setTelemetriaLogs(data);
+            }
+        } catch (e) {
+            console.error('Erro ao buscar telemetria:', e);
+            toast.error('Erro ao carregar radar de acessos');
+        } finally {
+            setLoadingTelemetria(false);
+        }
+    };
+
+    useEffect(() => {
+        if (viewMode === 'telemetria') {
+            fetchTelemetria();
+        }
+    }, [viewMode]);
 
     // Clientes State
     const [customers, setCustomers] = useState<Customer[]>([]);
@@ -661,6 +698,17 @@ export default function CustomersPage() {
                         <Sparkles size={16} />
                         Cadências de Promoções ({cadencias.length})
                     </button>
+                    <button
+                        onClick={() => setViewMode('telemetria')}
+                        className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                            viewMode === 'telemetria'
+                                ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                                : 'text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                        <Radio size={16} className={viewMode === 'telemetria' ? 'animate-pulse' : ''} />
+                        Radar de Acessos (Beacon)
+                    </button>
                 </div>
             </div>
 
@@ -835,6 +883,7 @@ export default function CustomersPage() {
                                         <tr className="border-b border-zinc-800/50 bg-black/40">
                                             <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Cliente / Contato</th>
                                             <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Tags & Segmentação</th>
+                                            <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden lg:table-cell">Último Acesso (Beacon)</th>
                                             <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden md:table-cell">Última Compra</th>
                                             <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] hidden md:table-cell">Total Gasto (LTV)</th>
                                             <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] text-right">Ações</th>
@@ -909,6 +958,27 @@ export default function CustomersPage() {
                                                         >
                                                             <Plus size={12} />
                                                         </button>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-5 hidden lg:table-cell">
+                                                    <div className="flex flex-col">
+                                                        {customer.ultimo_acesso_em ? (
+                                                            <>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                                                    <span className="text-[11px] font-bold text-zinc-300">
+                                                                        {new Date(customer.ultimo_acesso_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                                    </span>
+                                                                </div>
+                                                                <span className="text-[9px] font-bold text-zinc-500 flex items-center gap-1 mt-0.5">
+                                                                    <MapPin size={9} className="text-orange-400" />
+                                                                    {customer.cidade_ultimo_acesso ? `${customer.cidade_ultimo_acesso}${customer.uf_ultimo_acesso ? ` - ${customer.uf_ultimo_acesso}` : ''}` : 'Local desconhecido'}
+                                                                    {customer.total_acessos ? ` (${customer.total_acessos}x)` : ''}
+                                                                </span>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-[10px] text-zinc-600 italic">Sem registros</span>
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td className="px-8 py-5 hidden md:table-cell">
@@ -1287,6 +1357,238 @@ export default function CustomersPage() {
                                 {cadenceForm.id ? 'Salvar Alterações' : 'Criar e Matricular Clientes'}
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ABA 3: RADAR DE ACESSOS (BEACON & TELEMETRIA) */}
+            {viewMode === 'telemetria' && (
+                <div className="space-y-6">
+                    {/* Header do Radar */}
+                    <div className="bg-gradient-to-br from-zinc-900/95 via-zinc-900/60 to-zinc-950 border border-zinc-800 rounded-3xl p-6 md:p-8 backdrop-blur-xl relative overflow-hidden shadow-2xl">
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+                            <div>
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-black uppercase tracking-widest mb-2">
+                                    <Radio size={14} className="animate-pulse" /> Telemetria de Acessos
+                                </div>
+                                <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
+                                    Radar de Visitantes & Engajamento de Campanhas
+                                </h2>
+                                <p className="text-xs text-zinc-400 mt-1 max-w-2xl">
+                                    Rastreamento inteligente de geolocalização (cidade/estado), tráfego de campanhas e identificação de clientes no CRM através do Beacon nativo.
+                                </p>
+                            </div>
+                            <button
+                                onClick={fetchTelemetria}
+                                disabled={loadingTelemetria}
+                                className="self-start md:self-auto text-xs font-bold text-zinc-300 hover:text-white px-4 py-2.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700/50 transition-all flex items-center gap-2 active:scale-95 shadow-lg cursor-pointer"
+                            >
+                                <RefreshCw size={14} className={loadingTelemetria ? "animate-spin text-orange-400" : ""} />
+                                {loadingTelemetria ? 'Atualizando...' : 'Atualizar Radar'}
+                            </button>
+                        </div>
+
+                        {/* Cards de Métricas Rápidas */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 relative z-10">
+                            <div className="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl">
+                                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-1">Acessos Registrados</span>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-2xl font-black text-white">{telemetriaLogs.length}</span>
+                                    <span className="text-[10px] text-zinc-500 font-bold">últimos eventos</span>
+                                </div>
+                            </div>
+                            <div className="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl">
+                                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-1">Identificados no CRM</span>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-2xl font-black text-emerald-400">
+                                        {telemetriaLogs.filter(l => l.cliente_id || l.clientes).length}
+                                    </span>
+                                    <span className="text-[10px] text-emerald-500/70 font-bold">com cadastro</span>
+                                </div>
+                            </div>
+                            <div className="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl">
+                                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-1">Cliques em Campanhas</span>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-2xl font-black text-orange-400">
+                                        {telemetriaLogs.filter(l => l.utm_source || l.cadencia_id).length}
+                                    </span>
+                                    <span className="text-[10px] text-orange-500/70 font-bold">vindos de links</span>
+                                </div>
+                            </div>
+                            <div className="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl">
+                                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-1">Mobile vs Desktop</span>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-2xl font-black text-blue-400">
+                                        {telemetriaLogs.length > 0 ? Math.round((telemetriaLogs.filter(l => l.dispositivo === 'mobile').length / telemetriaLogs.length) * 100) : 0}%
+                                    </span>
+                                    <span className="text-[10px] text-blue-500/70 font-bold">Mobile</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Feed de Acessos Recentes */}
+                    <div className="bg-zinc-900/20 border border-zinc-800 rounded-[2rem] overflow-hidden backdrop-blur-sm shadow-2xl">
+                        {loadingTelemetria ? (
+                            <div className="p-20 flex flex-col items-center justify-center gap-4">
+                                <Loader2 className="animate-spin text-orange-500" size={40} />
+                                <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-600">Sincronizando Radar do Beacon...</p>
+                            </div>
+                        ) : telemetriaLogs.length === 0 ? (
+                            <div className="p-20 text-center space-y-4">
+                                <Radio size={60} className="mx-auto text-zinc-800 animate-pulse" />
+                                <p className="text-zinc-400 font-bold uppercase tracking-widest text-xs">Nenhum evento registrado ainda.</p>
+                                <p className="text-zinc-600 text-xs max-w-md mx-auto">
+                                    Navegue pela loja em outra aba para ver as visitas sendo capturadas pelo Beacon em tempo real!
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-zinc-800/50 bg-black/40">
+                                            <th className="px-6 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Último Sinal</th>
+                                            <th className="px-6 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Visitante / Cliente</th>
+                                            <th className="px-6 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">De Onde Acessou</th>
+                                            <th className="px-6 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Navegação & Interesse</th>
+                                            <th className="px-6 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Origem / Campanha</th>
+                                            <th className="px-6 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] text-right">Tempo Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-800/30">
+                                        {telemetriaLogs.map((log) => {
+                                            const isCliente = !!(log.clientes?.nome || log.email);
+                                            const clienteNome = log.clientes?.nome || log.email;
+                                            const displayTime = log.ultimo_acesso_em || log.created_at;
+                                            const totalSec = log.duracao_total_segundos || log.duracao_segundos || 0;
+                                            const minutes = Math.floor(totalSec / 60);
+                                            const seconds = totalSec % 60;
+                                            const timeFormatted = minutes > 0 ? `${minutes}m ${seconds}s` : (seconds > 0 ? `${seconds}s` : '< 5s');
+
+                                            return (
+                                                <tr key={log.id} className="group hover:bg-zinc-800/30 transition-colors">
+                                                    {/* Horário */}
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex flex-col">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                                                <span className="text-xs font-bold text-zinc-300">
+                                                                    {new Date(displayTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                                                </span>
+                                                            </div>
+                                                            <span className="text-[10px] text-zinc-600 font-mono mt-0.5">
+                                                                {new Date(displayTime).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Visitante / Cliente */}
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${
+                                                                isCliente 
+                                                                    ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' 
+                                                                    : 'bg-zinc-800 text-zinc-500 border border-zinc-700/50'
+                                                            }`}>
+                                                                {isCliente ? clienteNome[0]?.toUpperCase() : '?'}
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                {isCliente ? (
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="text-xs font-bold text-white">{clienteNome}</span>
+                                                                        <span className="px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-wider bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                                                                            CRM
+                                                                        </span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-xs font-medium text-zinc-400">
+                                                                        Anônimo ({log.visitor_id ? log.visitor_id.slice(0, 10) : 'vis'})
+                                                                    </span>
+                                                                )}
+                                                                <span className="text-[10px] text-zinc-600 flex items-center gap-1">
+                                                                    {log.dispositivo === 'mobile' ? <Smartphone size={10} /> : <Monitor size={10} />}
+                                                                    {log.dispositivo} • {log.navegador || 'Navegador'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Localização */}
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <MapPin size={12} className="text-orange-400 shrink-0" />
+                                                            <span className="text-xs font-bold text-zinc-200">
+                                                                {log.cidade || 'Desconhecida'}
+                                                                {log.estado && log.estado !== 'Desconhecido' && log.estado !== 'DEV' ? `, ${log.estado}` : ''}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Página Acessada & Histórico de Navegação */}
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex flex-col gap-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                                                                    {log.total_paginas || 1} {log.total_paginas > 1 ? 'páginas' : 'página'}
+                                                                </span>
+                                                                <span className="text-xs font-mono text-zinc-400 font-medium truncate max-w-[180px]" title={log.ultima_pagina || log.pathname}>
+                                                                    {log.ultima_pagina || log.pathname || '/'}
+                                                                </span>
+                                                            </div>
+                                                            {log.figuras && (
+                                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                                    {log.figuras.imagem_url && (
+                                                                        <img 
+                                                                            src={log.figuras.imagem_url} 
+                                                                            alt={log.figuras.nome} 
+                                                                            className="w-5 h-5 rounded object-cover border border-zinc-700 bg-zinc-800 shrink-0" 
+                                                                        />
+                                                                    )}
+                                                                    <span className="text-[11px] font-bold text-orange-400 truncate max-w-[200px]" title={log.figuras.nome}>
+                                                                        {log.figuras.nome}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Campanha / Origem */}
+                                                    <td className="px-6 py-4">
+                                                        {log.crm_cadencias ? (
+                                                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                                                                Cadência: {log.crm_cadencias.nome}
+                                                            </span>
+                                                        ) : log.utm_campaign ? (
+                                                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                                                                {log.utm_source || 'Campanha'}: {log.utm_campaign}
+                                                            </span>
+                                                        ) : log.referrer && log.referrer.includes('instagram') ? (
+                                                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-pink-500/15 text-pink-300 border border-pink-500/30">
+                                                                Instagram
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[11px] text-zinc-500 font-medium">
+                                                                {log.referrer ? 'Link externo' : 'Direto'}
+                                                            </span>
+                                                        )}
+                                                    </td>
+
+                                                    {/* Tempo */}
+                                                    <td className="px-6 py-4 text-right">
+                                                        <span className="text-xs font-mono font-bold text-zinc-300">
+                                                            {timeFormatted}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

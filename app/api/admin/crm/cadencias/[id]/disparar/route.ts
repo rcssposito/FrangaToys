@@ -64,6 +64,7 @@ export async function POST(
             const primeiroNome = cliente.nome ? cliente.nome.split(' ')[0] : 'Colecionador';
             const cupom = cadencia.cupom_codigo || 'FRANGA10';
             const desconto = cadencia.desconto_percentual ? `${cadencia.desconto_percentual}` : '10';
+            const lojaLink = `${siteUrl}/?cupom=${encodeURIComponent(cupom)}&utm_source=crm_cadencia&utm_campaign=${cadenciaId}&crm_c=${cliente.id}`;
 
             // Substituir variáveis dinâmicas
             const renderText = (template: string) => {
@@ -72,7 +73,7 @@ export async function POST(
                     .replace(/{primeiro_nome}/gi, primeiroNome)
                     .replace(/{cupom}/gi, cupom)
                     .replace(/{desconto}/gi, desconto)
-                    .replace(/{loja_link}/gi, `${siteUrl}/?cupom=${encodeURIComponent(cupom)}`);
+                    .replace(/{loja_link}/gi, lojaLink);
             };
 
             const assunto = renderText(cadencia.assunto_email || 'Presente Especial Franga Toys!');
@@ -104,7 +105,7 @@ export async function POST(
 ${conteudo}
                                     </div>
                                     <div style="text-align: center; margin-top: 24px;">
-                                        <a href="${siteUrl}/?cupom=${encodeURIComponent(cupom)}" style="background: linear-gradient(to right, #f97316, #f59e0b); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-weight: bold; font-size: 13px; display: inline-block;">
+                                        <a href="${lojaLink}" style="background: linear-gradient(to right, #f97316, #f59e0b); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-weight: bold; font-size: 13px; display: inline-block;">
                                             Resgatar Cupom na Loja
                                         </a>
                                     </div>

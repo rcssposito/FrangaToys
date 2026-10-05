@@ -6,6 +6,7 @@ import Providers from './providers';
 import { Toaster } from 'sonner';
 import Footer from '@/components/common/Footer';
 import CookieConsent from '@/components/common/CookieConsent';
+import AccessBeacon from '@/components/AccessBeacon';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -42,6 +43,7 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={inter.className} suppressHydrationWarning>
         <Providers>
+          <AccessBeacon />
           {children}
           {modal}
           <Footer />
