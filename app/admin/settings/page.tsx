@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { toast } from 'sonner';
 import { 
     Save, 
@@ -15,9 +15,13 @@ import {
     AlertTriangle,
     Search,
     Check,
-    ArrowRight
+    ArrowRight,
+    Users,
+    ShieldCheck
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import UsersManager from '@/components/Admin/UsersManager';
 
 interface MismatchItem {
     sheet: string;
@@ -33,7 +37,22 @@ interface MismatchItem {
     fileVersion?: string | null;
 }
 
-export default function SettingsPage() {
+function SettingsContent() {
+    const searchParams = useSearchParams();
+    const initialTab = searchParams.get('tab') === 'usuarios' 
+        ? 'usuarios' 
+        : searchParams.get('tab') === 'sync' 
+        ? 'sync' 
+        : 'custos';
+    const [activeTab, setActiveTab] = useState<'custos' | 'usuarios' | 'sync'>(initialTab);
+
+    const changeTab = (tab: 'custos' | 'usuarios' | 'sync') => {
+        setActiveTab(tab);
+        const params = new URLSearchParams(window.location.search);
+        params.set('tab', tab);
+        window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+    };
+
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -191,122 +210,173 @@ export default function SettingsPage() {
     );
 
     return (
-        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] p-4 md:p-8 transition-colors duration-300">
-            <div className="max-w-3xl mx-auto space-y-10">
-                <div className="flex items-center gap-4">
-                    <Link href="/admin" className="p-2 bg-[var(--card-bg)] border border-[var(--card-border)] hover:bg-[var(--input-bg)] rounded-xl transition-all shadow-sm text-[var(--text-muted)] hover:text-orange-500">
-                        <ArrowLeft size={20} />
-                    </Link>
-                    <div>
-                        <h1 className="text-3xl font-black tracking-tight">Configurações & Ferramentas</h1>
-                        <p className="text-[var(--text-muted)] font-medium text-sm">Ajuste custos operacionais e faça manutenção do catálogo.</p>
+        <div className="w-full text-[var(--foreground)] transition-colors duration-300">
+            <div className="w-full space-y-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--card-border)] pb-6">
+                    <div className="flex items-center gap-4">
+                        <Link href="/admin" className="p-2.5 bg-[var(--card-bg)] border border-[var(--card-border)] hover:bg-[var(--input-bg)] rounded-xl transition-all shadow-sm text-[var(--text-muted)] hover:text-orange-500">
+                            <ArrowLeft size={20} />
+                        </Link>
+                        <div>
+                            <h1 className="text-3xl font-black tracking-tight">Configurações & Gestão</h1>
+                            <p className="text-[var(--text-muted)] font-medium text-xs">Custos operacionais, equipe/permissões e manutenção do catálogo.</p>
+                        </div>
+                    </div>
+
+                    {/* Tab Switcher */}
+                    <div className="flex items-center gap-1.5 p-1 bg-zinc-950/80 border border-zinc-900 rounded-2xl w-fit">
+                        <button
+                            type="button"
+                            onClick={() => changeTab('custos')}
+                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                                activeTab === 'custos'
+                                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                                    : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                        >
+                            <DollarSign size={14} />
+                            Custos & Precificação
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => changeTab('usuarios')}
+                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                                activeTab === 'usuarios'
+                                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                                    : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                        >
+                            <Users size={14} />
+                            Equipe & Usuários
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => changeTab('sync')}
+                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                                activeTab === 'sync'
+                                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                                    : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                        >
+                            <RefreshCw size={14} />
+                            Sincronização
+                        </button>
                     </div>
                 </div>
 
-                <form onSubmit={handleSave} className="space-y-8">
-                    {/* Custos Base */}
-                    <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl p-8 shadow-[var(--shadow-md)]">
-                        <h2 className="text-xl font-black mb-6 flex items-center gap-3 tracking-tight">
-                            <DollarSign className="text-orange-500" size={24} /> Custos Base
-                        </h2>
-                        <div className="grid gap-6 md:grid-cols-2">
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Resina (R$/Kg)</label>
-                                <input
-                                    type="number" step="0.01"
-                                    value={formData.custo_resina_kg}
-                                    onChange={e => handleChange('custo_resina_kg', e.target.value)}
-                                    className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Estoque Resina (Kg)</label>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="number" step="0.01"
-                                        value={formData.estoque_resina_kg}
-                                        onChange={e => handleChange('estoque_resina_kg', e.target.value)}
-                                        className="flex-1 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
-                                    />
-                                    <button 
-                                        type="button"
-                                        onClick={handleAddResin}
-                                        className="bg-zinc-900 border border-zinc-800 hover:border-orange-500 text-orange-500 p-3.5 rounded-xl transition-all shadow-sm active:scale-95"
-                                        title="Adicionar Compra"
-                                    >
-                                        <Plus size={20} />
-                                    </button>
+                {activeTab === 'usuarios' && <UsersManager />}
+
+                {activeTab === 'custos' && (
+                    <form onSubmit={handleSave} className="space-y-8 w-full animate-in fade-in duration-300">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* Custos Base */}
+                            <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl p-8 shadow-[var(--shadow-md)]">
+                                <h2 className="text-xl font-black mb-6 flex items-center gap-3 tracking-tight">
+                                    <DollarSign className="text-orange-500" size={24} /> Custos Base
+                                </h2>
+                                <div className="grid gap-6 md:grid-cols-2">
+                                    <div className="space-y-1.5">
+                                        <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Resina (R$/Kg)</label>
+                                        <input
+                                            type="number" step="0.01"
+                                            value={formData.custo_resina_kg}
+                                            onChange={e => handleChange('custo_resina_kg', e.target.value)}
+                                            className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Estoque Resina (Kg)</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="number" step="0.01"
+                                                value={formData.estoque_resina_kg}
+                                                onChange={e => handleChange('estoque_resina_kg', e.target.value)}
+                                                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleAddResin}
+                                                className="bg-zinc-900 border border-zinc-800 hover:border-orange-500 text-orange-500 p-3.5 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer shrink-0"
+                                                title="Adicionar Compra"
+                                            >
+                                                <Plus size={20} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Hora Impressão (R$/h)</label>
+                                        <input
+                                            type="number" step="0.01"
+                                            value={formData.custo_h_impressao}
+                                            onChange={e => handleChange('custo_h_impressao', e.target.value)}
+                                            className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Hora Pintura (R$/h)</label>
+                                        <input
+                                            type="number" step="0.01"
+                                            value={formData.custo_h_pintura}
+                                            onChange={e => handleChange('custo_h_pintura', e.target.value)}
+                                            className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Hora Impressão (R$/h)</label>
-                                <input
-                                    type="number" step="0.01"
-                                    value={formData.custo_h_impressao}
-                                    onChange={e => handleChange('custo_h_impressao', e.target.value)}
-                                    className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Hora Pintura (R$/h)</label>
-                                <input
-                                    type="number" step="0.01"
-                                    value={formData.custo_h_pintura}
-                                    onChange={e => handleChange('custo_h_pintura', e.target.value)}
-                                    className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
-                                />
+
+                            {/* Margens de Lucro */}
+                            <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl p-8 shadow-[var(--shadow-md)]">
+                                <h2 className="text-xl font-black mb-6 flex items-center gap-3 tracking-tight">
+                                    <Percent className="text-orange-500" size={24} /> Margens de Lucro
+                                </h2>
+                                <div className="grid gap-6 md:grid-cols-3">
+                                    <div className="space-y-1.5">
+                                        <label className="block text-xs font-black uppercase tracking-widest text-orange-500 ml-1">Margem Estilizado</label>
+                                        <input
+                                            type="number" step="0.01"
+                                            value={formData.margem_pobre}
+                                            onChange={e => handleChange('margem_pobre', e.target.value)}
+                                            className="w-full bg-[var(--input-bg)] border border-orange-500/20 rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
+                                        />
+                                        <p className="text-[10px] text-[var(--text-muted)] font-medium ml-1">Ex: 1.15 = 15% de lucro base (Sem Pintura)</p>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Margem Colorido</label>
+                                        <input
+                                            type="number" step="0.01"
+                                            value={formData.margem_basica}
+                                            onChange={e => handleChange('margem_basica', e.target.value)}
+                                            className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
+                                        />
+                                        <p className="text-[10px] text-[var(--text-muted)] font-medium ml-1">Ex: 1.30 = 30% de lucro final</p>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Taxa Cartão (Global)</label>
+                                        <input
+                                            type="number" step="0.01"
+                                            value={formData.taxa_cartao}
+                                            onChange={e => handleChange('taxa_cartao', e.target.value)}
+                                            className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
+                                        />
+                                        <p className="text-[10px] text-[var(--text-muted)] font-medium ml-1">Ex: 1.15 = 15% de acréscimo final</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Margens de Lucro */}
-                    <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl p-8 shadow-[var(--shadow-md)]">
-                        <h2 className="text-xl font-black mb-6 flex items-center gap-3 tracking-tight">
-                            <Percent className="text-orange-500" size={24} /> Margens de Lucro
-                        </h2>
-                        <div className="grid gap-6 md:grid-cols-3">
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-black uppercase tracking-widest text-orange-500 ml-1">Margem Estilizado</label>
-                                <input
-                                    type="number" step="0.01"
-                                    value={formData.margem_pobre}
-                                    onChange={e => handleChange('margem_pobre', e.target.value)}
-                                    className="w-full bg-[var(--input-bg)] border border-orange-500/20 rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
-                                />
-                                <p className="text-[10px] text-[var(--text-muted)] font-medium ml-1">Ex: 1.15 = 15% de lucro base (Sem Pintura)</p>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Margem Colorido</label>
-                                <input
-                                    type="number" step="0.01"
-                                    value={formData.margem_basica}
-                                    onChange={e => handleChange('margem_basica', e.target.value)}
-                                    className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
-                                />
-                                <p className="text-[10px] text-[var(--text-muted)] font-medium ml-1">Ex: 1.30 = 30% de lucro final</p>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-muted)] ml-1">Taxa Cartão (Global)</label>
-                                <input
-                                    type="number" step="0.01"
-                                    value={formData.taxa_cartao}
-                                    onChange={e => handleChange('taxa_cartao', e.target.value)}
-                                    className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)]"
-                                />
-                                <p className="text-[10px] text-[var(--text-muted)] font-medium ml-1">Ex: 1.15 = 15% de acréscimo final</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button
-                        disabled={saving}
-                        className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-black py-5 rounded-2xl transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98] flex items-center justify-center gap-3 text-lg cursor-pointer"
-                    >
-                        {saving ? <Loader2 className="animate-spin" /> : <><Save size={24} /> SALVAR PREÇOS E TAXAS</>}
-                    </button>
-                </form>
+                        <button
+                            disabled={saving}
+                            className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-black py-5 rounded-2xl transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98] flex items-center justify-center gap-3 text-lg cursor-pointer"
+                        >
+                            {saving ? <Loader2 className="animate-spin" /> : <><Save size={24} /> SALVAR PREÇOS E TAXAS</>}
+                        </button>
+                    </form>
+                )}
 
                 {/* Card: Manutenção e Sincronização de Imagens (ImageKit & Planilha) */}
+                {activeTab === 'sync' && (
                 <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl p-8 shadow-[var(--shadow-md)] space-y-6">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[var(--card-border)]">
                         <div>
@@ -481,8 +551,21 @@ export default function SettingsPage() {
                         </div>
                     )}
                 </div>
+                )}
             </div>
         </div>
+    );
+}
+
+export default function SettingsPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+                <Loader2 className="animate-spin text-orange-500 w-10 h-10" />
+            </div>
+        }>
+            <SettingsContent />
+        </Suspense>
     );
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { toast } from 'sonner';
 import { 
     ArrowLeft, 
@@ -17,23 +17,25 @@ import {
     Search, 
     ImageIcon, 
     Sparkles, 
-    ShoppingBag,
-    Settings,
-    TrendingUp,
-    Percent,
-    ChevronDown,
-    MessageSquare,
-    Crown,
-    UserCheck,
-    UserX,
-    MoreVertical,
-    Target,
-    ShieldCheck,
-    AlertTriangle
+    ShoppingBag, 
+    Settings, 
+    TrendingUp, 
+    Percent, 
+    ChevronDown, 
+    MessageSquare, 
+    Crown, 
+    UserCheck, 
+    UserX, 
+    MoreVertical, 
+    Target, 
+    ShieldCheck, 
+    AlertTriangle,
+    Layers
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import StudiosBI from '@/components/Admin/StudiosBI';
 
 import { clsx } from 'clsx';
 
@@ -67,7 +69,7 @@ interface Studio {
     break_even_status?: 'isento' | 'pago' | 'proximo' | 'em_progresso' | 'sem_vendas';
 }
 
-export default function StudiosPage() {
+function StudiosContent() {
     const [studios, setStudios] = useState<Studio[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState<number | null>(null);
@@ -78,6 +80,17 @@ export default function StudiosPage() {
     const [expandedStudioIds, setExpandedStudioIds] = useState<Record<number, boolean>>({});
     const [patreonData, setPatreonData] = useState<any>(null);
     const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+
+    const searchParams = useSearchParams();
+    const initialTab = searchParams.get('tab') === 'bi' || searchParams.get('tab') === 'analytics' ? 'bi' : 'acervo';
+    const [activeTab, setActiveTab] = useState<'acervo' | 'bi'>(initialTab);
+
+    const changeTab = (tab: 'acervo' | 'bi') => {
+        setActiveTab(tab);
+        const params = new URLSearchParams(window.location.search);
+        params.set('tab', tab);
+        window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+    };
     
     const { hasRole, user } = usePermission();
     const canEdit = hasRole('admin') || hasRole('pricing');
@@ -214,13 +227,13 @@ export default function StudiosPage() {
         });
 
     return (
-        <div className="min-h-screen bg-black text-zinc-100 p-4 md:p-8 relative overflow-x-hidden">
+        <div className="w-full text-zinc-100 relative overflow-x-hidden">
             {/* Background Effects */}
             <div className="fixed top-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/5 rounded-full blur-[120px] pointer-events-none" />
             <div className="fixed bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/5 rounded-full blur-[120px] pointer-events-none" />
 
-            <div className="max-w-7xl mx-auto relative z-10 transition-all duration-500">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+            <div className="w-full relative z-10 transition-all duration-500">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                     <div className="flex items-center gap-5 flex-wrap">
                         <Link href="/admin" className="p-3 bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-400 rounded-2xl transition-all shadow-lg text-zinc-500 group">
                             <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
@@ -229,46 +242,74 @@ export default function StudiosPage() {
                             <h1 className="text-4xl font-black tracking-tighter text-white">Estúdios <span className="text-blue-500">Parceiros</span></h1>
                             <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-1 opacity-80">Gestão de Branding, Custos e BI.</p>
                         </div>
-                        <Link 
-                            href="/admin/studios/analytics" 
-                            className="flex items-center gap-2 px-5 py-3 bg-blue-600/10 border border-blue-500/25 hover:border-blue-500/50 hover:bg-blue-600/20 text-blue-400 font-black tracking-widest text-[10px] uppercase rounded-2xl transition-all active:scale-95 hover:shadow-[0_0_15px_rgba(59,130,246,0.15)] shadow-md ml-2"
-                        >
-                            <TrendingUp size={14} />
-                            Painel de BI
-                        </Link>
                     </div>
 
-                    {/* Search & Sort Controls */}
-                    <div className="flex flex-col sm:flex-row gap-4 w-full max-w-xl">
-                        {/* Search Bar */}
-                        <div className="relative group flex-1">
-                            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-blue-500 transition-colors" />
-                            <input
-                                type="text"
-                                placeholder="Buscar estúdio..."
-                                value={searchTerm}
-                                onChange={e => setSearchTerm(e.target.value)}
-                                className="w-full bg-zinc-950/60 border border-zinc-900 focus:border-blue-500/50 p-3.5 pl-12 rounded-2xl outline-none text-sm transition-all shadow-inner font-medium text-zinc-300"
-                            />
-                        </div>
-                        {/* Sort Selector */}
-                        <div className="relative group min-w-[180px]">
-                            <select
-                                value={sortBy}
-                                onChange={e => setSortBy(e.target.value as any)}
-                                className="w-full bg-zinc-950/60 border border-zinc-900 focus:border-blue-500/50 p-3.5 pr-10 rounded-2xl outline-none text-sm transition-all shadow-inner font-medium text-zinc-300 appearance-none cursor-pointer"
-                            >
-                                <option value="receita_bruta" className="bg-zinc-950">Faturamento Bruto</option>
-                                <option value="lucro_liquido" className="bg-zinc-950">Lucro Líquido Real</option>
-                                <option value="break_even_progresso_pct" className="bg-zinc-950">Progresso Break-Even (%)</option>
-                                <option value="total_figuras" className="bg-zinc-950">Tamanho do Acervo</option>
-                                <option value="custo_mensal" className="bg-zinc-950">Custo Mensal</option>
-                                <option value="nome" className="bg-zinc-950">Nome do Estúdio</option>
-                            </select>
-                            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-                        </div>
+                    {/* Tab Switcher */}
+                    <div className="flex items-center gap-1.5 p-1.5 bg-zinc-950/80 border border-zinc-900 rounded-2xl w-fit">
+                        <button
+                            onClick={() => changeTab('acervo')}
+                            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                                activeTab === 'acervo'
+                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                                    : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                        >
+                            <Box size={14} />
+                            Acervo & Licenças
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                                activeTab === 'acervo' ? 'bg-black/30 text-white' : 'bg-zinc-850 text-zinc-400'
+                            }`}>
+                                {studios.length}
+                            </span>
+                        </button>
+
+                        <button
+                            onClick={() => changeTab('bi')}
+                            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                                activeTab === 'bi'
+                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                                    : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                        >
+                            <TrendingUp size={14} />
+                            Painel de BI & Viabilidade
+                        </button>
                     </div>
                 </div>
+
+                {activeTab === 'bi' ? (
+                    <StudiosBI />
+                ) : (
+                    <>
+                        {/* Search & Sort Controls */}
+                        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-8">
+                            <div className="relative group flex-1 max-w-md">
+                                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-blue-500 transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar estúdio..."
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                    className="w-full bg-zinc-950/60 border border-zinc-900 focus:border-blue-500/50 p-3.5 pl-12 rounded-2xl outline-none text-sm transition-all shadow-inner font-medium text-zinc-300"
+                                />
+                            </div>
+
+                            <div className="relative group min-w-[200px]">
+                                <select
+                                    value={sortBy}
+                                    onChange={e => setSortBy(e.target.value as any)}
+                                    className="w-full bg-zinc-950/60 border border-zinc-900 focus:border-blue-500/50 p-3.5 pr-10 rounded-2xl outline-none text-xs font-bold text-zinc-300 appearance-none cursor-pointer"
+                                >
+                                    <option value="receita_bruta">Faturamento Bruto</option>
+                                    <option value="lucro_liquido">Lucro Líquido Real</option>
+                                    <option value="break_even_progresso_pct">Progresso Break-Even (%)</option>
+                                    <option value="total_figuras">Tamanho do Acervo</option>
+                                    <option value="custo_mensal">Custo Mensal</option>
+                                    <option value="nome">Nome do Estúdio</option>
+                                </select>
+                                <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+                            </div>
+                        </div>
 
                 {/* Financial Summary */}
                 {!loading && (
@@ -334,7 +375,7 @@ export default function StudiosPage() {
                 {loading ? (
                     <div className="py-24 flex justify-center w-full"><Loader2 className="animate-spin text-blue-500 w-12 h-12" /></div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 pb-20">
                         {/* New Studio Card */}
                         {hasRole('admin') && (
                             <div className="bg-zinc-950/40 border-2 border-dashed border-zinc-900 rounded-[2.5rem] p-8 flex flex-col justify-center items-center gap-6 hover:border-blue-500/30 transition-all group backdrop-blur-sm">
@@ -889,7 +930,21 @@ export default function StudiosPage() {
                         })}
                     </div>
                 )}
+                    </>
+                )}
             </div>
         </div>
+    );
+}
+
+export default function StudiosPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <Loader2 className="animate-spin text-blue-500 w-8 h-8" />
+            </div>
+        }>
+            <StudiosContent />
+        </Suspense>
     );
 }

@@ -556,12 +556,12 @@ function SalesContent() {
     };
 
     return (
-        <div className="min-h-screen bg-black text-zinc-200 p-4 md:p-8 relative overflow-x-hidden selection:bg-orange-500/30 selection:text-orange-200">
+        <div className="w-full text-zinc-200 relative overflow-x-hidden selection:bg-orange-500/30 selection:text-orange-200">
             {/* Sci-fi Background Blobs - Subdued */}
             <div className="fixed top-[0%] right-[0%] w-[40%] h-[40%] bg-cyan-900/10 rounded-full blur-[120px] pointer-events-none" />
             <div className="fixed bottom-[0%] left-[0%] w-[40%] h-[40%] bg-emerald-900/10 rounded-full blur-[120px] pointer-events-none" />
 
-            <div className="max-w-7xl mx-auto relative z-10 transition-colors duration-300">
+            <div className="w-full relative z-10 transition-colors duration-300">
 
                 {/* Header */}
                 <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8 mt-2">
@@ -667,7 +667,7 @@ function SalesContent() {
                                 </div>
 
                                 {/* Grid de Vendas */}
-                                <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
                                     {group.sales.map(sale => (
                                         <div key={sale.id} className="bg-zinc-950/60 backdrop-blur-sm border border-zinc-800/80 rounded-2xl p-5 shadow-sm flex flex-col relative group transition-colors hover:border-cyan-500/30">
                                             {/* Header do Card */}

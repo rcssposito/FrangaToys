@@ -51,12 +51,11 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             icon: Package,
             roles: ['admin', 'pricing', 'orcamento']
         },
-
         {
-            name: 'Campanhas',
-            href: '/admin/campaigns',
-            icon: Flame,
-            roles: ['admin', 'sales', 'pricing']
+            name: 'Promoções & Marketing',
+            href: '/admin/coupons',
+            icon: Tag,
+            roles: ['admin', 'sales', 'pricing', 'orcamento']
         },
         {
             name: 'Vendas & Acertos',
@@ -81,18 +80,6 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             href: '/admin/studios',
             icon: Activity,
             roles: ['admin', 'pricing']
-        },
-        {
-            name: 'Usuários',
-            href: '/admin/users',
-            icon: ShieldCheck,
-            roles: ['admin']
-        },
-        {
-            name: 'Cupons & Demanda',
-            href: '/admin/coupons',
-            icon: Tag,
-            roles: ['admin', 'sales', 'pricing', 'orcamento']
         },
         {
             name: 'Configurações',

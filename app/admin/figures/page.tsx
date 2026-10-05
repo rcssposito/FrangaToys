@@ -813,7 +813,7 @@ function DataGridContent() {
     if (duplicateIds.length > 0) console.error('Duplicate IDs detected:', duplicateIds);
 
     return (
-        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] p-4 md:p-8 relative transition-colors duration-300">
+        <div className="w-full text-[var(--foreground)] relative transition-colors duration-300">
             <div className="w-full mx-auto">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">

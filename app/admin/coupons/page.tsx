@@ -25,11 +25,13 @@ import {
     RotateCw,
     Layers,
     DollarSign,
-    ShoppingBag
+    ShoppingBag,
+    Flame
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import CampaignManager from '@/components/Admin/CampaignManager';
 
 interface Cupom {
     id: string;
@@ -75,9 +77,13 @@ function CouponsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     
-    // Tab state: 'cupons' | 'demanda'
-    const initialTab = searchParams.get('tab') === 'demanda' || searchParams.get('tab') === 'popularidade' ? 'demanda' : 'cupons';
-    const [activeTab, setActiveTab] = useState<'cupons' | 'demanda'>(initialTab);
+    // Tab state: 'cupons' | 'campanhas' | 'demanda'
+    const initialTab = searchParams.get('tab') === 'demanda' || searchParams.get('tab') === 'popularidade' 
+        ? 'demanda' 
+        : searchParams.get('tab') === 'campanhas'
+        ? 'campanhas'
+        : 'cupons';
+    const [activeTab, setActiveTab] = useState<'cupons' | 'campanhas' | 'demanda'>(initialTab);
 
     // Coupons State
     const [cupons, setCupons] = useState<Cupom[]>([]);
@@ -119,7 +125,7 @@ function CouponsContent() {
     const [demandaFilter, setDemandaFilter] = useState<'all' | 'reprimida' | 'alta_conversao'>('all');
     const [demandaSearch, setDemandaSearch] = useState('');
 
-    const changeTab = (tab: 'cupons' | 'demanda') => {
+    const changeTab = (tab: 'cupons' | 'campanhas' | 'demanda') => {
         setActiveTab(tab);
         const params = new URLSearchParams(window.location.search);
         params.set('tab', tab);
@@ -474,31 +480,33 @@ function CouponsContent() {
     }, [popularFigures, demandaSearch, demandaFilter]);
 
     return (
-        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-300">
+        <div className="w-full space-y-6 animate-in fade-in duration-300">
             {/* Header & Tabs */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-900 pb-5">
                 <div>
                     <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
                         <Tag className="text-orange-500" size={28} />
-                        Cupons & Demanda
+                        Promoções & Marketing
                     </h1>
                     <p className="text-xs text-zinc-500 mt-1 font-medium">
-                        Crie cupons promocionais e converta o interesse de busca reprimido em vendas reais.
+                        Cupons promocionais, promoções por estúdio/série no catálogo e radar de demanda reprimida.
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => openModal()}
-                        className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 shadow-[0_0_20px_rgba(249,115,22,0.25)]"
-                    >
-                        <Plus size={16} /> Novo Cupom
-                    </button>
-                </div>
+                {activeTab === 'cupons' && (
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => openModal()}
+                            className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 shadow-[0_0_20px_rgba(249,115,22,0.25)] cursor-pointer"
+                        >
+                            <Plus size={16} /> Novo Cupom
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Tab Switcher */}
-            <div className="flex items-center gap-2 p-1.5 bg-zinc-950/70 border border-zinc-900 rounded-2xl w-fit">
+            <div className="flex flex-wrap items-center gap-2 p-1.5 bg-zinc-950/70 border border-zinc-900 rounded-2xl w-fit">
                 <button
                     onClick={() => changeTab('cupons')}
                     className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
@@ -517,6 +525,18 @@ function CouponsContent() {
                 </button>
 
                 <button
+                    onClick={() => changeTab('campanhas')}
+                    className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                        activeTab === 'campanhas'
+                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                            : 'text-zinc-500 hover:text-zinc-300'
+                    }`}
+                >
+                    <Flame size={14} />
+                    Promoções no Catálogo
+                </button>
+
+                <button
                     onClick={() => changeTab('demanda')}
                     className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
                         activeTab === 'demanda'
@@ -525,10 +545,10 @@ function CouponsContent() {
                     }`}
                 >
                     <TrendingUp size={14} />
-                    Radar de Demanda & Oportunidades
+                    Radar de Demanda
                     {popularSummary?.demandaReprimidaCount > 0 && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full font-mono bg-red-500/20 border border-red-500/30 text-red-400 font-bold">
-                            {popularSummary.demandaReprimidaCount} reprimidas
+                            {popularSummary.demandaReprimidaCount}
                         </span>
                     )}
                 </button>
@@ -684,7 +704,16 @@ function CouponsContent() {
             )}
 
             {/* ========================================================================= */}
-            {/* ABA 2: RADAR DE DEMANDA & OPORTUNIDADES */}
+            {/* ABA 2: CAMPANHAS NO CATÁLOGO */}
+            {/* ========================================================================= */}
+            {activeTab === 'campanhas' && (
+                <div className="pt-2 animate-in fade-in duration-300">
+                    <CampaignManager hideHeader={true} />
+                </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* ABA 3: RADAR DE DEMANDA & OPORTUNIDADES */}
             {/* ========================================================================= */}
             {activeTab === 'demanda' && (
                 <div className="space-y-8 animate-in fade-in duration-300">

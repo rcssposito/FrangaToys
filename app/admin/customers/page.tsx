@@ -751,7 +751,7 @@ export default function CustomersPage() {
     }, [customersArray, cadenceForm.target_tags]);
 
     return (
-        <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
+        <div className="w-full space-y-8 animate-in fade-in duration-500">
             {/* Header Area */}
             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
                 <div className="space-y-1">
