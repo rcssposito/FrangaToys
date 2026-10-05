@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 
 function BeaconLogic() {
     const pathname = usePathname();
@@ -58,6 +59,23 @@ function BeaconLogic() {
         const utm_campaign = searchParams.get('utm_campaign') || '';
         const cadenciaId = searchParams.get('crm_cadencia') || searchParams.get('cadencia_id') || (utm_source === 'crm_cadencia' ? utm_campaign : null);
 
+        // 4. Capturar cupom promocional da URL (?cupom=XYZ ou ?c=XYZ)
+        const cupomFromUrl = searchParams.get('cupom') || searchParams.get('c');
+        if (cupomFromUrl) {
+            const upperCupom = cupomFromUrl.trim().toUpperCase();
+            try {
+                const prev = localStorage.getItem('franga_cupom_pendente');
+                if (prev !== upperCupom) {
+                    localStorage.setItem('franga_cupom_pendente', upperCupom);
+                    toast.success(`🎁 Cupom ${upperCupom} ativado! Desconto garantido na sua compra.`, {
+                        duration: 6000
+                    });
+                }
+            } catch {
+                // Silencioso
+            }
+        }
+
         // Se estiver em página de figura (ex: /figura/123)
         const figuraMatch = pathname.match(/\/figura\/([0-9]+)/);
         const figuraId = figuraMatch ? Number(figuraMatch[1]) : null;
@@ -72,7 +90,8 @@ function BeaconLogic() {
             utm_campaign,
             cadenciaId,
             figuraId,
-            duracaoSegundos: 0
+            duracaoSegundos: 0,
+            metadados: cupomFromUrl ? { cupom: cupomFromUrl.trim().toUpperCase() } : {}
         };
 
         const sendBeacon = (data: any) => {

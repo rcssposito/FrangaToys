@@ -43,7 +43,10 @@ import {
     Monitor,
     Compass,
     Eye,
-    MapPin
+    MapPin,
+    Flame,
+    FileText,
+    MessageSquare
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePermission } from '@/hooks/usePermission';
@@ -149,13 +152,54 @@ export default function CustomersPage() {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [activeFilter, setActiveFilter] = useState<'all' | 'vips' | 'inactives' | 'new'>('all');
+    const [activeFilter, setActiveFilter] = useState<'all' | 'leads_quentes' | 'vips' | 'inactives' | 'new'>('all');
     const [selectedTagFilter, setSelectedTagFilter] = useState<string>('all');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
     const [isCopying, setIsCopying] = useState(false);
     const [newTagInput, setNewTagInput] = useState('');
+
+    // WhatsApp CRM State & Templates
+    const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
+    const [whatsAppCustomer, setWhatsAppCustomer] = useState<Customer | null>(null);
+    const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>('oferta');
+    const [whatsAppText, setWhatsAppText] = useState<string>('');
+
+    const openWhatsAppModal = (customer: Customer) => {
+        setWhatsAppCustomer(customer);
+        const primeiroNome = customer.nome ? customer.nome.split(' ')[0] : 'Colecionador';
+        setSelectedTemplateKey('oferta');
+        setWhatsAppText(`Fala ${primeiroNome}, tudo bem? Separei um presente exclusivo para você na Franga Toys: use o cupom FRANGAPICKS15 para garantir 15% OFF na sua próxima figure sob encomenda!\n\nDá uma olhada no catálogo da oficina: https://frangatoys.com.br/?cupom=FRANGAPICKS15&crm_c=${customer.id}`);
+        setIsWhatsAppModalOpen(true);
+    };
+
+    const handleSelectTemplate = (key: string) => {
+        if (!whatsAppCustomer) return;
+        setSelectedTemplateKey(key);
+        const primeiroNome = whatsAppCustomer.nome ? whatsAppCustomer.nome.split(' ')[0] : 'Colecionador';
+        
+        if (key === 'oferta') {
+            setWhatsAppText(`Fala ${primeiroNome}, tudo bem? Separei um presente exclusivo para você na Franga Toys: use o cupom FRANGAPICKS15 para garantir 15% OFF na sua próxima figure sob encomenda!\n\nDá uma olhada no catálogo da oficina: https://frangatoys.com.br/?cupom=FRANGAPICKS15&crm_c=${whatsAppCustomer.id}`);
+        } else if (key === 'interesse') {
+            const loc = whatsAppCustomer.cidade_ultimo_acesso ? ` para envio até ${whatsAppCustomer.cidade_ultimo_acesso}` : '';
+            setWhatsAppText(`Fala ${primeiroNome}, beleza? Vi seu interesse em nossas peças sob encomenda. Temos vagas abertas para pintura manual na oficina neste mês${loc}! Bora produzir seu colecionável?`);
+        } else if (key === 'pos_venda') {
+            setWhatsAppText(`Oi ${primeiroNome}, tudo bem? Passando para saber como está sua coleção e seu colecionável da Franga Toys! Qualquer dúvida sobre novas encomendas ou projetos especiais, é só me chamar por aqui.`);
+        } else if (key === 'livre') {
+            setWhatsAppText(`Olá, ${primeiroNome}!`);
+        }
+    };
+
+    const handleSendWhatsAppMessage = () => {
+        if (!whatsAppCustomer || !whatsAppText.trim()) return;
+        const phone = whatsAppCustomer.telefone.replace(/\D/g, '');
+        const phoneWithCountry = phone.startsWith('55') ? phone : `55${phone}`;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const baseUrl = isMobile ? 'https://wa.me' : 'https://web.whatsapp.com/send';
+        window.open(`${baseUrl}/${phoneWithCountry}?text=${encodeURIComponent(whatsAppText)}`, '_blank');
+        setIsWhatsAppModalOpen(false);
+    };
 
     // Coupon Gift States
     const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
@@ -502,9 +546,20 @@ export default function CustomersPage() {
                 }
             }
 
-            // Filtro por Status
+            // Filtro por Segmento / Status
             if (activeFilter === 'all') return true;
-            if (activeFilter === 'vips') return (c.total_gasto || 0) > 500;
+            if (activeFilter === 'leads_quentes') {
+                const hasTag = (c.tags || []).some(t => t.toLowerCase().includes('quente'));
+                if (hasTag) return true;
+                if (c.ultimo_acesso_em) {
+                    const lastAccess = new Date(c.ultimo_acesso_em);
+                    const sevenDaysAgo = new Date();
+                    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                    return lastAccess >= sevenDaysAgo;
+                }
+                return false;
+            }
+            if (activeFilter === 'vips') return (c.total_gasto || 0) > 500 || (c.total_pedidos || 0) >= 2;
             if (activeFilter === 'new') {
                 const regDate = new Date(c.data_cadastro);
                 return regDate.getMonth() === currentMonth && regDate.getFullYear() === currentYear;
@@ -519,6 +574,43 @@ export default function CustomersPage() {
             return true;
         });
     }, [customersArray, selectedTagFilter, activeFilter, currentMonth, currentYear]);
+
+    // Contagem rápida de clientes por segmento
+    const segmentCounts = useMemo(() => {
+        let leadsQuentes = 0;
+        let vips = 0;
+        let inactives = 0;
+        let news = 0;
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const sixtyDaysAgo = new Date();
+        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+        customersArray.forEach(c => {
+            const hasQuenteTag = (c.tags || []).some(t => t.toLowerCase().includes('quente'));
+            const isRecentAccess = c.ultimo_acesso_em && new Date(c.ultimo_acesso_em) >= sevenDaysAgo;
+            if (hasQuenteTag || isRecentAccess) leadsQuentes++;
+
+            if ((c.total_gasto || 0) > 500 || (c.total_pedidos || 0) >= 2) vips++;
+
+            const regDate = new Date(c.data_cadastro);
+            if (regDate.getMonth() === currentMonth && regDate.getFullYear() === currentYear) news++;
+
+            if (!c.ultima_venda_em) {
+                inactives++;
+            } else if (new Date(c.ultima_venda_em) < sixtyDaysAgo) {
+                inactives++;
+            }
+        });
+
+        return {
+            all: customersArray.length,
+            leads_quentes: leadsQuentes,
+            vips,
+            inactives,
+            new: news
+        };
+    }, [customersArray, currentMonth, currentYear]);
 
     // Todas as tags em uso na base
     const allTagsInUse = useMemo(() => {
@@ -753,27 +845,33 @@ export default function CustomersPage() {
                             </span>
                             <button 
                                 onClick={() => setActiveFilter('all')}
-                                className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${activeFilter === 'all' ? 'bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-500/20' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}
+                                className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border cursor-pointer ${activeFilter === 'all' ? 'bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-500/20' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}
                             >
-                                Todos
+                                Todos ({segmentCounts.all})
+                            </button>
+                            <button 
+                                onClick={() => setActiveFilter('leads_quentes')}
+                                className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-1.5 cursor-pointer ${activeFilter === 'leads_quentes' ? 'bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-500/20' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}
+                            >
+                                <Flame size={12} className="text-orange-400" /> Leads Quentes ({segmentCounts.leads_quentes})
                             </button>
                             <button 
                                 onClick={() => setActiveFilter('vips')}
-                                className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-1.5 ${activeFilter === 'vips' ? 'bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-500/20' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}
+                                className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-1.5 cursor-pointer ${activeFilter === 'vips' ? 'bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-500/20' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}
                             >
-                                <Award size={12} /> VIPs (LTV &gt; 500)
+                                <Award size={12} /> VIPs ({segmentCounts.vips})
                             </button>
                             <button 
                                 onClick={() => setActiveFilter('inactives')}
-                                className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-1.5 ${activeFilter === 'inactives' ? 'bg-zinc-200 border-zinc-200 text-black shadow-md' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}
+                                className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-1.5 cursor-pointer ${activeFilter === 'inactives' ? 'bg-zinc-200 border-zinc-200 text-black shadow-md' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}
                             >
-                                <Clock size={12} /> Inativos (+60 dias)
+                                <Clock size={12} /> Inativos (+60d) ({segmentCounts.inactives})
                             </button>
                             <button 
                                 onClick={() => setActiveFilter('new')}
-                                className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-1.5 ${activeFilter === 'new' ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}
+                                className={`px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-1.5 cursor-pointer ${activeFilter === 'new' ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}
                             >
-                                <UserPlus size={12} /> Novos (Este Mês)
+                                <UserPlus size={12} /> Novos ({segmentCounts.new})
                             </button>
                         </div>
 
@@ -907,23 +1005,15 @@ export default function CustomersPage() {
                                                                 )}
                                                             </div>
                                                             <div className="flex items-center gap-3 mt-0.5">
-                                                                <a 
-                                                                    href="#"
-                                                                    onClick={(e) => {
-                                                                        e.preventDefault();
-                                                                        const cleanPhone = customer.telefone.replace(/\D/g, '');
-                                                                        const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
-                                                                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                                                                        const url = isMobile 
-                                                                            ? `https://wa.me/${phoneWithCountry}`
-                                                                            : `https://web.whatsapp.com/send?phone=${phoneWithCountry}`;
-                                                                        window.open(url, '_blank');
-                                                                    }}
-                                                                    className="text-[11px] font-mono text-zinc-500 flex items-center gap-1 hover:text-emerald-400 transition-colors"
+                                                                <button 
+                                                                    type="button"
+                                                                    onClick={() => openWhatsAppModal(customer)}
+                                                                    className="text-[11px] font-mono text-zinc-500 flex items-center gap-1 hover:text-emerald-400 transition-colors cursor-pointer group/wa"
+                                                                    title="Abrir WhatsApp com templates de mensagens"
                                                                 >
-                                                                    <MessageCircle size={12} />
+                                                                    <MessageCircle size={12} className="text-emerald-500 group-hover/wa:scale-110 transition-transform" />
                                                                     {customer.telefone}
-                                                                </a>
+                                                                </button>
                                                                 {customer.email && (
                                                                     <span className="text-[11px] text-zinc-500 flex items-center gap-1 truncate max-w-[160px]">
                                                                         <Mail size={11} className="text-zinc-600" />
@@ -1001,6 +1091,13 @@ export default function CustomersPage() {
                                                 </td>
                                                 <td className="px-8 py-5 text-right">
                                                     <div className="flex items-center justify-end gap-2">
+                                                        <button
+                                                            onClick={() => openWhatsAppModal(customer)}
+                                                            className="p-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-xl transition-colors border border-emerald-500/20 shadow-sm cursor-pointer"
+                                                            title="WhatsApp CRM 1-Clique (Templates & Ofertas)"
+                                                        >
+                                                            <MessageCircle size={16} />
+                                                        </button>
                                                         <button
                                                             onClick={() => openGiftModal(customer)}
                                                             className="p-2.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-xl transition-colors border border-purple-500/20 shadow-sm cursor-pointer"
@@ -1675,11 +1772,82 @@ export default function CustomersPage() {
                         <div className="mb-6">
                             <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
                                 <Edit2 size={22} className="text-orange-500" />
-                                Editar Cliente & Tags
+                                Visão 360° & Dados do Cliente
                             </h2>
                             <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">
-                                Atualize dados cadastrais, e-mail e tags de segmentação
+                                Perfil consolidado: LTV, telemetria de navegação, notas internas e tags
                             </p>
+                        </div>
+
+                        {/* CARD VISÃO 360° & TELEMETRIA BEACON */}
+                        <div className="mb-6 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-orange-400 flex items-center gap-1.5">
+                                    <Radio size={13} className="text-orange-500 animate-pulse" />
+                                    Métricas & Telemetria
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsEditModalOpen(false);
+                                        openWhatsAppModal(selectedCustomer);
+                                    }}
+                                    className="px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer"
+                                >
+                                    <MessageCircle size={12} /> WhatsApp 1-Clique
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                                <div className="p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl">
+                                    <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider block">LTV Acumulado</span>
+                                    <span className="text-sm font-black text-emerald-400">
+                                        R$ {(selectedCustomer.total_gasto || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                                <div className="p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl">
+                                    <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider block">Total Pedidos</span>
+                                    <span className="text-sm font-black text-white">
+                                        {selectedCustomer.total_pedidos || 0}
+                                    </span>
+                                </div>
+                                <div className="p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl">
+                                    <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider block">Última Compra</span>
+                                    <span className="text-xs font-bold text-zinc-300">
+                                        {selectedCustomer.ultima_venda_em ? new Date(selectedCustomer.ultima_venda_em).toLocaleDateString('pt-BR') : 'Nenhuma'}
+                                    </span>
+                                </div>
+                                <div className="p-2.5 bg-zinc-950/80 border border-zinc-800/80 rounded-xl">
+                                    <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider block">Último Acesso</span>
+                                    <span className="text-xs font-bold text-orange-400 flex items-center gap-1">
+                                        {selectedCustomer.ultimo_acesso_em ? (
+                                            <>
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
+                                                {new Date(selectedCustomer.ultimo_acesso_em).toLocaleDateString('pt-BR')}
+                                            </>
+                                        ) : 'Sem registro'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2 pt-1 text-[10px] text-zinc-400">
+                                {selectedCustomer.cidade_ultimo_acesso && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-zinc-950 rounded-lg border border-zinc-800 font-bold">
+                                        <MapPin size={11} className="text-orange-400" />
+                                        {selectedCustomer.cidade_ultimo_acesso}{selectedCustomer.uf_ultimo_acesso ? ` - ${selectedCustomer.uf_ultimo_acesso}` : ''}
+                                    </span>
+                                )}
+                                {selectedCustomer.total_acessos ? (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-zinc-950 rounded-lg border border-zinc-800 font-bold">
+                                        <Eye size={11} className="text-blue-400" />
+                                        {selectedCustomer.total_acessos} acessos monitorados
+                                    </span>
+                                ) : null}
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-zinc-950 rounded-lg border border-zinc-800 text-zinc-500 font-bold">
+                                    <Calendar size={11} />
+                                    Cliente desde {new Date(selectedCustomer.data_cadastro).toLocaleDateString('pt-BR')}
+                                </span>
+                            </div>
                         </div>
 
                         <form onSubmit={handleUpdateCustomer} className="space-y-5">
@@ -1899,12 +2067,15 @@ export default function CustomersPage() {
                             </div>
 
                             <div>
-                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Notas e Observações</label>
+                                <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1 flex items-center gap-1.5">
+                                    <FileText size={12} className="text-orange-500" />
+                                    Notas Internas da Equipe (Histórico de Atendimento)
+                                </label>
                                 <textarea
                                     value={selectedCustomer.notas || ''}
                                     onChange={e => setSelectedCustomer({ ...selectedCustomer, notas: e.target.value })}
-                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-sm font-medium text-zinc-200 h-20 resize-none"
-                                    placeholder="Preferências, animes favoritos ou avisos..."
+                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 outline-none focus:border-orange-500 text-xs font-medium text-zinc-200 h-24 resize-none leading-relaxed transition-all"
+                                    placeholder="Ex: Colecionador fã de Berserk e DBZ; prefere contato à tarde; encomendou busto customizado em resina..."
                                 />
                             </div>
 
@@ -2051,6 +2222,147 @@ export default function CustomersPage() {
                                 </button>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL 5: WHATSAPP CRM 1-CLIQUE */}
+            {isWhatsAppModalOpen && whatsAppCustomer && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-zinc-950 border border-emerald-500/30 w-full max-w-xl rounded-[2.5rem] p-8 shadow-[0_0_50px_rgba(16,185,129,0.12)] relative animate-in zoom-in-95 duration-200 space-y-6">
+                        <button 
+                            onClick={() => setIsWhatsAppModalOpen(false)}
+                            className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                        >
+                            <CloseIcon size={24} />
+                        </button>
+
+                        <div>
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest mb-3">
+                                <MessageCircle size={14} /> CRM WhatsApp 1-Clique
+                            </div>
+                            <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                                Conversar com <span className="text-emerald-400">{whatsAppCustomer.nome ? whatsAppCustomer.nome.split(' ')[0] : 'Cliente'}</span>
+                            </h2>
+                            <p className="text-xs text-zinc-400 mt-1">
+                                Telefone: <span className="font-mono text-zinc-300 font-bold">{whatsAppCustomer.telefone}</span>
+                                {whatsAppCustomer.cidade_ultimo_acesso && (
+                                    <span className="ml-2 text-zinc-500">({whatsAppCustomer.cidade_ultimo_acesso})</span>
+                                )}
+                            </p>
+                        </div>
+
+                        {/* Seletor de Templates Prontos */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 block">
+                                Escolha um Template Prático:
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleSelectTemplate('oferta')}
+                                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                                        selectedTemplateKey === 'oferta'
+                                            ? 'bg-emerald-500/15 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-500/10'
+                                            : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+                                    }`}
+                                >
+                                    <span className="text-[11px] font-black block text-white flex items-center gap-1.5">
+                                        🎁 Oferta Franga Picks 15%
+                                    </span>
+                                    <span className="text-[10px] text-zinc-400 block mt-0.5">Cupom FRANGAPICKS15 rastreado</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => handleSelectTemplate('interesse')}
+                                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                                        selectedTemplateKey === 'interesse'
+                                            ? 'bg-emerald-500/15 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-500/10'
+                                            : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+                                    }`}
+                                >
+                                    <span className="text-[11px] font-black block text-white flex items-center gap-1.5">
+                                        🎨 Vagas Oficina / Custom
+                                    </span>
+                                    <span className="text-[10px] text-zinc-400 block mt-0.5">Peças sob encomenda & pintura</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => handleSelectTemplate('pos_venda')}
+                                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                                        selectedTemplateKey === 'pos_venda'
+                                            ? 'bg-emerald-500/15 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-500/10'
+                                            : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+                                    }`}
+                                >
+                                    <span className="text-[11px] font-black block text-white flex items-center gap-1.5">
+                                        📦 Pós-Venda & Coleção
+                                    </span>
+                                    <span className="text-[10px] text-zinc-400 block mt-0.5">Cuidados e feedback da peça</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => handleSelectTemplate('livre')}
+                                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                                        selectedTemplateKey === 'livre'
+                                            ? 'bg-emerald-500/15 border-emerald-500 text-emerald-300 shadow-md shadow-emerald-500/10'
+                                            : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+                                    }`}
+                                >
+                                    <span className="text-[11px] font-black block text-white flex items-center gap-1.5">
+                                        ✍️ Mensagem Livre
+                                    </span>
+                                    <span className="text-[10px] text-zinc-400 block mt-0.5">Texto personalizado</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Mensagem Editável */}
+                        <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                                    Mensagem Prévia (Editável):
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(whatsAppText);
+                                        toast.success('Texto copiado!');
+                                    }}
+                                    className="text-[10px] font-bold text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                                >
+                                    <Copy size={11} /> Copiar texto
+                                </button>
+                            </div>
+                            <textarea
+                                rows={5}
+                                value={whatsAppText}
+                                onChange={(e) => setWhatsAppText(e.target.value)}
+                                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-xs font-medium text-zinc-100 outline-none focus:border-emerald-500 resize-none transition-all leading-relaxed"
+                            />
+                        </div>
+
+                        {/* Ações */}
+                        <div className="flex flex-col gap-2 pt-2">
+                            <button
+                                type="button"
+                                onClick={handleSendWhatsAppMessage}
+                                className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-black font-black py-4 rounded-2xl flex items-center justify-center gap-2 uppercase tracking-widest shadow-lg shadow-[#25D366]/20 transition-all active:scale-[0.98] cursor-pointer text-sm"
+                            >
+                                <MessageCircle size={18} />
+                                Abrir conversa no WhatsApp
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsWhatsAppModalOpen(false)}
+                                className="w-full py-2.5 text-[10px] text-zinc-500 uppercase font-black tracking-widest hover:text-white transition-colors cursor-pointer text-center"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

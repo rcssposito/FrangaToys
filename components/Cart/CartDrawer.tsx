@@ -53,6 +53,17 @@ export const CartDrawer = () => {
     const [cidade, setCidade] = useState('');
     const [uf, setUf] = useState('');
 
+    // Carregar cupom pré-ativado via link/campanha (URL ?cupom=XYZ)
+    useEffect(() => {
+        if (!isOpen) return;
+        try {
+            const savedCupom = localStorage.getItem('franga_cupom_pendente');
+            if (savedCupom && !cupomCodigo && !cupomAplicado) {
+                setCupomCodigo(savedCupom);
+            }
+        } catch {}
+    }, [isOpen, cupomCodigo, cupomAplicado]);
+
     // Auto-fill address details based on CEP
     useEffect(() => {
         const cleanCep = cep.replace(/\D/g, '');
