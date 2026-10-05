@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { toast } from 'sonner';
 import { 
     Plus, 
@@ -23,6 +23,8 @@ import {
     ArrowRight,
     Search,
     ChevronDown,
+    ChevronUp,
+    Filter,
     CreditCard,
     QrCode,
     Copy,
@@ -54,6 +56,8 @@ interface Sale {
     canal_venda?: string;
     pintura_freelancer?: boolean;
     pintor_nome?: string;
+    valor_pago_pintor?: number;
+    status_pagamento?: string;
     figura_id?: number;
     figuras: {
         nome: string;
@@ -110,6 +114,141 @@ function SalesContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const customerFilter = searchParams.get('cliente_id');
+    const [viewTab, setViewTab] = useState<'vendas' | 'comissoes'>(searchParams.get('tab') === 'comissoes' ? 'comissoes' : 'vendas');
+
+    // Comissões States
+    const [comissaoMonth, setComissaoMonth] = useState<string>(new Date().getMonth().toString());
+    const [comissaoYear, setComissaoYear] = useState<string>(new Date().getFullYear().toString());
+    const [comissaoVendedorId, setComissaoVendedorId] = useState<string>('all');
+    const [expandedSeller, setExpandedSeller] = useState<string | null>(null);
+
+    const months = [
+        { value: '0', label: 'Janeiro' },
+        { value: '1', label: 'Fevereiro' },
+        { value: '2', label: 'Março' },
+        { value: '3', label: 'Abril' },
+        { value: '4', label: 'Maio' },
+        { value: '5', label: 'Junho' },
+        { value: '6', label: 'Julho' },
+        { value: '7', label: 'Agosto' },
+        { value: '8', label: 'Setembro' },
+        { value: '9', label: 'Outubro' },
+        { value: '10', label: 'Novembro' },
+        { value: '11', label: 'Dezembro' },
+    ];
+
+    const commissionsBySeller = useMemo(() => {
+        let filtered = allSales.filter(s => {
+            const d = new Date(s.data_venda);
+            return d.getMonth().toString() === comissaoMonth && d.getFullYear().toString() === comissaoYear;
+        });
+
+        if (comissaoVendedorId !== 'all') {
+            filtered = filtered.filter(s => s.vendedor === comissaoVendedorId);
+        }
+
+        const acc: Record<string, any> = {};
+
+        const processAllocation = (userName: string, displayName: string, amount: number, type: 'venda' | 'pintura', sale: Sale) => {
+            if (amount <= 0) return;
+
+            const key = userName.toLowerCase();
+            if (!acc[key]) {
+                acc[key] = {
+                    email: userName,
+                    nome: displayName || userName,
+                    totalVendas: 0,
+                    totalBruto: 0,
+                    totalComissao: 0,
+                    totalPintura: 0,
+                    vendas: []
+                };
+            }
+
+            if (type === 'venda') {
+                acc[key].totalVendas += 1;
+                acc[key].totalBruto += (sale.valor_venda_final || 0);
+                acc[key].totalComissao += amount;
+            } else {
+                acc[key].totalPintura += amount;
+            }
+
+            acc[key].vendas.push({
+                id: sale.id,
+                data: sale.data_venda,
+                cliente: sale.cliente_nome || 'Não informado',
+                produto: sale.figuras?.nome || `Item ID: ${sale.figura_id}`,
+                valor: sale.valor_venda_final || 0,
+                ganho: amount,
+                tipo: type,
+                status: sale.status_pagamento || sale.status
+            });
+        };
+
+        filtered.forEach(sale => {
+            // 1. Comissão de Vendedor (15% ou comissao_vendedor)
+            processAllocation(
+                sale.vendedor || 'Loja',
+                sale.vendedor_nome || (sale.vendedor ? sale.vendedor.split('@')[0] : 'Loja'),
+                sale.comissao_vendedor || 0,
+                'venda',
+                sale
+            );
+
+            // 2. Pagamento de Pintura (Freelancer)
+            if (sale.pintura_freelancer && (sale.valor_pago_pintor || 0) > 0 && sale.pintor_nome) {
+                processAllocation(
+                    sale.pintor_nome,
+                    sale.pintor_nome.split('@')[0],
+                    sale.valor_pago_pintor || 0,
+                    'pintura',
+                    sale
+                );
+            }
+        });
+
+        return acc;
+    }, [allSales, comissaoMonth, comissaoYear, comissaoVendedorId]);
+
+    const totalComissoesGeral = useMemo(() => {
+        return Object.values(commissionsBySeller).reduce((sum: number, item: any) => {
+            return sum + (item.totalComissao || 0) + (item.totalPintura || 0);
+        }, 0);
+    }, [commissionsBySeller]);
+
+    const totalVendasComissionadas = useMemo(() => {
+        return Object.values(commissionsBySeller).reduce((sum: number, item: any) => {
+            return sum + (item.totalVendas || 0);
+        }, 0);
+    }, [commissionsBySeller]);
+
+    const handleSendWhatsAppComissao = (sellerData: any) => {
+        const foundUser = vendedores.find(v => (v.email || '').toLowerCase() === (sellerData.email || '').toLowerCase());
+        const phone = (foundUser?.telefone || '').replace(/\D/g, '');
+        const mesNome = months.find(m => m.value === comissaoMonth)?.label || 'Mês';
+        const totalVendaFmt = sellerData.totalComissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        const totalPinturaFmt = sellerData.totalPintura.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        const totalGeralFmt = (sellerData.totalComissao + sellerData.totalPintura).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
+        const msg = `💰 *Extrato de Fechamento - Franga Toys (${mesNome}/${comissaoYear})*\n\n` +
+            `Olá, *${sellerData.nome}*!\n\n` +
+            `Aqui está o resumo dos seus repasses deste mês:\n` +
+            `📦 *Vendas Realizadas:* ${sellerData.totalVendas}\n` +
+            `💵 *Comissão de Vendas:* R$ ${totalVendaFmt}\n` +
+            (sellerData.totalPintura > 0 ? `🎨 *Serviços de Pintura:* R$ ${totalPinturaFmt}\n` : '') +
+            `✨ *Total Líquido a Receber:* R$ ${totalGeralFmt}\n\n` +
+            `Qualquer dúvida ou conferência de pedidos, me avise por aqui!`;
+
+        if (phone) {
+            const phoneWithCountry = phone.startsWith('55') ? phone : `55${phone}`;
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const baseUrl = isMobile ? 'https://wa.me' : 'https://web.whatsapp.com/send';
+            window.open(`${baseUrl}/${phoneWithCountry}?text=${encodeURIComponent(msg)}`, '_blank');
+        } else {
+            navigator.clipboard.writeText(msg);
+            toast.success(`Extrato de ${sellerData.nome} copiado para envio no WhatsApp!`);
+        }
+    };
 
     // CRM States for Editing
     const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
@@ -425,14 +564,14 @@ function SalesContent() {
             <div className="max-w-7xl mx-auto relative z-10 transition-colors duration-300">
 
                 {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10 mt-2">
+                <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8 mt-2">
                     <div className="flex items-center gap-4">
                         <Link href="/admin" className="p-2.5 bg-zinc-900 border border-zinc-800 hover:border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-400 rounded-2xl transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] text-zinc-500 group">
                             <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
                         </Link>
                         <div>
                             <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white flex items-center gap-3">
-                                {customerFilter ? 'Vendas do Cliente' : 'Vendas Históricas'}
+                                {viewTab === 'comissoes' ? 'Acertos & Comissões' : (customerFilter ? 'Vendas do Cliente' : 'Vendas & Livro Caixa')}
                                 {customerFilter && (
                                     <button 
                                         onClick={() => router.push('/admin/sales')}
@@ -442,17 +581,60 @@ function SalesContent() {
                                     </button>
                                 )}
                             </h1>
-                            <p className="text-zinc-500 text-sm font-medium mt-1 uppercase tracking-widest text-[10px]">Livro Caixa Tático de Receitas.</p>
+                            <p className="text-zinc-500 text-sm font-medium mt-1 uppercase tracking-widest text-[10px]">
+                                {viewTab === 'comissoes' ? 'Fechamentos mensais e repasses para vendedores e pintores' : 'Livro Caixa Tático de Receitas e Pedidos.'}
+                            </p>
                         </div>
                     </div>
 
-                    <Link href="/admin/sales/new" className="bg-cyan-600 hover:bg-cyan-500 text-white px-8 py-3.5 rounded-2xl font-black flex items-center gap-2 transition-all shadow-sm active:scale-95 uppercase tracking-widest text-xs">
-                        <Plus size={18} strokeWidth={3} /> LANÇAR NOVA VENDA
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-between xl:justify-end">
+                        {/* Tab Switcher: Vendas vs Comissões */}
+                        <div className="flex items-center gap-1.5 bg-zinc-900/80 p-1.5 rounded-2xl border border-zinc-800">
+                            <button
+                                onClick={() => {
+                                    setViewTab('vendas');
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.delete('tab');
+                                    window.history.replaceState({}, '', url.toString());
+                                }}
+                                className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                    viewTab === 'vendas'
+                                        ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
+                                        : 'text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                <ShoppingCart size={15} />
+                                Pedidos & Vendas ({allSales.length})
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setViewTab('comissoes');
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.set('tab', 'comissoes');
+                                    window.history.replaceState({}, '', url.toString());
+                                }}
+                                className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                    viewTab === 'comissoes'
+                                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                                        : 'text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                <DollarSign size={15} />
+                                Acertos & Comissões
+                            </button>
+                        </div>
+
+                        {viewTab === 'vendas' && (
+                            <Link href="/admin/sales/new" className="bg-cyan-600 hover:bg-cyan-500 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 transition-all shadow-sm active:scale-95 uppercase tracking-widest text-xs">
+                                <Plus size={16} strokeWidth={3} /> NOVA VENDA
+                            </Link>
+                        )}
+                    </div>
                 </div>
 
-                {/* Lista Agrupada */}
-                {loading ? (
+                {/* ABA 1: LISTA AGRUPADA DE VENDAS */}
+                {viewTab === 'vendas' && (
+                    loading ? (
                     <div className="p-24 flex justify-center"><Loader2 className="animate-spin text-cyan-500 w-12 h-12" /></div>
                 ) : groups.length === 0 ? (
                     <div className="p-12 text-center text-zinc-500 bg-zinc-950/60 backdrop-blur-2xl rounded-3xl border border-zinc-800/80 shadow-2xl font-black tracking-widest uppercase text-sm">
@@ -609,6 +791,249 @@ function SalesContent() {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                    )
+                )}
+
+                {/* ABA 2: ACERTOS & COMISSÕES */}
+                {viewTab === 'comissoes' && (
+                    <div className="space-y-6 animate-in fade-in duration-300">
+                        {/* Barra de Filtros de Comissões & Métricas Rápidas */}
+                        <div className="bg-zinc-950/80 border border-zinc-800/80 rounded-3xl p-6 space-y-6 shadow-xl">
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                <div>
+                                    <h2 className="text-xl font-black text-white flex items-center gap-2.5">
+                                        <DollarSign className="text-emerald-500" size={22} />
+                                        Fechamento de Comissões e Repasses
+                                    </h2>
+                                    <p className="text-xs text-zinc-400 mt-1">
+                                        Cálculo automático de comissões para vendedores e valores de pintura freelancer terceirizada.
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-3 bg-zinc-900/90 p-2 rounded-2xl border border-zinc-800">
+                                    <div className="flex items-center gap-1.5 text-zinc-500 text-xs px-2 font-bold">
+                                        <Filter size={14} /> Filtros:
+                                    </div>
+
+                                    {vendedores.length > 0 && (
+                                        <select
+                                            value={comissaoVendedorId}
+                                            onChange={(e) => setComissaoVendedorId(e.target.value)}
+                                            className="bg-zinc-950 border border-zinc-800 text-white text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-emerald-500 cursor-pointer"
+                                        >
+                                            <option value="all">Todos os Vendedores</option>
+                                            {vendedores.map(v => (
+                                                <option key={v.email} value={v.email}>{v.nome || v.email}</option>
+                                            ))}
+                                        </select>
+                                    )}
+
+                                    <select
+                                        value={comissaoMonth}
+                                        onChange={(e) => setComissaoMonth(e.target.value)}
+                                        className="bg-zinc-950 border border-zinc-800 text-white text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-emerald-500 cursor-pointer"
+                                    >
+                                        {months.map(m => (
+                                            <option key={m.value} value={m.value}>{m.label}</option>
+                                        ))}
+                                    </select>
+
+                                    <select
+                                        value={comissaoYear}
+                                        onChange={(e) => setComissaoYear(e.target.value)}
+                                        className="bg-zinc-950 border border-zinc-800 text-white text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-emerald-500 cursor-pointer"
+                                    >
+                                        <option value="2024">2024</option>
+                                        <option value="2025">2025</option>
+                                        <option value="2026">2026</option>
+                                        <option value="2027">2027</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Cards de Resumo */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                                <div className="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl">
+                                    <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1">
+                                        Total a Pagar no Período
+                                    </span>
+                                    <span className="text-2xl font-black text-emerald-400">
+                                        R$ {totalComissoesGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                                <div className="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl">
+                                    <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1">
+                                        Profissionais com Repasse
+                                    </span>
+                                    <span className="text-2xl font-black text-white">
+                                        {Object.keys(commissionsBySeller).length}
+                                    </span>
+                                </div>
+                                <div className="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl">
+                                    <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1">
+                                        Vendas Comissionadas
+                                    </span>
+                                    <span className="text-2xl font-black text-cyan-400">
+                                        {totalVendasComissionadas}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Lista de Vendedores e Pintores */}
+                        {loading ? (
+                            <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-emerald-500 w-10 h-10" /></div>
+                        ) : Object.keys(commissionsBySeller).length === 0 ? (
+                            <div className="text-center py-20 bg-zinc-950/60 border border-zinc-800/80 rounded-3xl space-y-3">
+                                <Calendar size={48} className="mx-auto text-zinc-700" />
+                                <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">
+                                    Nenhuma comissão ou repasse registrado em {months.find(m => m.value === comissaoMonth)?.label} de {comissaoYear}.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {Object.entries(commissionsBySeller).map(([emailKey, data]: any) => {
+                                    const isExpanded = expandedSeller === emailKey;
+                                    const totalSeller = data.totalComissao + data.totalPintura;
+
+                                    return (
+                                        <div key={emailKey} className="bg-zinc-950/70 border border-zinc-800/80 rounded-3xl overflow-hidden shadow-lg transition-all">
+                                            {/* Header do Vendedor */}
+                                            <div
+                                                onClick={() => setExpandedSeller(isExpanded ? null : emailKey)}
+                                                className="p-6 cursor-pointer hover:bg-zinc-900/40 transition-colors flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-black text-xl border border-emerald-500/20 shadow-inner">
+                                                        {data.nome.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-lg font-black text-white flex items-center gap-2">
+                                                            {data.nome}
+                                                        </h3>
+                                                        <p className="text-xs text-zinc-500 font-medium">
+                                                            {data.totalVendas} {data.totalVendas === 1 ? 'venda' : 'vendas'} registradas no mês
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-wrap items-center gap-6 self-stretch md:self-auto justify-between md:justify-end">
+                                                    <div className="text-right">
+                                                        <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest">Comissão Venda</p>
+                                                        <p className="text-base font-bold text-emerald-400">
+                                                            R$ {data.totalComissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </p>
+                                                    </div>
+
+                                                    {data.totalPintura > 0 && (
+                                                        <div className="text-right border-l border-zinc-800 pl-6">
+                                                            <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest">Pintura Freelancer</p>
+                                                            <p className="text-base font-bold text-fuchsia-400">
+                                                                R$ {data.totalPintura.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                            </p>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="text-right border-l border-zinc-800 pl-6">
+                                                        <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest">Total a Pagar</p>
+                                                        <p className="text-xl font-black text-white">
+                                                            R$ {totalSeller.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 pl-2 border-l border-zinc-800">
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleSendWhatsAppComissao(data);
+                                                            }}
+                                                            className="p-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl transition-all cursor-pointer"
+                                                            title="Enviar Extrato no WhatsApp"
+                                                        >
+                                                            <MessageCircle size={16} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setExpandedSeller(isExpanded ? null : emailKey);
+                                                            }}
+                                                            className="p-2.5 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                                                        >
+                                                            {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Tabela de Vendas do Vendedor (Accordion) */}
+                                            {isExpanded && (
+                                                <div className="border-t border-zinc-800/80 bg-black/40 p-6 animate-in slide-in-from-top-2 duration-200">
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full text-left text-xs whitespace-nowrap">
+                                                            <thead className="text-[10px] uppercase font-black tracking-widest text-zinc-500 border-b border-zinc-800 pb-3">
+                                                                <tr>
+                                                                    <th className="pb-3 px-4">Data</th>
+                                                                    <th className="pb-3 px-4">Cliente</th>
+                                                                    <th className="pb-3 px-4">Produto</th>
+                                                                    <th className="pb-3 px-4">Status</th>
+                                                                    <th className="pb-3 px-4 text-center">Tipo</th>
+                                                                    <th className="pb-3 px-4 text-right">Valor Venda</th>
+                                                                    <th className="pb-3 px-4 text-right">Repasse / Ganho</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-zinc-800/60">
+                                                                {data.vendas.map((v: any) => (
+                                                                    <tr key={v.id} className="hover:bg-zinc-900/30 transition-colors">
+                                                                        <td className="py-3 px-4 font-mono text-zinc-400">
+                                                                            {new Date(v.data).toLocaleDateString('pt-BR')}
+                                                                        </td>
+                                                                        <td className="py-3 px-4 font-bold text-white">
+                                                                            {v.cliente}
+                                                                        </td>
+                                                                        <td className="py-3 px-4 text-zinc-300 font-medium">
+                                                                            {v.produto}
+                                                                        </td>
+                                                                        <td className="py-3 px-4">
+                                                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${
+                                                                                v.status === 'Concluída' || v.status === 'Pago'
+                                                                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                                                                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                                                            }`}>
+                                                                                {v.status || 'Pendente'}
+                                                                            </span>
+                                                                        </td>
+                                                                        <td className="py-3 px-4 text-center">
+                                                                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                                                                                v.tipo === 'venda'
+                                                                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                                                                    : 'bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20'
+                                                                            }`}>
+                                                                                {v.tipo}
+                                                                            </span>
+                                                                        </td>
+                                                                        <td className="py-3 px-4 text-right font-medium text-zinc-400">
+                                                                            R$ {v.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                        </td>
+                                                                        <td className={`py-3 px-4 text-right font-black ${
+                                                                            v.tipo === 'venda' ? 'text-emerald-400' : 'text-fuchsia-400'
+                                                                        }`}>
+                                                                            R$ {v.ganho.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

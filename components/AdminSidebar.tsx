@@ -64,7 +64,7 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             roles: ['admin', 'sales', 'pricing']
         },
         {
-            name: 'Vendas',
+            name: 'Vendas & Acertos',
             href: '/admin/sales',
             icon: ShoppingCart,
             roles: ['admin', 'sales', 'finance']
@@ -80,12 +80,6 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             href: '/admin/customers',
             icon: Users,
             roles: ['admin', 'sales', 'finance']
-        },
-        {
-            name: 'Comissões',
-            href: '/admin/commissions',
-            icon: DollarSign,
-            roles: ['admin', 'finance', 'sales']
         },
         {
             name: 'Estúdios',

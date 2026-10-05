@@ -19,12 +19,14 @@ import {
     ChevronDown,
     Activity,
     HelpCircle,
-    X
+    X,
+    Target
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import { useRouter } from 'next/navigation';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
+import { clsx } from 'clsx';
 
 interface Studio {
     id: number;
@@ -49,6 +51,13 @@ interface Studio {
     ticket_medio?: number;
     total_cliques?: number;
     created_at?: string;
+    custo_anual?: number;
+    lucro_medio_unitario?: number;
+    break_even_pecas_ano?: number;
+    break_even_pecas_restantes?: number;
+    break_even_progresso_pct?: number;
+    break_even_faturamento_anual?: number;
+    break_even_status?: 'isento' | 'pago' | 'proximo' | 'em_progresso' | 'sem_vendas';
 }
 
 type DateRangeType = 'all' | 'year' | 'last12m' | '90days' | '30days' | 'month' | 'custom';
@@ -715,19 +724,25 @@ export default function StudiosAnalyticsPage() {
                                             <th className="py-4 px-5 text-right">Lucro Peças</th>
                                             <th className="py-4 px-5 text-right">Custo Período</th>
                                             <th className="py-4 px-5 text-right">Resultado Líquido</th>
+                                            <th className="py-4 px-5 text-center min-w-[130px]">Break-Even Anual</th>
                                             <th className="py-4 px-5 text-right">Ticket Médio</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-900/40 text-xs font-bold text-zinc-350">
                                         {filteredStudios.length === 0 ? (
                                             <tr>
-                                                <td colSpan={10} className="py-12 text-center text-zinc-600 uppercase font-black tracking-widest">
+                                                <td colSpan={11} className="py-12 text-center text-zinc-600 uppercase font-black tracking-widest">
                                                     Nenhum estúdio encontrado
                                                 </td>
                                             </tr>
                                         ) : (
                                             filteredStudios.map((studio) => {
                                                 const { revenue, profit, ticket, clicks, sales, commConversion, costInPeriod, netBalance, verdict } = studio as any;
+                                                const custoAnual = studio.custo_anual ?? ((Number(studio.custo_mensal) || 0) * 12);
+                                                const pct = studio.break_even_progresso_pct ?? (custoAnual > 0 ? Math.round((profit / custoAnual) * 100) : 100);
+                                                const targetPieces = studio.break_even_pecas_ano ?? 0;
+                                                const remainingPieces = studio.break_even_pecas_restantes ?? Math.max(0, targetPieces - (studio.total_itens || 0));
+                                                const isPaid = custoAnual > 0 && profit >= custoAnual;
 
                                                 return (
                                                     <tr key={studio.id} className="hover:bg-zinc-900/20 transition-colors group">
@@ -795,6 +810,36 @@ export default function StudiosAnalyticsPage() {
                                                         </td>
                                                         <td className={`py-4 px-5 text-right font-black text-xs whitespace-nowrap ${netBalance >= 0 ? 'text-emerald-450' : 'text-rose-455'}`}>
                                                             R$ {netBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="py-4 px-5 whitespace-nowrap text-center">
+                                                            {custoAnual === 0 ? (
+                                                                <span className="text-[8px] font-black uppercase text-zinc-500 bg-zinc-900/60 border border-zinc-800 px-2 py-1 rounded-lg">
+                                                                    Isento
+                                                                </span>
+                                                            ) : (
+                                                                <div className="flex flex-col gap-1 w-28 mx-auto">
+                                                                    <div className="flex items-center justify-between text-[9px] font-black">
+                                                                        <span className={isPaid ? "text-emerald-400" : remainingPieces <= 2 ? "text-amber-400" : "text-blue-400"}>
+                                                                            {pct}%
+                                                                        </span>
+                                                                        <span className="text-[8px] text-zinc-500 font-bold">
+                                                                            {isPaid ? "Pago!" : `Falta ${remainingPieces} pç${remainingPieces > 1 ? 's' : ''}`}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800/80">
+                                                                        <div 
+                                                                            className={clsx(
+                                                                                "h-full rounded-full transition-all duration-500",
+                                                                                isPaid ? "bg-emerald-400" : remainingPieces <= 2 ? "bg-amber-400" : "bg-blue-500"
+                                                                            )}
+                                                                            style={{ width: `${Math.min(100, Math.max((studio.total_itens || 0) > 0 ? 8 : 0, pct))}%` }}
+                                                                        />
+                                                                    </div>
+                                                                    <span className="text-[7px] text-zinc-500 font-bold text-center">
+                                                                        {studio.total_itens || 0} de {targetPieces} pçs/ano
+                                                                    </span>
+                                                                </div>
+                                                            )}
                                                         </td>
                                                         <td className="py-4 px-5 text-right text-zinc-200 font-bold whitespace-nowrap">
                                                             R$ {ticket.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}

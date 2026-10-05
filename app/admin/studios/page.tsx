@@ -26,7 +26,10 @@ import {
     Crown,
     UserCheck,
     UserX,
-    MoreVertical
+    MoreVertical,
+    Target,
+    ShieldCheck,
+    AlertTriangle
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
@@ -55,6 +58,13 @@ interface Studio {
     conversao_acervo?: number;
     margem_lucro?: number;
     ticket_medio?: number;
+    custo_anual?: number;
+    lucro_medio_unitario?: number;
+    break_even_pecas_ano?: number;
+    break_even_pecas_restantes?: number;
+    break_even_progresso_pct?: number;
+    break_even_faturamento_anual?: number;
+    break_even_status?: 'isento' | 'pago' | 'proximo' | 'em_progresso' | 'sem_vendas';
 }
 
 export default function StudiosPage() {
@@ -64,7 +74,7 @@ export default function StudiosPage() {
     const [isAdding, setIsAdding] = useState(false);
     const [newStudioName, setNewStudioName] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
-    const [sortBy, setSortBy] = useState<'receita_bruta' | 'lucro_liquido' | 'total_figuras' | 'custo_mensal' | 'nome'>('receita_bruta');
+    const [sortBy, setSortBy] = useState<'receita_bruta' | 'lucro_liquido' | 'break_even_progresso_pct' | 'total_figuras' | 'custo_mensal' | 'nome'>('receita_bruta');
     const [expandedStudioIds, setExpandedStudioIds] = useState<Record<number, boolean>>({});
     const [patreonData, setPatreonData] = useState<any>(null);
     const [openMenuId, setOpenMenuId] = useState<number | null>(null);
@@ -250,6 +260,7 @@ export default function StudiosPage() {
                             >
                                 <option value="receita_bruta" className="bg-zinc-950">Faturamento Bruto</option>
                                 <option value="lucro_liquido" className="bg-zinc-950">Lucro Líquido Real</option>
+                                <option value="break_even_progresso_pct" className="bg-zinc-950">Progresso Break-Even (%)</option>
                                 <option value="total_figuras" className="bg-zinc-950">Tamanho do Acervo</option>
                                 <option value="custo_mensal" className="bg-zinc-950">Custo Mensal</option>
                                 <option value="nome" className="bg-zinc-950">Nome do Estúdio</option>
@@ -268,10 +279,13 @@ export default function StudiosPage() {
                                 <DollarSign size={24} />
                             </div>
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Custo Mensal Ativo</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Custo Licenças (Mês / Ano)</p>
                                 <h3 className="text-2xl font-black text-white tracking-tighter">
                                     R$ {studios.filter(s => s.ativo).reduce((acc, s) => acc + (Number(s.custo_mensal) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </h3>
+                                <p className="text-[9px] font-bold text-zinc-500 mt-0.5">
+                                    R$ {(studios.filter(s => s.ativo).reduce((acc, s) => acc + (Number(s.custo_mensal) || 0), 0) * 12).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}/ano total
+                                </p>
                             </div>
                         </div>
 
@@ -639,6 +653,108 @@ export default function StudiosPage() {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Break-Even Anual Card */}
+                                    {(() => {
+                                        const custoAnual = studio.custo_anual ?? ((Number(studio.custo_mensal) || 0) * 12);
+                                        const profit = studio.lucro_liquido || 0;
+                                        const items = studio.total_itens || 0;
+                                        const pct = studio.break_even_progresso_pct ?? (custoAnual > 0 ? Math.round((profit / custoAnual) * 100) : 100);
+                                        const targetPieces = studio.break_even_pecas_ano ?? 0;
+                                        const remainingPieces = studio.break_even_pecas_restantes ?? Math.max(0, targetPieces - items);
+                                        const isPaid = custoAnual > 0 && profit >= custoAnual;
+                                        const isZeroCost = custoAnual === 0;
+
+                                        return (
+                                            <div className="bg-zinc-950/60 border border-zinc-900/80 rounded-3xl p-4 flex flex-col gap-2.5 relative overflow-hidden shadow-inner">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={clsx(
+                                                            "w-6 h-6 rounded-lg flex items-center justify-center text-xs",
+                                                            isZeroCost ? "bg-zinc-800 text-zinc-400" :
+                                                            isPaid ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25" :
+                                                            remainingPieces <= 2 ? "bg-amber-500/15 text-amber-400 border border-amber-500/25" :
+                                                            "bg-blue-500/15 text-blue-400 border border-blue-500/25"
+                                                        )}>
+                                                            <Target size={13} />
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block leading-none">
+                                                                Break-Even Anual
+                                                            </span>
+                                                            <span className="text-[8px] text-zinc-500 font-bold block mt-0.5">
+                                                                {isZeroCost ? 'Sem custo de licença' : `Custo: R$ ${custoAnual.toLocaleString('pt-BR')}/ano`}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Badge de Status do Break-Even */}
+                                                    <div>
+                                                        {isZeroCost ? (
+                                                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-400 border border-zinc-700/50">
+                                                                Isento
+                                                            </span>
+                                                        ) : isPaid ? (
+                                                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                                                                <ShieldCheck size={10} />
+                                                                Pago (+R$ {(profit - custoAnual).toLocaleString('pt-BR', { maximumFractionDigits: 0 })})
+                                                            </span>
+                                                        ) : remainingPieces <= 2 && items > 0 ? (
+                                                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                                                                <AlertTriangle size={10} />
+                                                                Falta {remainingPieces} {remainingPieces === 1 ? 'peça' : 'peças'}
+                                                            </span>
+                                                        ) : items === 0 ? (
+                                                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                                                Meta: {targetPieces} pçs/ano
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                                                {pct}% coberto
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Barra de Progresso do Break-Even */}
+                                                {!isZeroCost && (
+                                                    <div className="space-y-1.5 pt-0.5">
+                                                        <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden p-0.5 border border-zinc-800/60">
+                                                            <div 
+                                                                className={clsx(
+                                                                    "h-full rounded-full transition-all duration-700",
+                                                                    isPaid ? "bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]" :
+                                                                    remainingPieces <= 2 ? "bg-gradient-to-r from-amber-500 to-amber-400" :
+                                                                    items === 0 ? "bg-zinc-800" :
+                                                                    "bg-gradient-to-r from-blue-600 to-blue-400"
+                                                                )}
+                                                                style={{ width: `${Math.min(100, Math.max(items > 0 ? 5 : 0, pct))}%` }}
+                                                            />
+                                                        </div>
+
+                                                        <div className="flex justify-between items-center text-[9px] font-bold text-zinc-500">
+                                                            <span>
+                                                                {isPaid ? (
+                                                                    <span className="text-emerald-400 font-black">Meta anual atingida! ({items} vendidas)</span>
+                                                                ) : (
+                                                                    <span>
+                                                                        <strong className="text-zinc-300 font-black">{items}</strong> de <strong className="text-zinc-300 font-black">{targetPieces}</strong> peças vendidas
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                            <span>
+                                                                {isPaid ? (
+                                                                    <span className="text-zinc-400">{pct}% coberto</span>
+                                                                ) : (
+                                                                    <span>Faltam <strong className="text-amber-400 font-black">{remainingPieces}</strong> pçs (~R$ {Math.max(0, custoAnual - profit).toLocaleString('pt-BR', { maximumFractionDigits: 0 })})</span>
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
 
                                     {/* Collapsible Edit Panel */}
                                     {isExpanded && (

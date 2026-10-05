@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { toast } from 'sonner';
-import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus, ChevronDown, ChevronUp, LayoutGrid, List, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import ThemeToggle from '@/components/common/ThemeToggle';
@@ -50,20 +50,21 @@ interface PricingSettings {
     taxa_cartao?: number;
 }
 
-const FigureMobileCard = ({
+const FigureCard = ({
     f, prices, canEdit, savingId, deletingId, hasRole,
     handleChange, handleSave, handleDelete, handleDownloadImage, setPreviewImage
 }: any) => {
     const [expanded, setExpanded] = useState(false);
 
     return (
-        <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl p-4 shadow-sm flex flex-col gap-3">
+        <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl p-4 shadow-sm flex flex-col gap-3 hover:border-orange-500/30 transition-all">
             {/* Cabecalho */}
             <div className="flex gap-3 justify-between items-start">
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                         {f.imagem_url && (
                             <button
+                                type="button"
                                 onClick={() => setPreviewImage({ url: f.imagem_url, nome: f.nome })}
                                 className="p-1 hover:bg-orange-500/10 rounded text-orange-500 transition-colors shrink-0"
                                 title="Ver Foto"
@@ -77,7 +78,7 @@ const FigureMobileCard = ({
                             placeholder="Nome da figura"
                             disabled={!canEdit}
                             onChange={e => handleChange(f.id, 'nome', e.target.value)}
-                            className="w-full bg-transparent border border-transparent hover:border-[var(--input-border)] focus:border-orange-500/50 rounded px-1.5 py-1 text-sm font-bold text-[var(--foreground)] focus:bg-[var(--input-bg)] outline-none transition-all truncate"
+                            className="w-full bg-transparent border border-transparent hover:border-[var(--input-border)] focus:border-orange-500/50 rounded px-1.5 py-0.5 text-sm font-bold text-[var(--foreground)] focus:bg-[var(--input-bg)] outline-none transition-all truncate"
                         />
                     </div>
                     <div className="text-xs text-[var(--text-muted)] mt-0.5 px-1.5 flex items-center gap-1.5 flex-wrap">
@@ -93,7 +94,7 @@ const FigureMobileCard = ({
                             </>
                         )}
                     </div>
-                    <span className="font-mono text-[10px] bg-[var(--input-bg)] text-[var(--text-muted)] px-2 py-0.5 rounded-sm border border-[var(--input-border)] mt-2 inline-block">
+                    <span className="font-mono text-[10px] bg-[var(--input-bg)] text-[var(--text-muted)] px-2 py-0.5 rounded-sm border border-[var(--input-border)] mt-1.5 inline-block">
                         SKU: {f.codigo || '--'}
                     </span>
                 </div>
@@ -370,10 +371,10 @@ function DataGridContent() {
     const [pendingChanges, setPendingChanges] = useState<Record<number, Partial<Figure>>>({});
     const [isSavingAll, setIsSavingAll] = useState(false);
     const [settings, setSettings] = useState<PricingSettings | null>(null);
+    const [studiosList, setStudiosList] = useState<{ id: number; nome: string }[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [search, setSearch] = useState('');
-    const [viewMode, setViewMode] = useState<'table' | 'grid'>('grid');
     const [nextCursor, setNextCursor] = useState<number | undefined>(undefined);
     const [savingId, setSavingId] = useState<number | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -384,7 +385,7 @@ function DataGridContent() {
 
     const [previewImage, setPreviewImage] = useState<{ url: string, nome: string } | null>(null);
 
-    // Fetch settings on mount
+    // Fetch settings & studios on mount
     useEffect(() => {
         const fetchSettings = async () => {
             try {
@@ -395,7 +396,23 @@ function DataGridContent() {
                 toast.error('Erro ao carregar configurações');
             }
         };
+        const fetchStudiosList = async () => {
+            try {
+                const res = await fetch('/api/admin/studios');
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    setStudiosList(
+                        data
+                            .map((s: any) => ({ id: s.id, nome: s.nome }))
+                            .sort((a: any, b: any) => a.nome.localeCompare(b.nome))
+                    );
+                }
+            } catch (err) {
+                console.error('Erro ao carregar lista de estúdios:', err);
+            }
+        };
         fetchSettings();
+        fetchStudiosList();
     }, []);
 
     // Fetch figures based on filters
@@ -809,23 +826,27 @@ function DataGridContent() {
                             <p className="text-[var(--text-muted)] text-sm font-medium">Clique no nome para ver a foto. Edite custos abaixo.</p>
                         </div>
                     </div>
-                    {/* View Controls & Search Bar */}
-                    <div className="flex items-center gap-3 w-full md:w-auto">
-                        <div className="hidden md:flex bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg p-1 shadow-sm">
-                            <button
-                                onClick={() => setViewMode('table')}
-                                className={`p-2 rounded-md transition-all ${viewMode === 'table' ? 'bg-[var(--input-bg)] text-orange-500 shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'}`}
-                                title="Ver como Tabela"
+                    {/* Seletor de Estúdio & Search Bar */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+                        <div className="relative min-w-[200px]">
+                            <select
+                                value={studioParam || ''}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    if (val) {
+                                        router.push(`/admin/figures?studio=${val}`);
+                                    } else {
+                                        router.push('/admin/figures');
+                                    }
+                                }}
+                                className="w-full bg-[var(--card-bg)] border border-[var(--input-border)] text-xs font-bold text-[var(--foreground)] rounded-xl px-3 py-3 outline-none focus:border-orange-500 cursor-pointer shadow-sm appearance-none pr-8"
                             >
-                                <List size={18} />
-                            </button>
-                            <button
-                                onClick={() => setViewMode('grid')}
-                                className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-[var(--input-bg)] text-orange-500 shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'}`}
-                                title="Ver como Grade"
-                            >
-                                <LayoutGrid size={18} />
-                            </button>
+                                <option value="">Todos os Estúdios ({studiosList.length})</option>
+                                {studiosList.map(s => (
+                                    <option key={s.id} value={s.id}>{s.nome}</option>
+                                ))}
+                            </select>
+                            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
                         </div>
 
                         <div className="relative w-full md:w-80">
@@ -835,7 +856,7 @@ function DataGridContent() {
                                 placeholder="Buscar figura..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
-                                className="w-full bg-[var(--card-bg)] border border-[var(--input-border)] rounded-lg pl-10 pr-4 py-3 outline-none focus:border-orange-500 transition-all shadow-[var(--shadow-sm)] text-[var(--foreground)] placeholder:text-[var(--text-muted)]"
+                                className="w-full bg-[var(--card-bg)] border border-[var(--input-border)] rounded-xl pl-10 pr-4 py-3 outline-none focus:border-orange-500 transition-all shadow-[var(--shadow-sm)] text-[var(--foreground)] placeholder:text-[var(--text-muted)] text-sm"
                             />
                         </div>
                     </div>
@@ -871,288 +892,15 @@ function DataGridContent() {
                 </div>
 
                 {/* Container Principal */}
-                <div className={`bg-[var(--card-bg)] border border-[var(--card-border)] md:rounded-xl shadow-[var(--shadow-md)] backdrop-blur-sm flex flex-col -mx-4 md:mx-0 border-x-0 md:border-x ${viewMode === 'grid' ? 'bg-transparent border-none shadow-none md:p-0' : ''}`}>
+                <div className="w-full">
 
-                    {/* View Desktop (Tabela) */}
-                    <div className={`hidden ${viewMode === 'table' ? 'md:block' : ''} overflow-auto flex-1 custom-scrollbar pb-10 md:pb-0 max-h-[75vh]`}>
-                        <table className="w-full min-w-full text-left border-collapse whitespace-nowrap relative">
-                            <thead className="bg-[var(--background)] sticky top-0 z-10">
-                                <tr className="text-[var(--text-muted)] text-[10px] uppercase font-bold tracking-widest border-b border-[var(--card-border)]">
-                                    <th className="pl-4 pr-2 py-4 w-full min-w-[350px]">Figura</th>
-                                    <th className="px-3 py-4 text-center">Vendas (Ano)</th>
-                                    <th className="px-3 py-4 text-center">Sinônimos / Tags</th>
-                                    <th className="px-3 py-4 text-center">SKU</th>
-                                    <th className="px-3 py-4 text-center">Escala (%)</th>
-                                    <th className="px-3 py-4 text-center">KG Resina</th>
-                                    <th className="px-2 py-4 text-center text-[10px]">H. Impressão</th>
-                                    <th className="px-2 py-4 text-center text-[10px]">H. Pintura</th>
-                                    <th className="px-3 py-4 text-center">Medidas (cm)</th>
-                                    <th className="px-3 py-4 text-center uppercase">Merchant</th>
-                                    <th className="px-3 py-4 text-center uppercase">Extras</th>
-                                    <th className="px-3 py-4 text-center uppercase">Real</th>
-                                    <th className="px-4 py-4 text-center text-zinc-400 group-hover:text-zinc-200 transition-colors"><div className="flex flex-col"><span>SEM PINTURA</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
-                                    <th className="px-4 py-4 text-center text-zinc-400 group-hover:text-zinc-200 transition-colors"><div className="flex flex-col"><span>COLORIDO</span><span className="text-[9px] text-[var(--text-muted)] mt-0.5 uppercase tracking-tighter">PIX (-15%)</span></div></th>
-                                    <th className="px-4 py-4 w-[120px] text-right">AÇÕES</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[var(--card-border)] text-sm">
-                                {figures.map(rawFigure => {
-                                    const f = { ...rawFigure, ...(pendingChanges[rawFigure.id] || {}) };
-                                    const prices = calculatePrices(f);
-                                    return (
-                                        <tr key={f.id} className="hover:bg-orange-500/[0.02] transition-colors group">
-                                            <td className="pl-4 pr-2 py-4 w-full min-w-[350px]">
-                                                <div className="flex items-center gap-2">
-                                                    {f.imagem_url && (
-                                                        <button
-                                                            onClick={() => setPreviewImage({ url: f.imagem_url, nome: f.nome })}
-                                                            className="p-1 hover:bg-orange-500/10 rounded text-orange-500 transition-colors shrink-0"
-                                                            title="Ver Foto"
-                                                        >
-                                                            <ImageIcon size={16} />
-                                                        </button>
-                                                    )}
-                                                    <div className="flex-1 min-w-0">
-                                                        <input
-                                                            type="text"
-                                                            value={f.nome || ''}
-                                                            placeholder="Nome da figura"
-                                                            disabled={!canEdit}
-                                                            onChange={e => handleChange(f.id, 'nome', e.target.value)}
-                                                            className="w-full bg-transparent border border-transparent hover:border-[var(--input-border)] focus:border-orange-500/50 rounded px-1.5 py-1 text-sm font-bold text-[var(--foreground)] focus:bg-[var(--input-bg)] outline-none transition-all truncate"
-                                                        />
-                                                        <div className="text-xs text-[var(--text-muted)] truncate px-1.5 mt-0.5">{f.categoria} - {f.serie}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            {/* Vendas (Ano) */}
-                                            <td className="px-3 py-4 text-center">
-                                                <div className="flex flex-col items-center justify-center gap-1">
-                                                    {f.badge_desempenho === 'Estrela' && (
-                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/10 border border-amber-500/30 text-amber-500 flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.15)] animate-pulse">
-                                                            ★ Estrela ({f.vendas_count} pçs)
-                                                        </span>
-                                                    )}
-                                                    {f.badge_desempenho === 'Lento' && (
-                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/10 border border-blue-500/30 text-blue-400">
-                                                            🔄 Lento ({f.vendas_count} pçs)
-                                                        </span>
-                                                    )}
-                                                    {f.badge_desempenho === 'Encalhado' && (
-                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-zinc-950 border border-zinc-900/60 text-zinc-600">
-                                                            ❄️ Encalhado
-                                                        </span>
-                                                    )}
-                                                    {f.faturamento_gerado && f.faturamento_gerado > 0 ? (
-                                                        <span className="text-[11px] font-black text-emerald-400">
-                                                            R$ {f.faturamento_gerado.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
-                                                        </span>
-                                                    ) : null}
-                                                </div>
-                                            </td>
-
-                                            <td className="px-3 py-4 text-center">
-                                                <input
-                                                    type="text"
-                                                    value={f.sinonimos || ''}
-                                                    placeholder="Nomes PT-BR, tags..."
-                                                    disabled={!canEdit}
-                                                    onChange={e => handleChange(f.id, 'sinonimos', e.target.value)}
-                                                    className="w-48 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-left text-xs font-medium text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all shadow-[var(--shadow-sm)] disabled:opacity-50"
-                                                />
-                                            </td>
-
-                                            <td className="px-3 py-4 text-center">
-                                                <span className="font-mono text-[10px] bg-[var(--input-bg)] text-[var(--text-muted)] px-2 py-1 rounded-sm border border-[var(--input-border)]">
-                                                    {f.codigo || '--'}
-                                                </span>
-                                            </td>
-
-                                            <td className="px-3 py-4">
-                                                <div className="flex items-center justify-center gap-2 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm p-1.5 w-fit mx-auto transition-all shadow-[var(--shadow-sm)] group-hover:border-orange-500/30">
-                                                    <button
-                                                        onClick={() => handleChange(f.id, 'escala', Math.max(1, (Number(f.escala) || 0) - 10).toString())}
-                                                        disabled={!canEdit}
-                                                        className="p-1 hover:text-orange-500 text-[var(--text-muted)] transition-colors disabled:opacity-30"
-                                                    >
-                                                        <Minus size={14} />
-                                                    </button>
-                                                    <input
-                                                        type="number"
-                                                        value={f.escala}
-                                                        disabled={!canEdit}
-                                                        onChange={e => handleChange(f.id, 'escala', e.target.value)}
-                                                        className="w-10 bg-transparent text-center text-sm font-black text-orange-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
-                                                    />
-                                                    <button
-                                                        onClick={() => handleChange(f.id, 'escala', ((Number(f.escala) || 0) + 10).toString())}
-                                                        disabled={!canEdit}
-                                                        className="p-1 hover:text-orange-500 text-[var(--text-muted)] transition-colors disabled:opacity-30"
-                                                    >
-                                                        <Plus size={14} />
-                                                    </button>
-                                                </div>
-                                            </td>
-
-                                            <td className="px-3 py-4 text-center">
-                                                <input
-                                                    type="number" step="0.001"
-                                                    value={f.resina_kg ?? ''}
-                                                    placeholder="0"
-                                                    disabled={!canEdit}
-                                                    onChange={e => handleChange(f.id, 'resina_kg', e.target.value)}
-                                                    className="w-24 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-center text-sm font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)] disabled:opacity-50"
-                                                />
-                                            </td>
-
-                                            <td className="px-2 py-4 text-center">
-                                                <input
-                                                    type="number"
-                                                    value={f.horas_impressao ?? ''}
-                                                    placeholder="0"
-                                                    disabled={!canEdit}
-                                                    onChange={e => handleChange(f.id, 'horas_impressao', e.target.value)}
-                                                    className="w-16 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-center text-sm font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)] disabled:opacity-50"
-                                                />
-                                            </td>
-
-                                            <td className="px-2 py-4 text-center">
-                                                <input
-                                                    type="number"
-                                                    value={f.horas_pintura ?? ''}
-                                                    placeholder="0"
-                                                    disabled={!canEdit}
-                                                    onChange={e => handleChange(f.id, 'horas_pintura', e.target.value)}
-                                                    className="w-16 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-2 text-center text-sm font-bold text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)] disabled:opacity-50"
-                                                />
-                                            </td>
-
-                                            <td className="px-3 py-4 text-center">
-                                                <div className="flex gap-1 justify-center">
-                                                    <Tooltip content="Altura" position="top">
-                                                        <input
-                                                            type="number" step="0.1"
-                                                            value={f.altura_cm ?? ''}
-                                                            placeholder="0"
-                                                            disabled={!canEdit}
-                                                            onChange={e => handleChange(f.id, 'altura_cm', e.target.value)}
-                                                            className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)] disabled:opacity-50"
-                                                        />
-                                                    </Tooltip>
-                                                    <Tooltip content="Largura" position="top">
-                                                        <input
-                                                            type="number" step="0.1"
-                                                            value={f.largura_cm ?? ''}
-                                                            placeholder="0"
-                                                            disabled={!canEdit}
-                                                            onChange={e => handleChange(f.id, 'largura_cm', e.target.value)}
-                                                            className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)] disabled:opacity-50"
-                                                        />
-                                                    </Tooltip>
-                                                    <Tooltip content="Profundidade" position="top">
-                                                        <input
-                                                            type="number" step="0.1"
-                                                            value={f.profundidade_cm ?? ''}
-                                                            placeholder="0"
-                                                            disabled={!canEdit}
-                                                            onChange={e => handleChange(f.id, 'profundidade_cm', e.target.value)}
-                                                            className="w-12 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm py-1.5 text-center text-[11px] font-black text-[var(--foreground)] outline-none focus:border-orange-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-[var(--shadow-sm)] disabled:opacity-50"
-                                                        />
-                                                    </Tooltip>
-                                                </div>
-                                            </td>
-
-                                            <td className="px-3 py-4 text-center">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={f.disponivel}
-                                                    disabled={!canEdit}
-                                                    onChange={e => handleChange(f.id, 'disponivel', e.target.checked)}
-                                                    className="w-5 h-5 rounded-sm border-[var(--input-border)] text-blue-500 bg-[var(--input-bg)] focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                                />
-                                            </td>
-
-                                            <td className="px-3 py-4 text-center">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={f.tem_extras}
-                                                    disabled={!canEdit}
-                                                    onChange={e => handleChange(f.id, 'tem_extras', e.target.checked)}
-                                                    className="w-5 h-5 rounded-sm border-[var(--input-border)] text-orange-500 bg-[var(--input-bg)] focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                                />
-                                            </td>
-
-                                            <td className="px-3 py-4 text-center">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={f.tem_pintura_real}
-                                                    disabled={!canEdit}
-                                                    onChange={e => handleChange(f.id, 'tem_pintura_real', e.target.checked)}
-                                                    className="w-5 h-5 rounded-sm border-[var(--input-border)] text-pink-500 bg-[var(--input-bg)] focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                                />
-                                            </td>
-
-                                            <td className="px-4 py-4 text-center">
-                                                <div className="flex flex-col items-center justify-center">
-                                                    <div className="text-[13px] font-black text-blue-400 whitespace-nowrap">R$ {prices.basicCredito}</div>
-                                                    <div className="text-[10px] font-bold text-[var(--text-muted)]">PIX R$ {prices.basic}</div>
-                                                </div>
-                                            </td>
-
-                                            <td className="px-4 py-4 text-center">
-                                                <div className="flex flex-col items-center justify-center">
-                                                    <div className="text-[13px] font-black text-blue-400 whitespace-nowrap">R$ {prices.premiumCredito}</div>
-                                                    <div className="text-[10px] font-bold text-[var(--text-muted)]">PIX R$ {prices.premium}</div>
-                                                </div>
-                                            </td>
-
-                                            <td className="px-4 py-4 text-right">
-                                                <div className="flex gap-2 justify-end">
-                                                    <Tooltip content={canEdit ? "Salvar Alterações" : "Sem permissão para salvar"} position="top">
-                                                        <button
-                                                            onClick={() => handleSave(f)}
-                                                            disabled={savingId === f.id || !canEdit}
-                                                            className="p-2.5 bg-orange-500/10 text-orange-500 rounded-md hover:bg-orange-500 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-orange-500/20 shadow-[var(--shadow-sm)]"
-                                                        >
-                                                            {savingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                                        </button>
-                                                    </Tooltip>
-                                                    {hasRole('admin') && (
-                                                        <Tooltip content="Excluir Figura" position="top">
-                                                            <button
-                                                                onClick={() => handleDelete(f.id, f.nome)}
-                                                                disabled={deletingId === f.id}
-                                                                className="p-2.5 bg-orange-400/10 text-orange-400 rounded-md hover:bg-orange-400 hover:text-white transition-all disabled:opacity-50 border border-orange-400/20 shadow-[var(--shadow-sm)]"
-                                                            >
-                                                                {deletingId === f.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                                                            </button>
-                                                        </Tooltip>
-                                                    )}
-                                                    <Tooltip content="Baixar Cartão de Orçamento" position="top">
-                                                        <button
-                                                            onClick={() => handleDownloadImage(f.id, f.nome)}
-                                                            className="p-2.5 bg-blue-500/10 text-blue-500 rounded-md hover:bg-blue-500 hover:text-white transition-all border border-blue-500/20 shadow-[var(--shadow-sm)]"
-                                                        >
-                                                            <ImageIcon size={16} />
-                                                        </button>
-                                                    </Tooltip>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody >
-                        </table >
-                    </div>
-
-                    {/* View Mobile (Sempre Grade) E Desktop (Se selecionou Grade) */}
-                    <div className={`${viewMode === 'table' ? 'md:hidden' : ''} grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 md:p-0 text-[var(--foreground)] bg-transparent w-full`}>
+                    {/* Grade de Figuras (Cards) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 md:p-0 text-[var(--foreground)] bg-transparent w-full">
                         {figures.map(rawFigure => {
                             const f = { ...rawFigure, ...(pendingChanges[rawFigure.id] || {}) };
                             const prices = calculatePrices(f);
                             return (
-                                <FigureMobileCard
+                                <FigureCard
                                     key={f.id}
                                     f={f}
                                     prices={prices}
@@ -1169,9 +917,9 @@ function DataGridContent() {
                             );
                         })}
                     </div>
-                    {/* Botão Carregar Mais - Compartilhado */}
+                    {/* Botão Carregar Mais */}
                     {nextCursor !== undefined && (
-                        <div className={`flex justify-center p-6 w-full ${viewMode === 'table' ? 'border-t border-[var(--card-border)] bg-[var(--background)]' : 'mt-4'}`}>
+                        <div className="flex justify-center p-6 w-full mt-6">
                             <button
                                 onClick={() => fetchFigures(selectedCategoryId, search, false)}
                                 disabled={loadingMore}

@@ -115,8 +115,9 @@ export async function GET(req: Request) {
             const conversao_acervo = total_figuras > 0 ? (figuras_vendidas / total_figuras) * 100 : 0;
             const margem_lucro = m.receita_bruta > 0 ? (m.lucro_liquido / m.receita_bruta) * 100 : 0;
 
-            // Calculate average ticket as average colored price of figures in the studio's catalog, and sum views/clicks
+            // Calculate average ticket and estimated unit profit of figures in the studio's catalog, and sum views/clicks
             let sumPrices = 0;
+            let sumEstimatedProfits = 0;
             let countPrices = 0;
             let total_cliques = 0;
             s.figuras?.forEach((f: any) => {
@@ -125,11 +126,50 @@ export async function GET(req: Request) {
                 const meta = Array.isArray(metaList) ? metaList[0] : metaList;
                 if (meta && settings) {
                     const prices = calculateFigurePrices(meta, settings);
+                    const custoProducaoEfetivo = ((meta.resina_kg || 0) * (settings.custo_resina_kg || 0)) +
+                                                 ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0)) +
+                                                 ((meta.horas_pintura || 0) * (settings.custo_h_pintura || 0));
+                    const lucroEstimado = Math.max(0, prices.pix_colorido - custoProducaoEfetivo);
                     sumPrices += prices.pix_colorido; // Use colored PIX price (pix_colorido)
+                    sumEstimatedProfits += lucroEstimado;
                     countPrices++;
                 }
             });
             const ticket_medio = countPrices > 0 ? sumPrices / countPrices : 0;
+            const lucro_medio_estimado_catalogo = countPrices > 0 ? sumEstimatedProfits / countPrices : 0;
+
+            // Lucro médio unitário (real de vendas ou estimado pelo catálogo)
+            const lucro_medio_unitario = m.total_itens > 0 && m.lucro_liquido > 0 
+                ? (m.lucro_liquido / m.total_itens)
+                : (lucro_medio_estimado_catalogo > 0 ? lucro_medio_estimado_catalogo : (ticket_medio > 0 ? ticket_medio * 0.40 : 100));
+
+            // Custo Anual (12 meses de custo_mensal)
+            const custo_mensal_num = Number(s.custo_mensal) || 0;
+            const custo_anual = custo_mensal_num * 12;
+
+            // Break-Even em Peças / Ano
+            const break_even_pecas_ano = custo_anual > 0 ? Math.ceil(custo_anual / Math.max(1, lucro_medio_unitario)) : 0;
+            const break_even_pecas_restantes = Math.max(0, break_even_pecas_ano - m.total_itens);
+            const break_even_progresso_pct = custo_anual > 0 
+                ? Math.round((m.lucro_liquido / custo_anual) * 100) 
+                : 100;
+
+            // Estimativa de faturamento anual necessário para cobrir o custo (Break-even faturamento)
+            const margem_efetiva = margem_lucro > 0 ? (margem_lucro / 100) : (ticket_medio > 0 && lucro_medio_unitario > 0 ? (lucro_medio_unitario / ticket_medio) : 0.4);
+            const break_even_faturamento_anual = custo_anual > 0 ? Math.round(custo_anual / (margem_efetiva > 0 ? margem_efetiva : 0.4)) : 0;
+
+            let break_even_status: 'isento' | 'pago' | 'proximo' | 'em_progresso' | 'sem_vendas' = 'isento';
+            if (custo_anual > 0) {
+                if (m.lucro_liquido >= custo_anual) {
+                    break_even_status = 'pago';
+                } else if (break_even_pecas_restantes <= 2 && m.total_itens > 0) {
+                    break_even_status = 'proximo';
+                } else if (m.total_itens === 0) {
+                    break_even_status = 'sem_vendas';
+                } else {
+                    break_even_status = 'em_progresso';
+                }
+            }
 
             // Clean up original figures array to avoid bloated response payload
             const { figuras, ...rest } = s;
@@ -145,7 +185,14 @@ export async function GET(req: Request) {
                 conversao_acervo,
                 margem_lucro,
                 ticket_medio,
-                total_cliques
+                total_cliques,
+                custo_anual,
+                lucro_medio_unitario,
+                break_even_pecas_ano,
+                break_even_pecas_restantes,
+                break_even_progresso_pct,
+                break_even_faturamento_anual,
+                break_even_status
             };
         });
 
