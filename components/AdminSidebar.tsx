@@ -51,12 +51,7 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             icon: Package,
             roles: ['admin', 'pricing', 'orcamento']
         },
-        {
-            name: 'Popularidade',
-            href: '/admin/popular',
-            icon: TrendingUp,
-            roles: ['admin', 'sales', 'pricing', 'orcamento']
-        },
+
         {
             name: 'Campanhas',
             href: '/admin/campaigns',
@@ -94,10 +89,10 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             roles: ['admin']
         },
         {
-            name: 'Cupons',
+            name: 'Cupons & Demanda',
             href: '/admin/coupons',
             icon: Tag,
-            roles: ['admin', 'sales']
+            roles: ['admin', 'sales', 'pricing', 'orcamento']
         },
         {
             name: 'Configurações',
