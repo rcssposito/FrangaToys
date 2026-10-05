@@ -54,12 +54,12 @@ const STATUS_CONFIGS: Record<string, StatusConfig> = {
         dicaAtelie: 'Trabalhamos com resinas premium de alta definição para assegurar máxima fidelidade nas proporções e traços anatômicos.'
     },
     'Lavagem e Cura': {
-        badge: 'Cura & Limpeza UV',
+        badge: 'Pós-Processamento',
         badgeBg: 'rgba(59, 130, 246, 0.15)',
         badgeColor: '#60a5fa',
         badgeBorder: 'rgba(59, 130, 246, 0.3)',
         accentColor: '#3b82f6',
-        subject: '💧 Impressão concluída! Fase de Lavagem e Cura UV',
+        subject: '💧 Impressão concluída! Fase de Pós-Processamento',
         title: 'Impressão 3D finalizada! Entrou em Pós-Processamento',
         stepIndex: 3,
         descricao: 'Sua peça saiu da máquina com sucesso! Ela agora passa pelo processo de lavagem química detalhada e câmara de cura ultravioleta para alcançar resistência mecânica ideal e toque perfeito.',
@@ -106,7 +106,7 @@ const STATUS_CONFIGS: Record<string, StatusConfig> = {
 const STEPS_TIMELINE = [
     { label: 'Fila', index: 1 },
     { label: 'Impressão', index: 2 },
-    { label: 'Cura UV', index: 3 },
+    { label: 'Pós-Processo', index: 3 },
     { label: 'Pintura', index: 4 },
     { label: 'Pronto', index: 5 }
 ];

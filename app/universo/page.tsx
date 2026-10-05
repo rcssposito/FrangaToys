@@ -830,7 +830,24 @@ export default function ThematicUniversePage() {
                     ctx.fillStyle = hexToRgba(figGeo.color, 0.75);
                     ctx.font = '600 10px system-ui, -apple-system, sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.fillText(figGeo.label, figGeo.cx, figGeo.cy - figGeo.r - 8);
+
+                    let labelToDraw = figGeo.label;
+                    const activeSerieForLabel = selectedNode?.type === 'serie' 
+                        ? selectedNode.id 
+                        : (selectedNode?.type === 'figure' ? selectedNode.serieId : null);
+                    if (activeSerieForLabel) {
+                        const countInLane = rawNodes.filter(n => 
+                            n.type === 'figure' && 
+                            n.serieId === activeSerieForLabel && 
+                            n.categoryId === figGeo.categoryId && 
+                            n.lane === figGeo.lane
+                        ).length;
+                        if (countInLane > 0) {
+                            const serieName = selectedNode?.type === 'serie' ? selectedNode.name : (selectedNode?.serieName || 'Franquia');
+                            labelToDraw = `${figGeo.label.split('(')[0].trim()} • ${serieName} (${countInLane} peças)`;
+                        }
+                    }
+                    ctx.fillText(labelToDraw, figGeo.cx, figGeo.cy - figGeo.r - 8);
                 });
             });
 
@@ -888,9 +905,9 @@ export default function ThematicUniversePage() {
                         ctx.shadowBlur = 10;
                     } else if (isSerieFigureLink) {
                         ctx.strokeStyle = '#f472b6'; // Rosa suave para conexões série-figura
-                        ctx.lineWidth = 1.8;
+                        ctx.lineWidth = 2.0;
                         ctx.shadowColor = '#f472b6';
-                        ctx.shadowBlur = 8;
+                        ctx.shadowBlur = 10;
                     } else if (isCategorySerieLink) {
                         ctx.strokeStyle = t.color || s.color || '#ec4899';
                         ctx.lineWidth = 2.4;
@@ -934,31 +951,49 @@ export default function ThematicUniversePage() {
 
             // C. Desenhar Discos e Rótulos
             const now = Date.now();
+            const activeSerieId = selectedNode?.type === 'serie' 
+                ? selectedNode.id 
+                : (selectedNode?.type === 'figure' ? selectedNode.serieId : null);
+            const activeStudioId = selectedNode?.type === 'studio' ? selectedNode.id : null;
+
             rawNodes.forEach(node => {
                 if (node.x === undefined || node.y === undefined) return;
+
+                // FILTRO INTELIGENTE: Quando uma franquia estiver selecionada,
+                // sumir 100% com as figuras de outras séries para permitir clique e visualização limpos!
+                if (activeSerieId && node.type === 'figure' && node.serieId !== activeSerieId) {
+                    return;
+                }
+                // Quando um estúdio estiver selecionado, ocultar figuras não modeladas por ele
+                if (activeStudioId && node.type === 'figure' && node.studioId !== activeStudioId) {
+                    return;
+                }
 
                 const isHovered = hoveredNode?.id === node.id;
                 const isSelected = selectedNode?.id === node.id;
                 const isConnected = activeFocus ? connectedIds.has(node.id) : true;
+                const isFigureOfActiveSerie = !!(activeSerieId && node.type === 'figure' && node.serieId === activeSerieId);
                 const opacity = isConnected ? 1 : (node.type === 'figure' ? 0.08 : 0.18);
 
                 ctx.save();
                 ctx.globalAlpha = opacity;
 
-                const nodeRenderSize = node.type === 'figure' ? (isHovered || isSelected ? 7 : node.size) : node.size;
+                const nodeRenderSize = node.type === 'figure' 
+                    ? (isHovered || isSelected ? 8 : (isFigureOfActiveSerie ? 5.5 : node.size)) 
+                    : node.size;
 
                 // 1. Halo / Glow
-                if (isHovered || isSelected || node.pulse) {
-                    const pulseRadius = nodeRenderSize + (node.pulse ? Math.sin(now / 350) * 3 + 4 : 8);
+                if (isHovered || isSelected || node.pulse || (isFigureOfActiveSerie && isConnected)) {
+                    const pulseRadius = nodeRenderSize + (node.pulse ? Math.sin(now / 350) * 3 + 4 : (isFigureOfActiveSerie ? 6 : 8));
                     ctx.beginPath();
                     ctx.arc(node.x, node.y, pulseRadius, 0, Math.PI * 2);
-                    ctx.fillStyle = `${node.color}25`;
+                    ctx.fillStyle = `${node.color}35`;
                     ctx.fill();
 
                     ctx.beginPath();
-                    ctx.arc(node.x, node.y, nodeRenderSize + 4, 0, Math.PI * 2);
+                    ctx.arc(node.x, node.y, nodeRenderSize + 3, 0, Math.PI * 2);
                     ctx.strokeStyle = node.color;
-                    ctx.lineWidth = 2;
+                    ctx.lineWidth = isFigureOfActiveSerie ? 2 : 1.5;
                     ctx.stroke();
                 }
 
@@ -967,7 +1002,7 @@ export default function ThematicUniversePage() {
                 ctx.arc(node.x, node.y, nodeRenderSize, 0, Math.PI * 2);
                 ctx.fillStyle = node.color;
                 ctx.shadowColor = node.color;
-                ctx.shadowBlur = isHovered ? 20 : (node.type === 'root' ? 14 : (node.lane === 1 ? 10 : (node.type === 'figure' ? 2 : 4)));
+                ctx.shadowBlur = isHovered ? 20 : (node.type === 'root' ? 14 : (isFigureOfActiveSerie ? 10 : (node.lane === 1 ? 10 : (node.type === 'figure' ? 2 : 4))));
                 ctx.fill();
                 ctx.shadowBlur = 0;
 
@@ -975,7 +1010,7 @@ export default function ThematicUniversePage() {
                 ctx.beginPath();
                 ctx.arc(node.x, node.y, nodeRenderSize, 0, Math.PI * 2);
                 ctx.strokeStyle = node.type === 'studio' ? '#93c5fd' : (node.type === 'figure' ? '#ffffff' : (node.type === 'serie' ? hexToRgba(node.color, 0.6) : 'rgba(0, 0, 0, 0.4)'));
-                ctx.lineWidth = node.type === 'studio' ? 1.5 : (node.type === 'figure' ? 0.8 : (node.type === 'serie' ? 1 : 2));
+                ctx.lineWidth = node.type === 'studio' ? 1.5 : (node.type === 'figure' ? (isFigureOfActiveSerie ? 1.2 : 0.8) : (node.type === 'serie' ? 1 : 2));
                 ctx.stroke();
 
                 // 3. Rótulos
@@ -986,6 +1021,7 @@ export default function ThematicUniversePage() {
                     (node.type === 'serie' && node.lane === 1) || 
                     isHovered || 
                     isSelected || 
+                    (isFigureOfActiveSerie && (scale > 0.75 || isHovered || isSelected)) ||
                     (node.type === 'serie' && node.lane === 2 && scale > 0.95) || 
                     (node.type === 'serie' && node.lane === 3 && scale > 1.35) ||
                     (node.type === 'figure' && scale > 1.8);
@@ -995,7 +1031,7 @@ export default function ThematicUniversePage() {
                         ? 'bold 13px system-ui, sans-serif' 
                         : (node.type === 'category' || node.type === 'studio')
                         ? 'bold 11px system-ui, sans-serif'
-                        : (node.type === 'serie' && node.lane === 1 ? 'bold 10px system-ui, sans-serif' : (node.type === 'figure' ? '8px system-ui, sans-serif' : '9px system-ui, sans-serif'));
+                        : (node.type === 'serie' && node.lane === 1 ? 'bold 10px system-ui, sans-serif' : (node.type === 'figure' ? 'bold 9px system-ui, sans-serif' : '9px system-ui, sans-serif'));
                     
                     ctx.fillStyle = isHovered 
                         ? '#ffffff' 
@@ -1110,7 +1146,29 @@ export default function ThematicUniversePage() {
         return () => window.removeEventListener('resize', updateSize);
     }, []);
 
-    // 7. Coordenadas e Detecção
+    // 7. Tecla Escape para encerrar a seleção e voltar a exibir todas as figuras
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                if (selectedNode) {
+                    setSelectedNode(null);
+                }
+                if (searchQuery) {
+                    setSearchQuery('');
+                }
+                if (showHelp) {
+                    setShowHelp(false);
+                }
+                if (document.activeElement instanceof HTMLElement) {
+                    document.activeElement.blur();
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedNode, searchQuery, showHelp]);
+
+    // 8. Coordenadas e Detecção
     const screenToWorld = useCallback((screenX: number, screenY: number) => {
         const { x: panX, y: panY, k: scale } = transformRef.current;
         return {
@@ -1120,18 +1178,65 @@ export default function ThematicUniversePage() {
     }, []);
 
     const getNodeAtPosition = useCallback((worldX: number, worldY: number) => {
+        const activeSerieId = selectedNode?.type === 'serie' 
+            ? selectedNode.id 
+            : (selectedNode?.type === 'figure' ? selectedNode.serieId : null);
+        const activeStudioId = selectedNode?.type === 'studio' ? selectedNode.id : null;
+
+        // 1. PRIORIDADE MÁXIMA: Se uma franquia ou estúdio estiver selecionado,
+        // checar primeiro as figuras ativas com raio de acerto generoso (14px)
+        if (activeSerieId) {
+            for (let i = rawNodes.length - 1; i >= 0; i--) {
+                const node = rawNodes[i];
+                if (node.type === 'figure' && node.serieId === activeSerieId) {
+                    if (node.x === undefined || node.y === undefined) continue;
+                    const dx = node.x - worldX;
+                    const dy = node.y - worldY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist <= 14) {
+                        return node;
+                    }
+                }
+            }
+        } else if (activeStudioId) {
+            for (let i = rawNodes.length - 1; i >= 0; i--) {
+                const node = rawNodes[i];
+                if (node.type === 'figure' && node.studioId === activeStudioId) {
+                    if (node.x === undefined || node.y === undefined) continue;
+                    const dx = node.x - worldX;
+                    const dy = node.y - worldY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist <= 14) {
+                        return node;
+                    }
+                }
+            }
+        }
+
+        // 2. Busca padrão para os demais nós da galáxia
         for (let i = rawNodes.length - 1; i >= 0; i--) {
             const node = rawNodes[i];
             if (node.x === undefined || node.y === undefined) continue;
+
+            // Se uma franquia ou estúdio estiver selecionado, ignorar COMPLETAMENTE
+            // qualquer figura oculta/não relacionada (evita clique fantasma)
+            if (activeSerieId && node.type === 'figure' && node.serieId !== activeSerieId) {
+                continue;
+            }
+            if (activeStudioId && node.type === 'figure' && node.studioId !== activeStudioId) {
+                continue;
+            }
+
             const dx = node.x - worldX;
             const dy = node.y - worldY;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist <= node.size + 8) {
+            const hitRadius = node.type === 'figure' ? 12 : node.size + 8;
+            if (dist <= hitRadius) {
                 return node;
             }
         }
         return null;
-    }, [rawNodes]);
+    }, [rawNodes, selectedNode]);
 
     // 8. Eventos de Mouse
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1467,6 +1572,32 @@ export default function ThematicUniversePage() {
                 </form>
             </div>
 
+            {/* Pill Indicador de Filtro Ativo por Franquia ou Estúdio */}
+            {selectedNode && (selectedNode.type === 'serie' || (selectedNode.type === 'figure' && selectedNode.serieName) || selectedNode.type === 'studio') && (
+                <div className="absolute top-20 left-4 z-30 pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="bg-zinc-900/90 backdrop-blur-xl border border-pink-500/40 px-3.5 py-1.5 rounded-2xl shadow-2xl flex items-center gap-2.5">
+                        <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+                        <span className="text-xs font-bold text-zinc-200">
+                            Foco exclusivo: <strong className="text-pink-400">
+                                {selectedNode.type === 'serie' ? selectedNode.name : (selectedNode.type === 'figure' ? selectedNode.serieName : selectedNode.name)}
+                            </strong>
+                            <span className="text-zinc-500 text-[10px] ml-1.5 font-normal hidden sm:inline">
+                                (demais figuras ocultas para navegação limpa)
+                            </span>
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setSelectedNode(null)}
+                            className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white px-2 py-0.5 rounded-lg transition-colors font-bold flex items-center gap-1.5 cursor-pointer border border-zinc-700"
+                            title="Limpar foco e voltar a exibir todas as figuras da galáxia (Atalho: ESC)"
+                        >
+                            <X size={10} /> Ver todas
+                            <kbd className="px-1 py-0.2 bg-zinc-900 border border-zinc-700 text-[9px] rounded font-mono text-zinc-400">ESC</kbd>
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Canvas Principal */}
             <div ref={containerRef} className="w-full h-full relative cursor-grab active:cursor-grabbing">
                 {loading && (
@@ -1703,9 +1834,11 @@ export default function ThematicUniversePage() {
                         </Link>
                         <button
                             onClick={() => setSelectedNode(null)}
-                            className="w-full bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-white font-bold text-[11px] py-2 rounded-xl transition-colors cursor-pointer"
+                            className="w-full bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-white font-bold text-[11px] py-2 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                            title="Fechar gaveta e desmarcar seleção (ESC)"
                         >
-                            Fechar
+                            <span>Fechar</span>
+                            <kbd className="px-1.5 py-0.5 bg-zinc-900 border border-zinc-700 text-[9px] rounded font-mono text-zinc-400">ESC</kbd>
                         </button>
                     </div>
                 </div>

@@ -69,7 +69,7 @@ const COLUMNS = [
     { id: 'Aguardando Pagamento', title: 'Pagamento', icon: DollarSign, color: 'border-yellow-500/40 bg-zinc-950/80', text: 'text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]' },
     { id: 'Fila de Impressão', title: 'Fila de Impressão', icon: Layers, color: 'border-zinc-800 bg-zinc-950/80', text: 'text-zinc-400' },
     { id: 'Imprimindo', title: 'Imprimindo', icon: Factory, color: 'border-orange-500/40 bg-zinc-950/80', text: 'text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]' },
-    { id: 'Lavagem e Cura', title: 'Cura e Limpeza', icon: Clock, color: 'border-blue-500/40 bg-zinc-950/80', text: 'text-blue-500 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' },
+    { id: 'Lavagem e Cura', title: 'Pós-Processamento', icon: Clock, color: 'border-blue-500/40 bg-zinc-950/80', text: 'text-blue-500 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' },
     { id: 'Pintura Secagem', title: 'Pintura', icon: Paintbrush, color: 'border-purple-500/40 bg-zinc-950/80', text: 'text-purple-500 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]' },
     { id: 'Pronto p/ Entrega', title: 'Pronto p/ Entrega', icon: CheckCircle2, color: 'border-emerald-500/40 bg-zinc-950/80', text: 'text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' }
 ];
@@ -684,49 +684,20 @@ export default function KanbanPage() {
             if (!res.ok) throw new Error('Failed');
             const resData = await res.json();
 
-            // Find the task to get customer details
-            const task = prevTask || previousSales.find(s => s.id.toString() === saleId);
-            if (task && prevTask?.status !== toStatus && toStatus !== 'Aguardando Pagamento') {
-                const clientWhatsApp = (task.cliente_contato || '').replace(/\D/g, '');
-                
-                let desc: string | undefined = undefined;
-                if (resData.notificacao_email?.success) {
-                    desc = `📧 E-mail de atualização enviado para ${resData.notificacao_email.email}`;
-                } else if (resData.notificacao_email && !resData.notificacao_email.success && autoNotifyEmail) {
-                    desc = resData.notificacao_email.motivo === 'Cliente sem e-mail cadastrado'
-                        ? 'Cliente sem e-mail cadastrado'
-                        : undefined;
-                }
-
-                if (clientWhatsApp && clientWhatsApp.length >= 10) {
-                    let msg = '';
-                    const primeiroNome = task.cliente_nome ? task.cliente_nome.trim().split(' ')[0] : 'Cliente';
-                    if (toStatus === 'Fila de Impressão') msg = `Olá, ${primeiroNome}! Seu ${task.figuras.nome} acabou de entrar na nossa fila de impressão! 🚀`;
-                    else if (toStatus === 'Imprimindo') msg = `Olá, ${primeiroNome}! Nossas máquinas já começaram a imprimir o seu ${task.figuras.nome}! 🏭`;
-                    else if (toStatus === 'Lavagem e Cura') msg = `A impressão concluiu, ${primeiroNome}! Seu ${task.figuras.nome} agora está no pós processamento. 💧`;
-                    else if (toStatus === 'Pintura Secagem') msg = `Saindo do forno! Seu ${task.figuras.nome} agora está na fase de pintura e acabamento. 🎨`;
-                    else if (toStatus === 'Pronto p/ Entrega') msg = `Obra finalizada, ${primeiroNome}! Seu ${task.figuras.nome} está pronto para entrega/envio! 🎉`;
-                    
-                    toast.success(`Movido para ${toStatus}`, {
-                        description: desc,
-                        action: msg ? {
-                            label: 'Avisar no WhatsApp',
-                            onClick: () => {
-                                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                                const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
-                                const waLink = `${baseUrl}?phone=55${clientWhatsApp}&text=${encodeURIComponent(msg)}`;
-                                window.open(waLink, '_blank');
-                            }
-                        } : undefined,
-                        duration: 8000 // Mantém na tela por 8 segundos
-                    });
-                } else {
-                    toast.success(`Status atualizado para ${toStatus}`, {
-                        description: desc,
-                        duration: 6000
-                    });
-                }
+            // Feedback do status e envio de e-mail (notificação automática por WhatsApp no arraste removida)
+            let desc: string | undefined = undefined;
+            if (resData.notificacao_email?.success) {
+                desc = `📧 E-mail de atualização enviado para ${resData.notificacao_email.email}`;
+            } else if (resData.notificacao_email && !resData.notificacao_email.success && autoNotifyEmail) {
+                desc = resData.notificacao_email.motivo === 'Cliente sem e-mail cadastrado'
+                    ? 'Cliente sem e-mail cadastrado'
+                    : undefined;
             }
+
+            toast.success(`Movido para ${toStatus}`, {
+                description: desc,
+                duration: 4000
+            });
         } catch (err) {
             toast.error('Erro ao atualizar status logístico');
             setSales(previousSales);

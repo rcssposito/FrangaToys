@@ -77,6 +77,40 @@ export async function GET() {
         const sortedStudios = Object.values(studioViewsMap).sort((a, b) => b.totalViews - a.totalViews);
         const topStudio = sortedStudios[0] || null;
 
+        // Buscar principais figuras da série líder
+        let topSerieFigures: any[] = [];
+        if (topSerie) {
+            const { data: sFigs } = await supabase
+                .from('figuras')
+                .select('id, nome, views, imagem_url')
+                .eq('serie_id', topSerie.id)
+                .order('views', { ascending: false })
+                .limit(5);
+            topSerieFigures = (sFigs || []).map((f: any) => ({
+                id: f.id,
+                nome: f.nome,
+                views: f.views || 0,
+                imagem_url: f.imagem_url
+            }));
+        }
+
+        // Buscar principais figuras do estúdio líder
+        let topStudioFigures: any[] = [];
+        if (topStudio) {
+            const { data: stFigs } = await supabase
+                .from('figuras')
+                .select('id, nome, views, imagem_url')
+                .eq('studio_id', topStudio.id)
+                .order('views', { ascending: false })
+                .limit(5);
+            topStudioFigures = (stFigs || []).map((f: any) => ({
+                id: f.id,
+                nome: f.nome,
+                views: f.views || 0,
+                imagem_url: f.imagem_url
+            }));
+        }
+
         // Gerar sugestões estruturadas prontas para uso no front
         const suggestions = {
             topFiguresCombo: topFigures.length > 0 ? {
@@ -99,6 +133,7 @@ export async function GET() {
                 valorSugerido: 10,
                 serieId: topSerie.id,
                 serieNome: topSerie.nome,
+                figuras: topSerieFigures,
                 totalViews: topSerie.totalViews,
                 badge: 'Série Favorita'
             } : null,
@@ -112,6 +147,7 @@ export async function GET() {
                 figurasPermitidas: topStudio.figureIds.slice(0, 20),
                 studioId: topStudio.id,
                 studioNome: topStudio.nome,
+                figuras: topStudioFigures,
                 totalViews: topStudio.totalViews,
                 badge: 'Estúdio Mais Desejado'
             } : null
