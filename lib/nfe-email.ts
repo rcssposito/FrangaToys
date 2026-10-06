@@ -243,11 +243,11 @@ export async function enviarEmailNFe({
             };
         });
 
-        const chaveFormatada = formatarChaveNFe(cleanKey);
+        const chaveFormatada = cleanKey; // 44 dígitos sem espaços para cópia e colagem perfeita na SEFAZ
         const primeiroNome = clienteNome.trim().split(' ')[0];
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://frangatoys.com.br';
         const rastreioUrl = `${siteUrl}/rastreio/${clienteTelefone ? clienteTelefone.replace(/\D/g, '') : ''}`;
-        const sefazConsultaUrl = 'https://www.nfe.fazenda.gov.br/portal/consultaRecibo.aspx';
+        const sefazConsultaUrl = 'https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=resumo&tipoConteudo=7PhJ+gAVw2g=';
 
         // 5. Preparar XML para anexo
         let finalXml = xmlContent;
@@ -337,13 +337,16 @@ export async function enviarEmailNFe({
                             </table>
 
                             <!-- Chave de Acesso em Destaque -->
-                            <div style="margin-top: 16px; pt-3; border-top: 1px solid #27272a; padding-top: 14px;">
+                            <div style="margin-top: 16px; border-top: 1px solid #27272a; padding-top: 14px;">
                                 <p style="font-size: 11px; color: #71717a; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 6px 0;">
-                                    Chave de Acesso da NF-e (44 dígitos):
+                                    Chave de Acesso da NF-e (44 dígitos contínuos para consulta na SEFAZ):
                                 </p>
-                                <div style="background: #09090b; border: 1px solid #3f3f46; border-radius: 8px; padding: 10px 12px; font-family: monospace; font-size: 11px; color: #38bdf8; word-break: break-all; letter-spacing: 1px; text-align: center;">
+                                <div style="background: #09090b; border: 1px solid #3f3f46; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 13px; font-weight: 700; color: #38bdf8; word-break: break-all; letter-spacing: 0.5px; text-align: center; user-select: all;">
                                     ${chaveFormatada}
                                 </div>
+                                <p style="font-size: 10px; color: #71717a; text-align: center; margin: 6px 0 0 0;">
+                                    💡 Copie a sequência numérica acima e cole no campo da SEFAZ para consultar a nota.
+                                </p>
                             </div>
                         </div>
 

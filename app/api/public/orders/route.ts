@@ -129,7 +129,7 @@ export async function GET(req: NextRequest) {
                 const cleanKey = s.chave_nfe.startsWith('NFe') ? s.chave_nfe.substring(3) : s.chave_nfe;
                 
                 if (cleanKey.length === 44) {
-                    linkDanfe = `https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=completa&tipoConteudo=X/5w46wAfac=`;
+                    linkDanfe = `https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=resumo&tipoConteudo=7PhJ+gAVw2g=`;
                 }
             }
 
