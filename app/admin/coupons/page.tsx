@@ -791,6 +791,66 @@ function CouponsContent() {
                                             <p className="text-[11px] text-zinc-400 mt-1 line-clamp-2">
                                                 {suggestions.topFiguresCombo.descricao}
                                             </p>
+
+                                            {/* Top 5 Figuras Favoritas com Miniatura e Acessos */}
+                                            {suggestions.topFiguresCombo.figuras && suggestions.topFiguresCombo.figuras.length > 0 && (
+                                                <div className="mt-3 pt-3 border-t border-zinc-800/60 space-y-2">
+                                                    <div className="flex items-center justify-between text-[10px] font-bold text-amber-400 uppercase tracking-wider">
+                                                        <span className="flex items-center gap-1.5">
+                                                            <Sparkles size={11} className="text-amber-400" />
+                                                            Top 5 Modelos Mais Acessados
+                                                        </span>
+                                                        <span className="text-zinc-500 font-normal lowercase font-mono">
+                                                            ranking
+                                                        </span>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        {suggestions.topFiguresCombo.figuras.map((fig: any, idx: number) => (
+                                                            <div 
+                                                                key={fig.id} 
+                                                                className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-zinc-950/70 border border-zinc-850/90 hover:border-amber-500/40 hover:bg-zinc-800/40 transition-all group/fig"
+                                                            >
+                                                                <div className="flex items-center gap-2 min-w-0">
+                                                                    <span className="text-[10px] font-mono font-black text-amber-500/90 w-4 text-center shrink-0">
+                                                                        #{idx + 1}
+                                                                    </span>
+                                                                    {fig.imagem_url ? (
+                                                                        <img 
+                                                                            src={fig.imagem_url} 
+                                                                            alt={fig.nome} 
+                                                                            className="w-7 h-7 rounded-lg object-cover border border-zinc-800 shrink-0 bg-zinc-900"
+                                                                            onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                                                                        />
+                                                                    ) : (
+                                                                        <div className="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-600 shrink-0">
+                                                                            <Sparkles size={11} />
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="min-w-0">
+                                                                        <a
+                                                                            href={`/figura/${fig.id}`}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="text-xs font-bold text-zinc-200 group-hover/fig:text-amber-400 transition-colors truncate block"
+                                                                            title={`Abrir ${fig.nome} na loja`}
+                                                                        >
+                                                                            {fig.nome}
+                                                                        </a>
+                                                                        {fig.serie && (
+                                                                            <span className="text-[9px] text-zinc-500 truncate block">
+                                                                                {fig.serie}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <span className="text-[10px] font-mono font-bold text-amber-400/90 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                                                                    {fig.views} views
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="pt-3 border-t border-zinc-800/60 flex items-center justify-between gap-2 mt-4">
@@ -799,7 +859,7 @@ function CouponsContent() {
                                             </span>
                                             <button
                                                 onClick={() => applySuggestion(suggestions.topFiguresCombo)}
-                                                className="bg-amber-500 hover:bg-amber-400 text-black px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all active:scale-95"
+                                                className="bg-amber-500 hover:bg-amber-400 text-black px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
                                             >
                                                 Ativar
                                             </button>
@@ -824,6 +884,61 @@ function CouponsContent() {
                                             <p className="text-[11px] text-zinc-400 mt-1 line-clamp-2">
                                                 {suggestions.topSeriesPromo.descricao}
                                             </p>
+
+                                            {/* Modelos em Destaque da Série Líder */}
+                                            {suggestions.topSeriesPromo.figuras && suggestions.topSeriesPromo.figuras.length > 0 && (
+                                                <div className="mt-3 pt-3 border-t border-zinc-800/60 space-y-2">
+                                                    <div className="flex items-center justify-between text-[10px] font-bold text-blue-400 uppercase tracking-wider">
+                                                        <span className="flex items-center gap-1.5">
+                                                            <Film size={11} className="text-blue-400" />
+                                                            Top Modelos da Série
+                                                        </span>
+                                                        <span className="text-zinc-500 font-normal lowercase font-mono">
+                                                            ranking
+                                                        </span>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        {suggestions.topSeriesPromo.figuras.map((fig: any, idx: number) => (
+                                                            <div 
+                                                                key={fig.id} 
+                                                                className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-zinc-950/70 border border-zinc-850/90 hover:border-blue-500/40 hover:bg-zinc-800/40 transition-all group/fig"
+                                                            >
+                                                                <div className="flex items-center gap-2 min-w-0">
+                                                                    <span className="text-[10px] font-mono font-black text-blue-400/90 w-4 text-center shrink-0">
+                                                                        #{idx + 1}
+                                                                    </span>
+                                                                    {fig.imagem_url ? (
+                                                                        <img 
+                                                                            src={fig.imagem_url} 
+                                                                            alt={fig.nome} 
+                                                                            className="w-7 h-7 rounded-lg object-cover border border-zinc-800 shrink-0 bg-zinc-900"
+                                                                            onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                                                                        />
+                                                                    ) : (
+                                                                        <div className="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-600 shrink-0">
+                                                                            <Film size={11} />
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="min-w-0">
+                                                                        <a
+                                                                            href={`/figura/${fig.id}`}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="text-xs font-bold text-zinc-200 group-hover/fig:text-blue-400 transition-colors truncate block"
+                                                                            title={`Abrir ${fig.nome} na loja`}
+                                                                        >
+                                                                            {fig.nome}
+                                                                        </a>
+                                                                    </div>
+                                                                </div>
+                                                                <span className="text-[10px] font-mono font-bold text-blue-400/90 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                                                                    {fig.views} views
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="pt-3 border-t border-zinc-800/60 flex items-center justify-between gap-2 mt-4">
@@ -832,7 +947,7 @@ function CouponsContent() {
                                             </span>
                                             <button
                                                 onClick={() => applySuggestion(suggestions.topSeriesPromo)}
-                                                className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all active:scale-95"
+                                                className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
                                             >
                                                 Ativar
                                             </button>
@@ -857,6 +972,61 @@ function CouponsContent() {
                                             <p className="text-[11px] text-zinc-400 mt-1 line-clamp-2">
                                                 {suggestions.topStudioPromo.descricao}
                                             </p>
+
+                                            {/* Modelos em Destaque do Estúdio Líder */}
+                                            {suggestions.topStudioPromo.figuras && suggestions.topStudioPromo.figuras.length > 0 && (
+                                                <div className="mt-3 pt-3 border-t border-zinc-800/60 space-y-2">
+                                                    <div className="flex items-center justify-between text-[10px] font-bold text-purple-400 uppercase tracking-wider">
+                                                        <span className="flex items-center gap-1.5">
+                                                            <Palette size={11} className="text-purple-400" />
+                                                            Top Modelos do Estúdio
+                                                        </span>
+                                                        <span className="text-zinc-500 font-normal lowercase font-mono">
+                                                            ranking
+                                                        </span>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        {suggestions.topStudioPromo.figuras.map((fig: any, idx: number) => (
+                                                            <div 
+                                                                key={fig.id} 
+                                                                className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-zinc-950/70 border border-zinc-850/90 hover:border-purple-500/40 hover:bg-zinc-800/40 transition-all group/fig"
+                                                            >
+                                                                <div className="flex items-center gap-2 min-w-0">
+                                                                    <span className="text-[10px] font-mono font-black text-purple-400/90 w-4 text-center shrink-0">
+                                                                        #{idx + 1}
+                                                                    </span>
+                                                                    {fig.imagem_url ? (
+                                                                        <img 
+                                                                            src={fig.imagem_url} 
+                                                                            alt={fig.nome} 
+                                                                            className="w-7 h-7 rounded-lg object-cover border border-zinc-800 shrink-0 bg-zinc-900"
+                                                                            onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                                                                        />
+                                                                    ) : (
+                                                                        <div className="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-600 shrink-0">
+                                                                            <Palette size={11} />
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="min-w-0">
+                                                                        <a
+                                                                            href={`/figura/${fig.id}`}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="text-xs font-bold text-zinc-200 group-hover/fig:text-purple-400 transition-colors truncate block"
+                                                                            title={`Abrir ${fig.nome} na loja`}
+                                                                        >
+                                                                            {fig.nome}
+                                                                        </a>
+                                                                    </div>
+                                                                </div>
+                                                                <span className="text-[10px] font-mono font-bold text-purple-400/90 bg-purple-500/10 border border-purple-500/20 px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                                                                    {fig.views} views
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="pt-3 border-t border-zinc-800/60 flex items-center justify-between gap-2 mt-4">
@@ -865,7 +1035,7 @@ function CouponsContent() {
                                             </span>
                                             <button
                                                 onClick={() => applySuggestion(suggestions.topStudioPromo)}
-                                                className="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all active:scale-95"
+                                                className="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
                                             >
                                                 Ativar
                                             </button>

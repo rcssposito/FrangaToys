@@ -39,6 +39,9 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: 'A chave de acesso da NF-e deve conter exatamente 44 dígitos' }, { status: 400 });
             }
 
+            const numStr = cleanKey.slice(25, 34);
+            const num = parseInt(numStr, 10);
+
             // Atualiza todas as vendas deste checkout (ou a venda específica)
             if (finalCheckoutId) {
                 await supabase
@@ -47,8 +50,6 @@ export async function POST(req: NextRequest) {
                     .eq('checkout_id', finalCheckoutId);
 
                 // Registrar ou atualizar registros_nfe
-                const numStr = cleanKey.slice(25, 34);
-                const num = parseInt(numStr, 10);
                 if (!isNaN(num)) {
                     await supabase
                         .from('registros_nfe')
@@ -66,19 +67,73 @@ export async function POST(req: NextRequest) {
                     .eq('id', Number(sale_id));
             }
 
-            // Alerta opcional no Telegram
+            // Disparar e-mail com a NF-e para o cliente
+            let emailSent = false;
             try {
-                const { sendTelegramAlert } = await import('@/lib/telegram');
-                await sendTelegramAlert(
-                    `🧾 *[NF-e REGISTRADA MANUALMENTE]*\n\n` +
-                    `✅ *Chave de Acesso vinculada com sucesso!*\n` +
-                    `🔑 *Chave de Acesso:* \`${cleanKey}\``
-                );
-            } catch (tgErr) {
-                console.error('Error sending Telegram alert for manual NFe:', tgErr);
+                const { enviarEmailNFe } = await import('@/lib/nfe-email');
+                const emailRes = await enviarEmailNFe({
+                    checkoutId: finalCheckoutId,
+                    saleId: sale_id ? Number(sale_id) : undefined,
+                    chaveNfe: cleanKey,
+                    numeroNfe: num
+                });
+                emailSent = emailRes.success;
+            } catch (emailErr) {
+                console.error('Error sending NF-e email for manual key:', emailErr);
             }
 
-            return NextResponse.json({ success: true, message: 'Chave NF-e registrada manualmente', chave: cleanKey });
+            return NextResponse.json({ 
+                success: true, 
+                message: emailSent 
+                    ? 'Chave NF-e registrada e e-mail com XML enviado ao cliente!' 
+                    : 'Chave NF-e registrada manualmente.', 
+                chave: cleanKey,
+                email_sent: emailSent
+            });
+        }
+
+        // Ação explícita de reenvio de e-mail da NF-e
+        if (body.action === 'send_email') {
+            let chaveFound: string | null = null;
+            if (finalCheckoutId) {
+                const { data: v } = await supabase
+                    .from('vendas')
+                    .select('chave_nfe')
+                    .eq('checkout_id', finalCheckoutId)
+                    .not('chave_nfe', 'is', null)
+                    .limit(1)
+                    .maybeSingle();
+                chaveFound = v?.chave_nfe || null;
+            } else if (sale_id) {
+                const { data: v } = await supabase
+                    .from('vendas')
+                    .select('chave_nfe')
+                    .eq('id', Number(sale_id))
+                    .maybeSingle();
+                chaveFound = v?.chave_nfe || null;
+            }
+
+            if (!chaveFound) {
+                return NextResponse.json({ error: 'Nenhuma chave de NF-e encontrada para este pedido' }, { status: 400 });
+            }
+
+            const { enviarEmailNFe } = await import('@/lib/nfe-email');
+            const emailResult = await enviarEmailNFe({
+                checkoutId: finalCheckoutId,
+                saleId: sale_id ? Number(sale_id) : undefined,
+                chaveNfe: chaveFound,
+                force: true
+            });
+
+            if (!emailResult.success) {
+                return NextResponse.json({ error: emailResult.motivo || emailResult.error || 'Falha ao enviar e-mail' }, { status: 400 });
+            }
+
+            return NextResponse.json({ 
+                success: true, 
+                message: `E-mail com XML da NF-e enviado com sucesso para ${emailResult.email}!`, 
+                email: emailResult.email 
+            });
         }
 
         if (!finalCheckoutId) {

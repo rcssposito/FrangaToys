@@ -63,6 +63,7 @@ interface Sale {
     valor_pago_parcial?: number;
     checklist?: ChecklistItem[];
     wip_fotos?: WipPhoto[];
+    chave_nfe?: string | null;
 }
 
 const COLUMNS = [
@@ -218,6 +219,33 @@ export default function KanbanPage() {
     const [cleanupStats, setCleanupStats] = useState<{ eligibleOrdersCount: number; eligiblePhotosCount: number } | null>(null);
     const [isCleaningWip, setIsCleaningWip] = useState(false);
 
+    // NF-e Resend Email State & Handler
+    const [isSendingNfeEmail, setIsSendingNfeEmail] = useState(false);
+    const handleResendNfeEmail = async () => {
+        if (!selectedNfeSale) return;
+        setIsSendingNfeEmail(true);
+        const toastId = toast.loading('Enviando e-mail da NF-e para o cliente...');
+        try {
+            const bodyPayload = selectedNfeSale.checkout_id 
+                ? { checkout_id: selectedNfeSale.checkout_id, action: 'send_email' } 
+                : { sale_id: selectedNfeSale.id, action: 'send_email' };
+
+            const res = await fetch('/api/admin/sales/nfe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bodyPayload)
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Falha ao reenviar e-mail');
+            toast.success(data.message || 'E-mail com XML da NF-e enviado com sucesso!', { id: toastId });
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao enviar e-mail com a NF-e', { id: toastId });
+        } finally {
+            setIsSendingNfeEmail(false);
+        }
+    };
+
     // Expanded image modal state
     const [expandedImage, setExpandedImage] = useState<{
         url: string;
@@ -298,8 +326,8 @@ export default function KanbanPage() {
         setNfeCustomerCidade('');
         setNfeCustomerUf('');
         setNfeClienteId(sale.cliente_id || null);
-        setIsManualNfe(false);
-        setManualNfeKey('');
+        setIsManualNfe(!!sale.chave_nfe);
+        setManualNfeKey(sale.chave_nfe || '');
         setNfeNumber(2);
         setNfeNumberAlreadyAssigned(false);
 
@@ -1764,6 +1792,31 @@ export default function KanbanPage() {
                                         >
                                             <MessageCircle size={13} />
                                             Pedir Dados no WhatsApp
+                                        </button>
+                                    </div>
+                                )}
+
+                                {selectedNfeSale.chave_nfe && (
+                                    <div className="p-3.5 bg-emerald-950/40 border border-emerald-500/30 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            <Receipt className="text-emerald-400 shrink-0" size={18} />
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                                                    NF-e já vinculada a esta venda
+                                                </p>
+                                                <p className="text-xs font-mono text-zinc-300 truncate" title={selectedNfeSale.chave_nfe}>
+                                                    {selectedNfeSale.chave_nfe}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleResendNfeEmail}
+                                            disabled={isSendingNfeEmail}
+                                            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-50 shrink-0 cursor-pointer shadow-sm shadow-emerald-600/30 active:scale-95"
+                                        >
+                                            {isSendingNfeEmail ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />}
+                                            Reenviar E-mail com XML
                                         </button>
                                     </div>
                                 )}

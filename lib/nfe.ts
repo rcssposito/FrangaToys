@@ -537,6 +537,18 @@ export async function emitirNFeUniNFe(checkoutId: string): Promise<{ success: bo
         console.error('Error sending Telegram alert:', tgErr);
       }
 
+      // Disparar e-mail com a NF-e e anexo XML para o cliente
+      try {
+        const { enviarEmailNFe } = await import('./nfe-email');
+        await enviarEmailNFe({
+          checkoutId,
+          chaveNfe: finalKey,
+          numeroNfe
+        });
+      } catch (emailErr) {
+        console.error('[UniNFe] Erro ao enviar e-mail com NF-e:', emailErr);
+      }
+
       return { success: true, message: 'Nota fiscal autorizada com sucesso pela SEFAZ.', chave: finalKey };
     } else {
       if (!errorMessage) {
