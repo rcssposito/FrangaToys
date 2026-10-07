@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FolderGit2, Save, Check, Terminal, RefreshCw, Lock, Copy, Sparkles, UserCheck } from 'lucide-react';
+import Link from 'next/link';
+import { FolderGit2, Save, Check, Terminal, RefreshCw, Lock, Copy, Sparkles, UserCheck, ArrowLeft, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AdminPatreonRepositoryPage() {
@@ -119,19 +120,41 @@ export default function AdminPatreonRepositoryPage() {
             <div className="max-w-6xl mx-auto space-y-8">
                 
                 {/* Header Admin */}
-                <div className="flex items-center justify-between border-b border-zinc-800 pb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-6">
                     <div className="flex items-center gap-4">
+                        <Link 
+                            href="/admin" 
+                            className="p-3 bg-zinc-900 border border-zinc-800 hover:border-purple-500/50 hover:bg-purple-500/10 hover:text-purple-400 rounded-2xl transition-all text-zinc-400 group cursor-pointer"
+                            title="Voltar ao Painel Admin"
+                        >
+                            <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+                        </Link>
                         <div className="p-3.5 bg-gradient-to-br from-purple-500/20 to-indigo-600/20 border border-purple-500/30 rounded-2xl text-purple-400 shadow-lg">
-                            <Lock size={28} />
+                            <FolderGit2 size={26} />
                         </div>
                         <div>
                             <span className="bg-purple-500/20 border border-purple-500/30 text-purple-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full">
-                                Painel do Criador & Gestor de Downloads
+                                Franga Studio • Criador & Releases
                             </span>
                             <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white mt-1">
-                                Gestão de Repositórios & Terceirizados
+                                Franga Studio
                             </h1>
+                            <p className="text-xs text-zinc-400 mt-0.5">
+                                Gestão de Repositórios STL, Lançamentos Mensais e Acessos de Terceirizados
+                            </p>
                         </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <Link
+                            href="/release"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-4 py-2.5 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 hover:border-purple-500/40 text-purple-300 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all shadow-sm group cursor-pointer"
+                        >
+                            <span>Abrir Página do Membro (/release)</span>
+                            <ExternalLink size={14} className="group-hover:translate-x-0.5 transition-transform text-purple-400" />
+                        </Link>
                     </div>
                 </div>
 

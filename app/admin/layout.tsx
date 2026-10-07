@@ -19,6 +19,8 @@ const routeRoles: Record<string, string[]> = {
     '/admin/customers': ['admin', 'sales', 'finance'],
     '/admin/commissions': ['admin', 'finance', 'sales'],
     '/admin/studios': ['admin', 'pricing'],
+    '/admin/franga-studio': ['admin', 'pricing'],
+    '/admin/patreon/repository': ['admin', 'pricing'],
     '/admin/users': ['admin'],
     '/admin/coupons': ['admin', 'sales', 'pricing', 'orcamento'],
     '/admin/settings': ['admin']

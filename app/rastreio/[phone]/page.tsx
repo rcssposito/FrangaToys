@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw, ShoppingBag, Copy, QrCode, Check, Camera, X, Eye, FileText, CheckCircle2, AlertCircle, Edit3, MapPin, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw, ShoppingBag, Copy, QrCode, Check, Camera, X, Eye, FileText, CheckCircle2, AlertCircle, Edit3, MapPin, ShieldCheck, Heart, Coffee, Sparkles } from 'lucide-react';
 import { OrderTracker } from '@/components/OrderTracker';
 import Image from 'next/image';
 import imageKitLoader from '@/lib/image-loader';
@@ -224,6 +224,171 @@ function NfeWidget({ order }: { order: any }) {
                     Visualizar DANFE (PDF)
                 </a>
             )}
+        </div>
+    );
+}
+
+function ArtistTipWidget({ order }: { order: any }) {
+    const [tipAmount, setTipAmount] = useState<number>(10);
+    const [customAmount, setCustomAmount] = useState<string>('');
+    const [isCustom, setIsCustom] = useState(false);
+    const [copied, setCopied] = useState(false);
+
+    const activeAmount = isCustom ? (parseFloat(customAmount.replace(',', '.')) || 0) : tipAmount;
+    const checkoutId = order.checkout_id || order.id;
+
+    const tipPayload = useMemo(() => {
+        if (activeAmount <= 0) return '';
+        // Gera chave Pix com txid dedicado de gorjeta sem alterar o pedido
+        return generatePixPayload(
+            "contato@frangatoys.com.br",
+            "Bianca Machado Mastrocollo",
+            activeAmount,
+            `TIP${checkoutId}`.slice(0, 25)
+        );
+    }, [activeAmount, checkoutId]);
+
+    const copyTipPix = () => {
+        if (!tipPayload) return;
+        navigator.clipboard.writeText(tipPayload);
+        setCopied(true);
+        toast.success(`Chave Pix de R$ ${activeAmount.toFixed(2)} copiada! A equipe agradece imensamente o carinho! ❤️`);
+        setTimeout(() => setCopied(false), 3000);
+    };
+
+    const PRESETS = [
+        { label: 'R$ 5', val: 5, emoji: '☕', desc: 'Cafezinho' },
+        { label: 'R$ 10', val: 10, emoji: '🎨', desc: 'Incentivo' },
+        { label: 'R$ 20', val: 20, emoji: '🍕', desc: 'Lanche pro Artista' },
+        { label: 'R$ 50', val: 50, emoji: '⭐', desc: 'Apoio Lendário' },
+    ];
+
+    return (
+        <div className="mt-4 p-5 rounded-3xl bg-gradient-to-br from-amber-950/20 via-zinc-950/70 to-zinc-950/90 border border-amber-500/30 shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/10 transition-all" />
+            
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-800/80">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+                        <Heart size={16} className="text-amber-400 fill-amber-400/20" />
+                    </div>
+                    <div>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-2">
+                            Gorjeta para os Artistas do Ateliê
+                            <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold">
+                                Voluntário
+                            </span>
+                        </h4>
+                        <p className="text-[10px] text-zinc-400 font-medium">
+                            Gostou do colecionável? Envie um café ou incentivo extra para quem modelou e pintou sua peça!
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="pt-4 space-y-4">
+                {/* Presets */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    {PRESETS.map(p => (
+                        <button
+                            key={p.val}
+                            type="button"
+                            onClick={() => {
+                                setIsCustom(false);
+                                setTipAmount(p.val);
+                            }}
+                            className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer ${
+                                !isCustom && tipAmount === p.val
+                                    ? 'bg-amber-500/20 border-amber-500 text-white shadow-md shadow-amber-500/10 scale-[1.02]'
+                                    : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white'
+                            }`}
+                        >
+                            <div className="text-sm">{p.emoji}</div>
+                            <div className="text-xs font-black">{p.label}</div>
+                            <div className="text-[9px] text-zinc-500 truncate">{p.desc}</div>
+                        </button>
+                    ))}
+
+                    {/* Botão Outro Valor */}
+                    <button
+                        type="button"
+                        onClick={() => setIsCustom(true)}
+                        className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer col-span-2 sm:col-span-1 ${
+                            isCustom
+                                ? 'bg-amber-500/20 border-amber-500 text-white shadow-md shadow-amber-500/10 scale-[1.02]'
+                                : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white'
+                        }`}
+                    >
+                        <div className="text-sm">✨</div>
+                        <div className="text-xs font-black">Outro</div>
+                        <div className="text-[9px] text-zinc-500">Personalizado</div>
+                    </button>
+                </div>
+
+                {/* Input personalizado se ativo */}
+                {isCustom && (
+                    <div className="flex items-center gap-2 bg-zinc-900/80 border border-amber-500/40 rounded-2xl p-2 px-3">
+                        <span className="text-xs font-bold text-amber-400">R$</span>
+                        <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={customAmount}
+                            onChange={(e) => setCustomAmount(e.target.value)}
+                            placeholder="Digite o valor (ex: 25)"
+                            className="bg-transparent border-none text-xs font-bold text-white outline-none w-full placeholder:text-zinc-600"
+                            autoFocus
+                        />
+                    </div>
+                )}
+
+                {/* Área de Pagamento da Gorjeta */}
+                {activeAmount > 0 && tipPayload && (
+                    <div className="bg-zinc-950/80 border border-zinc-800/90 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
+                        <div className="bg-white p-2.5 rounded-xl shrink-0 shadow-md">
+                            <img 
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(tipPayload)}`} 
+                                alt="PIX Gorjeta QR Code" 
+                                className="w-24 h-24"
+                            />
+                        </div>
+
+                        <div className="space-y-2.5 w-full min-w-0">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-zinc-300">
+                                <span className="flex items-center gap-1.5 text-amber-400">
+                                    <Sparkles size={13} />
+                                    Gorjeta de R$ {activeAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                                <span className="text-[9px] text-zinc-500 uppercase font-mono">
+                                    PIX Direto Ateliê
+                                </span>
+                            </div>
+
+                            <div className="w-full bg-zinc-900 border border-zinc-850 p-2.5 rounded-xl overflow-hidden text-ellipsis whitespace-nowrap text-[9px] font-mono text-zinc-500">
+                                {tipPayload}
+                            </div>
+
+                            <button 
+                                type="button"
+                                onClick={copyTipPix}
+                                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black text-xs font-black py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-wider shadow-lg shadow-amber-500/20 cursor-pointer"
+                            >
+                                {copied ? (
+                                    <>
+                                        <Check size={14} strokeWidth={3} />
+                                        Chave Pix Copiada!
+                                    </>
+                                ) : (
+                                    <>
+                                        <Copy size={14} />
+                                        Copiar Pix da Gorjeta (R$ {activeAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
@@ -876,6 +1041,11 @@ export default function CustomerDashboard() {
                                        order.status === 'Aguardando Pagamento') && 
                                       order.status !== 'Cancelada') && (
                                         <PixPaymentWidget order={order} />
+                                    )}
+
+                                    {/* Gorjeta para os Artistas (Apoio Voluntário aos Pintores e Modelistas) */}
+                                    {order.status !== 'Cancelada' && (
+                                        <ArtistTipWidget order={order} />
                                     )}
                                 </div>
                             </div>

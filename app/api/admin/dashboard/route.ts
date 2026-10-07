@@ -218,12 +218,35 @@ export async function GET(req: Request) {
             outstanding: calculateTrend(currentKPIs.outstanding, previousKPIs.outstanding)
         };
 
-        // --- Financial Ratios ---
+        // --- Financial Ratios (Custos Reais de Estúdios) ---
         const activeStudios = (studios || []).filter(s => s.ativo === true);
         const monthlyFixedCost = activeStudios.reduce((acc, s) => acc + (s.custo_mensal || 0), 0);
         let costMultiplier = 1;
         if (dayDiff > 300) costMultiplier = 12;
-        const totalFixedCost = monthlyFixedCost * costMultiplier;
+
+        // Buscar custos reais registrados em studios_mensalidades para o período selecionado
+        const startYear = currentStart.getFullYear();
+        const endYear = currentEnd.getFullYear();
+        const { data: mensalidadesData } = await supabase
+            .from('studios_mensalidades')
+            .select('ano, mes, valor_pago, ativo')
+            .gte('ano', startYear)
+            .lte('ano', endYear)
+            .eq('ativo', true);
+
+        let totalFixedCost = monthlyFixedCost * costMultiplier;
+
+        if (mensalidadesData && mensalidadesData.length > 0) {
+            // Filtrar meses que se encaixam no período [currentStart, currentEnd]
+            const periodExpenses = mensalidadesData.filter(m => {
+                const itemDate = new Date(m.ano, m.mes - 1, 15);
+                return itemDate >= currentStart && itemDate <= currentEnd;
+            });
+
+            if (periodExpenses.length > 0) {
+                totalFixedCost = periodExpenses.reduce((acc, m) => acc + (Number(m.valor_pago) || 0), 0);
+            }
+        }
 
         const profitMargin = currentKPIs.revenue > 0
             ? (currentKPIs.profit / currentKPIs.revenue) * 100

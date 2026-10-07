@@ -24,7 +24,8 @@ import {
     ShieldCheck,
     TrendingUp,
     Flame,
-    Tag
+    Tag,
+    FolderGit2
 } from 'lucide-react';
 import ThemeToggle from '@/components/common/ThemeToggle';
 
@@ -79,6 +80,12 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             name: 'Estúdios',
             href: '/admin/studios',
             icon: Activity,
+            roles: ['admin', 'pricing']
+        },
+        {
+            name: 'Franga Studio',
+            href: '/admin/franga-studio',
+            icon: FolderGit2,
             roles: ['admin', 'pricing']
         },
         {
@@ -147,7 +154,8 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
                         const canView = item.roles.some(r => hasRole(r));
                         if (!canView) return null;
 
-                        const isActive = pathname === item.href;
+                        const isActive = pathname === item.href || 
+                            (item.name === 'Franga Studio' && (pathname.startsWith('/admin/patreon/repository') || pathname.startsWith('/admin/franga-studio')));
 
                         return (
                             <Link

@@ -126,9 +126,9 @@ const FigureCard = ({
 
             {/* Tabela de Preços Renovada (Visual Dashboard) */}
             <div className="grid grid-cols-2 gap-2 bg-zinc-950/40 rounded-xl p-3 border border-zinc-900/60 shadow-inner">
-                {/* Estilizado */}
+                {/* Sem Pintura */}
                 <div className="flex flex-col items-center justify-between text-center py-0.5 border-r border-zinc-900/60 pr-2">
-                    <span className="text-[9px] font-black tracking-widest text-zinc-500 uppercase">Estilizado</span>
+                    <span className="text-[9px] font-black tracking-widest text-zinc-500 uppercase">Sem Pintura</span>
                     <span className="text-xs font-black text-emerald-400 mt-1">R$ {prices.basic}</span>
                     <span className="text-[9px] font-bold text-zinc-500/70">Cartão R$ {prices.basicCredito}</span>
                 </div>

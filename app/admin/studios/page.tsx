@@ -30,12 +30,15 @@ import {
     Target, 
     ShieldCheck, 
     AlertTriangle,
-    Layers
+    Layers,
+    Calendar,
+    FolderGit2
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import { useRouter, useSearchParams } from 'next/navigation';
 import StudiosBI from '@/components/Admin/StudiosBI';
+import StudiosMonthlyControl from '@/components/Admin/StudiosMonthlyControl';
 
 import { clsx } from 'clsx';
 
@@ -82,10 +85,13 @@ function StudiosContent() {
     const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
     const searchParams = useSearchParams();
-    const initialTab = searchParams.get('tab') === 'bi' || searchParams.get('tab') === 'analytics' ? 'bi' : 'acervo';
-    const [activeTab, setActiveTab] = useState<'acervo' | 'bi'>(initialTab);
+    const tabParam = searchParams.get('tab');
+    const initialTab: 'acervo' | 'bi' | 'mensalidades' = 
+        tabParam === 'bi' || tabParam === 'analytics' ? 'bi' :
+        tabParam === 'mensalidades' || tabParam === 'gastos' ? 'mensalidades' : 'acervo';
+    const [activeTab, setActiveTab] = useState<'acervo' | 'bi' | 'mensalidades'>(initialTab);
 
-    const changeTab = (tab: 'acervo' | 'bi') => {
+    const changeTab = (tab: 'acervo' | 'bi' | 'mensalidades') => {
         setActiveTab(tab);
         const params = new URLSearchParams(window.location.search);
         params.set('tab', tab);
@@ -274,10 +280,33 @@ function StudiosContent() {
                             <TrendingUp size={14} />
                             Painel de BI & Viabilidade
                         </button>
+
+                        <button
+                            onClick={() => changeTab('mensalidades')}
+                            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                                activeTab === 'mensalidades'
+                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                                    : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                        >
+                            <Calendar size={14} />
+                            Controle Mensal & Gastos
+                        </button>
+
+                        <Link
+                            href="/admin/franga-studio"
+                            className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/20 cursor-pointer"
+                            title="Gerenciar lançamentos e repositórios do Franga Studio"
+                        >
+                            <FolderGit2 size={14} />
+                            Franga Studio
+                        </Link>
                     </div>
                 </div>
 
-                {activeTab === 'bi' ? (
+                {activeTab === 'mensalidades' ? (
+                    <StudiosMonthlyControl />
+                ) : activeTab === 'bi' ? (
                     <StudiosBI />
                 ) : (
                     <>

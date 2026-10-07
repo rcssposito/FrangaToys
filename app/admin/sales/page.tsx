@@ -31,7 +31,15 @@ import {
     ExternalLink,
     MessageCircle,
     CheckCircle2,
-    RotateCw
+    RotateCw,
+    BarChart3,
+    Award,
+    Archive,
+    Building2,
+    Layers,
+    Trophy,
+    Eye,
+    Clock
 } from 'lucide-react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { usePermission } from '@/hooks/usePermission';
@@ -114,7 +122,53 @@ function SalesContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const customerFilter = searchParams.get('cliente_id');
-    const [viewTab, setViewTab] = useState<'vendas' | 'comissoes'>(searchParams.get('tab') === 'comissoes' ? 'comissoes' : 'vendas');
+    const tabParam = searchParams.get('tab');
+    const [viewTab, setViewTab] = useState<'vendas' | 'comissoes' | 'kpis'>(
+        tabParam === 'kpis' ? 'kpis' : (tabParam === 'comissoes' ? 'comissoes' : 'vendas')
+    );
+
+    // KPIs & Matriz de Decisão States (3ª Aba)
+    const [kpiData, setKpiData] = useState<any>(null);
+    const [loadingKpis, setLoadingKpis] = useState(false);
+    const [kpiSegment, setKpiSegment] = useState<'series' | 'studios' | 'categorias' | 'figuras'>('series');
+    const [kpiTimeMode, setKpiTimeMode] = useState<'mensal' | 'anual'>('mensal');
+    const [kpiSelectedMonth, setKpiSelectedMonth] = useState<string>(new Date().getMonth().toString());
+    const [kpiSelectedYear, setKpiSelectedYear] = useState<string>(new Date().getFullYear().toString());
+    const [kpiFilterStatus, setKpiFilterStatus] = useState<'todos' | 'manter' | 'observar' | 'descartar'>('todos');
+    const [kpiSearch, setKpiSearch] = useState('');
+    const [kpiSort, setKpiSort] = useState<'faturamento' | 'vendas' | 'share' | 'modelos'>('faturamento');
+
+    const fetchKpis = async (overrideMode?: 'mensal' | 'anual', overrideMonth?: string, overrideYear?: string) => {
+        setLoadingKpis(true);
+        try {
+            const mode = overrideMode ?? kpiTimeMode;
+            const month = overrideMonth ?? kpiSelectedMonth;
+            const year = overrideYear ?? kpiSelectedYear;
+
+            const params = new URLSearchParams();
+            params.set('range', mode);
+            params.set('year', year);
+            if (mode === 'mensal') {
+                params.set('month', month);
+            }
+
+            const res = await fetch(`/api/admin/sales/kpis?${params.toString()}`);
+            if (!res.ok) throw new Error('Falha ao obter KPIs');
+            const data = await res.json();
+            setKpiData(data);
+        } catch (err) {
+            console.error(err);
+            toast.error('Erro ao processar inteligência de portfólio');
+        } finally {
+            setLoadingKpis(false);
+        }
+    };
+
+    useEffect(() => {
+        if (viewTab === 'kpis') {
+            fetchKpis();
+        }
+    }, [viewTab]);
 
     // Comissões States
     const [comissaoMonth, setComissaoMonth] = useState<string>(new Date().getMonth().toString());
@@ -221,6 +275,48 @@ function SalesContent() {
             return sum + (item.totalVendas || 0);
         }, 0);
     }, [commissionsBySeller]);
+
+    const filteredKpiItems = useMemo(() => {
+        if (!kpiData) return [];
+        let list: any[] = [];
+        if (kpiSegment === 'series') list = kpiData.series || [];
+        else if (kpiSegment === 'studios') list = kpiData.studios || [];
+        else if (kpiSegment === 'categorias') list = kpiData.categorias || [];
+        else if (kpiSegment === 'figuras') list = kpiData.figurasVendidas || kpiData.topFiguras || [];
+
+        // Busca textual
+        if (kpiSearch.trim()) {
+            const q = kpiSearch.toLowerCase();
+            list = list.filter((item: any) => 
+                (item.nome || '').toLowerCase().includes(q) ||
+                (item.serieNome || '').toLowerCase().includes(q) ||
+                (item.studioNome || '').toLowerCase().includes(q) ||
+                (item.extra?.categoriaNome || '').toLowerCase().includes(q)
+            );
+        }
+
+        // Filtro por status de decisão (para series, studios, categorias)
+        if ((kpiSegment === 'series' || kpiSegment === 'studios' || kpiSegment === 'categorias') && kpiFilterStatus !== 'todos') {
+            list = list.filter((item: any) => item.statusDecisao === kpiFilterStatus);
+        }
+
+        // Ordenação
+        if (kpiSegment === 'series' || kpiSegment === 'studios' || kpiSegment === 'categorias') {
+            list = [...list].sort((a: any, b: any) => {
+                if (kpiSort === 'vendas') return (b.unidadesVendidas || 0) - (a.unidadesVendidas || 0);
+                if (kpiSort === 'share') return (b.shareReceita || 0) - (a.shareReceita || 0);
+                if (kpiSort === 'modelos') return (b.totalModelos || 0) - (a.totalModelos || 0);
+                return (b.faturamentoTotal || 0) - (a.faturamentoTotal || 0);
+            });
+        } else if (kpiSegment === 'figuras') {
+            list = [...list].sort((a: any, b: any) => {
+                if (kpiSort === 'vendas') return (b.unidadesVendidas || 0) - (a.unidadesVendidas || 0);
+                return (b.faturamentoTotal || 0) - (a.faturamentoTotal || 0);
+            });
+        }
+
+        return list;
+    }, [kpiData, kpiSegment, kpiSearch, kpiFilterStatus, kpiSort]);
 
     const handleSendWhatsAppComissao = (sellerData: any) => {
         const foundUser = vendedores.find(v => (v.email || '').toLowerCase() === (sellerData.email || '').toLowerCase());
@@ -571,7 +667,7 @@ function SalesContent() {
                         </Link>
                         <div>
                             <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white flex items-center gap-3">
-                                {viewTab === 'comissoes' ? 'Acertos & Comissões' : (customerFilter ? 'Vendas do Cliente' : 'Vendas & Livro Caixa')}
+                                {viewTab === 'kpis' ? 'Inteligência de Portfólio & Decisão Executiva' : viewTab === 'comissoes' ? 'Acertos & Comissões' : (customerFilter ? 'Vendas do Cliente' : 'Vendas & Livro Caixa')}
                                 {customerFilter && (
                                     <button 
                                         onClick={() => router.push('/admin/sales')}
@@ -582,13 +678,13 @@ function SalesContent() {
                                 )}
                             </h1>
                             <p className="text-zinc-500 text-sm font-medium mt-1 uppercase tracking-widest text-[10px]">
-                                {viewTab === 'comissoes' ? 'Fechamentos mensais e repasses para vendedores e pintores' : 'Livro Caixa Tático de Receitas e Pedidos.'}
+                                {viewTab === 'kpis' ? 'Matriz financeira de Top Sellers vs Descarte de Catálogo (Séries, Estúdios e Categorias)' : viewTab === 'comissoes' ? 'Fechamentos mensais e repasses para vendedores e pintores' : 'Livro Caixa Tático de Receitas e Pedidos.'}
                             </p>
                         </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-between xl:justify-end">
-                        {/* Tab Switcher: Vendas vs Comissões */}
+                        {/* Tab Switcher: Vendas vs Comissões vs KPIs */}
                         <div className="flex items-center gap-1.5 bg-zinc-900/80 p-1.5 rounded-2xl border border-zinc-800">
                             <button
                                 onClick={() => {
@@ -621,6 +717,22 @@ function SalesContent() {
                             >
                                 <DollarSign size={15} />
                                 Acertos & Comissões
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setViewTab('kpis');
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.set('tab', 'kpis');
+                                    window.history.replaceState({}, '', url.toString());
+                                }}
+                                className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                    viewTab === 'kpis'
+                                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-black font-black shadow-md shadow-amber-500/30'
+                                        : 'text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                <TrendingUp size={15} />
+                                Inteligência & Portfólio (KPIs)
                             </button>
                         </div>
 
@@ -1032,6 +1144,622 @@ function SalesContent() {
                                         </div>
                                     );
                                 })}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ABA 3: INTELIGÊNCIA & PORTFÓLIO (KPIS) - DECISÃO EXECUTIVA (MANTER VS DESCARTAR) */}
+                {viewTab === 'kpis' && (
+                    <div className="space-y-6 animate-in fade-in duration-300">
+                        {/* Banner Superior com Resumo Executivo */}
+                        <div className="bg-zinc-950/80 border border-zinc-800/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6 relative z-10">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center gap-1.5">
+                                            <Sparkles size={11} /> Matriz de Decisão Executiva
+                                        </span>
+                                        <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                                            Pareto & Inteligência de Catálogo
+                                        </span>
+                                    </div>
+                                    <h2 className="text-2xl font-black text-white mt-1.5 flex items-center gap-2.5">
+                                        <BarChart3 className="text-amber-400" size={26} />
+                                        Top Sellers, Retenção & Decisão de Catálogo
+                                    </h2>
+                                    <p className="text-xs text-zinc-400 mt-1 max-w-xl leading-relaxed">
+                                        Classificação financeira e giro de vendas. Saiba quem <strong className="text-emerald-400 font-bold">MANTER & EXPANDIR</strong> vs <strong className="text-rose-400 font-bold">DESCARTAR / CANCELAR ASSINATURA</strong>.
+                                    </p>
+                                </div>
+
+                                {/* Controles do Filtro de Tempo (Visão Mensal ou Visão do Ano) */}
+                                <div className="flex flex-wrap items-center gap-2.5 bg-zinc-900/90 border border-zinc-800 p-2 rounded-2xl shrink-0">
+                                    <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-xl border border-zinc-800/80">
+                                        <button
+                                            onClick={() => {
+                                                setKpiTimeMode('mensal');
+                                                fetchKpis('mensal', kpiSelectedMonth, kpiSelectedYear);
+                                            }}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
+                                                kpiTimeMode === 'mensal'
+                                                    ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
+                                                    : 'text-zinc-400 hover:text-white'
+                                            }`}
+                                        >
+                                            <Calendar size={13} />
+                                            Mensal
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setKpiTimeMode('anual');
+                                                fetchKpis('anual', undefined, kpiSelectedYear);
+                                            }}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
+                                                kpiTimeMode === 'anual'
+                                                    ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
+                                                    : 'text-zinc-400 hover:text-white'
+                                            }`}
+                                        >
+                                            <Clock size={13} />
+                                            Do Ano
+                                        </button>
+                                    </div>
+
+                                    {kpiTimeMode === 'mensal' && (
+                                        <select
+                                            value={kpiSelectedMonth}
+                                            onChange={(e) => {
+                                                setKpiSelectedMonth(e.target.value);
+                                                fetchKpis('mensal', e.target.value, kpiSelectedYear);
+                                            }}
+                                            className="bg-zinc-950 border border-zinc-800 text-white text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-amber-500 cursor-pointer"
+                                        >
+                                            {months.map(m => (
+                                                <option key={m.value} value={m.value}>{m.label}</option>
+                                            ))}
+                                        </select>
+                                    )}
+
+                                    <select
+                                        value={kpiSelectedYear}
+                                        onChange={(e) => {
+                                            setKpiSelectedYear(e.target.value);
+                                            fetchKpis(kpiTimeMode, kpiSelectedMonth, e.target.value);
+                                        }}
+                                        className="bg-zinc-950 border border-zinc-800 text-white text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-amber-500 cursor-pointer"
+                                    >
+                                        <option value="2024">2024</option>
+                                        <option value="2025">2025</option>
+                                        <option value="2026">2026</option>
+                                        <option value="2027">2027</option>
+                                    </select>
+
+                                    <button
+                                        onClick={() => fetchKpis()}
+                                        disabled={loadingKpis}
+                                        className="p-2 bg-zinc-950 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                                        title="Atualizar Indicadores"
+                                    >
+                                        <RotateCw size={14} className={loadingKpis ? 'animate-spin text-amber-400' : ''} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* KPI Cards Superiores */}
+                            {loadingKpis ? (
+                                <div className="p-16 flex justify-center items-center gap-3 text-zinc-500 text-xs font-bold uppercase tracking-widest">
+                                    <Loader2 className="animate-spin text-amber-400 w-8 h-8" />
+                                    Processando inteligência de vendas e catálogo...
+                                </div>
+                            ) : kpiData?.summary && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
+                                    {/* Card 1: Faturamento */}
+                                    <div className="p-5 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl relative overflow-hidden group hover:border-amber-500/30 transition-all">
+                                        <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1">
+                                            Faturamento ({kpiData.summary.periodLabel || 'Período'})
+                                        </span>
+                                        <div className="text-2xl font-black text-amber-400">
+                                            R$ {(kpiData.summary.totalFaturamento || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </div>
+                                        <div className="text-[11px] text-zinc-400 mt-1.5 flex items-center gap-1.5 font-bold">
+                                            <span>Lucro Real:</span>
+                                            <span className="text-emerald-400 font-black">
+                                                R$ {(kpiData.summary.totalLucro || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            </span>
+                                            <span className="text-zinc-600 font-normal">
+                                                ({kpiData.summary.margemMediaPct.toFixed(1)}% margem)
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Card 2: Volume & Ticket */}
+                                    <div className="p-5 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl relative overflow-hidden group hover:border-cyan-500/30 transition-all">
+                                        <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1">
+                                            Peças Vendidas & Ticket Médio
+                                        </span>
+                                        <div className="text-2xl font-black text-cyan-400">
+                                            {kpiData.summary.totalUnidades || 0} unidades
+                                        </div>
+                                        <div className="text-[11px] text-zinc-400 mt-1.5 flex items-center gap-1.5 font-bold">
+                                            <span>Ticket Médio Geral:</span>
+                                            <span className="text-white font-black">
+                                                R$ {(kpiData.summary.ticketMedio || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Card 3: Top Drivers */}
+                                    <div className="p-5 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl relative overflow-hidden group hover:border-emerald-500/30 transition-all">
+                                        <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1 flex items-center gap-1.5">
+                                            <Award size={12} className="text-emerald-400" /> Franquia Líder (Receita)
+                                        </span>
+                                        <div className="text-base font-black text-white truncate" title={kpiData.summary.topSerie?.nome}>
+                                            {kpiData.summary.topSerie?.nome || 'Sem vendas'}
+                                        </div>
+                                        <div className="text-[11px] text-emerald-400 font-bold mt-1 truncate">
+                                            {kpiData.summary.topStudio?.nome ? `Estúdio Líder: ${kpiData.summary.topStudio.nome}` : ''}
+                                        </div>
+                                    </div>
+
+                                    {/* Card 4: Matriz de Estúdios (Manter vs Descartar) */}
+                                    <div className="p-5 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl relative overflow-hidden group hover:border-rose-500/30 transition-all">
+                                        <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1 flex items-center gap-1.5">
+                                            <Building2 size={12} className="text-zinc-400" /> Decisão de Estúdios
+                                        </span>
+                                        <div className="flex items-center gap-3 mt-1">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
+                                                <span className="text-xs font-black text-white">
+                                                    {kpiData.summary.contadores?.studios?.manter || 0} Manter
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                                                <span className="text-xs font-black text-zinc-300">
+                                                    {kpiData.summary.contadores?.studios?.observar || 0} Obs.
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                                                <span className="text-xs font-black text-rose-400">
+                                                    {kpiData.summary.contadores?.studios?.descartar || 0} Descarte
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="text-[10px] text-zinc-500 font-medium mt-2">
+                                            {kpiData.summary.contadores?.studios?.descartar || 0} assinaturas com mensalidade e zero vendas
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Barra de Sub-abas (Segmentos) + Filtros + Busca */}
+                        <div className="bg-zinc-950/80 border border-zinc-800/80 rounded-3xl p-5 space-y-4 shadow-xl">
+                            {/* Seletor de Segmento */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/70 pb-4">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <button
+                                        onClick={() => setKpiSegment('series')}
+                                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                            kpiSegment === 'series'
+                                                ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
+                                                : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                                        }`}
+                                    >
+                                        <Layers size={14} />
+                                        Séries que Venderam ({kpiData?.series?.length || 0})
+                                    </button>
+                                    <button
+                                        onClick={() => setKpiSegment('studios')}
+                                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                            kpiSegment === 'studios'
+                                                ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
+                                                : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                                        }`}
+                                    >
+                                        <Building2 size={14} />
+                                        Estúdios Ativos & Custom ({kpiData?.studios?.length || 0})
+                                    </button>
+                                    <button
+                                        onClick={() => setKpiSegment('categorias')}
+                                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                            kpiSegment === 'categorias'
+                                                ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
+                                                : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                                        }`}
+                                    >
+                                        <Package size={14} />
+                                        Categorias ({kpiData?.categorias?.length || 0})
+                                    </button>
+                                    <button
+                                        onClick={() => setKpiSegment('figuras')}
+                                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                            kpiSegment === 'figuras'
+                                                ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20'
+                                                : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                                        }`}
+                                    >
+                                        <Trophy size={14} />
+                                        Figuras que Venderam ({kpiData?.figurasVendidas?.length || 0})
+                                    </button>
+                                </div>
+
+                                {/* Ordenação */}
+                                <div className="flex items-center gap-2 text-xs">
+                                    <span className="text-zinc-500 font-bold uppercase tracking-wider text-[10px]">Ordenar por:</span>
+                                    <select
+                                        value={kpiSort}
+                                        onChange={(e: any) => setKpiSort(e.target.value)}
+                                        className="bg-zinc-900 border border-zinc-800 text-zinc-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:border-amber-500 cursor-pointer"
+                                    >
+                                        <option value="faturamento">Maior Faturamento (R$)</option>
+                                        <option value="vendas">Mais Peças Vendidas</option>
+                                        {kpiSegment !== 'figuras' && (
+                                            <>
+                                                <option value="share">Maior Participação (%)</option>
+                                                <option value="modelos">Mais Modelos no Acervo</option>
+                                            </>
+                                        )}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Linha de Busca & Filtros de Decisão */}
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+                                {/* Busca */}
+                                <div className="relative flex-1 max-w-md">
+                                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar por nome, estúdio ou categoria..."
+                                        value={kpiSearch}
+                                        onChange={(e) => setKpiSearch(e.target.value)}
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-zinc-500 outline-none focus:border-amber-500/50"
+                                    />
+                                    {kpiSearch && (
+                                        <button
+                                            onClick={() => setKpiSearch('')}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
+                                        >
+                                            <X size={13} />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Filtro por Decisão / Status Conforme o Segmento */}
+                                {kpiSegment === 'studios' && (
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-zinc-500 text-[10px] font-black uppercase tracking-wider mr-1">
+                                            Decisão:
+                                        </span>
+                                        <button
+                                            onClick={() => setKpiFilterStatus('todos')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                                kpiFilterStatus === 'todos'
+                                                    ? 'bg-zinc-200 text-black'
+                                                    : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                                            }`}
+                                        >
+                                            Todos
+                                        </button>
+                                        <button
+                                            onClick={() => setKpiFilterStatus('manter')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                                kpiFilterStatus === 'manter'
+                                                    ? 'bg-emerald-500 text-black font-black shadow-sm shadow-emerald-500/20'
+                                                    : 'bg-zinc-900 text-emerald-400/80 hover:text-emerald-400 border border-zinc-800'
+                                            }`}
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                            Manter (ou sem custo)
+                                        </button>
+                                        <button
+                                            onClick={() => setKpiFilterStatus('observar')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                                kpiFilterStatus === 'observar'
+                                                    ? 'bg-amber-500 text-black font-black shadow-sm shadow-amber-500/20'
+                                                    : 'bg-zinc-900 text-amber-400/80 hover:text-amber-400 border border-zinc-800'
+                                            }`}
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                            Em Observação
+                                        </button>
+                                        <button
+                                            onClick={() => setKpiFilterStatus('descartar')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                                kpiFilterStatus === 'descartar'
+                                                    ? 'bg-rose-500 text-white font-black shadow-sm shadow-rose-500/20'
+                                                    : 'bg-zinc-900 text-rose-400/80 hover:text-rose-400 border border-zinc-800'
+                                            }`}
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                                            Candidato a Descarte
+                                        </button>
+                                    </div>
+                                )}
+                                {kpiSegment === 'series' && (
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-zinc-500 text-[10px] font-black uppercase tracking-wider mr-1">
+                                            Tração:
+                                        </span>
+                                        <button
+                                            onClick={() => setKpiFilterStatus('todos')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                                kpiFilterStatus === 'todos'
+                                                    ? 'bg-zinc-200 text-black'
+                                                    : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                                            }`}
+                                        >
+                                            Todas
+                                        </button>
+                                        <button
+                                            onClick={() => setKpiFilterStatus('manter')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                                kpiFilterStatus === 'manter'
+                                                    ? 'bg-emerald-500 text-black font-black shadow-sm shadow-emerald-500/20'
+                                                    : 'bg-zinc-900 text-emerald-400/80 hover:text-emerald-400 border border-zinc-800'
+                                            }`}
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                            Top Sellers
+                                        </button>
+                                        <button
+                                            onClick={() => setKpiFilterStatus('observar')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                                kpiFilterStatus === 'observar'
+                                                    ? 'bg-amber-500 text-black font-black shadow-sm shadow-amber-500/20'
+                                                    : 'bg-zinc-900 text-amber-400/80 hover:text-amber-400 border border-zinc-800'
+                                            }`}
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                            Em Observação
+                                        </button>
+                                    </div>
+                                )}
+                                {kpiSegment === 'categorias' && (
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-zinc-500 text-[10px] font-black uppercase tracking-wider mr-1">
+                                            Relevância:
+                                        </span>
+                                        <button
+                                            onClick={() => setKpiFilterStatus('todos')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                                kpiFilterStatus === 'todos'
+                                                    ? 'bg-zinc-200 text-black'
+                                                    : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                                            }`}
+                                        >
+                                            Todas
+                                        </button>
+                                        <button
+                                            onClick={() => setKpiFilterStatus('manter')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                                kpiFilterStatus === 'manter'
+                                                    ? 'bg-emerald-500 text-black font-black shadow-sm shadow-emerald-500/20'
+                                                    : 'bg-zinc-900 text-emerald-400/80 hover:text-emerald-400 border border-zinc-800'
+                                            }`}
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                            Pilares Estratégicos
+                                        </button>
+                                        <button
+                                            onClick={() => setKpiFilterStatus('observar')}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                                kpiFilterStatus === 'observar'
+                                                    ? 'bg-amber-500 text-black font-black shadow-sm shadow-amber-500/20'
+                                                    : 'bg-zinc-900 text-amber-400/80 hover:text-amber-400 border border-zinc-800'
+                                            }`}
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                            Nichos Secundários
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Listagem de Dados */}
+                        {loadingKpis ? (
+                            <div className="p-24 flex justify-center">
+                                <Loader2 className="animate-spin text-amber-400 w-12 h-12" />
+                            </div>
+                        ) : filteredKpiItems.length === 0 ? (
+                            <div className="text-center py-20 bg-zinc-950/60 border border-zinc-800/80 rounded-3xl space-y-3">
+                                <BarChart3 size={48} className="mx-auto text-zinc-700" />
+                                <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">
+                                    Nenhum registro encontrado para este filtro ou busca.
+                                </p>
+                            </div>
+                        ) : (kpiSegment === 'series' || kpiSegment === 'studios' || kpiSegment === 'categorias') ? (
+                            /* Tabela Principal para Séries, Estúdios e Categorias */
+                            <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-3xl overflow-hidden shadow-2xl">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-xs whitespace-nowrap">
+                                        <thead className="bg-zinc-900/90 text-[10px] uppercase font-black tracking-widest text-zinc-500 border-b border-zinc-800">
+                                            <tr>
+                                                <th className="py-4 px-6">Segmento / Nome</th>
+                                                <th className="py-4 px-4 text-center">Modelos no Acervo</th>
+                                                <th className="py-4 px-4 text-center">Vendas (Qtd)</th>
+                                                <th className="py-4 px-4 text-right">Faturamento Total</th>
+                                                <th className="py-4 px-4 text-right">Lucro Real</th>
+                                                <th className="py-4 px-4 text-center">Share da Loja (%)</th>
+                                                <th className="py-4 px-6 text-center">Decisão Executiva (KPI)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-zinc-800/60">
+                                            {filteredKpiItems.map((item: any) => {
+                                                const isManter = item.statusDecisao === 'manter';
+                                                const isObservar = item.statusDecisao === 'observar';
+                                                const isDescartar = item.statusDecisao === 'descartar';
+
+                                                return (
+                                                    <tr key={item.id} className="hover:bg-zinc-900/40 transition-colors">
+                                                        {/* Nome e Badges */}
+                                                        <td className="py-4 px-6">
+                                                            <div className="space-y-1">
+                                                                <div className="font-black text-sm text-white flex items-center gap-2">
+                                                                    {item.nome}
+                                                                    {item.extra?.categoriaNome && (
+                                                                        <span className="text-[10px] bg-zinc-800/80 text-zinc-400 px-2 py-0.5 rounded-full font-bold">
+                                                                            {item.extra.categoriaNome}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                {item.extra?.custoMensal > 0 && (
+                                                                    <div className="text-[10px] text-amber-400 font-bold">
+                                                                        Custo Assinatura: R$ {item.extra.custoMensal.toFixed(2)}/mês
+                                                                    </div>
+                                                                )}
+                                                                <div className="text-[10px] text-zinc-500">
+                                                                    {item.totalViews} visualizações acumuladas
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Modelos no Acervo */}
+                                                        <td className="py-4 px-4 text-center font-bold text-zinc-300">
+                                                            {item.totalModelos} peças
+                                                        </td>
+
+                                                        {/* Vendas (Qtd) */}
+                                                        <td className="py-4 px-4 text-center">
+                                                            <span className={`font-black text-sm ${item.unidadesVendidas > 0 ? 'text-cyan-400' : 'text-zinc-600'}`}>
+                                                                {item.unidadesVendidas} un.
+                                                            </span>
+                                                            {item.taxaGiro > 0 && (
+                                                                <div className="text-[9px] text-zinc-500 font-bold">
+                                                                    Giro: {(item.taxaGiro * 100).toFixed(0)}%
+                                                                </div>
+                                                            )}
+                                                        </td>
+
+                                                        {/* Faturamento */}
+                                                        <td className="py-4 px-4 text-right">
+                                                            <div className={`font-black text-sm ${item.faturamentoTotal > 0 ? 'text-amber-400' : 'text-zinc-600'}`}>
+                                                                R$ {(item.faturamentoTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                            </div>
+                                                            {item.ticketMedio > 0 && (
+                                                                <div className="text-[9px] text-zinc-500">
+                                                                    Ticket: R$ {item.ticketMedio.toFixed(0)}
+                                                                </div>
+                                                            )}
+                                                        </td>
+
+                                                        {/* Lucro Real */}
+                                                        <td className="py-4 px-4 text-right">
+                                                            <div className={`font-black text-sm ${item.lucroTotal > 0 ? 'text-emerald-400' : 'text-zinc-600'}`}>
+                                                                R$ {(item.lucroTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Share da Loja */}
+                                                        <td className="py-4 px-4 text-center">
+                                                            <div className="w-24 mx-auto space-y-1">
+                                                                <div className="text-[11px] font-black text-zinc-300">
+                                                                    {(item.shareReceita || 0).toFixed(1)}%
+                                                                </div>
+                                                                <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+                                                                    <div 
+                                                                        className={`h-full rounded-full ${isManter ? 'bg-emerald-400' : isObservar ? 'bg-amber-400' : 'bg-rose-500'}`}
+                                                                        style={{ width: `${Math.min(item.shareReceita || 0, 100)}%` }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Decisão Executiva */}
+                                                        <td className="py-4 px-6 text-center">
+                                                            <div className="space-y-1.5 max-w-xs mx-auto">
+                                                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                                                    isManter 
+                                                                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                                                        : isObservar
+                                                                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                                                                        : isDescartar
+                                                                        ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                                                                        : 'bg-zinc-850 text-zinc-400 border border-zinc-700/60'
+                                                                }`}>
+                                                                    <span className={`w-1.5 h-1.5 rounded-full ${
+                                                                        isManter ? 'bg-emerald-400 animate-pulse' : isObservar ? 'bg-amber-400' : isDescartar ? 'bg-rose-400' : 'bg-zinc-500'
+                                                                    }`} />
+                                                                    {item.statusLabel}
+                                                                </span>
+                                                                <div className="text-[10px] text-zinc-400 leading-tight">
+                                                                    {item.motivo}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ) : (
+                            /* Grid para Figuras que Venderam */
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {filteredKpiItems.map((fig: any) => (
+                                    <div 
+                                        key={fig.id} 
+                                        className="bg-zinc-950/70 border border-zinc-800/80 rounded-2xl p-4 flex gap-4 items-start group hover:border-emerald-500/40 transition-all shadow-lg"
+                                    >
+                                        {fig.imagem_url ? (
+                                            <img 
+                                                src={fig.imagem_url} 
+                                                alt={fig.nome} 
+                                                className="w-20 h-24 object-cover rounded-xl border border-zinc-800 shrink-0 bg-zinc-900" 
+                                            />
+                                        ) : (
+                                            <div className="w-20 h-24 rounded-xl border border-zinc-800 bg-zinc-900 flex items-center justify-center shrink-0 text-zinc-600">
+                                                <Package size={24} />
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-1.5 flex-1 min-w-0">
+                                            <div className="font-black text-sm text-white truncate" title={fig.nome}>
+                                                {fig.nome}
+                                            </div>
+                                            <div className="text-[10px] text-zinc-400 flex flex-wrap gap-1 font-bold">
+                                                <span className="bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800 truncate max-w-[120px]">
+                                                    {fig.serieNome}
+                                                </span>
+                                                <span className="bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800 truncate max-w-[120px]">
+                                                    {fig.studioNome}
+                                                </span>
+                                            </div>
+
+                                            <div className="pt-2 border-t border-zinc-800/60 flex items-center justify-between text-xs">
+                                                <div>
+                                                    <span className="text-[9px] uppercase font-black text-zinc-500 block">Vendas:</span>
+                                                    <span className="font-black text-cyan-400">
+                                                        {fig.unidadesVendidas} un.
+                                                    </span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-[9px] uppercase font-black text-zinc-500 block">Faturamento:</span>
+                                                    <span className="font-black text-amber-400">
+                                                        R$ {(fig.faturamentoTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {fig.lucroTotal > 0 && (
+                                                <div className="text-[11px] font-bold text-emerald-400">
+                                                    Lucro Real: R$ {fig.lucroTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </div>
+                                            )}
+
+                                            <div className="text-[10px] text-zinc-500 flex items-center gap-1">
+                                                <Eye size={11} /> {fig.views || 0} visualizações acumuladas
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </div>
