@@ -34,7 +34,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
     try {
-        const auth = await requireRoles(['admin']);
+        const auth = await requireRoles(['admin', 'franga_studio']);
         if (auth instanceof NextResponse) return auth;
 
         const body = await req.json();

@@ -86,7 +86,7 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             name: 'Franga Studio',
             href: '/admin/franga-studio',
             icon: FolderGit2,
-            roles: ['admin', 'pricing']
+            roles: ['admin', 'franga_studio']
         },
         {
             name: 'Configurações',

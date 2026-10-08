@@ -6,11 +6,16 @@ import {
     FolderGit2, Save, Check, Terminal, RefreshCw, Lock, Copy, Sparkles, 
     UserCheck, ArrowLeft, ExternalLink, ShieldCheck, ShoppingBag, 
     Ticket, KeyRound, AlertTriangle, CheckCircle2, Clock, Package,
-    Eye, EyeOff
+    Eye, EyeOff, Search, Filter, List, LayoutGrid, X, Trash2, CheckSquare, Tag,
+    ChevronLeft, ChevronRight, ArrowUpDown, Layers, Zap, CheckCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { usePermission } from '@/hooks/usePermission';
 
 export default function AdminPatreonRepositoryPage() {
+    const { user } = usePermission();
+    const isAdmin = user?.roles?.includes('admin') ?? false;
+
     // Aba Ativa: 'gumroad' | 'drive'
     const [activeTab, setActiveTab] = useState<'gumroad' | 'drive'>('gumroad');
 
@@ -24,6 +29,18 @@ export default function AdminPatreonRepositoryPage() {
     // Controle de produtos visíveis/liberados em /release
     const [enabledProducts, setEnabledProducts] = useState<string[]>([]);
     const [updatingEnabledProduct, setUpdatingEnabledProduct] = useState<string | null>(null);
+
+    // Filtros inteligentes para catálogo escalável (dezenas e centenas de modelos)
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterStatus, setFilterStatus] = useState<'all' | 'enabled' | 'hidden'>('all');
+    const [selectedTag, setSelectedTag] = useState<string | null>(null);
+    const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+
+    // Multi-seleção, ordenação e paginação para centenas de modelos
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [sortBy, setSortBy] = useState<'enabled_first' | 'recent' | 'name_asc' | 'name_desc' | 'price_desc' | 'price_asc'>('enabled_first');
+    const [pageSize, setPageSize] = useState<number>(24);
+    const [currentPage, setCurrentPage] = useState<number>(1);
 
     // Form de emissão de cupom Gumroad
     const [selectedProductId, setSelectedProductId] = useState('');
@@ -110,6 +127,120 @@ export default function AdminPatreonRepositoryPage() {
             setEnabledProducts(enabledProducts);
         } finally {
             setUpdatingEnabledProduct(null);
+        }
+    };
+
+    // Desmarcar todos os produtos do /release (para virada de mês)
+    const handleClearAllRelease = async () => {
+        if (enabledProducts.length === 0) {
+            toast.info('Nenhum modelo está marcado no momento.');
+            return;
+        }
+        if (!confirm('Deseja desmarcar TODOS os modelos ativos em /release? O portal ficará vazio até você selecionar os novos modelos.')) {
+            return;
+        }
+
+        const prev = [...enabledProducts];
+        setEnabledProducts([]);
+        try {
+            const res = await fetch('/api/admin/franga-studio/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabledProducts: [] })
+            });
+            if (!res.ok) throw new Error('Falha ao desmarcar produtos');
+            toast.success('Todos os modelos foram removidos do /release.');
+        } catch (e: any) {
+            toast.error('Erro ao limpar release.');
+            setEnabledProducts(prev);
+        }
+    };
+
+    // Marcar em massa múltiplos produtos selecionados
+    const handleBulkEnable = async (idsToAdd: string[]) => {
+        if (idsToAdd.length === 0) return;
+        const newEnabled = Array.from(new Set([...enabledProducts, ...idsToAdd]));
+
+        const prev = [...enabledProducts];
+        setEnabledProducts(newEnabled);
+        try {
+            const res = await fetch('/api/admin/franga-studio/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabledProducts: newEnabled })
+            });
+            if (!res.ok) throw new Error('Falha ao salvar');
+            toast.success(`${idsToAdd.length} modelo(s) liberados para o /release!`);
+            setSelectedIds([]);
+        } catch (e: any) {
+            toast.error('Erro ao marcar em massa.');
+            setEnabledProducts(prev);
+        }
+    };
+
+    // Ocultar em massa múltiplos produtos selecionados
+    const handleBulkDisable = async (idsToRemove: string[]) => {
+        if (idsToRemove.length === 0) return;
+        const removeSet = new Set(idsToRemove);
+        const newEnabled = enabledProducts.filter(id => !removeSet.has(id));
+
+        const prev = [...enabledProducts];
+        setEnabledProducts(newEnabled);
+        try {
+            const res = await fetch('/api/admin/franga-studio/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabledProducts: newEnabled })
+            });
+            if (!res.ok) throw new Error('Falha ao salvar');
+            toast.info(`${idsToRemove.length} modelo(s) ocultados do /release.`);
+            setSelectedIds([]);
+        } catch (e: any) {
+            toast.error('Erro ao ocultar em massa.');
+            setEnabledProducts(prev);
+        }
+    };
+
+    // Definir EXCLUSIVAMENTE os selecionados como o Release do Mês (Virada de mês em 1 clique)
+    const handleSetExclusiveRelease = async (targetIds: string[]) => {
+        if (targetIds.length === 0) {
+            toast.error('Selecione pelo menos um modelo para definir o release.');
+            return;
+        }
+        if (!confirm(`Deseja definir APENAS estes ${targetIds.length} modelo(s) como o lançamento ativo em /release? Todos os outros modelos serão desmarcados.`)) {
+            return;
+        }
+
+        const prev = [...enabledProducts];
+        setEnabledProducts(targetIds);
+        try {
+            const res = await fetch('/api/admin/franga-studio/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabledProducts: targetIds })
+            });
+            if (!res.ok) throw new Error('Falha ao salvar');
+            toast.success(`Release do Mês definido com sucesso com ${targetIds.length} modelo(s)!`);
+            setSelectedIds([]);
+        } catch (e: any) {
+            toast.error('Erro ao definir release exclusivo.');
+            setEnabledProducts(prev);
+        }
+    };
+
+    const handleToggleSelectId = (id: string) => {
+        setSelectedIds(prev => 
+            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        );
+    };
+
+    const handleSelectAllVisible = (visibleIds: string[]) => {
+        const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.includes(id));
+        if (allSelected) {
+            const visibleSet = new Set(visibleIds);
+            setSelectedIds(prev => prev.filter(id => !visibleSet.has(id)));
+        } else {
+            setSelectedIds(prev => Array.from(new Set([...prev, ...visibleIds])));
         }
     };
 
@@ -248,6 +379,10 @@ export default function AdminPatreonRepositoryPage() {
 
     const handleSavePatreonRepo = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!isAdmin) {
+            toast.error('Alteração bloqueada: Apenas administradores gerais podem modificar o repositório do Google Drive.');
+            return;
+        }
         setSavingPatreonRepo(true);
         try {
             const res = await fetch('/api/admin/integrations/patreon/repository', {
@@ -472,7 +607,12 @@ export default function AdminPatreonRepositoryPage() {
                         }`}
                     >
                         <FolderGit2 size={16} />
-                        Google Drive & Terceirizados
+                        <span>Google Drive & Terceirizados</span>
+                        {!isAdmin && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700 flex items-center gap-1">
+                                <Lock size={10} /> Somente Leitura
+                            </span>
+                        )}
                     </button>
                 </div>
 
@@ -534,116 +674,744 @@ export default function AdminPatreonRepositoryPage() {
                             </div>
                         </div>
 
-                        {/* CONTROLE DE MODELOS LIBERADOS EM /release */}
-                        <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-5">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2.5 bg-orange-500/10 text-orange-400 rounded-xl border border-orange-500/20">
-                                        <Package size={22} />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
-                                            <span>Modelos Liberados para os Membros no /release</span>
-                                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/30">
-                                                {enabledProducts.length} de {gumroadProducts.length} liberados
-                                            </span>
-                                        </h3>
-                                        <p className="text-xs text-zinc-400 mt-0.5">
-                                            Defina quais produtos aparecem como cards em /release. Apoiadores só veem os modelos marcados como Liberado.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
+                        {/* CONTROLE INTELIGENTE DE MODELOS LIBERADOS EM /release */}
+                        {(() => {
+                            // Mapeamento e lista de modelos atualmente habilitados
+                            const enabledProductsMap = new Map(gumroadProducts.map((p: any) => [p.id, p]));
+                            const activeReleaseModels = enabledProducts
+                                .map(id => enabledProductsMap.get(id))
+                                .filter(Boolean);
 
-                            {gumroadProducts.length === 0 ? (
-                                <div className="p-8 text-center text-zinc-500 text-xs italic">
-                                    Nenhum produto cadastrado no Gumroad.
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {gumroadProducts.map((p) => {
-                                        const isEnabled = enabledProducts.includes(p.id);
-                                        const isUpdating = updatingEnabledProduct === p.id;
-                                        const cover = (p.covers && p.covers[0]?.url) || p.preview_url || p.thumbnail_url;
+                            const allTags = Array.from(new Set(gumroadProducts.flatMap((p: any) => p.tags || []))).filter(Boolean);
 
-                                        return (
-                                            <div 
-                                                key={p.id}
-                                                className={`p-4 rounded-2xl border transition-all flex flex-col justify-between gap-4 ${
-                                                    isEnabled 
-                                                        ? 'bg-zinc-950/90 border-orange-500/50 shadow-lg shadow-orange-500/5' 
-                                                        : 'bg-zinc-950/40 border-zinc-800/80 opacity-70 hover:opacity-100'
-                                                }`}
-                                            >
-                                                <div className="flex items-start gap-3">
-                                                    <div className="w-14 h-14 rounded-xl bg-zinc-900 overflow-hidden border border-zinc-800 shrink-0 flex items-center justify-center">
-                                                        {cover ? (
-                                                            <img src={cover} alt={p.name} className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <Package size={22} className="text-zinc-600" />
-                                                        )}
-                                                    </div>
-                                                    <div className="min-w-0 flex-1">
-                                                        <span className="text-xs font-black text-white truncate block">
-                                                            {p.name}
-                                                        </span>
-                                                        <div className="flex items-center gap-2 mt-1">
-                                                            <span className="text-[10px] text-zinc-400 font-mono font-bold">
-                                                                {p.formatted_price}
-                                                            </span>
-                                                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                                                                p.published 
-                                                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                                                                    : 'bg-zinc-800 text-zinc-400'
-                                                            }`}>
-                                                                {p.published ? 'Publicado' : 'Rascunho'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
+                            // 1. Filtragem inteligente
+                            const filteredProducts = gumroadProducts.filter((p: any) => {
+                                if (searchTerm.trim()) {
+                                    const term = searchTerm.toLowerCase();
+                                    const matchesName = p.name?.toLowerCase().includes(term);
+                                    const matchesTag = p.tags?.some((t: string) => t.toLowerCase().includes(term));
+                                    const matchesPrice = p.formatted_price?.toLowerCase().includes(term);
+                                    if (!matchesName && !matchesTag && !matchesPrice) return false;
+                                }
+                                if (selectedTag && (!p.tags || !p.tags.includes(selectedTag))) {
+                                    return false;
+                                }
+                                const isEnabled = enabledProducts.includes(p.id);
+                                if (filterStatus === 'enabled' && !isEnabled) return false;
+                                if (filterStatus === 'hidden' && isEnabled) return false;
+                                return true;
+                            });
+
+                            // 2. Ordenação
+                            const sortedProducts = [...filteredProducts].sort((a: any, b: any) => {
+                                if (sortBy === 'enabled_first') {
+                                    const aEnabled = enabledProducts.includes(a.id) ? 1 : 0;
+                                    const bEnabled = enabledProducts.includes(b.id) ? 1 : 0;
+                                    if (aEnabled !== bEnabled) return bEnabled - aEnabled;
+                                    return 0;
+                                }
+                                if (sortBy === 'name_asc') {
+                                    return (a.name || '').localeCompare(b.name || '');
+                                }
+                                if (sortBy === 'name_desc') {
+                                    return (b.name || '').localeCompare(a.name || '');
+                                }
+                                if (sortBy === 'price_desc') {
+                                    return (b.price || 0) - (a.price || 0);
+                                }
+                                if (sortBy === 'price_asc') {
+                                    return (a.price || 0) - (b.price || 0);
+                                }
+                                // 'recent' (ordem original da API Gumroad)
+                                return 0;
+                            });
+
+                            // 3. Paginação
+                            const totalItems = sortedProducts.length;
+                            const effectivePageSize = pageSize >= 9999 ? totalItems || 1 : pageSize;
+                            const totalPages = Math.max(1, Math.ceil(totalItems / effectivePageSize));
+                            const validCurrentPage = Math.min(currentPage, totalPages);
+                            const startIndex = (validCurrentPage - 1) * effectivePageSize;
+                            const paginatedProducts = pageSize >= 9999 
+                                ? sortedProducts 
+                                : sortedProducts.slice(startIndex, startIndex + effectivePageSize);
+
+                            const visibleIds = paginatedProducts.map((p: any) => p.id);
+                            const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.includes(id));
+                            const someVisibleSelected = visibleIds.some(id => selectedIds.includes(id)) && !allVisibleSelected;
+
+                            return (
+                                <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-6">
+                                    
+                                    {/* CABEÇALHO DO CATÁLOGO */}
+                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-800/80 pb-5">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2.5 bg-orange-500/10 text-orange-400 rounded-xl border border-orange-500/20">
+                                                <Package size={22} />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2.5 flex-wrap">
+                                                    <h3 className="text-base font-black text-white uppercase tracking-wider">
+                                                        Controle de Lançamentos em /release
+                                                    </h3>
+                                                    <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                                                        {enabledProducts.length} ATIVO(S) NO RELEASE
+                                                    </span>
+                                                    <span className="text-[10px] text-zinc-500 font-mono">
+                                                        ({gumroadProducts.length} modelos no catálogo)
+                                                    </span>
                                                 </div>
+                                                <p className="text-xs text-zinc-400 mt-0.5">
+                                                    Gerenciamento de alta escala: selecione em lote, ordene, filtre e faça a virada de mês em 1 clique.
+                                                </p>
+                                            </div>
+                                        </div>
 
-                                                <div className="pt-2 border-t border-zinc-850 flex items-center justify-between gap-2">
+                                        {/* AÇÕES GLOBAIS RÁPIDAS */}
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            {enabledProducts.length > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleClearAllRelease}
+                                                    className="px-3.5 py-2 bg-red-950/40 hover:bg-red-900/60 border border-red-500/30 text-red-400 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                                                    title="Limpar todos os produtos liberados para começar um mês limpo"
+                                                >
+                                                    <Trash2 size={14} />
+                                                    <span>Limpar Release Atual ({enabledProducts.length})</span>
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* BANDEJA / RESUMO VISUAL: O QUE ESTÁ LIBERADO AGORA NO /release */}
+                                    <div className="bg-zinc-950/80 border border-zinc-800/80 rounded-2xl p-4 space-y-3">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <Zap size={15} className="text-orange-400" />
+                                                <span className="text-xs font-black text-white uppercase tracking-wider">
+                                                    Lançamento do Mês Atual (Visível aos Membros)
+                                                </span>
+                                                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400">
+                                                    {enabledProducts.length} modelo(s)
+                                                </span>
+                                            </div>
+                                            {filterStatus !== 'enabled' && enabledProducts.length > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setFilterStatus('enabled'); setCurrentPage(1); }}
+                                                    className="text-xs text-orange-400 hover:text-orange-300 font-bold flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+                                                >
+                                                    <Eye size={12} />
+                                                    <span>Filtrar apenas os ativos</span>
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {activeReleaseModels.length === 0 ? (
+                                            <div className="p-3 bg-zinc-900/50 rounded-xl border border-dashed border-zinc-800 text-xs text-zinc-500 flex items-center gap-2">
+                                                <AlertTriangle size={14} className="text-amber-500 shrink-0" />
+                                                <span>Nenhum modelo liberado no momento. Marque os modelos abaixo que farão parte do release deste mês.</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                {activeReleaseModels.map((p: any) => {
+                                                    const cover = (p.covers && p.covers[0]?.url) || p.preview_url || p.thumbnail_url;
+                                                    return (
+                                                        <div 
+                                                            key={p.id}
+                                                            className="flex items-center gap-2 bg-zinc-900/90 border border-orange-500/30 hover:border-orange-500/60 rounded-xl py-1.5 px-3 text-xs text-zinc-200 shadow-sm transition-all group"
+                                                        >
+                                                            <div className="w-5 h-5 rounded-md bg-zinc-800 overflow-hidden shrink-0">
+                                                                {cover ? (
+                                                                    <img src={cover} alt={p.name} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <Package size={12} className="text-zinc-600 m-auto" />
+                                                                )}
+                                                            </div>
+                                                            <span className="font-bold text-[11px] truncate max-w-[140px] text-white">
+                                                                {p.name}
+                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleToggleProductRelease(p.id, p.name)}
+                                                                className="text-zinc-500 hover:text-red-400 transition-colors cursor-pointer p-0.5 rounded"
+                                                                title={`Remover "${p.name}" do release`}
+                                                            >
+                                                                <X size={12} />
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* BARRA DE FERRAMENTAS: BUSCA, FILTROS, ORDENAÇÃO E DENSIDADE */}
+                                    <div className="space-y-3">
+                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                                            {/* Busca Rápida */}
+                                            <div className="md:col-span-4 relative">
+                                                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Buscar por nome, tag ou valor..."
+                                                    value={searchTerm}
+                                                    onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                                                    className="w-full bg-zinc-950 border border-zinc-800 focus:border-orange-500 rounded-xl pl-9 pr-8 py-2.5 text-xs text-white outline-none transition-all placeholder:text-zinc-600"
+                                                />
+                                                {searchTerm && (
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleToggleProductRelease(p.id, p.name)}
-                                                        disabled={isUpdating}
-                                                        className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                                                            isEnabled
-                                                                ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-500/20'
-                                                                : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800'
-                                                        }`}
+                                                        onClick={() => { setSearchTerm(''); setCurrentPage(1); }}
+                                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white p-1"
                                                     >
-                                                        {isEnabled ? (
-                                                            <>
-                                                                <Eye size={14} />
-                                                                <span>Liberado no /release</span>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <EyeOff size={14} />
-                                                                <span>Oculto no /release</span>
-                                                            </>
-                                                        )}
+                                                        <X size={13} />
                                                     </button>
+                                                )}
+                                            </div>
 
-                                                    {p.short_url && (
-                                                        <a
-                                                            href={p.short_url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="p-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-xl border border-zinc-800 transition-all cursor-pointer"
-                                                            title="Ver produto no Gumroad"
-                                                        >
-                                                            <ExternalLink size={14} />
-                                                        </a>
-                                                    )}
+                                            {/* Abas de Status */}
+                                            <div className="md:col-span-5 flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800 text-xs overflow-x-auto">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setFilterStatus('all'); setCurrentPage(1); }}
+                                                    className={`flex-1 min-w-[70px] py-1.5 px-2 rounded-lg font-bold text-center transition-all cursor-pointer ${
+                                                        filterStatus === 'all'
+                                                            ? 'bg-zinc-800 text-white shadow-sm'
+                                                            : 'text-zinc-500 hover:text-zinc-300'
+                                                    }`}
+                                                >
+                                                    Todos ({gumroadProducts.length})
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setFilterStatus('enabled'); setCurrentPage(1); }}
+                                                    className={`flex-1 min-w-[90px] py-1.5 px-2 rounded-lg font-bold text-center transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                                                        filterStatus === 'enabled'
+                                                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                                                            : 'text-orange-400 hover:text-orange-300'
+                                                    }`}
+                                                >
+                                                    <Eye size={12} />
+                                                    <span>Liberados ({enabledProducts.length})</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setFilterStatus('hidden'); setCurrentPage(1); }}
+                                                    className={`flex-1 min-w-[75px] py-1.5 px-2 rounded-lg font-bold text-center transition-all cursor-pointer ${
+                                                        filterStatus === 'hidden'
+                                                            ? 'bg-zinc-800 text-white shadow-sm'
+                                                            : 'text-zinc-500 hover:text-zinc-300'
+                                                    }`}
+                                                >
+                                                    Ocultos ({Math.max(0, gumroadProducts.length - enabledProducts.length)})
+                                                </button>
+                                            </div>
+
+                                            {/* Ordenação e Alternador de Modo */}
+                                            <div className="md:col-span-3 flex items-center gap-2 justify-end">
+                                                <div className="relative flex-1">
+                                                    <select
+                                                        value={sortBy}
+                                                        onChange={e => { setSortBy(e.target.value as any); setCurrentPage(1); }}
+                                                        className="w-full bg-zinc-950 border border-zinc-800 focus:border-orange-500 rounded-xl px-3 py-2 text-xs text-zinc-300 outline-none cursor-pointer appearance-none font-bold"
+                                                    >
+                                                        <option value="enabled_first">★ Liberados no Topo</option>
+                                                        <option value="recent">🕒 Mais Recentes (Gumroad)</option>
+                                                        <option value="name_asc">🔤 Nome (A-Z)</option>
+                                                        <option value="name_desc">🔤 Nome (Z-A)</option>
+                                                        <option value="price_desc">💰 Maior Preço</option>
+                                                        <option value="price_asc">🏷️ Menor Preço</option>
+                                                    </select>
+                                                </div>
+
+                                                {/* Alternador Grid vs Tabela */}
+                                                <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800 shrink-0">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setViewMode('grid')}
+                                                        className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                                                            viewMode === 'grid' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'
+                                                        }`}
+                                                        title="Visualização em Cards"
+                                                    >
+                                                        <LayoutGrid size={15} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setViewMode('table')}
+                                                        className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                                                            viewMode === 'table' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'
+                                                        }`}
+                                                        title="Visualização em Tabela Compacta (Alta Densidade)"
+                                                    >
+                                                        <List size={15} />
+                                                    </button>
                                                 </div>
                                             </div>
-                                        );
-                                    })}
+                                        </div>
+
+                                        {/* Filtro por Tags */}
+                                        {allTags.length > 0 && (
+                                            <div className="flex items-center gap-2 pt-1 flex-wrap">
+                                                <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider flex items-center gap-1">
+                                                    <Tag size={11} /> Tags:
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setSelectedTag(null); setCurrentPage(1); }}
+                                                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                                                        selectedTag === null
+                                                            ? 'bg-zinc-800 text-white'
+                                                            : 'bg-zinc-950 text-zinc-500 hover:text-white border border-zinc-850'
+                                                    }`}
+                                                >
+                                                    Todas
+                                                </button>
+                                                {allTags.map((t: any) => (
+                                                    <button
+                                                        key={t}
+                                                        type="button"
+                                                        onClick={() => { setSelectedTag(selectedTag === t ? null : t); setCurrentPage(1); }}
+                                                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold cursor-pointer transition-all ${
+                                                            selectedTag === t
+                                                                ? 'bg-orange-500 text-white shadow-sm'
+                                                                : 'bg-zinc-950 text-zinc-400 hover:text-white border border-zinc-850'
+                                                        }`}
+                                                    >
+                                                        #{t}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* BARRA DE SELEÇÃO EM MASSA (QUANDO HOUVER ITENS VISÍVEIS) */}
+                                    {paginatedProducts.length > 0 && (
+                                        <div className="bg-zinc-950/90 border border-zinc-800/80 rounded-2xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                                            <div className="flex items-center gap-3">
+                                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={allVisibleSelected}
+                                                        ref={input => {
+                                                            if (input) input.indeterminate = someVisibleSelected;
+                                                        }}
+                                                        onChange={() => handleSelectAllVisible(visibleIds)}
+                                                        className="w-4 h-4 rounded accent-orange-500 cursor-pointer"
+                                                    />
+                                                    <span className="font-bold text-zinc-300">
+                                                        {selectedIds.length > 0 
+                                                            ? `${selectedIds.length} selecionado(s)` 
+                                                            : 'Selecionar visíveis nesta página'}
+                                                    </span>
+                                                </label>
+
+                                                {selectedIds.length > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSelectedIds([])}
+                                                        className="text-zinc-500 hover:text-zinc-300 underline text-[11px] cursor-pointer"
+                                                    >
+                                                        Limpar seleção
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {/* Ações para a seleção atual */}
+                                            {selectedIds.length > 0 ? (
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleBulkEnable(selectedIds)}
+                                                        className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition-all cursor-pointer"
+                                                    >
+                                                        <Eye size={13} />
+                                                        <span>Liberar ({selectedIds.length})</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleBulkDisable(selectedIds)}
+                                                        className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl font-bold flex items-center gap-1.5 border border-zinc-700 transition-all cursor-pointer"
+                                                    >
+                                                        <EyeOff size={13} />
+                                                        <span>Ocultar ({selectedIds.length})</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSetExclusiveRelease(selectedIds)}
+                                                        className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+                                                        title="Limpa todos os outros e deixa APENAS estes selecionados ativos no release"
+                                                    >
+                                                        <Sparkles size={13} />
+                                                        <span>Definir como Release do Mês</span>
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-3 text-zinc-500 text-[11px]">
+                                                    <span>Dica: selecione os modelos desejados para liberar em lote ou trocar o mês em 1 clique.</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* LISTAGEM DOS PRODUTOS */}
+                                    {gumroadProducts.length === 0 ? (
+                                        <div className="p-8 text-center text-zinc-500 text-xs italic">
+                                            Nenhum produto cadastrado no Gumroad.
+                                        </div>
+                                    ) : filteredProducts.length === 0 ? (
+                                        <div className="p-8 bg-zinc-950/60 rounded-2xl border border-dashed border-zinc-800 text-center space-y-2">
+                                            <p className="text-xs text-zinc-400 font-bold">
+                                                Nenhum modelo corresponde aos filtros selecionados.
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => { setSearchTerm(''); setFilterStatus('all'); setSelectedTag(null); setCurrentPage(1); }}
+                                                className="text-xs text-orange-400 hover:underline font-bold"
+                                            >
+                                                Limpar filtros de busca
+                                            </button>
+                                        </div>
+                                    ) : viewMode === 'grid' ? (
+                                        /* MODO 1: CARDS GRID (COM CHECKBOX E TOGGLE) */
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {paginatedProducts.map((p: any) => {
+                                                const isEnabled = enabledProducts.includes(p.id);
+                                                const isSelected = selectedIds.includes(p.id);
+                                                const isUpdating = updatingEnabledProduct === p.id;
+                                                const cover = (p.covers && p.covers[0]?.url) || p.preview_url || p.thumbnail_url;
+
+                                                return (
+                                                    <div 
+                                                        key={p.id}
+                                                        className={`p-4 rounded-2xl border transition-all flex flex-col justify-between gap-4 relative ${
+                                                            isSelected 
+                                                                ? 'ring-2 ring-orange-500/80 bg-zinc-950/95 border-orange-500/60'
+                                                                : isEnabled 
+                                                                    ? 'bg-zinc-950/90 border-orange-500/40 shadow-lg shadow-orange-500/5' 
+                                                                    : 'bg-zinc-950/40 border-zinc-800/80 opacity-75 hover:opacity-100'
+                                                        }`}
+                                                    >
+                                                        {/* Checkbox de seleção em massa */}
+                                                        <div className="absolute top-3 left-3 z-10">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isSelected}
+                                                                onChange={() => handleToggleSelectId(p.id)}
+                                                                className="w-4 h-4 rounded accent-orange-500 cursor-pointer"
+                                                                title="Selecionar para ações em massa"
+                                                            />
+                                                        </div>
+
+                                                        <div className="flex items-start gap-3 pl-6">
+                                                            <div className="w-14 h-14 rounded-xl bg-zinc-900 overflow-hidden border border-zinc-800 shrink-0 flex items-center justify-center">
+                                                                {cover ? (
+                                                                    <img src={cover} alt={p.name} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <Package size={22} className="text-zinc-600" />
+                                                                )}
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <span className="text-xs font-black text-white truncate block">
+                                                                    {p.name}
+                                                                </span>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <span className="text-[10px] text-zinc-400 font-mono font-bold">
+                                                                        {p.formatted_price}
+                                                                    </span>
+                                                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                                                                        p.published 
+                                                                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                                                            : 'bg-zinc-800 text-zinc-400'
+                                                                    }`}>
+                                                                        {p.published ? 'Publicado' : 'Rascunho'}
+                                                                    </span>
+                                                                </div>
+                                                                {p.tags && p.tags.length > 0 && (
+                                                                    <div className="flex gap-1 mt-1 flex-wrap">
+                                                                        {p.tags.slice(0, 3).map((t: string) => (
+                                                                            <span key={t} className="text-[9px] text-zinc-500 font-mono">#{t}</span>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Botões de Ação do Card */}
+                                                        <div className="pt-2 border-t border-zinc-850 flex items-center justify-between gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleToggleProductRelease(p.id, p.name)}
+                                                                disabled={isUpdating}
+                                                                className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                                                                    isEnabled
+                                                                        ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-500/20'
+                                                                        : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800'
+                                                                }`}
+                                                            >
+                                                                {isEnabled ? (
+                                                                    <>
+                                                                        <Check size={14} />
+                                                                        <span>Liberado no /release</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <EyeOff size={14} />
+                                                                        <span>Oculto no /release</span>
+                                                                    </>
+                                                                )}
+                                                            </button>
+
+                                                            {p.short_url && (
+                                                                <a
+                                                                    href={p.short_url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="p-2 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white rounded-xl border border-zinc-800 transition-all cursor-pointer"
+                                                                    title="Ver produto no Gumroad"
+                                                                >
+                                                                    <ExternalLink size={14} />
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        /* MODO 2: TABELA COMPACTA (ALTA DENSIDADE COM CHECKBOX) */
+                                        <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-950">
+                                            <table className="w-full text-left text-xs text-zinc-300">
+                                                <thead className="bg-zinc-900/80 text-[10px] uppercase font-black tracking-widest text-zinc-500 border-b border-zinc-800">
+                                                    <tr>
+                                                        <th className="py-3 px-3 w-10 text-center">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={allVisibleSelected}
+                                                                ref={input => {
+                                                                    if (input) input.indeterminate = someVisibleSelected;
+                                                                }}
+                                                                onChange={() => handleSelectAllVisible(visibleIds)}
+                                                                className="w-4 h-4 rounded accent-orange-500 cursor-pointer"
+                                                            />
+                                                        </th>
+                                                        <th className="py-3 px-3 w-12 text-center">Capa</th>
+                                                        <th className="py-3 px-4">Modelo / Produto</th>
+                                                        <th className="py-3 px-4">Preço</th>
+                                                        <th className="py-3 px-4">Status Gumroad</th>
+                                                        <th className="py-3 px-4 text-center">Liberação no /release</th>
+                                                        <th className="py-3 px-4 text-right">Link</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-zinc-850">
+                                                    {paginatedProducts.map((p: any) => {
+                                                        const isEnabled = enabledProducts.includes(p.id);
+                                                        const isSelected = selectedIds.includes(p.id);
+                                                        const isUpdating = updatingEnabledProduct === p.id;
+                                                        const cover = (p.covers && p.covers[0]?.url) || p.preview_url || p.thumbnail_url;
+
+                                                        return (
+                                                            <tr 
+                                                                key={p.id} 
+                                                                className={`transition-colors ${
+                                                                    isSelected 
+                                                                        ? 'bg-orange-500/10' 
+                                                                        : isEnabled 
+                                                                            ? 'bg-zinc-900/40 hover:bg-zinc-900/70' 
+                                                                            : 'hover:bg-zinc-900/30'
+                                                                }`}
+                                                            >
+                                                                <td className="py-2.5 px-3 text-center">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={isSelected}
+                                                                        onChange={() => handleToggleSelectId(p.id)}
+                                                                        className="w-4 h-4 rounded accent-orange-500 cursor-pointer"
+                                                                    />
+                                                                </td>
+                                                                <td className="py-2.5 px-3 text-center">
+                                                                    <div className="w-9 h-9 rounded-lg bg-zinc-900 overflow-hidden border border-zinc-800 mx-auto flex items-center justify-center">
+                                                                        {cover ? (
+                                                                            <img src={cover} alt={p.name} className="w-full h-full object-cover" />
+                                                                        ) : (
+                                                                            <Package size={16} className="text-zinc-600" />
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="py-2.5 px-4">
+                                                                    <div className="font-bold text-white leading-tight">{p.name}</div>
+                                                                    {p.tags && p.tags.length > 0 && (
+                                                                        <div className="flex gap-1 mt-0.5 flex-wrap">
+                                                                            {p.tags.map((t: string) => (
+                                                                                <span key={t} className="text-[9px] text-zinc-500 font-mono">#{t}</span>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </td>
+                                                                <td className="py-2.5 px-4 font-mono font-bold text-zinc-400">
+                                                                    {p.formatted_price}
+                                                                </td>
+                                                                <td className="py-2.5 px-4">
+                                                                    <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase ${
+                                                                        p.published 
+                                                                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                                                            : 'bg-zinc-800 text-zinc-400'
+                                                                    }`}>
+                                                                        {p.published ? 'Publicado' : 'Rascunho'}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="py-2.5 px-4 text-center">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleToggleProductRelease(p.id, p.name)}
+                                                                        disabled={isUpdating}
+                                                                        className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider inline-flex items-center gap-1.5 transition-all cursor-pointer ${
+                                                                            isEnabled
+                                                                                ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-sm shadow-orange-500/20'
+                                                                                : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-500 hover:text-white border border-zinc-800'
+                                                                        }`}
+                                                                    >
+                                                                        {isEnabled ? (
+                                                                            <>
+                                                                                <Check size={12} />
+                                                                                <span>Liberado</span>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <EyeOff size={12} />
+                                                                                <span>Oculto</span>
+                                                                            </>
+                                                                        )}
+                                                                    </button>
+                                                                </td>
+                                                                <td className="py-2.5 px-4 text-right">
+                                                                    {p.short_url && (
+                                                                        <a
+                                                                            href={p.short_url}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="p-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-lg border border-zinc-800 transition-all inline-block"
+                                                                            title="Ver no Gumroad"
+                                                                        >
+                                                                            <ExternalLink size={13} />
+                                                                        </a>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+
+                                    {/* CONTROLES DE PAGINAÇÃO & QUANTIDADE */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 border-t border-zinc-800/80 text-xs text-zinc-400">
+                                        <div className="flex items-center gap-3">
+                                            <span>
+                                                Mostrando <strong className="text-white">{totalItems === 0 ? 0 : startIndex + 1}</strong> a <strong className="text-white">{Math.min(startIndex + effectivePageSize, totalItems)}</strong> de <strong className="text-white">{totalItems}</strong> modelos
+                                            </span>
+
+                                            {/* Seletor de tamanho de página */}
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-[11px] text-zinc-500">Exibir:</span>
+                                                <select
+                                                    value={pageSize}
+                                                    onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                                                    className="bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-xs text-zinc-300 outline-none cursor-pointer"
+                                                >
+                                                    <option value={12}>12</option>
+                                                    <option value={24}>24</option>
+                                                    <option value={48}>48</option>
+                                                    <option value={9999}>Todos</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* Navegação de Páginas */}
+                                        {totalPages > 1 && pageSize < 9999 && (
+                                            <div className="flex items-center gap-1.5 self-center sm:self-auto">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                                    disabled={validCurrentPage === 1}
+                                                    className="p-1.5 bg-zinc-950 hover:bg-zinc-850 disabled:opacity-30 disabled:hover:bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-300 transition-all cursor-pointer"
+                                                    title="Página anterior"
+                                                >
+                                                    <ChevronLeft size={15} />
+                                                </button>
+
+                                                <span className="px-3 py-1 bg-zinc-950 border border-zinc-800 rounded-lg text-xs font-bold text-white">
+                                                    {validCurrentPage} / {totalPages}
+                                                </span>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                                    disabled={validCurrentPage === totalPages}
+                                                    className="p-1.5 bg-zinc-950 hover:bg-zinc-850 disabled:opacity-30 disabled:hover:bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-300 transition-all cursor-pointer"
+                                                    title="Próxima página"
+                                                >
+                                                    <ChevronRight size={15} />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* BARRA FLUTUANTE STICKY NO RODAPÉ (QUANDO HÁ MODELOS SELECIONADOS) */}
+                                    {selectedIds.length > 0 && (
+                                        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-zinc-950/95 border border-orange-500/50 shadow-2xl shadow-orange-500/20 backdrop-blur-md rounded-2xl px-5 py-3 flex items-center gap-3 flex-wrap max-w-2xl w-[92%] justify-between animate-in slide-in-from-bottom-5 duration-200">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-7 h-7 rounded-lg bg-orange-500 text-white font-black text-xs flex items-center justify-center shadow-sm">
+                                                    {selectedIds.length}
+                                                </div>
+                                                <span className="text-xs font-bold text-white">
+                                                    {selectedIds.length} {selectedIds.length === 1 ? 'modelo selecionado' : 'modelos selecionados'}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleBulkEnable(selectedIds)}
+                                                    className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition-all cursor-pointer"
+                                                >
+                                                    <Eye size={13} />
+                                                    <span>Liberar</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleBulkDisable(selectedIds)}
+                                                    className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-zinc-700 transition-all cursor-pointer"
+                                                >
+                                                    <EyeOff size={13} />
+                                                    <span>Ocultar</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleSetExclusiveRelease(selectedIds)}
+                                                    className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+                                                    title="Limpa os atuais e define APENAS os selecionados como o release do mês"
+                                                >
+                                                    <Sparkles size={13} />
+                                                    <span>Release do Mês</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedIds([])}
+                                                    className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 cursor-pointer"
+                                                    title="Fechar seleção"
+                                                >
+                                                    <X size={15} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
                                 </div>
-                            )}
-                        </div>
+                            );
+                        })()}
 
                         {/* GRID: EMISSOR DE CUPOM & EXPLICATIVO */}
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -909,14 +1677,37 @@ export default function AdminPatreonRepositoryPage() {
                                         <FolderGit2 size={20} />
                                     </div>
                                     <div>
-                                        <h2 className="text-base font-black text-white uppercase tracking-wider">
-                                            1. Repositório Ativo dos Membros (Google Drive)
-                                        </h2>
-                                        <p className="text-xs text-zinc-400">
+                                        <div className="flex items-center gap-2">
+                                            <h2 className="text-base font-black text-white uppercase tracking-wider">
+                                                1. Repositório Ativo dos Membros (Google Drive)
+                                            </h2>
+                                            {!isAdmin && (
+                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-950/40 text-red-400 border border-red-500/30 flex items-center gap-1">
+                                                    <Lock size={10} /> Protegido
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-zinc-400 mt-0.5">
                                             Informe a URL da pasta do mês. Todos os membros ativos baixarão desta pasta até você alterá-la.
                                         </p>
                                     </div>
                                 </div>
+
+                                {!isAdmin && (
+                                    <div className="p-3.5 bg-red-950/20 border border-red-500/30 rounded-2xl flex items-center gap-3 text-xs text-red-300">
+                                        <div className="p-2 bg-red-500/10 text-red-400 rounded-xl shrink-0">
+                                            <Lock size={16} />
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-white uppercase text-[11px] tracking-wider">
+                                                Alteração Bloqueada para Operadores do Franga Studio
+                                            </div>
+                                            <p className="text-[11px] text-zinc-400 mt-0.5">
+                                                O repositório do Google Drive está em modo somente leitura. Apenas administradores gerais possuem permissão para salvar novas pastas.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <form onSubmit={handleSavePatreonRepo} className="space-y-3 pt-2">
                                     <div>
@@ -928,19 +1719,36 @@ export default function AdminPatreonRepositoryPage() {
                                             placeholder="https://drive.google.com/drive/folders/..."
                                             value={patreonRepoUrl}
                                             onChange={e => setPatreonRepoUrl(e.target.value)}
-                                            disabled={loadingConfig}
-                                            className="w-full bg-zinc-950 border border-zinc-800 focus:border-amber-500 rounded-xl px-4 py-3 text-xs font-mono text-amber-300 outline-none transition-all disabled:opacity-50"
+                                            disabled={!isAdmin || loadingConfig}
+                                            className={`w-full border rounded-xl px-4 py-3 text-xs font-mono outline-none transition-all ${
+                                                !isAdmin 
+                                                    ? 'bg-zinc-950/50 border-zinc-850 text-zinc-500 cursor-not-allowed' 
+                                                    : 'bg-zinc-950 border-zinc-800 focus:border-amber-500 text-amber-300 disabled:opacity-50'
+                                            }`}
                                             required
                                         />
                                     </div>
 
                                     <button
                                         type="submit"
-                                        disabled={savingPatreonRepo || loadingConfig}
-                                        className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-98 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                                        disabled={!isAdmin || savingPatreonRepo || loadingConfig}
+                                        className={`w-full py-3 font-black text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${
+                                            !isAdmin
+                                                ? 'bg-zinc-900 border border-zinc-800 text-zinc-500 cursor-not-allowed'
+                                                : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-98 text-white shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50'
+                                        }`}
                                     >
-                                        <Save size={16} />
-                                        {savingPatreonRepo ? 'Salvando no Banco...' : 'Salvar Repositório do Drive'}
+                                        {!isAdmin ? (
+                                            <>
+                                                <Lock size={15} />
+                                                <span>Alteração Bloqueada (Somente Leitura)</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save size={16} />
+                                                {savingPatreonRepo ? 'Salvando no Banco...' : 'Salvar Repositório do Drive'}
+                                            </>
+                                        )}
                                     </button>
                                 </form>
 

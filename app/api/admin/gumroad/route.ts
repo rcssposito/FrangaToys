@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
     try {
-        const auth = await requireRoles(['admin']);
+        const auth = await requireRoles(['admin', 'franga_studio']);
         if (auth instanceof NextResponse) return auth;
 
         // 1. Dados do Gumroad (usuário e catálogo de produtos)
@@ -58,7 +58,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
     try {
-        const auth = await requireRoles(['admin']);
+        const auth = await requireRoles(['admin', 'franga_studio']);
         if (auth instanceof NextResponse) return auth;
 
         const body = await req.json();
@@ -110,7 +110,7 @@ export async function POST(req: Request) {
 // Sincronizar status de resgate via API de vendas do Gumroad
 export async function PUT(req: Request) {
     try {
-        const auth = await requireRoles(['admin']);
+        const auth = await requireRoles(['admin', 'franga_studio']);
         if (auth instanceof NextResponse) return auth;
 
         const sales = await getGumroadSales();

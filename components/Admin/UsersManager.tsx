@@ -15,6 +15,7 @@ interface User {
 
 const AVAILABLE_ROLES = [
     { id: 'admin', label: 'Admin (Total)' },
+    { id: 'franga_studio', label: 'Franga Studio (Anti-Leak & Distribuição)' },
     { id: 'sales', label: 'Vendas' },
     { id: 'pricing', label: 'Precificação' },
     { id: 'finance', label: 'Financeiro' },
@@ -207,9 +208,15 @@ export default function UsersManager() {
                                 {user.roles?.map(role => (
                                     <span 
                                         key={role}
-                                        className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800"
+                                        className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${
+                                            role === 'franga_studio'
+                                                ? 'bg-orange-500/10 text-orange-400 border-orange-500/30'
+                                                : role === 'admin'
+                                                ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                                                : 'bg-zinc-900 text-zinc-400 border-zinc-800'
+                                        }`}
                                     >
-                                        {role}
+                                        {role === 'franga_studio' ? 'Franga Studio' : role}
                                     </span>
                                 ))}
                             </div>

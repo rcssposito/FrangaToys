@@ -8,8 +8,8 @@ import AdminSidebar from '@/components/AdminSidebar';
 import { AuthGuard } from '@/components/AuthGuard';
 
 const routeRoles: Record<string, string[]> = {
-    '/admin': ['admin', 'sales', 'pricing', 'finance', 'orcamento', 'production', 'painter'],
-    '/admin/profile': ['admin', 'sales', 'pricing', 'finance', 'orcamento', 'production', 'painter'],
+    '/admin': ['admin', 'sales', 'pricing', 'finance', 'orcamento', 'production', 'painter', 'franga_studio'],
+    '/admin/profile': ['admin', 'sales', 'pricing', 'finance', 'orcamento', 'production', 'painter', 'franga_studio'],
     '/admin/figures': ['admin', 'pricing', 'orcamento'],
     '/admin/popular': ['admin', 'sales', 'pricing', 'orcamento'],
     '/admin/campaigns': ['admin', 'sales', 'pricing'],
@@ -19,8 +19,8 @@ const routeRoles: Record<string, string[]> = {
     '/admin/customers': ['admin', 'sales', 'finance'],
     '/admin/commissions': ['admin', 'finance', 'sales'],
     '/admin/studios': ['admin', 'pricing'],
-    '/admin/franga-studio': ['admin', 'pricing'],
-    '/admin/patreon/repository': ['admin', 'pricing'],
+    '/admin/franga-studio': ['admin', 'franga_studio'],
+    '/admin/patreon/repository': ['admin', 'franga_studio'],
     '/admin/users': ['admin'],
     '/admin/coupons': ['admin', 'sales', 'pricing', 'orcamento'],
     '/admin/settings': ['admin']

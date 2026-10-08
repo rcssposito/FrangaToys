@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireRoles, getServerSession } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -7,9 +8,13 @@ const DEFAULT_REPO_URL = 'https://drive.google.com/drive/folders/1aB9Xx-NZe2K7lw
 
 /**
  * GET: Retorna a URL do repositório ativo do Patreon salva no banco.
+ * Permitido para admin e operadores do Franga Studio (somente leitura).
  */
 export async function GET() {
     try {
+        const auth = await requireRoles(['admin', 'franga_studio']);
+        if (auth instanceof NextResponse) return auth;
+
         const { data, error } = await supabase
             .from('download_tokens')
             .select('real_file_url')
@@ -30,9 +35,23 @@ export async function GET() {
 
 /**
  * POST: Atualiza a URL do repositório ativo no banco de dados.
+ * RESTRITO E BLOQUEADO: Apenas Administrador Geral pode alterar.
+ * Operadores do Franga Studio têm alteração expressamente bloqueada.
  */
 export async function POST(req: NextRequest) {
     try {
+        const session = await getServerSession();
+        if (!session) {
+            return NextResponse.json({ error: 'Não autorizado. Faça login.' }, { status: 401 });
+        }
+
+        // Bloqueio rigoroso: Apenas admin pode alterar a pasta do Drive
+        if (!session.roles?.includes('admin')) {
+            return NextResponse.json({ 
+                error: 'Alteração bloqueada. Apenas administradores gerais possuem permissão para modificar o repositório do Google Drive. Operadores do Franga Studio possuem acesso somente leitura.' 
+            }, { status: 403 });
+        }
+
         const body = await req.json();
         const { repoUrl } = body;
 
@@ -47,8 +66,8 @@ export async function POST(req: NextRequest) {
             .from('download_tokens')
             .insert({
                 token: `config_repo_${Date.now()}`,
-                patron_email: 'admin@frangatoys.com.br',
-                patron_name: 'Configuração Admin',
+                patron_email: session.email || 'admin@frangatoys.com.br',
+                patron_name: session.nome || 'Configuração Admin',
                 figure_id: -999, // Marcador de repositório ativo
                 file_name: 'Configuração da Pasta Ativa do Patreon',
                 real_file_url: cleanUrl,
