@@ -7,7 +7,8 @@ import {
     UserCheck, ArrowLeft, ExternalLink, ShieldCheck, ShoppingBag, 
     Ticket, KeyRound, AlertTriangle, CheckCircle2, Clock, Package,
     Eye, EyeOff, Search, Filter, List, LayoutGrid, X, Trash2, CheckSquare, Tag,
-    ChevronLeft, ChevronRight, ArrowUpDown, Layers, Zap, CheckCheck
+    ChevronLeft, ChevronRight, ArrowUpDown, Layers, Zap, CheckCheck,
+    ShieldAlert, UserX, Globe, FileText, CheckCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePermission } from '@/hooks/usePermission';
@@ -16,8 +17,12 @@ export default function AdminPatreonRepositoryPage() {
     const { user } = usePermission();
     const isAdmin = user?.roles?.includes('admin') ?? false;
 
-    // Aba Ativa: 'gumroad' | 'drive'
-    const [activeTab, setActiveTab] = useState<'gumroad' | 'drive'>('gumroad');
+    // Aba Ativa: 'gumroad' | 'auditoria' | 'drive'
+    const [activeTab, setActiveTab] = useState<'gumroad' | 'auditoria' | 'drive'>('auditoria');
+
+    // Filtros e busca da Tela de Auditoria
+    const [auditSearch, setAuditSearch] = useState('');
+    const [auditFilter, setAuditFilter] = useState<'all' | 'redeemed' | 'pending' | 'leak'>('all');
 
     // --- ESTADO GUMROAD & ANTI-LEAK ---
     const [gumroadUser, setGumroadUser] = useState<any>(null);
@@ -267,14 +272,18 @@ export default function AdminPatreonRepositoryPage() {
         }
     };
 
-    // Sincronizar resgates via API de vendas do Gumroad
+    // Sincronizar resgates via API de vendas e offer_codes do Gumroad
     const handleSyncSales = async () => {
         try {
             setSyncingSales(true);
             const res = await fetch('/api/admin/gumroad', { method: 'PUT' });
             if (res.ok) {
                 const data = await res.json();
-                toast.success(`Sincronização concluída: ${data.claimsUpdated || 0} resgate(s) atualizados.`);
+                if (data.claimsUpdated > 0) {
+                    toast.success(`✓ ${data.claimsUpdated} cupom(ns) sincronizado(s) como resgatado(s)!`);
+                } else {
+                    toast.info(`Nenhum novo resgate identificado no Gumroad (times_used ainda está zerado).`);
+                }
                 fetchGumroadData();
             } else {
                 throw new Error('Falha na sincronização');
@@ -283,6 +292,22 @@ export default function AdminPatreonRepositoryPage() {
             toast.error(e.message || 'Erro ao sincronizar resgates');
         } finally {
             setSyncingSales(false);
+        }
+    };
+
+    // Alternar status do claim manualmente (ex: auditoria manual)
+    const handleToggleClaimStatus = async (claimId: string, currentStatus: boolean) => {
+        try {
+            const res = await fetch('/api/admin/gumroad', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ claimId, isRedeemed: !currentStatus })
+            });
+            if (!res.ok) throw new Error('Falha ao atualizar');
+            toast.success(currentStatus ? 'Status alterado para Pendente' : 'Marcado como Resgatado!');
+            fetchGumroadData();
+        } catch (e: any) {
+            toast.error(e.message || 'Erro ao alterar status');
         }
     };
 
@@ -424,6 +449,45 @@ export default function AdminPatreonRepositoryPage() {
             toast.error('Erro ao copiar');
         }
     };
+
+    // Estatísticas e filtros forenses para a Tela de Auditoria
+    const auditStats = {
+        total: claims.length,
+        redeemed: claims.filter((c: any) => c.is_redeemed).length,
+        pending: claims.filter((c: any) => !c.is_redeemed).length,
+        leaks: claims.filter((c: any) => 
+            c.is_leak_detected || 
+            (c.is_redeemed && c.redeemer_email && c.patron_email && c.redeemer_email.toLowerCase() !== c.patron_email.toLowerCase())
+        ).length
+    };
+
+    const filteredAuditClaims = claims.filter((c: any) => {
+        const pEmail = (c.patron_email || '').toLowerCase();
+        const rEmail = (c.redeemer_email || '').toLowerCase();
+        const code = (c.coupon_code || '').toLowerCase();
+        const prod = (c.product_name || '').toLowerCase();
+        const pName = (c.patron_name || '').toLowerCase();
+        const term = auditSearch.trim().toLowerCase();
+
+        const matchesSearch = !term || 
+            pEmail.includes(term) || 
+            rEmail.includes(term) || 
+            code.includes(term) || 
+            prod.includes(term) || 
+            pName.includes(term);
+
+        if (!matchesSearch) return false;
+
+        const isLeak = Boolean(
+            c.is_leak_detected || 
+            (c.is_redeemed && rEmail && pEmail && rEmail !== pEmail)
+        );
+
+        if (auditFilter === 'redeemed') return c.is_redeemed;
+        if (auditFilter === 'pending') return !c.is_redeemed;
+        if (auditFilter === 'leak') return isLeak;
+        return true;
+    });
 
     return (
         <div className="min-h-screen bg-[#09090b] text-white p-4 md:p-8 space-y-8 font-sans">
@@ -586,7 +650,7 @@ export default function AdminPatreonRepositoryPage() {
                 </div>
 
                 {/* NAVEGAÇÃO DE ABAS */}
-                <div className="flex items-center gap-2 border-b border-zinc-800/80 pb-1">
+                <div className="flex items-center gap-2 border-b border-zinc-800/80 pb-1 flex-wrap">
                     <button
                         onClick={() => setActiveTab('gumroad')}
                         className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
@@ -595,9 +659,30 @@ export default function AdminPatreonRepositoryPage() {
                                 : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
                         }`}
                     >
-                        <ShieldCheck size={16} />
-                        Distribuição Gumroad (Anti-Leak)
+                        <Package size={16} />
+                        <span>Catálogo & Lançamentos</span>
                     </button>
+
+                    <button
+                        onClick={() => setActiveTab('auditoria')}
+                        className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer relative ${
+                            activeTab === 'auditoria'
+                                ? 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 text-orange-400 border border-orange-500/30 shadow-md'
+                                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                        }`}
+                    >
+                        <ShieldAlert size={16} className={auditStats.leaks > 0 ? 'text-red-400 animate-pulse' : 'text-orange-400'} />
+                        <span>Auditoria Anti-Leak</span>
+                        <span className="text-[10px] bg-zinc-800 text-zinc-300 font-mono font-bold px-2 py-0.5 rounded-full">
+                            {claims.length}
+                        </span>
+                        {auditStats.leaks > 0 && (
+                            <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full animate-bounce">
+                                {auditStats.leaks} VAZAMENTO!
+                            </span>
+                        )}
+                    </button>
+
                     <button
                         onClick={() => setActiveTab('drive')}
                         className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
@@ -1580,6 +1665,14 @@ export default function AdminPatreonRepositoryPage() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button 
+                                        onClick={() => setActiveTab('auditoria')}
+                                        className="px-3.5 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/30 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer transition-all"
+                                    >
+                                        <ShieldAlert size={13} />
+                                        <span>Abrir Painel Forense Completo</span>
+                                    </button>
+
+                                    <button 
                                         onClick={handleSyncSales} 
                                         disabled={syncingSales}
                                         className="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-xs text-orange-300 font-bold rounded-xl flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
@@ -1595,10 +1688,10 @@ export default function AdminPatreonRepositoryPage() {
                                 <table className="w-full text-left text-xs text-zinc-300">
                                     <thead className="bg-zinc-950 text-[10px] uppercase font-black tracking-widest text-zinc-500 border-b border-zinc-800">
                                         <tr>
-                                            <th className="py-3 px-4">Patrono / E-mail</th>
+                                            <th className="py-3 px-4">Patrono Autorizado</th>
                                             <th className="py-3 px-4">Produto</th>
                                             <th className="py-3 px-4">Código do Cupom</th>
-                                            <th className="py-3 px-4 text-center">Status</th>
+                                            <th className="py-3 px-4">Quem Resgatou no Gumroad</th>
                                             <th className="py-3 px-4">Data Emissão</th>
                                             <th className="py-3 px-4 text-right">Ação</th>
                                         </tr>
@@ -1611,51 +1704,105 @@ export default function AdminPatreonRepositoryPage() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            claims.map((c: any) => (
-                                                <tr key={c.id} className="hover:bg-zinc-800/40 transition-colors">
-                                                    <td className="py-3 px-4">
-                                                        <div className="font-sans font-bold text-white">{c.patron_email}</div>
-                                                        {c.patron_name && (
-                                                            <div className="text-[10px] text-zinc-500 font-sans">{c.patron_name}</div>
-                                                        )}
-                                                    </td>
-                                                    <td className="py-3 px-4 font-sans text-zinc-300">
-                                                        {c.product_name || 'Produto Gumroad'}
-                                                    </td>
-                                                    <td className="py-3 px-4">
-                                                        <span className="bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800 text-orange-400 font-bold">
-                                                            {c.coupon_code}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-3 px-4 text-center">
-                                                        {c.is_redeemed ? (
-                                                            <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-sans font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                                                                <Check size={11} /> Resgatado
+                                            claims.map((c: any) => {
+                                                const pEmail = (c.patron_email || '').toLowerCase();
+                                                const rEmail = (c.redeemer_email || '').toLowerCase();
+                                                const isLeak = Boolean(c.is_leak_detected || (c.is_redeemed && rEmail && pEmail && rEmail !== pEmail));
+
+                                                return (
+                                                    <tr key={c.id} className={`transition-colors ${isLeak ? 'bg-red-950/25 hover:bg-red-950/35 border-l-4 border-l-red-500' : 'hover:bg-zinc-800/40'}`}>
+                                                        <td className="py-3.5 px-4">
+                                                            <div className="font-sans font-bold text-white text-xs">{c.patron_email}</div>
+                                                            {c.patron_name && (
+                                                                <div className="text-[11px] text-zinc-400 font-sans mt-0.5">{c.patron_name}</div>
+                                                            )}
+                                                            <span className="inline-block mt-1 text-[9px] font-mono uppercase bg-zinc-900 px-1.5 py-0.5 rounded text-zinc-400 border border-zinc-800">
+                                                                Apoiador Oficial
                                                             </span>
-                                                        ) : (
-                                                            <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-sans font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                                                                <Clock size={11} /> Pendente (1 uso restante)
+                                                        </td>
+                                                        <td className="py-3.5 px-4 font-sans text-zinc-300">
+                                                            <div className="font-bold text-white text-xs">{c.product_name || 'Produto Gumroad'}</div>
+                                                        </td>
+                                                        <td className="py-3.5 px-4">
+                                                            <span className="bg-zinc-950 px-2 py-1 rounded border border-zinc-800 text-orange-400 font-bold text-xs">
+                                                                {c.coupon_code}
                                                             </span>
-                                                        )}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-zinc-500 text-[11px] font-sans">
-                                                        {new Date(c.created_at).toLocaleString('pt-BR')}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-right">
-                                                        {c.checkout_url && (
-                                                            <button
-                                                                onClick={() => {
-                                                                    navigator.clipboard.writeText(c.checkout_url);
-                                                                    toast.success('Link copiado!');
-                                                                }}
-                                                                className="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-[10px] font-bold font-sans cursor-pointer transition-all inline-flex items-center gap-1"
-                                                            >
-                                                                <Copy size={11} /> Copiar Link
-                                                            </button>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))
+                                                        </td>
+                                                        <td className="py-3.5 px-4">
+                                                            {c.is_redeemed ? (
+                                                                c.redeemer_email ? (
+                                                                    isLeak ? (
+                                                                        <div className="bg-red-500/15 border border-red-500/40 rounded-xl px-3 py-2 text-left space-y-1">
+                                                                            <div className="flex items-center gap-1.5 text-red-400 font-black text-[11px] uppercase tracking-wider">
+                                                                                <ShieldAlert size={14} className="shrink-0 animate-pulse" />
+                                                                                <span>🚨 VAZAMENTO DETECTADO!</span>
+                                                                            </div>
+                                                                            <div className="font-mono text-xs font-bold text-white bg-red-950/80 px-2 py-1 rounded border border-red-500/30">
+                                                                                {c.redeemer_email}
+                                                                            </div>
+                                                                            <p className="text-[10px] text-red-300 font-sans leading-tight">
+                                                                                Resgatado por e-mail diferente do apoiador!
+                                                                            </p>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-3 py-1.5 text-left space-y-0.5">
+                                                                            <div className="flex items-center gap-1 text-emerald-400 font-black text-[10px] uppercase tracking-wider">
+                                                                                <CheckCircle2 size={13} className="shrink-0" />
+                                                                                <span>✓ Resgate Autêntico</span>
+                                                                            </div>
+                                                                            <div className="font-mono text-xs font-bold text-emerald-300">
+                                                                                {c.redeemer_email}
+                                                                            </div>
+                                                                        </div>
+                                                                    )
+                                                                ) : (
+                                                                    <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold px-2.5 py-1 rounded-xl inline-flex items-center gap-1.5">
+                                                                        <Check size={13} /> Resgatado no Gumroad
+                                                                    </span>
+                                                                )
+                                                            ) : (
+                                                                <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold px-2.5 py-1 rounded-xl inline-flex items-center gap-1.5">
+                                                                    <Clock size={13} /> ⏳ Pendente
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-3.5 px-4 text-zinc-400 text-[11px] font-sans">
+                                                            {new Date(c.created_at).toLocaleString('pt-BR')}
+                                                        </td>
+                                                        <td className="py-3 px-4 text-right">
+                                                            <div className="flex items-center justify-end gap-1.5">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleToggleClaimStatus(c.id, c.is_redeemed)}
+                                                                    className={`px-2 py-1 rounded-lg text-[10px] font-bold font-sans cursor-pointer transition-all inline-flex items-center gap-1 ${
+                                                                        c.is_redeemed
+                                                                            ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white'
+                                                                            : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20'
+                                                                    }`}
+                                                                    title={c.is_redeemed ? 'Reverter para Pendente' : 'Marcar como Resgatado manualmente'}
+                                                                >
+                                                                    <Check size={11} />
+                                                                    <span>{c.is_redeemed ? 'Desmarcar' : 'Validar'}</span>
+                                                                </button>
+
+                                                                {c.checkout_url && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            navigator.clipboard.writeText(c.checkout_url);
+                                                                            toast.success('Link copiado!');
+                                                                        }}
+                                                                        className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-[10px] font-bold font-sans cursor-pointer transition-all inline-flex items-center gap-1"
+                                                                        title="Copiar link com cupom"
+                                                                    >
+                                                                        <Copy size={11} /> Copiar
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
                                         )}
                                     </tbody>
                                 </table>
@@ -1664,6 +1811,349 @@ export default function AdminPatreonRepositoryPage() {
 
                     </div>
                 )}
+
+                {/* ABA 2: AUDITORIA FORENSE & ANTI-LEAK */}
+                {activeTab === 'auditoria' && (
+                    <div className="space-y-8 animate-in fade-in duration-300">
+                        
+                        {/* BANNER FORENSE COM BOTÃO DE SINCRONIZAÇÃO */}
+                        <div className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-orange-950/30 border border-orange-500/30 rounded-3xl p-6 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 bg-orange-500/10 border border-orange-500/20 rounded-xl text-orange-400">
+                                        <ShieldAlert size={20} />
+                                    </div>
+                                    <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-wider">
+                                        Auditoria Forense & Rastreamento Anti-Leak
+                                    </h2>
+                                </div>
+                                <p className="text-xs text-zinc-400 max-w-2xl leading-relaxed">
+                                    Cruza em tempo real o e-mail do apoiador que recebeu o cupom com o e-mail que concluiu o pedido no Gumroad.
+                                    Se um assinante repassar o link para um terceiro, o sistema aponta imediatamente a divergência como <strong className="text-red-400 font-bold">Vazamento Detectado</strong>.
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={handleSyncSales}
+                                    disabled={syncingSales}
+                                    className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-orange-500/20 cursor-pointer transition-all"
+                                >
+                                    <RefreshCw size={14} className={syncingSales ? 'animate-spin' : ''} />
+                                    <span>{syncingSales ? 'Sincronizando...' : 'Verificar Resgates no Gumroad'}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* CARDS DE METRICAS FORENSES (KPIS) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {/* TOTAL EMITIDOS */}
+                            <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-5 space-y-2">
+                                <div className="flex items-center justify-between text-zinc-400">
+                                    <span className="text-[11px] font-black uppercase tracking-wider">Cupons Emitidos</span>
+                                    <Ticket size={16} className="text-zinc-500" />
+                                </div>
+                                <div className="text-2xl font-black text-white font-mono">{auditStats.total}</div>
+                                <p className="text-[10px] text-zinc-500">Total de códigos gerados pela API</p>
+                            </div>
+
+                            {/* RESGATADOS */}
+                            <div className="bg-zinc-900/70 border border-emerald-500/20 rounded-2xl p-5 space-y-2">
+                                <div className="flex items-center justify-between text-emerald-400">
+                                    <span className="text-[11px] font-black uppercase tracking-wider">Resgatados</span>
+                                    <CheckCircle2 size={16} />
+                                </div>
+                                <div className="text-2xl font-black text-emerald-400 font-mono">{auditStats.redeemed}</div>
+                                <p className="text-[10px] text-zinc-500">Concluídos com sucesso no Gumroad</p>
+                            </div>
+
+                            {/* PENDENTES */}
+                            <div className="bg-zinc-900/70 border border-amber-500/20 rounded-2xl p-5 space-y-2">
+                                <div className="flex items-center justify-between text-amber-400">
+                                    <span className="text-[11px] font-black uppercase tracking-wider">Pendentes</span>
+                                    <Clock size={16} />
+                                </div>
+                                <div className="text-2xl font-black text-amber-400 font-mono">{auditStats.pending}</div>
+                                <p className="text-[10px] text-zinc-500">Ainda não utilizados no checkout</p>
+                            </div>
+
+                            {/* VAZAMENTOS DETECTADOS */}
+                            <div className={`rounded-2xl p-5 space-y-2 border transition-all ${
+                                auditStats.leaks > 0
+                                    ? 'bg-red-950/40 border-red-500 shadow-xl shadow-red-500/10 animate-pulse'
+                                    : 'bg-zinc-900/70 border-zinc-800'
+                            }`}>
+                                <div className="flex items-center justify-between">
+                                    <span className={`text-[11px] font-black uppercase tracking-wider ${
+                                        auditStats.leaks > 0 ? 'text-red-400 font-bold' : 'text-zinc-400'
+                                    }`}>
+                                        Vazamentos Detectados
+                                    </span>
+                                    <ShieldAlert size={16} className={auditStats.leaks > 0 ? 'text-red-400' : 'text-zinc-500'} />
+                                </div>
+                                <div className={`text-2xl font-black font-mono ${
+                                    auditStats.leaks > 0 ? 'text-red-400' : 'text-zinc-400'
+                                }`}>
+                                    {auditStats.leaks}
+                                </div>
+                                <p className="text-[10px] text-zinc-500">
+                                    {auditStats.leaks > 0 ? 'E-mails divergentes do apoiador original!' : 'Nenhuma violação identificada'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* BARRA DE BUSCA E FILTROS */}
+                        <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-5">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                {/* Busca */}
+                                <div className="relative flex-1">
+                                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar por e-mail do patrono, e-mail de quem comprou, cupom ou modelo..."
+                                        value={auditSearch}
+                                        onChange={e => setAuditSearch(e.target.value)}
+                                        className="w-full bg-zinc-950 border border-zinc-800 focus:border-orange-500 rounded-xl pl-9 pr-8 py-2.5 text-xs text-white outline-none transition-all placeholder:text-zinc-600"
+                                    />
+                                    {auditSearch && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setAuditSearch('')}
+                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white p-1"
+                                        >
+                                            <X size={13} />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Abas de Filtro */}
+                                <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800 text-xs overflow-x-auto shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAuditFilter('all')}
+                                        className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                                            auditFilter === 'all'
+                                                ? 'bg-zinc-800 text-white shadow-sm'
+                                                : 'text-zinc-500 hover:text-zinc-300'
+                                        }`}
+                                    >
+                                        Todos ({auditStats.total})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAuditFilter('redeemed')}
+                                        className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                                            auditFilter === 'redeemed'
+                                                ? 'bg-emerald-500 text-white shadow-md'
+                                                : 'text-emerald-400 hover:text-emerald-300'
+                                        }`}
+                                    >
+                                        Resgatados ({auditStats.redeemed})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAuditFilter('pending')}
+                                        className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                                            auditFilter === 'pending'
+                                                ? 'bg-amber-500 text-white shadow-md'
+                                                : 'text-amber-400 hover:text-amber-300'
+                                        }`}
+                                    >
+                                        Pendentes ({auditStats.pending})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAuditFilter('leak')}
+                                        className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                                            auditFilter === 'leak'
+                                                ? 'bg-red-500 text-white shadow-md'
+                                                : 'text-red-400 hover:text-red-300'
+                                        }`}
+                                    >
+                                        🚨 Vazamentos ({auditStats.leaks})
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* TABELA FORENSE COMPLETA */}
+                            <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-950">
+                                <table className="w-full text-left text-xs text-zinc-300">
+                                    <thead className="bg-zinc-900/90 text-[10px] uppercase font-black tracking-widest text-zinc-500 border-b border-zinc-800">
+                                        <tr>
+                                            <th className="py-3 px-4">Patrono Autorizado</th>
+                                            <th className="py-3 px-4">Quem Resgatou no Gumroad</th>
+                                            <th className="py-3 px-4">Modelo / Cupom</th>
+                                            <th className="py-3 px-4">Pedido / Origem</th>
+                                            <th className="py-3 px-4">Data Emissão / Resgate</th>
+                                            <th className="py-3 px-4 text-right">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-850">
+                                        {filteredAuditClaims.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={6} className="py-12 text-center text-zinc-500 italic">
+                                                    Nenhum registro encontrado para este filtro de auditoria.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            filteredAuditClaims.map((c: any) => {
+                                                const pEmail = (c.patron_email || '').toLowerCase();
+                                                const rEmail = (c.redeemer_email || '').toLowerCase();
+                                                const isLeak = Boolean(c.is_leak_detected || (c.is_redeemed && rEmail && pEmail && rEmail !== pEmail));
+
+                                                return (
+                                                    <tr 
+                                                        key={c.id} 
+                                                        className={`transition-colors ${
+                                                            isLeak 
+                                                                ? 'bg-red-950/20 hover:bg-red-950/30 border-l-4 border-l-red-500' 
+                                                                : 'hover:bg-zinc-900/40'
+                                                        }`}
+                                                    >
+                                                        {/* COLUNA 1: PATRONO AUTORIZADO */}
+                                                        <td className="py-3.5 px-4">
+                                                            <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                                                                <span>{c.patron_email}</span>
+                                                            </div>
+                                                            {c.patron_name && (
+                                                                <div className="text-[11px] text-zinc-400 mt-0.5">
+                                                                    {c.patron_name}
+                                                                </div>
+                                                            )}
+                                                            <span className="inline-block mt-1 text-[9px] font-mono uppercase bg-zinc-900 px-1.5 py-0.5 rounded text-zinc-400 border border-zinc-800">
+                                                                Destinatário Oficial
+                                                            </span>
+                                                        </td>
+
+                                                        {/* COLUNA 2: QUEM RESGATOU NO GUMROAD */}
+                                                        <td className="py-3.5 px-4">
+                                                            {c.is_redeemed ? (
+                                                                c.redeemer_email ? (
+                                                                    isLeak ? (
+                                                                        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-2.5 space-y-1">
+                                                                            <div className="flex items-center gap-1.5 text-red-400 font-black text-[11px]">
+                                                                                <ShieldAlert size={14} className="shrink-0" />
+                                                                                <span>VAZAMENTO DETECTADO!</span>
+                                                                            </div>
+                                                                            <div className="font-mono text-xs font-bold text-red-300">
+                                                                                {c.redeemer_email}
+                                                                            </div>
+                                                                            <p className="text-[10px] text-red-400/80">
+                                                                                Diferente do patrono oficial ({c.patron_email})
+                                                                            </p>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2.5 space-y-0.5">
+                                                                            <div className="flex items-center gap-1 text-emerald-400 font-bold text-[10px]">
+                                                                                <CheckCircle2 size={13} className="shrink-0" />
+                                                                                <span>Mesmo Comprador (Autêntico)</span>
+                                                                            </div>
+                                                                            <div className="font-mono text-xs font-bold text-emerald-300">
+                                                                                {c.redeemer_email}
+                                                                            </div>
+                                                                        </div>
+                                                                    )
+                                                                ) : (
+                                                                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2 text-emerald-400 text-xs flex items-center gap-1.5">
+                                                                        <Check size={14} />
+                                                                        <span>Resgatado no Gumroad</span>
+                                                                    </div>
+                                                                )
+                                                            ) : (
+                                                                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-2 text-amber-400 text-xs flex items-center gap-1.5">
+                                                                    <Clock size={13} />
+                                                                    <span>Aguardando resgate no Gumroad</span>
+                                                                </div>
+                                                            )}
+                                                        </td>
+
+                                                        {/* COLUNA 3: MODELO / CUPOM */}
+                                                        <td className="py-3.5 px-4">
+                                                            <div className="font-bold text-white text-xs">{c.product_name}</div>
+                                                            <div className="mt-1 flex items-center gap-1.5">
+                                                                <span className="bg-zinc-900 border border-zinc-800 text-orange-400 font-mono font-bold px-2 py-0.5 rounded text-[11px]">
+                                                                    {c.coupon_code}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* COLUNA 4: PEDIDO / ORIGEM */}
+                                                        <td className="py-3.5 px-4 font-mono text-[11px]">
+                                                            {c.gumroad_order_number ? (
+                                                                <div className="text-zinc-200">
+                                                                    Pedido #{c.gumroad_order_number}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-zinc-500">-</div>
+                                                            )}
+                                                            {c.buyer_country && (
+                                                                <div className="text-zinc-400 text-[10px] mt-0.5 flex items-center gap-1">
+                                                                    <Globe size={11} className="text-zinc-500" />
+                                                                    <span>{c.buyer_country}</span>
+                                                                </div>
+                                                            )}
+                                                        </td>
+
+                                                        {/* COLUNA 5: DATAS */}
+                                                        <td className="py-3.5 px-4 text-[11px] text-zinc-400 space-y-1">
+                                                            <div>
+                                                                <span className="text-zinc-500 text-[10px] block">Emissão:</span>
+                                                                <span>{new Date(c.created_at).toLocaleString('pt-BR')}</span>
+                                                            </div>
+                                                            {c.redeemed_at && (
+                                                                <div>
+                                                                    <span className="text-emerald-500 text-[10px] block">Resgate:</span>
+                                                                    <span className="text-zinc-200">{new Date(c.redeemed_at).toLocaleString('pt-BR')}</span>
+                                                                </div>
+                                                            )}
+                                                        </td>
+
+                                                        {/* COLUNA 6: AÇÕES */}
+                                                        <td className="py-3.5 px-4 text-right">
+                                                            <div className="flex items-center justify-end gap-1.5">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleToggleClaimStatus(c.id, c.is_redeemed)}
+                                                                    className={`px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all inline-flex items-center gap-1.5 ${
+                                                                        c.is_redeemed
+                                                                            ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white'
+                                                                            : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20'
+                                                                    }`}
+                                                                    title={c.is_redeemed ? 'Reverter para Pendente' : 'Marcar como Resgatado'}
+                                                                >
+                                                                    <Check size={12} />
+                                                                    <span>{c.is_redeemed ? 'Desmarcar' : 'Validar'}</span>
+                                                                </button>
+
+                                                                {c.checkout_url && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            navigator.clipboard.writeText(c.checkout_url);
+                                                                            toast.success('Link de resgate copiado!');
+                                                                        }}
+                                                                        className="px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-[10px] font-bold cursor-pointer transition-all inline-flex items-center gap-1"
+                                                                        title="Copiar link com cupom 100% OFF"
+                                                                    >
+                                                                        <Copy size={12} />
+                                                                        <span>Copiar Link</span>
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                )}
+
 
                 {/* ABA 2: GOOGLE DRIVE & TERCEIRIZADOS (LEGADO) */}
                 {activeTab === 'drive' && (

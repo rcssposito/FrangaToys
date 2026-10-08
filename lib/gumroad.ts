@@ -138,3 +138,19 @@ export async function getGumroadSales() {
     const data = await res.json();
     return data.sales || [];
 }
+
+/**
+ * Consulta cupons/offer_codes de um produto específico para verificar times_used
+ */
+export async function getGumroadProductOfferCodes(productId: string): Promise<GumroadOfferCode[]> {
+    const token = getGumroadToken();
+    const res = await fetch(`${GUMROAD_API_BASE}/products/${productId}/offer_codes`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        cache: 'no-store'
+    });
+    if (!res.ok) {
+        throw new Error(`Erro ao consultar cupons do produto ${productId} no Gumroad: HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    return data.offer_codes || [];
+}
