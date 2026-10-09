@@ -52,9 +52,13 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
         e.stopPropagation();
         trackClick(); // Conta como interesse mesmo se só girar
         setIsFlipped(!isFlipped);
-    };
- 
-    const imageUrl = getOptimizedImageUrl(figure.imagem_url);
+    };    const imageUrl = getOptimizedImageUrl(figure.imagem_url);
+    const secondaryImageUrl = figure.imagem_secundaria
+        ? getOptimizedImageUrl(figure.imagem_secundaria)
+        : (figure.fotos_extras && figure.fotos_extras.length > 0)
+            ? getOptimizedImageUrl(figure.fotos_extras[0])
+            : null;
+
     const figurePrice = figure.precos?.pix_colorido || figure.precos?.colorido || figure.precos?.pix_estilizado || 0;
     const tier = figure.precos?.colorido ? getFigureTier(figure.precos.colorido) : null;
     const tierStyle = tier ? getTierBadgeStyle(tier) : null;
@@ -89,16 +93,41 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                         </div>
                     </div>
 
-                    {/* Image Area (Full bleed background) */}
+                    {/* Mini Indicador de Galeria (Estilo Stories / Luxury - sutil no topo) */}
+                    {secondaryImageUrl && (
+                        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 pointer-events-none opacity-40 group-hover/front:opacity-100 transition-all duration-300">
+                            <span className="h-0.5 w-3 rounded-full bg-white transition-all duration-300 group-hover/front:bg-white/40 shadow-sm" />
+                            <span className="h-0.5 w-3 rounded-full bg-white/40 transition-all duration-300 group-hover/front:bg-orange-500 shadow-sm" />
+                        </div>
+                    )}
+
+                    {/* Image Area (Primary Image) */}
                     <Image
                         loader={imageKitLoader}
                         src={imageUrl}
                         alt={figure.nome}
                         fill
-                        className="object-contain p-2 transition-transform duration-700 group-hover/front:scale-105 opacity-90 group-hover/front:opacity-100"
+                        className={clsx(
+                            "object-contain p-2 transition-all duration-700 opacity-90",
+                            secondaryImageUrl 
+                                ? "group-hover/front:opacity-0 group-hover/front:scale-105" 
+                                : "group-hover/front:scale-105 group-hover/front:opacity-100"
+                        )}
                         sizes="(max-width: 768px) 50vw, 25vw"
                         priority={priority}
                     />
+
+                    {/* Secondary Image (Crossfade suave no Hover) */}
+                    {secondaryImageUrl && (
+                        <Image
+                            loader={imageKitLoader}
+                            src={secondaryImageUrl}
+                            alt={`${figure.nome} - Vista alternativa`}
+                            fill
+                            className="object-contain p-2 transition-all duration-700 opacity-0 group-hover/front:opacity-100 group-hover/front:scale-105"
+                            sizes="(max-width: 768px) 50vw, 25vw"
+                        />
+                    )}
 
                     {/* Status Badges Overlay (Top Left) */}
                     <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 flex flex-col gap-1.5 sm:gap-2 pointer-events-none">

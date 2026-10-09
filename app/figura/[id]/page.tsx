@@ -154,6 +154,8 @@ export default async function FiguraPage({ params }: Props) {
         desconto_campanha: metaData?.desconto_campanha,
         preco_fixo_campanha: metaData?.preco_fixo_campanha,
         tem_pintura_real: figure.tem_pintura_real,
+        imagem_secundaria: figure.imagem_secundaria || null,
+        fotos_extras: Array.isArray(figure.fotos_extras) ? figure.fotos_extras : [],
         is_merchant: studioData?.merchant ?? false
     };
 
