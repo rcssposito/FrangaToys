@@ -7,9 +7,9 @@ interface ImageLoaderParams {
 }
 
 /**
- * Custom Loader para ImageKit.
- * Evita o uso do /_next/image da Vercel, gerando URLs diretas para o ImageKit.
- * Documentação: https://nextjs.org/docs/api-reference/next/image#loader
+ * Custom Loader para Cloudflare R2 e ImageKit.
+ * Controlado pela variável NEXT_PUBLIC_STORAGE_PROVIDER ('cloudflare' ou 'imagekit').
+ * Permite alternar instantaneamente entre provedores com zero risco de quebra.
  */
 export default function imageKitLoader({ src, width, quality }: ImageLoaderParams): string {
     if (src.startsWith('/') || src.startsWith('data:')) {
@@ -18,39 +18,44 @@ export default function imageKitLoader({ src, width, quality }: ImageLoaderParam
 
     try {
         const urlObj = new URL(src);
+        const r2PublicBase = (
+            process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL ||
+            'https://pub-ab391b8f43ea4791b533669f933ac2b5.r2.dev'
+        ).replace(/\/+$/, '');
+        const activeProvider = (process.env.NEXT_PUBLIC_STORAGE_PROVIDER || 'imagekit').toLowerCase().trim();
 
-        // Verifica se é ImageKit
+        // Modo Cloudflare R2 Ativo
+        if (activeProvider === 'cloudflare') {
+            // Se já for URL do R2, entrega direta e limpa
+            if (urlObj.hostname.includes('r2.dev') || urlObj.hostname.includes('r2.cloudflarestorage.com')) {
+                return src.split('?')[0];
+            }
+
+            // Se for do ImageKit, mapeia transparentemente para a réplica idêntica no R2
+            if (urlObj.hostname.includes('imagekit.io')) {
+                let cleanPath = urlObj.pathname;
+                cleanPath = cleanPath.replace(/^\/lojinha3d\//, '/');
+                return `${r2PublicBase}${cleanPath}`;
+            }
+        }
+
+        // Modo ImageKit (Padrão de Fallback)
         if (urlObj.hostname.includes('imagekit.io')) {
             const params = urlObj.searchParams;
-
-            // Obtém transformações existentes ou inicia vazio
             let tr = params.get('tr') || '';
-
-            // Adiciona width e quality controlados pelo Next.js
-            // Formato ImageKit: tr=w-300,q-80
             const newTransforms = [];
 
-            // Se não tiver width na string original, adiciona a do loader
             if (!tr.includes('w-')) {
                 newTransforms.push(`w-${width}`);
             }
-
-            // Se não tiver quality, adiciona
             if (!tr.includes('q-')) {
                 newTransforms.push(`q-${quality || 75}`);
             }
-
-            // Garante f-auto (formato automático: WebP/AVIF)
             if (!tr.includes('f-')) {
                 newTransforms.push('f-auto');
             }
 
-            // Concatena com vírgula se já existir, senão cria
             if (tr) {
-                // Se já existe tr, adicionamos as novas propriedades. 
-                // O ImageKit permite tr=w-200,w-300 (o último ganha? ou encadeia?)
-                // Melhor abordagem: append na string existente
-                // Mas cuidado com a sintaxe. ImageKit usa vírgulas.
                 params.set('tr', `${tr},${newTransforms.join(',')}`);
             } else {
                 params.set('tr', newTransforms.join(','));

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { uploadFile } from '@/lib/storage';
 
 export async function POST(req: Request) {
     try {
@@ -16,34 +17,17 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Arquivo e ID do pedido são obrigatórios' }, { status: 400 });
         }
 
-        const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
-        if (!privateKey) {
-            return NextResponse.json({ error: 'Chave do ImageKit não configurada no servidor' }, { status: 500 });
-        }
+        // 1. Upload universal (Cloudflare R2 ou ImageKit)
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const fileName = `wip_${saleId}_${Date.now()}.webp`;
 
-        // 1. Upload para o ImageKit
-        const auth = Buffer.from(`${privateKey}:`).toString('base64');
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', file);
-        uploadFormData.append('fileName', `wip_${saleId}_${Date.now()}`);
-        uploadFormData.append('folder', '/wip');
-        uploadFormData.append('useUniqueFileName', 'true');
-
-        const uploadRes = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
-            method: 'POST',
-            headers: {
-                Authorization: `Basic ${auth}`
-            },
-            body: uploadFormData
+        const uploadData = await uploadFile({
+            buffer,
+            folder: 'wip',
+            fileName,
+            contentType: file.type || 'image/webp',
         });
-
-        if (!uploadRes.ok) {
-            const errText = await uploadRes.text();
-            console.error('ImageKit Upload Error:', errText);
-            return NextResponse.json({ error: 'Falha ao enviar imagem para o ImageKit' }, { status: 500 });
-        }
-
-        const uploadData = await uploadRes.json();
         const photoUrl = uploadData.url;
 
         // 2. Buscar fotos WIP atuais da venda

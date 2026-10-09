@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRoles } from '@/lib/server-auth';
+import { uploadFile } from '@/lib/storage';
 
-function toImageKitFileName(name: string) {
+function toCleanFileName(name: string) {
     return name
         .trim()
         .replace(/[^\w-]/g, '_')
@@ -23,59 +24,35 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Arquivo e nome da figura são obrigatórios' }, { status: 400 });
         }
 
-        const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
-        if (!privateKey) {
-            return NextResponse.json({ error: 'IMAGEKIT_PRIVATE_KEY não configurada' }, { status: 500 });
-        }
-
         // 1. Padronizar nome canônico sempre com extensão .webp
-        const baseClean = toImageKitFileName(figureName);
+        const baseClean = toCleanFileName(figureName);
         const targetFileName = `${baseClean}_${index}.webp`;
 
-        // 3. Pasta de destino padronizada por categoria
+        // 2. Pasta de destino padronizada por categoria
         const rawCategory = categoria.trim().toLowerCase();
         const validFolders = ['anime', 'games', 'marvel', 'dc', 'random'];
-        const folder = validFolders.includes(rawCategory) ? `/${rawCategory}` : '/random';
+        const folder = validFolders.includes(rawCategory) ? rawCategory : 'random';
 
-        // 4. Preparar payload para a API do ImageKit
+        // 3. Upload através da camada universal de storage (Cloudflare R2 ou ImageKit)
         const arrayBuffer = await file.arrayBuffer();
-        const base64Data = Buffer.from(arrayBuffer).toString('base64');
+        const buffer = Buffer.from(arrayBuffer);
 
-        const ikPayload = new URLSearchParams();
-        ikPayload.append('file', base64Data);
-        ikPayload.append('fileName', targetFileName);
-        ikPayload.append('folder', folder);
-        ikPayload.append('useUniqueFileName', 'false');
-
-        const authHeader = `Basic ${Buffer.from(`${privateKey}:`).toString('base64')}`;
-
-        const uploadRes = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
-            method: 'POST',
-            headers: {
-                Authorization: authHeader,
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: ikPayload.toString()
+        const result = await uploadFile({
+            buffer,
+            folder,
+            fileName: targetFileName,
+            contentType: 'image/webp',
         });
-
-        if (!uploadRes.ok) {
-            const errText = await uploadRes.text();
-            console.error('ImageKit upload error:', uploadRes.status, errText);
-            return NextResponse.json({ error: `Erro no upload do ImageKit (${uploadRes.status}): ${errText}` }, { status: 502 });
-        }
-
-        const ikData = await uploadRes.json();
-        const rawUrl = (ikData.url || '').split('?')[0];
-        const finalUrl = `${rawUrl}?tr=w-500,q-80,f-auto`;
 
         return NextResponse.json({
             success: true,
-            url: finalUrl,
+            provider: result.provider,
+            url: result.url,
             fileName: targetFileName,
-            filePath: ikData.filePath
+            filePath: result.path,
         });
-    } catch (error: any) {
-        console.error('Erro no upload de imagem de figura:', error);
-        return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 });
+    } catch (err: any) {
+        console.error('Erro no upload de foto da figura:', err);
+        return NextResponse.json({ error: err.message || 'Falha interna no upload' }, { status: 500 });
     }
 }

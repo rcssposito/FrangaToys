@@ -9,28 +9,33 @@ export function getOptimizedImageUrl(url: string | null): string {
 
   try {
     const urlObj = new URL(url);
+    const r2PublicBase = (
+      process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL ||
+      'https://pub-ab391b8f43ea4791b533669f933ac2b5.r2.dev'
+    ).replace(/\/+$/, '');
+    const activeProvider = (process.env.NEXT_PUBLIC_STORAGE_PROVIDER || 'imagekit').toLowerCase().trim();
 
-    // Se for do ImageKit, podemos garantir as transformações e o parâmetro de versão
+    // Modo Cloudflare R2 Ativo
+    if (activeProvider === 'cloudflare') {
+      if (urlObj.hostname.includes('r2.dev') || urlObj.hostname.includes('r2.cloudflarestorage.com')) {
+        return url.split('?')[0];
+      }
+      if (urlObj.hostname.includes('imagekit.io')) {
+        let cleanPath = urlObj.pathname.replace(/^\/lojinha3d\//, '/');
+        return `${r2PublicBase}${cleanPath}`;
+      }
+    }
+
+    // Modo ImageKit (Padrão de Fallback)
     if (urlObj.hostname.includes('imagekit.io')) {
-      // Adiciona parâmetro de versão baseado no timestamp atual (por sessão/carregamento)
-      // Ou poderíamos usar uma constante global se quisermos cache mais longo.
-      // Aqui usamos um valor que muda aproximadamente a cada hora para equilíbrio
       const hourScale = Math.floor(Date.now() / (1000 * 60 * 60));
-
-      if (urlObj.searchParams.has('v')) {
-        // Se já tem versão, não mexemos (ou atualizamos se necessário)
-      } else {
+      if (!urlObj.searchParams.has('v')) {
         urlObj.searchParams.set('v', hourScale.toString());
       }
-
-      // As transformações de redimensionamento (width/quality) agora são 
-      // gerenciadas pelo Custom Loader (next.config.ts -> image-loader.ts)
-      // Aqui garantimos apenas o cache-busting (v).
     }
 
     return urlObj.toString();
   } catch (e) {
-    // Se a URL for inválida (ex: apenas parte do path), tenta concatenar ou retorna original
     return url;
   }
 }
