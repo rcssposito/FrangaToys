@@ -56,6 +56,16 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
         // Beacon Analytics - Captura Origem, Dispositivo e Geolocalização
         const fireBeacon = async () => {
             try {
+                if (typeof window !== 'undefined') {
+                    const h = window.location.hostname;
+                    if (h === 'localhost' || h === '127.0.0.1' || h.endsWith('.local') || window.location.port === '3000') {
+                        return;
+                    }
+                }
+                if (typeof document !== 'undefined' && document.cookie.includes('admin_session=')) {
+                    return;
+                }
+
                 const urlParams = new URLSearchParams(window.location.search);
                 const source = urlParams.get('ref') || 'direto';
                 const isApp = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches;

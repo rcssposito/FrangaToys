@@ -26,6 +26,16 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
  
     const trackClick = async () => {
         try {
+            if (typeof window !== 'undefined') {
+                const h = window.location.hostname;
+                if (h === 'localhost' || h === '127.0.0.1' || h.endsWith('.local') || window.location.port === '3000') {
+                    return;
+                }
+            }
+            if (typeof document !== 'undefined' && document.cookie.includes('admin_session=')) {
+                return;
+            }
+
             await fetch('/api/analytics/hit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

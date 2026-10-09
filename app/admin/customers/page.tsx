@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
     Users, 
@@ -46,7 +46,13 @@ import {
     MapPin,
     Flame,
     FileText,
-    MessageSquare
+    MessageSquare,
+    Package,
+    ShieldCheck,
+    ChevronDown,
+    ChevronUp,
+    Link2,
+    Layers
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePermission } from '@/hooks/usePermission';
@@ -147,6 +153,133 @@ export default function CustomersPage() {
             fetchTelemetria();
         }
     }, [viewMode]);
+
+    // Agrupamento Inteligente da Telemetria (Correlacionando IP, Visitor ID e Cliente)
+    const [telemetriaGrouping, setTelemetriaGrouping] = useState<'grouped' | 'flat'>('grouped');
+    const [expandedGroupIds, setExpandedGroupIds] = useState<Record<string, boolean>>({});
+
+    const toggleGroupExpand = (groupId: string) => {
+        setExpandedGroupIds(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+    };
+
+    const groupedTelemetria = useMemo(() => {
+        if (!telemetriaLogs || telemetriaLogs.length === 0) return [];
+
+        type GroupItem = {
+            id: string;
+            sessoes: any[];
+            ips: Set<string>;
+            visitorIds: Set<string>;
+            dispositivos: Set<string>;
+            navegadores: Set<string>;
+            cidade: string;
+            estado: string;
+            clienteNome?: string;
+            clienteId?: string;
+            pedidoInfo?: any;
+            figuras: any[];
+            totalDuracao: number;
+            totalPaginas: number;
+            ultimoAcesso: string;
+            primeiroAcesso: string;
+            origens: Set<string>;
+        };
+
+        const groups: GroupItem[] = [];
+
+        for (const log of telemetriaLogs) {
+            let matchedIndex = -1;
+            for (let i = 0; i < groups.length; i++) {
+                const g = groups[i];
+                const sharesClient = log.cliente_id && g.clienteId === log.cliente_id;
+                const sharesVisitor = log.visitor_id && g.visitorIds.has(log.visitor_id);
+                const sharesIp = log.ip && log.ip !== 'local' && log.ip !== '127.0.0.1' && g.ips.has(log.ip);
+
+                if (sharesClient || sharesVisitor || sharesIp) {
+                    matchedIndex = i;
+                    break;
+                }
+            }
+
+            const logOrigem = log.crm_cadencias?.nome 
+                ? `Cadência: ${log.crm_cadencias.nome}` 
+                : log.utm_campaign 
+                ? `${log.utm_source || 'Campanha'}: ${log.utm_campaign}` 
+                : log.referrer && log.referrer.includes('instagram') 
+                ? 'Instagram' 
+                : log.referrer && log.referrer.includes('google')
+                ? 'Google'
+                : log.referrer 
+                ? 'Link externo' 
+                : 'Direto';
+
+            if (matchedIndex === -1) {
+                const g: GroupItem = {
+                    id: log.id,
+                    sessoes: [log],
+                    ips: new Set(log.ip && log.ip !== 'local' && log.ip !== '127.0.0.1' ? [log.ip] : []),
+                    visitorIds: new Set(log.visitor_id ? [log.visitor_id] : []),
+                    dispositivos: new Set(log.dispositivo ? [log.dispositivo] : []),
+                    navegadores: new Set(log.navegador ? [log.navegador] : []),
+                    cidade: log.cidade || 'Desconhecida',
+                    estado: log.estado || '',
+                    clienteNome: log.clientes?.nome || log.email,
+                    clienteId: log.cliente_id,
+                    pedidoInfo: log.pedido_info,
+                    figuras: log.figuras ? [log.figuras] : [],
+                    totalDuracao: Number(log.duracao_total_segundos || log.duracao_segundos) || 0,
+                    totalPaginas: Number(log.total_paginas) || 1,
+                    ultimoAcesso: log.ultimo_acesso_em || log.created_at,
+                    primeiroAcesso: log.primeiro_acesso_em || log.created_at,
+                    origens: new Set([logOrigem])
+                };
+                groups.push(g);
+            } else {
+                const g = groups[matchedIndex];
+                g.sessoes.push(log);
+                if (log.ip && log.ip !== 'local' && log.ip !== '127.0.0.1') g.ips.add(log.ip);
+                if (log.visitor_id) g.visitorIds.add(log.visitor_id);
+                if (log.dispositivo) g.dispositivos.add(log.dispositivo);
+                if (log.navegador) g.navegadores.add(log.navegador);
+                if (!g.clienteNome && (log.clientes?.nome || log.email)) {
+                    g.clienteNome = log.clientes?.nome || log.email;
+                }
+                if (!g.clienteId && log.cliente_id) {
+                    g.clienteId = log.cliente_id;
+                }
+                if (!g.pedidoInfo && log.pedido_info) {
+                    g.pedidoInfo = log.pedido_info;
+                }
+                if (log.figuras && !g.figuras.some(f => f.id === log.figuras.id)) {
+                    g.figuras.push(log.figuras);
+                }
+                g.totalDuracao += (Number(log.duracao_total_segundos || log.duracao_segundos) || 0);
+                g.totalPaginas += (Number(log.total_paginas) || 1);
+                g.origens.add(logOrigem);
+
+                const logTime = log.ultimo_acesso_em || log.created_at;
+                if (new Date(logTime) > new Date(g.ultimoAcesso)) {
+                    g.ultimoAcesso = logTime;
+                }
+                const logFirstTime = log.primeiro_acesso_em || log.created_at;
+                if (new Date(logFirstTime) < new Date(g.primeiroAcesso)) {
+                    g.primeiroAcesso = logFirstTime;
+                }
+            }
+        }
+
+        groups.sort((a, b) => new Date(b.ultimoAcesso).getTime() - new Date(a.ultimoAcesso).getTime());
+
+        for (const g of groups) {
+            g.sessoes.sort((a, b) => {
+                const timeA = new Date(a.ultimo_acesso_em || a.created_at).getTime();
+                const timeB = new Date(b.ultimo_acesso_em || b.created_at).getTime();
+                return timeB - timeA;
+            });
+        }
+
+        return groups;
+    }, [telemetriaLogs]);
 
     // Clientes State
     const [customers, setCustomers] = useState<Customer[]>([]);
@@ -1738,144 +1871,556 @@ export default function CustomersPage() {
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
+                                {/* Barra Superior de Controles do Radar */}
+                                <div className="px-6 py-4 border-b border-zinc-800/80 bg-zinc-950/60 flex flex-wrap items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            <span className="text-xs font-black uppercase tracking-wider text-white">Radar de Telemetria</span>
+                                        </div>
+                                        <span className="text-[11px] text-zinc-500 font-medium">
+                                            {telemetriaGrouping === 'grouped' 
+                                                ? `${groupedTelemetria.length} conexões únicas correlacionadas` 
+                                                : `${telemetriaLogs.length} sessões individuais gravadas`}
+                                        </span>
+                                    </div>
+
+                                    {/* Seletor de Modo: Agrupado por IP vs Sessões Individuais */}
+                                    <div className="flex items-center bg-zinc-900 border border-zinc-800 p-1 rounded-xl">
+                                        <button
+                                            onClick={() => setTelemetriaGrouping('grouped')}
+                                            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                                                telemetriaGrouping === 'grouped'
+                                                    ? 'bg-orange-500 text-black shadow-md shadow-orange-500/20'
+                                                    : 'text-zinc-400 hover:text-white'
+                                            }`}
+                                        >
+                                            <Link2 size={13} />
+                                            <span>Por Conexão / Lead (IP)</span>
+                                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                                                telemetriaGrouping === 'grouped' ? 'bg-black/20 text-black font-black' : 'bg-zinc-800 text-zinc-400'
+                                            }`}>
+                                                {groupedTelemetria.length}
+                                            </span>
+                                        </button>
+
+                                        <button
+                                            onClick={() => setTelemetriaGrouping('flat')}
+                                            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                                                telemetriaGrouping === 'flat'
+                                                    ? 'bg-orange-500 text-black shadow-md shadow-orange-500/20'
+                                                    : 'text-zinc-400 hover:text-white'
+                                            }`}
+                                        >
+                                            <Layers size={13} />
+                                            <span>Sessões Individuais</span>
+                                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                                                telemetriaGrouping === 'flat' ? 'bg-black/20 text-black font-black' : 'bg-zinc-800 text-zinc-400'
+                                            }`}>
+                                                {telemetriaLogs.length}
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="border-b border-zinc-800/50 bg-black/40">
                                             <th className="px-6 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Último Sinal</th>
-                                            <th className="px-6 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Visitante / Cliente</th>
+                                            <th className="px-6 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">
+                                                {telemetriaGrouping === 'grouped' ? 'Conexão / Visitante (IP & Aparelhos)' : 'Visitante / Cliente'}
+                                            </th>
                                             <th className="px-6 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">De Onde Acessou</th>
                                             <th className="px-6 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Navegação & Interesse</th>
-                                            <th className="px-6 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Origem / Campanha</th>
+                                            <th className="px-6 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Origem / Sessões</th>
                                             <th className="px-6 py-5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] text-right">Tempo Total</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-800/30">
-                                        {telemetriaLogs.map((log) => {
-                                            const isCliente = !!(log.clientes?.nome || log.email);
-                                            const clienteNome = log.clientes?.nome || log.email;
-                                            const displayTime = log.ultimo_acesso_em || log.created_at;
-                                            const totalSec = log.duracao_total_segundos || log.duracao_segundos || 0;
-                                            const minutes = Math.floor(totalSec / 60);
-                                            const seconds = totalSec % 60;
-                                            const timeFormatted = minutes > 0 ? `${minutes}m ${seconds}s` : (seconds > 0 ? `${seconds}s` : '< 5s');
+                                        {telemetriaGrouping === 'grouped' ? (
+                                            /* MODO 1: AGRUPADO POR CONEXÃO (IP, VISITOR ID E CLIENTE) */
+                                            groupedTelemetria.map((group) => {
+                                                const isCliente = !!group.clienteNome;
+                                                const isExpanded = !!expandedGroupIds[group.id];
+                                                const displayTime = group.ultimoAcesso;
+                                                const totalSec = group.totalDuracao;
+                                                const minutes = Math.floor(totalSec / 60);
+                                                const seconds = totalSec % 60;
+                                                const hours = Math.floor(minutes / 60);
+                                                const remainingMinutes = minutes % 60;
+                                                const timeFormatted = hours > 0 
+                                                    ? `${hours}h ${remainingMinutes}m` 
+                                                    : (minutes > 0 ? `${minutes}m ${seconds}s` : (seconds > 0 ? `${seconds}s` : '< 5s'));
 
-                                            return (
-                                                <tr key={log.id} className="group hover:bg-zinc-800/30 transition-colors">
-                                                    {/* Horário */}
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex flex-col">
-                                                            <div className="flex items-center gap-1.5">
-                                                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                                                <span className="text-xs font-bold text-zinc-300">
-                                                                    {new Date(displayTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                                                </span>
-                                                            </div>
-                                                            <span className="text-[10px] text-zinc-600 font-mono mt-0.5">
-                                                                {new Date(displayTime).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                                                            </span>
-                                                        </div>
-                                                    </td>
+                                                const ipDisplay = group.ips.size > 0 ? Array.from(group.ips)[0] : '';
+                                                const hasMultipleSessions = group.sessoes.length > 1;
 
-                                                    {/* Visitante / Cliente */}
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${
-                                                                isCliente 
-                                                                    ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' 
-                                                                    : 'bg-zinc-800 text-zinc-500 border border-zinc-700/50'
-                                                            }`}>
-                                                                {isCliente ? clienteNome[0]?.toUpperCase() : '?'}
-                                                            </div>
-                                                            <div className="flex flex-col">
-                                                                {isCliente ? (
+                                                return (
+                                                    <Fragment key={group.id}>
+                                                        <tr 
+                                                            onClick={() => hasMultipleSessions && toggleGroupExpand(group.id)}
+                                                            className={`group transition-colors ${
+                                                                hasMultipleSessions ? 'cursor-pointer hover:bg-zinc-800/40' : 'hover:bg-zinc-800/20'
+                                                            } ${isExpanded ? 'bg-orange-500/5' : ''}`}
+                                                        >
+                                                            {/* Horário */}
+                                                            <td className="px-6 py-4">
+                                                                <div className="flex flex-col">
                                                                     <div className="flex items-center gap-1.5">
-                                                                        <span className="text-xs font-bold text-white">{clienteNome}</span>
-                                                                        <span className="px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-wider bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                                                                            CRM
+                                                                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                                                        <span className="text-xs font-bold text-zinc-300">
+                                                                            {new Date(displayTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                                                         </span>
                                                                     </div>
-                                                                ) : (
-                                                                    <span className="text-xs font-medium text-zinc-400">
-                                                                        Anônimo ({log.visitor_id ? log.visitor_id.slice(0, 10) : 'vis'})
+                                                                    <span className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                                                                        {new Date(displayTime).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                                                                     </span>
-                                                                )}
-                                                                <span className="text-[10px] text-zinc-600 flex items-center gap-1">
-                                                                    {log.dispositivo === 'mobile' ? <Smartphone size={10} /> : <Monitor size={10} />}
-                                                                    {log.dispositivo} • {log.navegador || 'Navegador'}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-
-                                                    {/* Localização */}
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <MapPin size={12} className="text-orange-400 shrink-0" />
-                                                            <span className="text-xs font-bold text-zinc-200">
-                                                                {log.cidade || 'Desconhecida'}
-                                                                {log.estado && log.estado !== 'Desconhecido' && log.estado !== 'DEV' ? `, ${log.estado}` : ''}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-
-                                                    {/* Página Acessada & Histórico de Navegação */}
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex flex-col gap-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
-                                                                    {log.total_paginas || 1} {log.total_paginas > 1 ? 'páginas' : 'página'}
-                                                                </span>
-                                                                <span className="text-xs font-mono text-zinc-400 font-medium truncate max-w-[180px]" title={log.ultima_pagina || log.pathname}>
-                                                                    {log.ultima_pagina || log.pathname || '/'}
-                                                                </span>
-                                                            </div>
-                                                            {log.figuras && (
-                                                                <div className="flex items-center gap-1.5 mt-0.5">
-                                                                    {log.figuras.imagem_url && (
-                                                                        <img 
-                                                                            src={log.figuras.imagem_url} 
-                                                                            alt={log.figuras.nome} 
-                                                                            className="w-5 h-5 rounded object-cover border border-zinc-700 bg-zinc-800 shrink-0" 
-                                                                        />
+                                                                    {hasMultipleSessions && (
+                                                                        <span className="text-[9px] text-zinc-600 font-mono">
+                                                                            1º: {new Date(group.primeiroAcesso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                                                                        </span>
                                                                     )}
-                                                                    <span className="text-[11px] font-bold text-orange-400 truncate max-w-[200px]" title={log.figuras.nome}>
-                                                                        {log.figuras.nome}
+                                                                </div>
+                                                            </td>
+
+                                                            {/* Conexão / Visitante */}
+                                                            <td className="px-6 py-4">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
+                                                                        isCliente 
+                                                                            ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' 
+                                                                            : 'bg-zinc-800 text-zinc-500 border border-zinc-700/50'
+                                                                    }`}>
+                                                                        {isCliente ? group.clienteNome![0]?.toUpperCase() : (hasMultipleSessions ? <Link2 size={16} className="text-orange-400" /> : '?')}
+                                                                    </div>
+                                                                    <div className="flex flex-col min-w-0">
+                                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                                            <span className="text-xs font-bold text-white truncate max-w-[160px]">
+                                                                                {isCliente ? group.clienteNome : `Anônimo (${Array.from(group.visitorIds)[0]?.slice(0, 8) || 'vis'})`}
+                                                                            </span>
+                                                                            {group.pedidoInfo && (
+                                                                                <span className="px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                                                                                    Pedido #{group.pedidoInfo.id}
+                                                                                </span>
+                                                                            )}
+                                                                            {hasMultipleSessions && (
+                                                                                <span className="px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-wider bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center gap-0.5">
+                                                                                    <Link2 size={8} /> {group.sessoes.length} sessões
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                                                            <span className="text-[10px] text-zinc-400 flex items-center gap-1">
+                                                                                {group.dispositivos.has('mobile') && group.dispositivos.has('desktop') ? (
+                                                                                    <span className="text-orange-400 font-bold flex items-center gap-1">
+                                                                                        <Monitor size={10} /> + <Smartphone size={10} /> 2 aparelhos
+                                                                                    </span>
+                                                                                ) : group.dispositivos.has('mobile') ? (
+                                                                                    <span className="flex items-center gap-1"><Smartphone size={10} /> Mobile</span>
+                                                                                ) : (
+                                                                                    <span className="flex items-center gap-1"><Monitor size={10} /> Desktop</span>
+                                                                                )}
+                                                                            </span>
+                                                                            {ipDisplay && (
+                                                                                <span className="text-[10px] text-zinc-600 font-mono">
+                                                                                    IP: {ipDisplay}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+
+                                                            {/* Localização */}
+                                                            <td className="px-6 py-4">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <MapPin size={12} className="text-orange-400 shrink-0" />
+                                                                    <span className="text-xs font-bold text-zinc-200">
+                                                                        {group.cidade}
+                                                                        {group.estado && group.estado !== 'Desconhecido' && group.estado !== 'DEV' ? `, ${group.estado}` : ''}
                                                                     </span>
                                                                 </div>
-                                                            )}
-                                                        </div>
-                                                    </td>
+                                                            </td>
 
-                                                    {/* Campanha / Origem */}
-                                                    <td className="px-6 py-4">
-                                                        {log.crm_cadencias ? (
-                                                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/30">
-                                                                Cadência: {log.crm_cadencias.nome}
-                                                            </span>
-                                                        ) : log.utm_campaign ? (
-                                                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-300 border border-blue-500/30">
-                                                                {log.utm_source || 'Campanha'}: {log.utm_campaign}
-                                                            </span>
-                                                        ) : log.referrer && log.referrer.includes('instagram') ? (
-                                                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-pink-500/15 text-pink-300 border border-pink-500/30">
-                                                                Instagram
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-[11px] text-zinc-500 font-medium">
-                                                                {log.referrer ? 'Link externo' : 'Direto'}
-                                                            </span>
+                                                            {/* Navegação & Interesse Consolidado */}
+                                                            <td className="px-6 py-4">
+                                                                <div className="flex flex-col gap-1.5">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700 shrink-0">
+                                                                            {group.totalPaginas} {group.totalPaginas > 1 ? 'páginas' : 'página'}
+                                                                        </span>
+                                                                        {group.figuras.length > 0 ? (
+                                                                            <span className="text-xs text-orange-400 font-bold">
+                                                                                {group.figuras.length} {group.figuras.length > 1 ? 'peças analisadas' : 'peça analisada'}
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="text-xs font-mono text-zinc-400 truncate max-w-[180px]">
+                                                                                {group.sessoes[0]?.ultima_pagina || '/'}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {/* Miniaturas das figuras de interesse consolidadas */}
+                                                                    {group.figuras.length > 0 && (
+                                                                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                                                            {group.figuras.slice(0, 3).map((fig) => (
+                                                                                <a
+                                                                                    key={fig.id}
+                                                                                    href={fig.slug ? `/figura/${fig.slug}` : `/figura/${fig.id}`}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    onClick={(e) => e.stopPropagation()}
+                                                                                    title={`Ver: ${fig.nome}`}
+                                                                                    className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700/80 border border-zinc-700 transition-colors group/item"
+                                                                                >
+                                                                                    {fig.imagem_url && (
+                                                                                        <img 
+                                                                                            src={fig.imagem_url} 
+                                                                                            alt={fig.nome} 
+                                                                                            className="w-5 h-5 rounded object-cover border border-zinc-600 bg-zinc-900 shrink-0" 
+                                                                                        />
+                                                                                    )}
+                                                                                    <span className="text-[10px] font-bold text-zinc-300 group-hover/item:text-orange-400 truncate max-w-[120px]">
+                                                                                        {fig.nome}
+                                                                                    </span>
+                                                                                </a>
+                                                                            ))}
+                                                                            {group.figuras.length > 3 && (
+                                                                                <span className="text-[10px] font-black text-zinc-500">
+                                                                                    +{group.figuras.length - 3}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+
+                                                            {/* Origem & Sessões */}
+                                                            <td className="px-6 py-4">
+                                                                <div className="flex flex-col gap-1">
+                                                                    {hasMultipleSessions ? (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                toggleGroupExpand(group.id);
+                                                                            }}
+                                                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-400 text-[11px] font-black transition-all w-fit"
+                                                                        >
+                                                                            <Link2 size={12} />
+                                                                            <span>Ver Jornada ({group.sessoes.length})</span>
+                                                                            {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                                                        </button>
+                                                                    ) : (
+                                                                        <span className="text-xs text-zinc-400 font-medium">
+                                                                            {Array.from(group.origens)[0]}
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="text-[10px] text-zinc-500">
+                                                                        {Array.from(group.origens).join(' • ')}
+                                                                    </span>
+                                                                </div>
+                                                            </td>
+
+                                                            {/* Tempo Total */}
+                                                            <td className="px-6 py-4 text-right">
+                                                                <div className="flex flex-col items-end">
+                                                                    <span className="text-xs font-mono font-bold text-zinc-300">
+                                                                        {timeFormatted}
+                                                                    </span>
+                                                                    {hasMultipleSessions && (
+                                                                        <span className="text-[10px] text-orange-400/80 font-bold flex items-center gap-0.5 mt-0.5">
+                                                                            {isExpanded ? 'Recolher' : 'Expandir'} {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+
+                                                        {/* Linha Expandida: Timeline da Jornada Completa deste IP */}
+                                                        {isExpanded && (
+                                                            <tr className="bg-zinc-950/80 border-y border-orange-500/30">
+                                                                <td colSpan={6} className="px-8 py-5">
+                                                                    <div className="space-y-3">
+                                                                        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2">
+                                                                            <span className="text-[10px] font-black uppercase tracking-widest text-orange-400 flex items-center gap-1.5">
+                                                                                <Clock size={12} /> Linha do Tempo da Conexão ({group.sessoes.length} acessos interligados por IP & Aparelhos):
+                                                                            </span>
+                                                                            <span className="text-[10px] text-zinc-500 font-mono">
+                                                                                IP: {Array.from(group.ips).join(', ')} • Visitors: {Array.from(group.visitorIds).map(v => v.slice(0, 10)).join(', ')}
+                                                                            </span>
+                                                                        </div>
+
+                                                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                                            {group.sessoes.map((sessao, sIdx) => {
+                                                                                const sTime = sessao.ultimo_acesso_em || sessao.created_at;
+                                                                                const sSec = sessao.duracao_total_segundos || sessao.duracao_segundos || 0;
+                                                                                const sMin = Math.floor(sSec / 60);
+                                                                                const sDuration = sMin > 0 ? `${sMin}m ${sSec % 60}s` : (sSec > 0 ? `${sSec}s` : '< 5s');
+
+                                                                                return (
+                                                                                    <div key={sessao.id || sIdx} className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-3 space-y-2">
+                                                                                        <div className="flex items-center justify-between">
+                                                                                            <span className="text-xs font-bold text-white">
+                                                                                                {new Date(sTime).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} às {new Date(sTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                                                            </span>
+                                                                                            <span className="text-[10px] font-mono font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
+                                                                                                {sDuration}
+                                                                                            </span>
+                                                                                        </div>
+
+                                                                                        <div className="text-[11px] text-zinc-400 flex items-center gap-2">
+                                                                                            <span className="flex items-center gap-1 font-medium">
+                                                                                                {sessao.dispositivo === 'mobile' ? <Smartphone size={11} /> : <Monitor size={11} />}
+                                                                                                {sessao.dispositivo} • {sessao.navegador || 'Chrome'}
+                                                                                            </span>
+                                                                                            <span className="text-zinc-600 font-mono text-[10px]">
+                                                                                                ID: {sessao.visitor_id ? sessao.visitor_id.slice(0, 8) : 'vis'}
+                                                                                            </span>
+                                                                                        </div>
+
+                                                                                        <div className="pt-1 border-t border-zinc-800/60">
+                                                                                            <a 
+                                                                                                href={sessao.ultima_pagina || sessao.pathname || '/'}
+                                                                                                target="_blank"
+                                                                                                rel="noopener noreferrer"
+                                                                                                className="text-xs font-mono text-zinc-300 hover:text-orange-400 font-medium truncate flex items-center gap-1 group/link"
+                                                                                                title={sessao.ultima_pagina || sessao.pathname}
+                                                                                            >
+                                                                                                <span className="truncate">{sessao.ultima_pagina || sessao.pathname || '/'}</span>
+                                                                                                <ExternalLink size={10} className="text-zinc-600 group-hover/link:text-orange-400 shrink-0" />
+                                                                                            </a>
+
+                                                                                            {sessao.pedido_info && (
+                                                                                                <div className="mt-1">
+                                                                                                    <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20 inline-block">
+                                                                                                        {sessao.pedido_info.tipo === 'verificar' ? 'Certificado' : 'Rastreio'} #{sessao.pedido_info.id} ({sessao.pedido_info.cliente_nome})
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                            )}
+
+                                                                                            {sessao.figuras && (
+                                                                                                <div className="flex items-center gap-1.5 mt-1">
+                                                                                                    {sessao.figuras.imagem_url && (
+                                                                                                        <img 
+                                                                                                            src={sessao.figuras.imagem_url} 
+                                                                                                            alt={sessao.figuras.nome} 
+                                                                                                            className="w-4 h-4 rounded object-cover border border-zinc-700 shrink-0" 
+                                                                                                        />
+                                                                                                    )}
+                                                                                                    <span className="text-[11px] font-bold text-orange-400 truncate max-w-[180px]">
+                                                                                                        {sessao.figuras.nome}
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+
+                                                                                        <div className="text-[10px] text-zinc-500 flex items-center justify-between pt-1">
+                                                                                            <span>{sessao.total_paginas || 1} pág(s)</span>
+                                                                                            <span className="text-zinc-600">
+                                                                                                {sessao.referrer && sessao.referrer.includes('instagram') ? 'Instagram' : (sessao.referrer && sessao.referrer.includes('google') ? 'Google' : (sessao.referrer ? 'Link externo' : 'Direto'))}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
                                                         )}
-                                                    </td>
+                                                    </Fragment>
+                                                );
+                                            })
+                                        ) : (
+                                            /* MODO 2: SESSÕES INDIVIDUAIS (LISTA PLANA) */
+                                            telemetriaLogs.map((log) => {
+                                                const isCliente = !!(log.clientes?.nome || log.email);
+                                                const clienteNome = log.clientes?.nome || log.email;
+                                                const displayTime = log.ultimo_acesso_em || log.created_at;
+                                                const totalSec = log.duracao_total_segundos || log.duracao_segundos || 0;
+                                                const minutes = Math.floor(totalSec / 60);
+                                                const seconds = totalSec % 60;
+                                                const timeFormatted = minutes > 0 ? `${minutes}m ${seconds}s` : (seconds > 0 ? `${seconds}s` : '< 5s');
 
-                                                    {/* Tempo */}
-                                                    <td className="px-6 py-4 text-right">
-                                                        <span className="text-xs font-mono font-bold text-zinc-300">
-                                                            {timeFormatted}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
+                                                return (
+                                                    <tr key={log.id} className="group hover:bg-zinc-800/30 transition-colors">
+                                                        {/* Horário */}
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex flex-col">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                                                    <span className="text-xs font-bold text-zinc-300">
+                                                                        {new Date(displayTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                                                    </span>
+                                                                </div>
+                                                                <span className="text-[10px] text-zinc-600 font-mono mt-0.5">
+                                                                    {new Date(displayTime).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Visitante / Cliente */}
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${
+                                                                    isCliente 
+                                                                        ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' 
+                                                                        : 'bg-zinc-800 text-zinc-500 border border-zinc-700/50'
+                                                                }`}>
+                                                                    {isCliente ? clienteNome[0]?.toUpperCase() : '?'}
+                                                                </div>
+                                                                <div className="flex flex-col">
+                                                                    {isCliente ? (
+                                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                                            <span className="text-xs font-bold text-white">{clienteNome}</span>
+                                                                            <span className={`px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-wider ${
+                                                                                log.pedido_info ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                                                                            }`}>
+                                                                                {log.pedido_info ? `Pedido #${log.pedido_info.id}` : 'CRM'}
+                                                                            </span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="text-xs font-medium text-zinc-400">
+                                                                            Anônimo ({log.visitor_id ? log.visitor_id.slice(0, 10) : 'vis'})
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="text-[10px] text-zinc-600 flex items-center gap-1">
+                                                                        {log.dispositivo === 'mobile' ? <Smartphone size={10} /> : <Monitor size={10} />}
+                                                                        {log.dispositivo} • {log.navegador || 'Navegador'}
+                                                                        {log.ip && log.ip !== 'local' && (
+                                                                            <span className="text-zinc-600 font-mono ml-1">({log.ip})</span>
+                                                                        )}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Localização */}
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <MapPin size={12} className="text-orange-400 shrink-0" />
+                                                                <span className="text-xs font-bold text-zinc-200">
+                                                                    {log.cidade || 'Desconhecida'}
+                                                                    {log.estado && log.estado !== 'Desconhecido' && log.estado !== 'DEV' ? `, ${log.estado}` : ''}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Página Acessada & Histórico de Navegação */}
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex flex-col gap-1.5">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700 shrink-0">
+                                                                        {log.total_paginas || 1} {log.total_paginas > 1 ? 'páginas' : 'página'}
+                                                                    </span>
+                                                                    <a 
+                                                                        href={log.ultima_pagina || log.pathname || '/'} 
+                                                                        target="_blank" 
+                                                                        rel="noopener noreferrer"
+                                                                        title={`Abrir página: ${log.ultima_pagina || log.pathname || '/'}`}
+                                                                        className="text-xs font-mono text-zinc-300 hover:text-orange-400 font-medium truncate max-w-[200px] inline-flex items-center gap-1 transition-colors group cursor-pointer"
+                                                                    >
+                                                                        <span className="truncate">{log.ultima_pagina || log.pathname || '/'}</span>
+                                                                        <ExternalLink size={10} className="text-zinc-600 group-hover:text-orange-400 shrink-0 transition-colors" />
+                                                                    </a>
+                                                                </div>
+
+                                                                {/* Rastreio, Certificado ou Recibo identificado */}
+                                                                {log.pedido_info && (
+                                                                    <a
+                                                                        href={
+                                                                            log.pedido_info.tipo === 'verificar' || log.pedido_info.tipo === 'certificado'
+                                                                                ? `/verificar/${log.pedido_info.token || ''}`
+                                                                                : log.pedido_info.tipo === 'recibo'
+                                                                                ? `/recibo/${log.pedido_info.token || ''}`
+                                                                                : `/rastreio/${log.pedido_info.token || ''}`
+                                                                        }
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all w-fit group shadow-sm ${
+                                                                            log.pedido_info.tipo === 'verificar' || log.pedido_info.tipo === 'certificado'
+                                                                                ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400'
+                                                                                : log.pedido_info.tipo === 'recibo'
+                                                                                ? 'bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400'
+                                                                                : 'bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400'
+                                                                        }`}
+                                                                        title={`Clique para abrir ${log.pedido_info.tipo === 'verificar' || log.pedido_info.tipo === 'certificado' ? 'o Certificado' : log.pedido_info.tipo === 'recibo' ? 'o Recibo' : 'o Rastreio'}`}
+                                                                    >
+                                                                        {log.pedido_info.tipo === 'verificar' || log.pedido_info.tipo === 'certificado' ? (
+                                                                            <ShieldCheck size={12} className="shrink-0 text-emerald-400" />
+                                                                        ) : log.pedido_info.tipo === 'recibo' ? (
+                                                                            <FileText size={12} className="shrink-0 text-purple-400" />
+                                                                        ) : (
+                                                                            <Package size={12} className="shrink-0 text-blue-400" />
+                                                                        )}
+                                                                        <span>
+                                                                            {log.pedido_info.tipo === 'verificar' || log.pedido_info.tipo === 'certificado'
+                                                                                ? 'Certificado'
+                                                                                : log.pedido_info.tipo === 'recibo'
+                                                                                ? 'Recibo'
+                                                                                : 'Rastreio'}{' '}
+                                                                            #{log.pedido_info.id} ({log.pedido_info.cliente_nome})
+                                                                        </span>
+                                                                        <ExternalLink size={10} className="opacity-60 group-hover:opacity-100 shrink-0" />
+                                                                    </a>
+                                                                )}
+
+                                                                {/* Figura associada */}
+                                                                {log.figuras && (
+                                                                    <a
+                                                                        href={log.figuras.slug ? `/figura/${log.figuras.slug}` : (log.figura_id ? `/figura/${log.figura_id}` : (log.figuras.id ? `/figura/${log.figuras.id}` : '#'))}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="flex items-center gap-2 mt-0.5 hover:opacity-85 transition-opacity group cursor-pointer w-fit"
+                                                                        title={`Ver detalhes de ${log.figuras.nome}`}
+                                                                    >
+                                                                        {log.figuras.imagem_url && (
+                                                                            <img 
+                                                                                src={log.figuras.imagem_url} 
+                                                                                alt={log.figuras.nome} 
+                                                                                className="w-6 h-6 rounded-lg object-cover border border-zinc-700 bg-zinc-800 shrink-0 group-hover:border-orange-500/50 transition-colors shadow-sm" 
+                                                                            />
+                                                                        )}
+                                                                        <span className="text-[11px] font-bold text-orange-400 group-hover:underline truncate max-w-[200px] flex items-center gap-1">
+                                                                            {log.figuras.nome}
+                                                                            <ExternalLink size={9} className="opacity-60 group-hover:opacity-100 shrink-0" />
+                                                                        </span>
+                                                                    </a>
+                                                                )}
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Campanha / Origem */}
+                                                        <td className="px-6 py-4">
+                                                            {log.crm_cadencias ? (
+                                                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                                                                    Cadência: {log.crm_cadencias.nome}
+                                                                </span>
+                                                            ) : log.utm_campaign ? (
+                                                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                                                                    {log.utm_source || 'Campanha'}: {log.utm_campaign}
+                                                                </span>
+                                                            ) : log.referrer && log.referrer.includes('instagram') ? (
+                                                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-pink-500/15 text-pink-300 border border-pink-500/30">
+                                                                    Instagram
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-[11px] text-zinc-500 font-medium">
+                                                                    {log.referrer ? 'Link externo' : 'Direto'}
+                                                                </span>
+                                                            )}
+                                                        </td>
+
+                                                        {/* Tempo */}
+                                                        <td className="px-6 py-4 text-right">
+                                                            <span className="text-xs font-mono font-bold text-zinc-300">
+                                                                {timeFormatted}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
                                     </tbody>
                                 </table>
                             </div>

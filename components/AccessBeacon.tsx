@@ -17,6 +17,44 @@ function BeaconLogic() {
             return;
         }
 
+        // Ignora ambiente local (localhost / 127.0.0.1) - não poluir radar de acessos
+        if (typeof window !== 'undefined') {
+            const h = window.location.hostname;
+            if (h === 'localhost' || h === '127.0.0.1' || h.endsWith('.local') || window.location.port === '3000') {
+                return;
+            }
+        }
+
+        // Ignora se for navegador do administrador (cookie de sessão, flag persistente ou parâmetro restrito)
+        if (typeof window !== 'undefined') {
+            if (
+                localStorage.getItem('franga_is_admin') === 'true' ||
+                document.cookie.includes('admin_session=') ||
+                document.cookie.includes('franga_is_admin=true')
+            ) {
+                return;
+            }
+
+            if (searchParams?.get('incluirNaoVendaveis') === 'true') {
+                try {
+                    localStorage.setItem('franga_is_admin', 'true');
+                    document.cookie = 'franga_is_admin=true; path=/; max-age=31536000';
+                } catch {}
+                return;
+            }
+        }
+
+        // Ignora robôs, scrapers, headless e automações (Puppeteer, Selenium, Playwright, etc.)
+        if (typeof navigator !== 'undefined') {
+            if (navigator.webdriver) {
+                return;
+            }
+            const ua = navigator.userAgent || '';
+            if (/bot|googlebot|crawler|spider|robot|crawling|facebookexternalhit|bingbot|slurp|semrush|ahrefs|lighthouse|headlesschrome|phantomjs|selenium|playwright|puppeteer|inspect|postman|python|curl|wget/i.test(ua)) {
+                return;
+            }
+        }
+
         const now = Date.now();
         // Evita double-firing do React StrictMode no mesmo segundo
         if (lastSentPathRef.current === pathname && (now - lastSentTimeRef.current) < 2000) {

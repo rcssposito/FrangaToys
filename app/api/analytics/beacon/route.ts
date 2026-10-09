@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { getClientIp, isExcludedAdmin } from '@/lib/analytics-exclusion';
 
 export async function POST(req: NextRequest) {
     try {
@@ -49,13 +50,29 @@ export async function POST(req: NextRequest) {
         let city = safeDecode(req.headers.get('x-vercel-ip-city'), 'Desconhecido');
         let state = safeDecode(req.headers.get('x-vercel-ip-country-region'), 'Desconhecido');
 
-        const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || '127.0.0.1';
-        const isLocal = ip === '127.0.0.1' || ip === '::1' || ip.includes('127.0.0.1') || ip.startsWith('192.168.') || ip.startsWith('10.');
+        const ip = getClientIp(req.headers);
 
-        if (isLocal) {
-            city = 'Localhost';
-            state = 'DEV';
-        } else if (city === 'Desconhecido') {
+        // 1. Não gravar se for o lojista/administrador (IP, Cookie, Visitor ID ou URL param)
+        const adminCheck = isExcludedAdmin({
+            ip,
+            visitorId: safeVisitorId,
+            pathname,
+            referrer,
+            cookies: req.cookies
+        });
+
+        if (adminCheck.excluded) {
+            return NextResponse.json({ ignored: adminCheck.reason });
+        }
+
+        // 3. Ignorar robôs e rastreadores automáticos
+        const ua = req.headers.get('user-agent') || '';
+        const isBot = /bot|googlebot|crawler|spider|robot|crawling|facebookexternalhit|bingbot|slurp|semrush|ahrefs|lighthouse|headless|phantomjs|selenium|playwright|puppeteer|python|curl|wget|httpclient|postman|uptimerobot|petalbot|bytespider|mj12bot|dotbot|screaming frog|ia_archiver/i.test(ua);
+        if (isBot || metadados?.isWebDriver) {
+            return NextResponse.json({ ignored: 'bot' });
+        }
+
+        if (city === 'Desconhecido') {
             try {
                 const geoRes = await fetch(`https://ipwho.is/${ip}`);
                 if (geoRes.ok) {
@@ -72,7 +89,6 @@ export async function POST(req: NextRequest) {
         }
 
         // 2. Dispositivo e Navegador via User-Agent
-        const ua = req.headers.get('user-agent') || '';
         let dispositivo = 'desktop';
         if (/mobile/i.test(ua)) dispositivo = 'mobile';
         else if (/tablet|ipad/i.test(ua)) dispositivo = 'tablet';
@@ -92,6 +108,41 @@ export async function POST(req: NextRequest) {
                 .eq('email', email)
                 .maybeSingle();
             if (cData) resolvedClienteId = cData.id;
+        }
+
+        // 3.1 Se acessar rastreio, recibo ou certificado de autenticidade com token, vincular cliente e figura automaticamente
+        let resolvedFiguraId = figuraId ? Number(figuraId) : null;
+        const rastreioMatch = pathname.match(/\/(rastreio|recibo|verificar|certificado)\/([a-zA-Z0-9-]+)/);
+        if (rastreioMatch && rastreioMatch[2]) {
+            const token = rastreioMatch[2];
+            const { data: venda } = await supabase
+                .from('vendas')
+                .select('cliente_id, figura_id')
+                .eq('access_token', token)
+                .maybeSingle();
+            if (venda) {
+                if (!resolvedClienteId && venda.cliente_id) {
+                    resolvedClienteId = venda.cliente_id;
+                }
+                if (!resolvedFiguraId && venda.figura_id) {
+                    resolvedFiguraId = venda.figura_id;
+                }
+            }
+        }
+
+        // 3.2 Se for rota de figura com slug (ex: /figura/berserk---slan-v2)
+        if (!resolvedFiguraId) {
+            const figMatch = pathname.match(/\/figura\/([a-zA-Z0-9-_]+)/);
+            if (figMatch && figMatch[1] && isNaN(Number(figMatch[1]))) {
+                const { data: fData } = await supabase
+                    .from('figuras')
+                    .select('id')
+                    .eq('slug', figMatch[1])
+                    .maybeSingle();
+                if (fData?.id) {
+                    resolvedFiguraId = fData.id;
+                }
+            }
         }
 
         // 4. Buscar se já existe uma sessão aberta hoje para este visitorId
@@ -115,8 +166,8 @@ export async function POST(req: NextRequest) {
             const updatedPages = isNewPage ? [...currentPages, pathname] : currentPages;
 
             let currentFiguras: any[] = Array.isArray(existingSession.figuras_vistas) ? existingSession.figuras_vistas : [];
-            if (figuraId && !currentFiguras.some(f => f.id === Number(figuraId))) {
-                currentFiguras.push({ id: Number(figuraId), visualizado_em: nowIso });
+            if (resolvedFiguraId && !currentFiguras.some(f => f.id === Number(resolvedFiguraId))) {
+                currentFiguras.push({ id: Number(resolvedFiguraId), visualizado_em: nowIso });
             }
 
             const updatedTotalPages = isNewPage 
@@ -136,7 +187,7 @@ export async function POST(req: NextRequest) {
                     figuras_vistas: currentFiguras,
                     total_paginas: updatedTotalPages,
                     duracao_total_segundos: updatedDuration,
-                    figura_id: figuraId ? Number(figuraId) : existingSession.figura_id,
+                    figura_id: resolvedFiguraId ? Number(resolvedFiguraId) : existingSession.figura_id,
                     utm_source: utm_source || existingSession.utm_source,
                     utm_campaign: utm_campaign || existingSession.utm_campaign,
                     cadencia_id: cadenciaId || existingSession.cadencia_id,
@@ -146,7 +197,7 @@ export async function POST(req: NextRequest) {
         } else {
             // PRIMEIRA VISITA DO DIA -> CRIAR SESSÃO ÚNICA
             const initialPages = [pathname];
-            const initialFiguras = figuraId ? [{ id: Number(figuraId), visualizado_em: nowIso }] : [];
+            const initialFiguras = resolvedFiguraId ? [{ id: Number(resolvedFiguraId), visualizado_em: nowIso }] : [];
 
             await supabase
                 .from('crm_acessos_beacon')
@@ -171,8 +222,8 @@ export async function POST(req: NextRequest) {
                     pais: country,
                     dispositivo,
                     navegador,
-                    ip: isLocal ? 'local' : ip,
-                    figura_id: figuraId ? Number(figuraId) : null,
+                    ip: ip,
+                    figura_id: resolvedFiguraId ? Number(resolvedFiguraId) : null,
                     metadados: metadados || {},
                     primeiro_acesso_em: nowIso,
                     ultimo_acesso_em: nowIso

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { getClientIp, isExcludedAdmin } from '@/lib/analytics-exclusion';
 
 export async function POST(req: NextRequest) {
     try {
@@ -18,16 +19,36 @@ export async function POST(req: NextRequest) {
         let city = safeDecode(req.headers.get('x-vercel-ip-city'), 'Desconhecido');
         let state = safeDecode(req.headers.get('x-vercel-ip-country-region'), 'Desconhecido');
 
-        const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
-        const isLocal = ip === '127.0.0.1' || ip === '::1' || ip.includes('127.0.0.1') || ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.');
+        const ip = getClientIp(req.headers);
 
-        // Tratamento para localhost (ambiente de dev)
-        if (isLocal) {
-            city = 'Localhost';
-            state = 'DEV';
-        } 
+        // 1. Ignorar se for o lojista/administrador
+        const adminCheck = isExcludedAdmin({
+            ip,
+            cookies: req.cookies
+        });
+
+        if (adminCheck.excluded) {
+            return NextResponse.json({ ignored: adminCheck.reason });
+        }
+
+        // 3. Ignorar robôs, indexadores e crawlers conhecidos
+        const ua = req.headers.get('user-agent') || '';
+        const isBot = /bot|googlebot|crawler|spider|robot|crawling|facebookexternalhit|bingbot|slurp|semrush|ahrefs|lighthouse|headless|phantomjs|selenium|playwright|puppeteer|python|curl|wget|httpclient|postman|uptimerobot|petalbot|bytespider|mj12bot|dotbot|screaming frog|ia_archiver/i.test(ua);
+        if (isBot) {
+            return NextResponse.json({ ignored: 'bot' });
+        }
+
+        // 4. Prevenção de F5 / spam: não duplicar views para a mesma figura na mesma sessão recente (janela de 30 minutos)
+        const recentHitsCookie = req.cookies.get('franga_recent_hits')?.value || '';
+        const recentList = recentHitsCookie ? recentHitsCookie.split(',') : [];
+        const figureKey = String(figureId);
+
+        if (recentList.includes(figureKey)) {
+            return NextResponse.json({ success: true, deduped: true });
+        }
+
         // Fallback para IPs reais quando a Vercel não sabe a cidade
-        else if (city === 'Desconhecido') {
+        if (city === 'Desconhecido') {
             try {
                 // Usando ipwho.is que é mais tolerante a rate-limits em chamadas server-side
                 const geoRes = await fetch(`https://ipwho.is/${ip}`);
@@ -45,7 +66,6 @@ export async function POST(req: NextRequest) {
         }
 
         // 2. Detect Device from User-Agent
-        const ua = req.headers.get('user-agent') || '';
         let device = 'desktop';
         if (/mobile/i.test(ua)) device = 'mobile';
         if (/tablet/i.test(ua)) device = 'tablet';
@@ -85,7 +105,17 @@ export async function POST(req: NextRequest) {
                 .eq('id', Number(figureId));
         }
 
-        return NextResponse.json({ success: true });
+        // Atualiza cookie de visualizações recentes da sessão (máx 25 itens, 30 minutos)
+        const updatedList = [...recentList, figureKey].slice(-25).join(',');
+        const response = NextResponse.json({ success: true });
+        response.cookies.set('franga_recent_hits', updatedList, {
+            path: '/',
+            maxAge: 60 * 30,
+            sameSite: 'lax',
+            httpOnly: true
+        });
+
+        return response;
     } catch (error: any) {
         console.error('Analytics Route Error:', error.message);
         return NextResponse.json({ error: error.message }, { status: 500 });
