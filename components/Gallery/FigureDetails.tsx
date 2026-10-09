@@ -13,7 +13,7 @@ import {
     ShoppingCart, ExternalLink, Sparkles, Instagram, Clock, Truck, ShieldCheck,
     Share2, Paintbrush, Palette, Crown, CheckCircle2, X, HelpCircle, Info,
     Maximize2, ArrowLeft, Tag, MessageCircle,
-    ChevronRight
+    ChevronRight, ChevronLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -131,7 +131,21 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
         { id: 'colorido', label: 'Colorido', icon: Palette, description: 'Pintura Premium', color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20', price: figure.precos?.colorido, pixPrice: figure.precos?.pix_colorido },
     ] as const;
 
-    const imageUrl = getOptimizedImageUrl(figure.imagem_url);
+    // Coleta todas as fotos disponíveis (capa, hover e extras)
+    const galleryImages = Array.from(
+        new Set([figure.imagem_url, figure.imagem_secundaria, ...(figure.fotos_extras || [])].filter(Boolean))
+    ) as string[];
+
+    const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+    // Reseta foto ativa ao trocar de figura
+    useEffect(() => {
+        setActiveImageIndex(0);
+    }, [figure.id]);
+
+    const currentImage = galleryImages[activeImageIndex] || figure.imagem_url || '';
+    const currentOptimizedUrl = getOptimizedImageUrl(currentImage);
+
     const figurePrice = figure.precos?.colorido || figure.precos?.estilizado || 0;
     const tier = figure.precos?.colorido ? getFigureTier(figure.precos.colorido) : null;
     const tierStyle = tier ? getTierBadgeStyle(tier) : null;
@@ -149,18 +163,49 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                         className="fixed inset-0 z-[100] bg-black flex items-center justify-center p-4 md:p-12 cursor-zoom-out"
                         onClick={() => setIsZenMode(false)}
                     >
-                        <div className="absolute top-8 right-8 text-white/40 hover:text-white transition-colors">
+                        <div className="absolute top-8 right-8 text-white/40 hover:text-white transition-colors z-20">
                             <X size={40} strokeWidth={1} />
                         </div>
+
+                        {/* Setas de navegação no Zen Mode */}
+                        {galleryImages.length > 1 && (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveImageIndex(prev => (prev > 0 ? prev - 1 : galleryImages.length - 1));
+                                    }}
+                                    className="absolute left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/10 hover:bg-orange-500 text-white flex items-center justify-center backdrop-blur border border-white/20 transition-all cursor-pointer"
+                                    title="Foto anterior"
+                                >
+                                    <ChevronLeft size={24} />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveImageIndex(prev => (prev < galleryImages.length - 1 ? prev + 1 : 0));
+                                    }}
+                                    className="absolute right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/10 hover:bg-orange-500 text-white flex items-center justify-center backdrop-blur border border-white/20 transition-all cursor-pointer"
+                                    title="Próxima foto"
+                                >
+                                    <ChevronRight size={24} />
+                                </button>
+                            </>
+                        )}
+
                         <motion.div
-                            initial={{ scale: 0.9, y: 20 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.9, y: 20 }}
+                            key={currentImage}
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
                             className="relative w-full h-full"
                         >
                             <Image
                                 loader={imageKitLoader}
-                                src={(figure.imagem_url || '').split('?')[0]}
+                                src={(currentImage || '').split('?')[0]}
                                 alt={figure.nome}
                                 fill
                                 className="object-contain"
@@ -168,9 +213,28 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                 priority
                             />
                         </motion.div>
-                        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 text-center">
+
+                        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-center z-20 flex flex-col items-center gap-2">
                             <h2 className="text-xl font-black text-white uppercase tracking-widest drop-shadow-2xl">{figure.nome}</h2>
-                            <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-[0.5em] mt-2">Arraste para explorar • Clique para sair</p>
+                            {galleryImages.length > 1 && (
+                                <div className="flex items-center gap-2 mt-1">
+                                    {galleryImages.map((_, i) => (
+                                        <button
+                                            key={i}
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActiveImageIndex(i);
+                                            }}
+                                            className={clsx(
+                                                "w-2.5 h-2.5 rounded-full transition-all cursor-pointer",
+                                                i === activeImageIndex ? "bg-orange-500 w-6" : "bg-white/40 hover:bg-white"
+                                            )}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                            <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-[0.5em]">Clique para sair</p>
                         </div>
                     </motion.div>
                 )}
@@ -180,14 +244,38 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
             <div className="lg:hidden absolute inset-x-0 top-0 h-[60vh] overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10 pointer-events-none" />
                 <Image
+                    key={currentImage}
                     loader={imageKitLoader}
-                    src={imageUrl}
+                    src={currentOptimizedUrl}
                     alt={figure.nome}
                     fill
-                    className="object-contain p-6 -z-10"
+                    className="object-contain p-6 -z-10 transition-all duration-300"
                     sizes="100vw"
                     priority
                 />
+
+                {/* Mobile Gallery Selector (Bolinhas táteis no rodapé da foto) */}
+                {galleryImages.length > 1 && (
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 p-1.5 bg-black/70 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl">
+                        {galleryImages.map((_, idx) => (
+                            <button
+                                key={idx}
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveImageIndex(idx);
+                                }}
+                                className={clsx(
+                                    "transition-all duration-200 rounded-full",
+                                    idx === activeImageIndex 
+                                        ? "bg-orange-500 w-5 h-2" 
+                                        : "bg-white/40 hover:bg-white w-2 h-2"
+                                )}
+                            />
+                        ))}
+                    </div>
+                )}
+
                 {/* Clickable Area for Zen Mode */}
                 <div
                     className="absolute inset-0 z-30 cursor-zoom-in active:bg-white/5 transition-colors"
@@ -201,37 +289,101 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
 
             <div className="flex flex-col lg:flex-row w-full gap-8 items-start lg:items-center relative z-20">
 
-                {/* Main Image Container (Desktop Only) */}
-                <div
-                    className="hidden lg:flex relative w-full lg:w-1/2 aspect-square items-center justify-center p-4 bg-zinc-900/20 rounded-3xl overflow-hidden shadow-inner order-1 transition-all duration-500 hover:bg-zinc-900/40 group cursor-zoom-in"
-                    onClick={() => setIsZenMode(true)}
-                >
-                    {/* Desktop: Pro Magnifier */}
-                    <ImageMagnifier
-                        src={figure.imagem_url || ''}
-                        alt={figure.nome}
-                        onClick={() => {
-                            // Link inside FigureCard prevented propagation but here we want to trigger ZenMode
-                        }}
-                    />
-
-                    {/* Mobile: Standard Display (Since magnifier is hidden lg:block) */}
-                    <div className="lg:hidden w-full h-full relative">
-                        <Image
-                            loader={imageKitLoader}
-                            src={imageUrl}
-                            alt={figure.nome}
-                            fill
-                            className="object-contain p-4 transition-transform duration-700 active:scale-105"
-                            sizes="100vw"
-                            priority
+                {/* Main Image Container & Gallery (Desktop Only) */}
+                <div className="hidden lg:flex flex-col gap-3.5 w-full lg:w-1/2 order-1">
+                    <div
+                        className="relative w-full aspect-square flex items-center justify-center p-4 bg-zinc-900/20 rounded-3xl overflow-hidden shadow-inner transition-all duration-500 hover:bg-zinc-900/40 group cursor-zoom-in border border-zinc-800/40"
+                        onClick={() => setIsZenMode(true)}
+                    >
+                        {/* Desktop: Pro Magnifier */}
+                        <ImageMagnifier
+                            key={currentImage}
+                            src={currentImage}
+                            alt={`${figure.nome} - Foto ${activeImageIndex + 1}`}
                         />
+
+                        {/* Zoom Hint */}
+                        <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md p-2 rounded-xl border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Maximize2 size={16} className="text-zinc-300" />
+                        </div>
+
+                        {/* Setas de navegação rápida sobre a imagem */}
+                        {galleryImages.length > 1 && (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveImageIndex(prev => (prev > 0 ? prev - 1 : galleryImages.length - 1));
+                                    }}
+                                    className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/70 backdrop-blur border border-white/10 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-orange-500 hover:border-orange-500 shadow-xl cursor-pointer"
+                                    title="Foto anterior"
+                                >
+                                    <ChevronLeft size={18} />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveImageIndex(prev => (prev < galleryImages.length - 1 ? prev + 1 : 0));
+                                    }}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/70 backdrop-blur border border-white/10 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-orange-500 hover:border-orange-500 shadow-xl cursor-pointer"
+                                    title="Próxima foto"
+                                >
+                                    <ChevronRight size={18} />
+                                </button>
+
+                                {/* Badge de Fotos (ex: 1 / 3) */}
+                                <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur px-2.5 py-1 rounded-full border border-white/10 text-[10px] font-black tracking-widest text-zinc-300 pointer-events-none">
+                                    {activeImageIndex + 1} / {galleryImages.length}
+                                </div>
+                            </>
+                        )}
                     </div>
 
-                    {/* Zoom Hint */}
-                    <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-md p-2 rounded-xl border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Maximize2 size={16} className="text-zinc-400" />
-                    </div>
+                    {/* Fileira de Miniaturas (Thumbnails) para Desktop */}
+                    {galleryImages.length > 1 && (
+                        <div className="flex items-center gap-2.5 overflow-x-auto p-1 scrollbar-none">
+                            {galleryImages.map((img, idx) => {
+                                const isActive = idx === activeImageIndex;
+                                const thumbUrl = getOptimizedImageUrl(img);
+
+                                return (
+                                    <button
+                                        key={img + idx}
+                                        type="button"
+                                        onClick={() => setActiveImageIndex(idx)}
+                                        className={clsx(
+                                            "relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 transition-all duration-200 cursor-pointer p-1 bg-zinc-950/80 border",
+                                            isActive 
+                                                ? "border-orange-500 ring-2 ring-orange-500/50 shadow-lg shadow-orange-500/20 scale-105" 
+                                                : "border-zinc-800/80 opacity-60 hover:opacity-100 hover:border-zinc-600"
+                                        )}
+                                        title={`Ver foto ${idx + 1}`}
+                                    >
+                                        <Image
+                                            loader={imageKitLoader}
+                                            src={thumbUrl}
+                                            alt={`${figure.nome} thumb ${idx + 1}`}
+                                            fill
+                                            className="object-contain p-1"
+                                            sizes="80px"
+                                        />
+                                        {idx === 0 && (
+                                            <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[7px] font-black uppercase tracking-wider bg-black/90 px-1 py-0.2 rounded text-zinc-300 border border-white/10">
+                                                Capa
+                                            </span>
+                                        )}
+                                        {idx === 1 && (
+                                            <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[7px] font-black uppercase tracking-wider bg-orange-950/90 px-1 py-0.2 rounded text-orange-400 border border-orange-500/30">
+                                                Hover
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
 
                 {/* Info & Pricing Panel */}

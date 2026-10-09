@@ -45,6 +45,8 @@ export async function GET(req: NextRequest) {
         nome, 
         codigo,
         imagem_url,
+        imagem_secundaria,
+        fotos_extras,
         disponivel,
         tem_extras,
         sinonimos,
@@ -146,6 +148,8 @@ export async function GET(req: NextRequest) {
                 categoria: cat.nome || 'Outros',
                 categoria_id: cat.id || 0,
                 imagem_url: item.imagem_url,
+                imagem_secundaria: item.imagem_secundaria || null,
+                fotos_extras: Array.isArray(item.fotos_extras) ? item.fotos_extras : [],
                 disponivel: item.disponivel || false,
                 tem_extras: item.tem_extras || false,
                 tem_pintura_real: item.tem_pintura_real || false,
@@ -247,6 +251,9 @@ export async function PUT(req: Request) {
 
         const updateFields: any = {};
         if (nome !== undefined) updateFields.nome = nome;
+        if (imagem_url !== undefined) updateFields.imagem_url = imagem_url;
+        if (body.imagem_secundaria !== undefined) updateFields.imagem_secundaria = body.imagem_secundaria;
+        if (body.fotos_extras !== undefined) updateFields.fotos_extras = body.fotos_extras;
         if (disponivel !== undefined) updateFields.disponivel = disponivel;
         if (tem_extras !== undefined) updateFields.tem_extras = tem_extras;
         if (tem_pintura_real !== undefined) updateFields.tem_pintura_real = tem_pintura_real;

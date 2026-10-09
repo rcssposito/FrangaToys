@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { toast } from 'sonner';
-import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, Upload, ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import ThemeToggle from '@/components/common/ThemeToggle';
@@ -17,6 +17,8 @@ interface Figure {
     categoria: string;
     categoria_id: number;
     imagem_url: string;
+    imagem_secundaria?: string | null;
+    fotos_extras?: string[];
     altura_cm: number | string;
     largura_cm: number | string;
     profundidade_cm: number | string;
@@ -52,9 +54,11 @@ interface PricingSettings {
 
 const FigureCard = ({
     f, prices, canEdit, savingId, deletingId, hasRole,
-    handleChange, handleSave, handleDelete, handleDownloadImage, setPreviewImage
+    handleChange, handleSave, handleDelete, handleDownloadImage, setPreviewImage, setPhotoManagerFigure
 }: any) => {
     const [expanded, setExpanded] = useState(false);
+
+    const totalFotos = (f.imagem_url ? 1 : 0) + (f.imagem_secundaria ? 1 : 0) + (f.fotos_extras?.length || 0);
 
     return (
         <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl p-4 shadow-sm flex flex-col gap-3 hover:border-orange-500/30 transition-all">
@@ -65,11 +69,16 @@ const FigureCard = ({
                         {f.imagem_url && (
                             <button
                                 type="button"
-                                onClick={() => setPreviewImage({ url: f.imagem_url, nome: f.nome })}
-                                className="p-1 hover:bg-orange-500/10 rounded text-orange-500 transition-colors shrink-0"
-                                title="Ver Foto"
+                                onClick={() => setPhotoManagerFigure ? setPhotoManagerFigure(f) : setPreviewImage({ url: f.imagem_url, nome: f.nome })}
+                                className="p-1 hover:bg-orange-500/10 rounded text-orange-500 transition-colors shrink-0 relative cursor-pointer"
+                                title="Gerenciar e Reordenar Fotos da Peça"
                             >
                                 <ImageIcon size={14} />
+                                {totalFotos > 1 && (
+                                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-orange-500 text-white text-[8px] font-black rounded-full flex items-center justify-center shadow-sm">
+                                        {totalFotos}
+                                    </span>
+                                )}
                             </button>
                         )}
                         <input
@@ -359,7 +368,596 @@ const FigureCard = ({
 
 import { useSearchParams, useRouter } from 'next/navigation';
 
-// ... (tipagens permanecem as mesmas)
+interface ImageInspectorModalProps {
+    imageUrl: string;
+    title: string;
+    onClose: () => void;
+}
+
+const ImageInspectorModal = ({ imageUrl, title, onClose }: ImageInspectorModalProps) => {
+    // Carrega a imagem original do estúdio em máxima definição (remove transformações de compressão/tamanho)
+    const rawUrl = (imageUrl || '').split('?')[0];
+    const [scale, setScale] = useState(1);
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+    const handleZoomIn = () => setScale(prev => Math.min(Number((prev + 0.35).toFixed(2)), 4.5));
+    const handleZoomOut = () => setScale(prev => Math.max(Number((prev - 0.35).toFixed(2)), 0.5));
+    const handleReset = () => {
+        setScale(1);
+        setPosition({ x: 0, y: 0 });
+    };
+
+    const handleWheel = (e: React.WheelEvent) => {
+        e.preventDefault();
+        if (e.deltaY < 0) {
+            setScale(prev => Math.min(Number((prev + 0.2).toFixed(2)), 4.5));
+        } else {
+            setScale(prev => Math.max(Number((prev - 0.2).toFixed(2)), 0.5));
+        }
+    };
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (scale <= 1) return;
+        setIsDragging(true);
+        setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!isDragging) return;
+        setPosition({
+            x: e.clientX - dragStart.x,
+            y: e.clientY - dragStart.y
+        });
+    };
+
+    const handleMouseUp = () => setIsDragging(false);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
+
+    return (
+        <div
+            className="fixed inset-0 z-[150] flex flex-col bg-black/95 backdrop-blur-xl animate-in fade-in duration-200 select-none"
+            onClick={onClose}
+        >
+            {/* Top Toolbar */}
+            <div
+                className="p-4 border-b border-zinc-800 bg-zinc-950/90 flex items-center justify-between gap-4 z-20 shrink-0"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded bg-orange-500/10 border border-orange-500/30 text-orange-400 shrink-0 flex items-center gap-1.5">
+                        <ZoomIn size={12} /> Inspeção de Pintura HD
+                    </span>
+                    <h3 className="font-bold text-sm text-white truncate">{title}</h3>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                    {/* Zoom Controls */}
+                    <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl p-1 gap-1">
+                        <button
+                            type="button"
+                            onClick={handleZoomOut}
+                            disabled={scale <= 0.5}
+                            className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-300 hover:text-white disabled:opacity-30 transition-all cursor-pointer"
+                            title="Diminuir Zoom"
+                        >
+                            <ZoomOut size={16} />
+                        </button>
+                        <span className="px-2 text-xs font-mono font-bold text-orange-400 min-w-[50px] text-center">
+                            {Math.round(scale * 100)}%
+                        </span>
+                        <button
+                            type="button"
+                            onClick={handleZoomIn}
+                            disabled={scale >= 4.5}
+                            className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-300 hover:text-white disabled:opacity-30 transition-all cursor-pointer"
+                            title="Aumentar Zoom"
+                        >
+                            <ZoomIn size={16} />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleReset}
+                            className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-all cursor-pointer text-[10px] font-bold"
+                            title="Resetar Zoom (100%)"
+                        >
+                            <RotateCcw size={14} />
+                        </button>
+                    </div>
+
+                    <a
+                        href={rawUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                        title="Abrir arquivo em nova aba"
+                    >
+                        <ExternalLink size={14} />
+                        <span className="hidden sm:inline">Original</span>
+                    </a>
+
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="p-2 bg-zinc-900 hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-all cursor-pointer"
+                        title="Fechar inspeção (Esc)"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Viewport de Zoom Interativo */}
+            <div
+                className={`flex-1 relative overflow-hidden flex items-center justify-center ${
+                    scale > 1 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'
+                }`}
+                onWheel={handleWheel}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onClick={e => {
+                    e.stopPropagation();
+                    if (scale === 1) handleZoomIn();
+                }}
+            >
+                <div
+                    style={{
+                        transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                        transition: isDragging ? 'none' : 'transform 0.15s ease-out',
+                    }}
+                    className="relative max-w-full max-h-full flex items-center justify-center p-4"
+                >
+                    <img
+                        src={rawUrl}
+                        alt={title}
+                        className="max-h-[85vh] max-w-[90vw] object-contain rounded-lg shadow-2xl pointer-events-none"
+                    />
+                </div>
+            </div>
+
+            {/* Footer com Dicas de Precificação */}
+            <div className="p-3 bg-zinc-950/80 border-t border-zinc-800/60 text-center text-[11px] text-zinc-400 z-20 shrink-0">
+                <span>
+                    💡 <strong>Dica de Precificação:</strong> Gire a roda do mouse para aproximar/afastar e clique + arraste para inspecionar olhos, sombras, texturas e detalhes finos da pintura.
+                </span>
+            </div>
+        </div>
+    );
+};
+
+interface PhotoManagerModalProps {
+    figure: Figure;
+    onClose: () => void;
+    onSaved: (updated: Partial<Figure>) => void;
+}
+
+const PhotoManagerModal = ({ figure, onClose, onSaved }: PhotoManagerModalProps) => {
+    // Coleta todas as imagens existentes da figura em ordem
+    const [images, setImages] = useState<string[]>(() => {
+        const list = [figure.imagem_url, figure.imagem_secundaria, ...(figure.fotos_extras || [])].filter(Boolean) as string[];
+        return Array.from(new Set(list));
+    });
+    const [newUrl, setNewUrl] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [inspectImageUrl, setInspectImageUrl] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleMove = (index: number, direction: 'left' | 'right') => {
+        const targetIndex = direction === 'left' ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= images.length) return;
+        const newArr = [...images];
+        const [moved] = newArr.splice(index, 1);
+        newArr.splice(targetIndex, 0, moved);
+        setImages(newArr);
+    };
+
+    const handleSetCover = (index: number) => {
+        if (index === 0) return;
+        const newArr = [...images];
+        const [moved] = newArr.splice(index, 1);
+        newArr.unshift(moved);
+        setImages(newArr);
+    };
+
+    const handleSetHover = (index: number) => {
+        if (index === 1 || images.length < 2) return;
+        const newArr = [...images];
+        const [moved] = newArr.splice(index, 1);
+        newArr.splice(1, 0, moved);
+        setImages(newArr);
+    };
+
+    const handleRemove = (index: number) => {
+        setImages(images.filter((_, i) => i !== index));
+    };
+
+    const handleAddImage = () => {
+        const trimmed = newUrl.trim();
+        if (!trimmed) return;
+        if (images.includes(trimmed)) {
+            toast.error('Essa imagem já está adicionada');
+            return;
+        }
+        setImages([...images, trimmed]);
+        setNewUrl('');
+    };
+
+    const handleFilesUpload = async (filesToUpload: FileList | File[]) => {
+        const filesArray = Array.from(filesToUpload).filter(f => f.type.startsWith('image/'));
+        if (filesArray.length === 0) {
+            toast.error('Selecione arquivos de imagem válidos');
+            return;
+        }
+
+        setIsUploading(true);
+        let currentImages = [...images];
+
+        try {
+            for (let i = 0; i < filesArray.length; i++) {
+                const file = filesArray[i];
+                const nextIndex = currentImages.length + 1;
+                setUploadStatus(`Enviando foto ${i + 1} de ${filesArray.length} (${file.name})...`);
+
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('figureName', figure.nome);
+                formData.append('categoria', figure.categoria || 'Random');
+                formData.append('index', String(nextIndex));
+
+                const res = await fetch('/api/admin/figures/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || `Falha ao subir ${file.name}`);
+                }
+
+                const data = await res.json();
+                if (data.url) {
+                    currentImages.push(data.url);
+                    setImages([...currentImages]);
+                }
+            }
+
+            toast.success(`${filesArray.length} foto(s) extra(s) enviada(s) e renomeada(s) no ImageKit!`);
+        } catch (err: any) {
+            toast.error(err.message || 'Erro durante o upload');
+        } finally {
+            setIsUploading(false);
+            setUploadStatus(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            const updatedPayload: Partial<Figure> = {
+                id: figure.id,
+                imagem_url: images[0] || '',
+                imagem_secundaria: images[1] || null,
+                fotos_extras: images.slice(2),
+            };
+
+            const res = await fetch('/api/admin/figures', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedPayload),
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Erro ao salvar');
+            }
+
+            toast.success('Fotos e ordem salvas com sucesso!');
+            onSaved(updatedPayload);
+            onClose();
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao salvar fotos');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <div
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200"
+            onClick={onClose}
+        >
+            <div
+                className="relative max-w-4xl w-full bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="p-5 border-b border-zinc-800/80 flex justify-between items-center bg-zinc-900/50">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 text-orange-400">
+                                Galeria da Peça
+                            </span>
+                            <span className="text-xs font-mono text-zinc-500">ID #{figure.id}</span>
+                        </div>
+                        <h3 className="font-black text-lg md:text-xl text-white mt-1 truncate max-w-xl">
+                            {figure.nome}
+                        </h3>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-2 hover:bg-zinc-800 rounded-full transition-colors text-zinc-400 hover:text-white cursor-pointer"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* Explicativo das Posições */}
+                <div className="px-6 py-3 bg-zinc-900/30 border-b border-zinc-800/60 flex items-center gap-4 text-[11px] flex-wrap">
+                    <span className="text-zinc-400 font-bold">Regras da Vitrine:</span>
+                    <span className="inline-flex items-center gap-1.5 text-emerald-400 font-medium">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <strong>#1</strong> Capa Principal (Vitrine)
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 text-orange-400 font-medium">
+                        <span className="w-2 h-2 rounded-full bg-orange-500" />
+                        <strong>#2</strong> Foto de Hover (Ao passar o mouse)
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 text-blue-400 font-medium">
+                        <span className="w-2 h-2 rounded-full bg-blue-500" />
+                        <strong>#3+</strong> Galeria do Modal de Detalhes
+                    </span>
+                </div>
+
+                {/* Corpo: Grade de Fotos para Reordenar */}
+                <div className="p-6 overflow-y-auto space-y-6 flex-1">
+                    {images.length === 0 ? (
+                        <div className="py-12 text-center text-zinc-500 border border-dashed border-zinc-800 rounded-2xl">
+                            Nenhuma foto cadastrada para esta figura.
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            {images.map((url, idx) => {
+                                const isCover = idx === 0;
+                                const isHover = idx === 1;
+
+                                return (
+                                    <div
+                                        key={url + idx}
+                                        className={`relative bg-zinc-900/80 border rounded-2xl p-3 flex flex-col gap-3 transition-all ${
+                                            isCover 
+                                                ? 'border-emerald-500/60 shadow-lg shadow-emerald-500/10' 
+                                                : isHover 
+                                                    ? 'border-orange-500/60 shadow-lg shadow-orange-500/10' 
+                                                    : 'border-zinc-800 hover:border-zinc-700'
+                                        }`}
+                                    >
+                                        {/* Badge de Posição */}
+                                        <div className="flex items-center justify-between">
+                                            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                                isCover 
+                                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                                                    : isHover 
+                                                        ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' 
+                                                        : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                                            }`}>
+                                                {isCover ? '⭐ 1. Capa Oficial' : isHover ? '⚡ 2. Efeito Hover' : `#${idx + 1} Galeria`}
+                                            </span>
+
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setInspectImageUrl(url)}
+                                                    className="text-zinc-400 hover:text-orange-400 p-1 rounded hover:bg-zinc-800 transition-colors cursor-pointer"
+                                                    title="Inspecionar Pintura em Alta Resolução (Zoom HD)"
+                                                >
+                                                    <ZoomIn size={14} />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemove(idx)}
+                                                    className="text-zinc-500 hover:text-red-400 p-1 rounded hover:bg-zinc-800 transition-colors cursor-pointer"
+                                                    title="Remover foto"
+                                                >
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Preview da Imagem com Zoom */}
+                                        <div
+                                            onClick={() => setInspectImageUrl(url)}
+                                            className="aspect-[4/5] bg-black rounded-xl overflow-hidden relative flex items-center justify-center p-2 border border-zinc-800/80 cursor-zoom-in group/img transition-all hover:border-orange-500/50"
+                                            title="Clique para dar Zoom em Alta Resolução e inspecionar a pintura"
+                                        >
+                                            <img
+                                                src={url}
+                                                alt={`Foto ${idx + 1}`}
+                                                className="object-contain w-full h-full rounded transition-transform duration-300 group-hover/img:scale-105"
+                                            />
+                                            <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                <span className="bg-orange-500 text-white font-black text-[10px] uppercase tracking-wider px-2.5 py-1.5 rounded-full shadow-2xl flex items-center gap-1.5 backdrop-blur">
+                                                    <ZoomIn size={12} /> Inspecionar Pintura (HD)
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Ações de Reordenação */}
+                                        <div className="flex items-center justify-between gap-1 pt-1 border-t border-zinc-800/60">
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    disabled={idx === 0}
+                                                    onClick={() => handleMove(idx, 'left')}
+                                                    className="px-2 py-1 text-xs font-bold rounded bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                                                    title="Mover para a esquerda"
+                                                >
+                                                    ◀
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={idx === images.length - 1}
+                                                    onClick={() => handleMove(idx, 'right')}
+                                                    className="px-2 py-1 text-xs font-bold rounded bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                                                    title="Mover para a direita"
+                                                >
+                                                    ▶
+                                                </button>
+                                            </div>
+
+                                            <div className="flex items-center gap-1">
+                                                {!isCover && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSetCover(idx)}
+                                                        className="px-2 py-1 text-[10px] font-black uppercase rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30 transition-all cursor-pointer"
+                                                        title="Tornar esta foto a capa principal"
+                                                    >
+                                                        Tornar Capa
+                                                    </button>
+                                                )}
+                                                {!isHover && images.length > 1 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSetHover(idx)}
+                                                        className="px-2 py-1 text-[10px] font-black uppercase rounded bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 border border-orange-500/30 transition-all cursor-pointer"
+                                                        title="Tornar esta foto a imagem de hover"
+                                                    >
+                                                        Tornar Hover
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Área de Upload Direto para ImageKit (Drag & Drop + Arquivo do Windows) */}
+                    <div className="space-y-3">
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            multiple
+                            accept="image/png,image/jpeg,image/webp,image/jpg"
+                            className="hidden"
+                            onChange={e => e.target.files && handleFilesUpload(e.target.files)}
+                        />
+
+                        <div
+                            onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                            onDragLeave={() => setIsDragging(false)}
+                            onDrop={e => {
+                                e.preventDefault();
+                                setIsDragging(false);
+                                if (e.dataTransfer.files) handleFilesUpload(e.dataTransfer.files);
+                            }}
+                            onClick={() => !isUploading && fileInputRef.current?.click()}
+                            className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
+                                isDragging 
+                                    ? 'border-orange-500 bg-orange-500/10' 
+                                    : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/40 hover:bg-zinc-900/60'
+                            } ${isUploading ? 'pointer-events-none opacity-70' : ''}`}
+                        >
+                            {isUploading ? (
+                                <>
+                                    <Loader2 size={24} className="animate-spin text-orange-500" />
+                                    <span className="text-xs font-bold text-orange-400">{uploadStatus}</span>
+                                    <span className="text-[10px] text-zinc-500">Enviando e renomeando no ImageKit...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="w-10 h-10 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500">
+                                        <Upload size={18} />
+                                    </div>
+                                    <div className="text-xs font-bold text-zinc-200">
+                                        Arraste fotos extras aqui ou <span className="text-orange-400 underline underline-offset-2">clique para selecionar do PC</span>
+                                    </div>
+                                    <p className="text-[11px] text-zinc-500 max-w-md">
+                                        Pode subir com qualquer nome bruto do estúdio (ex: <code className="text-zinc-400">BS_01.png</code>, <code className="text-zinc-400">Colored_01.png</code>). O sistema renomeia automaticamente e envia para o ImageKit.
+                                    </p>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Adicionar Foto via URL Direta (Fallback) */}
+                    <div className="bg-zinc-900/40 border border-zinc-850 rounded-2xl p-3.5 space-y-2">
+                        <label className="text-[11px] font-bold text-zinc-400 block">
+                            Ou adicione via URL direta / ImageKit já existente
+                        </label>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                placeholder="https://ik.imagekit.io/frangatoys/..."
+                                value={newUrl}
+                                onChange={e => setNewUrl(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddImage())}
+                                className="flex-1 bg-black border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-orange-500 transition-colors"
+                            />
+                            <button
+                                type="button"
+                                onClick={handleAddImage}
+                                disabled={!newUrl.trim()}
+                                className="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-40 cursor-pointer"
+                            >
+                                + Adicionar URL
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer com Salvar */}
+                <div className="p-4 border-t border-zinc-800/80 bg-zinc-900/50 flex items-center justify-between">
+                    <span className="text-xs text-zinc-500">
+                        {images.length} {images.length === 1 ? 'foto vinculada' : 'fotos vinculadas'}
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 rounded-xl text-xs font-bold text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg shadow-orange-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                        >
+                            {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                            {isSaving ? 'Salvando...' : 'Salvar Ordem das Fotos'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Modal de Zoom HD para Inspeção de Pintura */}
+            {inspectImageUrl && (
+                <ImageInspectorModal
+                    imageUrl={inspectImageUrl}
+                    title={`${figure.nome}`}
+                    onClose={() => setInspectImageUrl(null)}
+                />
+            )}
+        </div>
+    );
+};
 
 function DataGridContent() {
     const searchParams = useSearchParams();
@@ -384,6 +982,7 @@ function DataGridContent() {
     const canEdit = hasRole('admin') || hasRole('pricing');
 
     const [previewImage, setPreviewImage] = useState<{ url: string, nome: string } | null>(null);
+    const [photoManagerFigure, setPhotoManagerFigure] = useState<Figure | null>(null);
 
     // Fetch settings & studios on mount
     useEffect(() => {
@@ -913,6 +1512,7 @@ function DataGridContent() {
                                     handleDelete={handleDelete}
                                     handleDownloadImage={handleDownloadImage}
                                     setPreviewImage={setPreviewImage}
+                                    setPhotoManagerFigure={setPhotoManagerFigure}
                                 />
                             );
                         })}
@@ -968,6 +1568,17 @@ function DataGridContent() {
                     </div>
                 )
             }
+
+            {/* Photo Manager & Reorder Modal */}
+            {photoManagerFigure && (
+                <PhotoManagerModal
+                    figure={photoManagerFigure}
+                    onClose={() => setPhotoManagerFigure(null)}
+                    onSaved={(updated) => {
+                        setFigures(prev => prev.map(f => f.id === photoManagerFigure.id ? { ...f, ...updated } : f));
+                    }}
+                />
+            )}
             {/* Barra Flutuante de Salvar Alterações */}
             {Object.keys(pendingChanges).length > 0 && (
                 <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] bg-zinc-950/95 backdrop-blur border border-orange-500/30 px-6 py-4 rounded-2xl flex items-center gap-6 shadow-2xl animate-in slide-in-from-bottom-5 duration-200">

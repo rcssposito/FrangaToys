@@ -101,16 +101,7 @@ body {
   -webkit-transform-style: preserve-3d;
 }
 
-@media (min-width: 768px) {
-
-  /* On desktop hover, flip it. */
-  .group:hover .flip-card-inner {
-    transform: rotateY(180deg);
-    -webkit-transform: rotateY(180deg);
-  }
-}
-
-/* For mobile tap */
+/* Flipping acionado pelo botão Detalhes ou toque */
 .is-flipped .flip-card-inner {
   transform: rotateY(180deg);
   -webkit-transform: rotateY(180deg);
