@@ -28,14 +28,9 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'IMAGEKIT_PRIVATE_KEY não configurada' }, { status: 500 });
         }
 
-        // 1. Obter extensão original do arquivo
-        const originalName = file.name || '';
-        const extMatch = originalName.match(/\.(webp|png|jpg|jpeg|gif)$/i);
-        const ext = extMatch ? extMatch[0].toLowerCase() : '.webp';
-
-        // 2. Padronizar nome canônico: Nome_Da_Figura_2.ext
+        // 1. Padronizar nome canônico sempre com extensão .webp
         const baseClean = toImageKitFileName(figureName);
-        const targetFileName = `${baseClean}_${index}${ext}`;
+        const targetFileName = `${baseClean}_${index}.webp`;
 
         // 3. Pasta de destino padronizada por categoria
         const rawCategory = categoria.trim().toLowerCase();

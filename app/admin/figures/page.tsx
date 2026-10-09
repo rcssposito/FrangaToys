@@ -535,6 +535,74 @@ const ImageInspectorModal = ({ imageUrl, title, onClose }: ImageInspectorModalPr
     );
 };
 
+async function compressImageForUpload(file: File, maxDim = 1920, quality = 0.80): Promise<File> {
+    return new Promise((resolve) => {
+        // Se já for um WebP leve (< 300KB), não precisa reprocessar
+        if (file.type === 'image/webp' && file.size < 300 * 1024) {
+            resolve(file);
+            return;
+        }
+
+        const img = new Image();
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            img.src = e.target?.result as string;
+        };
+
+        img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+
+            // Redimensiona proporcionalmente se passar de maxDim (1920px)
+            if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                    height = Math.round((height * maxDim) / width);
+                    width = maxDim;
+                } else {
+                    width = Math.round((width * maxDim) / height);
+                    height = maxDim;
+                }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                resolve(file);
+                return;
+            }
+
+            // Renderização bilinear suave em alta definição
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob(
+                (blob) => {
+                    if (!blob) {
+                        resolve(file);
+                        return;
+                    }
+                    const newFileName = file.name.replace(/\.[^/.]+$/, '') + '.webp';
+                    const compressedFile = new File([blob], newFileName, { type: 'image/webp' });
+                    resolve(compressedFile);
+                },
+                'image/webp',
+                quality
+            );
+        };
+
+        img.onerror = () => {
+            resolve(file);
+        };
+
+        reader.readAsDataURL(file);
+    });
+}
+
 interface PhotoManagerModalProps {
     figure: Figure;
     onClose: () => void;
@@ -607,12 +675,18 @@ const PhotoManagerModal = ({ figure, onClose, onSaved }: PhotoManagerModalProps)
 
         try {
             for (let i = 0; i < filesArray.length; i++) {
-                const file = filesArray[i];
+                const rawFile = filesArray[i];
                 const nextIndex = currentImages.length + 1;
-                setUploadStatus(`Enviando foto ${i + 1} de ${filesArray.length} (${file.name})...`);
+                
+                setUploadStatus(`Otimizando foto ${i + 1} de ${filesArray.length} para WebP...`);
+                const optimizedFile = await compressImageForUpload(rawFile, 1920, 0.80);
+                
+                const originalKb = Math.round(rawFile.size / 1024);
+                const compressedKb = Math.round(optimizedFile.size / 1024);
+                setUploadStatus(`Enviando foto ${i + 1} (${compressedKb}KB) para o ImageKit...`);
 
                 const formData = new FormData();
-                formData.append('file', file);
+                formData.append('file', optimizedFile);
                 formData.append('figureName', figure.nome);
                 formData.append('categoria', figure.categoria || 'Random');
                 formData.append('index', String(nextIndex));
@@ -624,7 +698,7 @@ const PhotoManagerModal = ({ figure, onClose, onSaved }: PhotoManagerModalProps)
 
                 if (!res.ok) {
                     const err = await res.json();
-                    throw new Error(err.error || `Falha ao subir ${file.name}`);
+                    throw new Error(err.error || `Falha ao subir ${rawFile.name}`);
                 }
 
                 const data = await res.json();
@@ -634,7 +708,7 @@ const PhotoManagerModal = ({ figure, onClose, onSaved }: PhotoManagerModalProps)
                 }
             }
 
-            toast.success(`${filesArray.length} foto(s) extra(s) enviada(s) e renomeada(s) no ImageKit!`);
+            toast.success(`${filesArray.length} foto(s) extra(s) otimizada(s) e salva(s) no ImageKit!`);
         } catch (err: any) {
             toast.error(err.message || 'Erro durante o upload');
         } finally {
