@@ -16,6 +16,7 @@ export async function GET() {
         });
 
         const deliveryMode = configMap['delivery_mode'] || 'gumroad';
+        const patreonAccessRule = configMap['patreon_access_rule'] || 'paid_only';
         let enabledProducts: string[] = [];
         try {
             if (configMap['enabled_gumroad_products']) {
@@ -25,10 +26,11 @@ export async function GET() {
 
         return NextResponse.json({
             deliveryMode,
+            patreonAccessRule,
             enabledProducts
         });
     } catch (e: any) {
-        return NextResponse.json({ deliveryMode: 'gumroad', enabledProducts: [] });
+        return NextResponse.json({ deliveryMode: 'gumroad', patreonAccessRule: 'paid_only', enabledProducts: [] });
     }
 }
 
@@ -38,7 +40,7 @@ export async function POST(req: NextRequest) {
         if (auth instanceof NextResponse) return auth;
 
         const body = await req.json();
-        const { deliveryMode, enabledProducts } = body;
+        const { deliveryMode, patreonAccessRule, enabledProducts } = body;
 
         if (deliveryMode) {
             if (!['gumroad', 'drive', 'both'].includes(deliveryMode)) {
@@ -55,6 +57,21 @@ export async function POST(req: NextRequest) {
             if (err1) throw err1;
         }
 
+        if (patreonAccessRule) {
+            if (!['paid_only', 'all'].includes(patreonAccessRule)) {
+                return NextResponse.json({ error: 'Regra de acesso inválida. Escolha entre: paid_only ou all' }, { status: 400 });
+            }
+
+            const { error: errRule } = await supabase
+                .from('franga_studio_config')
+                .upsert({
+                    key: 'patreon_access_rule',
+                    value: patreonAccessRule,
+                    updated_at: new Date().toISOString()
+                });
+            if (errRule) throw errRule;
+        }
+
         if (Array.isArray(enabledProducts)) {
             const { error: err2 } = await supabase
                 .from('franga_studio_config')
@@ -69,6 +86,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
             success: true,
             deliveryMode,
+            patreonAccessRule,
             enabledProducts
         });
     } catch (error: any) {
@@ -76,3 +94,4 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 });
     }
 }
+

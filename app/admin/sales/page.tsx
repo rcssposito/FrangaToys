@@ -667,7 +667,7 @@ function SalesContent() {
                         </Link>
                         <div>
                             <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white flex items-center gap-3">
-                                {viewTab === 'kpis' ? 'Inteligência de Portfólio & Decisão Executiva' : viewTab === 'comissoes' ? 'Acertos & Comissões' : (customerFilter ? 'Vendas do Cliente' : 'Vendas & Livro Caixa')}
+                                {viewTab === 'kpis' ? 'KPIs de Vendas' : viewTab === 'comissoes' ? 'Acertos & Comissões' : (customerFilter ? 'Vendas do Cliente' : 'Vendas & Livro Caixa')}
                                 {customerFilter && (
                                     <button 
                                         onClick={() => router.push('/admin/sales')}
@@ -678,7 +678,7 @@ function SalesContent() {
                                 )}
                             </h1>
                             <p className="text-zinc-500 text-sm font-medium mt-1 uppercase tracking-widest text-[10px]">
-                                {viewTab === 'kpis' ? 'Matriz financeira de Top Sellers vs Descarte de Catálogo (Séries, Estúdios e Categorias)' : viewTab === 'comissoes' ? 'Fechamentos mensais e repasses para vendedores e pintores' : 'Livro Caixa Tático de Receitas e Pedidos.'}
+                                {viewTab === 'kpis' ? 'Faturamento, volume e desempenho por segmento de catálogo' : viewTab === 'comissoes' ? 'Fechamentos mensais e repasses para vendedores e pintores' : 'Livro Caixa Tático de Receitas e Pedidos.'}
                             </p>
                         </div>
                     </div>
@@ -732,7 +732,7 @@ function SalesContent() {
                                 }`}
                             >
                                 <TrendingUp size={15} />
-                                Inteligência & Portfólio (KPIs)
+                                KPIs de Vendas
                             </button>
                         </div>
 
@@ -1152,26 +1152,16 @@ function SalesContent() {
                 {/* ABA 3: INTELIGÊNCIA & PORTFÓLIO (KPIS) - DECISÃO EXECUTIVA (MANTER VS DESCARTAR) */}
                 {viewTab === 'kpis' && (
                     <div className="space-y-6 animate-in fade-in duration-300">
-                        {/* Banner Superior com Resumo Executivo */}
-                        <div className="bg-zinc-950/80 border border-zinc-800/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
-
-                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6 relative z-10">
+                        {/* Resumo por Período */}
+                        <div className="bg-zinc-950/80 border border-zinc-800/80 rounded-3xl p-6 space-y-6 shadow-2xl relative overflow-hidden">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-5 relative z-10">
                                 <div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center gap-1.5">
-                                            <Sparkles size={11} /> Matriz de Decisão Executiva
-                                        </span>
-                                        <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
-                                            Pareto & Inteligência de Catálogo
-                                        </span>
-                                    </div>
-                                    <h2 className="text-2xl font-black text-white mt-1.5 flex items-center gap-2.5">
-                                        <BarChart3 className="text-amber-400" size={26} />
-                                        Top Sellers, Retenção & Decisão de Catálogo
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                        <BarChart3 className="text-amber-400" size={22} />
+                                        Desempenho de Vendas
                                     </h2>
-                                    <p className="text-xs text-zinc-400 mt-1 max-w-xl leading-relaxed">
-                                        Classificação financeira e giro de vendas. Saiba quem <strong className="text-emerald-400 font-bold">MANTER & EXPANDIR</strong> vs <strong className="text-rose-400 font-bold">DESCARTAR / CANCELAR ASSINATURA</strong>.
+                                    <p className="text-xs text-zinc-400 mt-0.5">
+                                        Resultados consolidados por período e segmento.
                                     </p>
                                 </div>
 
@@ -1252,7 +1242,7 @@ function SalesContent() {
                             {loadingKpis ? (
                                 <div className="p-16 flex justify-center items-center gap-3 text-zinc-500 text-xs font-bold uppercase tracking-widest">
                                     <Loader2 className="animate-spin text-amber-400 w-8 h-8" />
-                                    Processando inteligência de vendas e catálogo...
+                                    Atualizando indicadores...
                                 </div>
                             ) : kpiData?.summary && (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
@@ -1265,12 +1255,12 @@ function SalesContent() {
                                             R$ {(kpiData.summary.totalFaturamento || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                         </div>
                                         <div className="text-[11px] text-zinc-400 mt-1.5 flex items-center gap-1.5 font-bold">
-                                            <span>Lucro Real:</span>
+                                            <span>Lucro:</span>
                                             <span className="text-emerald-400 font-black">
                                                 R$ {(kpiData.summary.totalLucro || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             </span>
                                             <span className="text-zinc-600 font-normal">
-                                                ({kpiData.summary.margemMediaPct.toFixed(1)}% margem)
+                                                ({kpiData.summary.margemMediaPct.toFixed(1)}%)
                                             </span>
                                         </div>
                                     </div>
@@ -1281,10 +1271,10 @@ function SalesContent() {
                                             Peças Vendidas & Ticket Médio
                                         </span>
                                         <div className="text-2xl font-black text-cyan-400">
-                                            {kpiData.summary.totalUnidades || 0} unidades
+                                            {kpiData.summary.totalUnidades || 0} {kpiData.summary.totalUnidades === 1 ? 'peça' : 'peças'}
                                         </div>
                                         <div className="text-[11px] text-zinc-400 mt-1.5 flex items-center gap-1.5 font-bold">
-                                            <span>Ticket Médio Geral:</span>
+                                            <span>Ticket Médio:</span>
                                             <span className="text-white font-black">
                                                 R$ {(kpiData.summary.ticketMedio || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             </span>
@@ -1294,43 +1284,43 @@ function SalesContent() {
                                     {/* Card 3: Top Drivers */}
                                     <div className="p-5 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl relative overflow-hidden group hover:border-emerald-500/30 transition-all">
                                         <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1 flex items-center gap-1.5">
-                                            <Award size={12} className="text-emerald-400" /> Franquia Líder (Receita)
+                                            <Award size={12} className="text-emerald-400" /> Série Líder
                                         </span>
                                         <div className="text-base font-black text-white truncate" title={kpiData.summary.topSerie?.nome}>
                                             {kpiData.summary.topSerie?.nome || 'Sem vendas'}
                                         </div>
                                         <div className="text-[11px] text-emerald-400 font-bold mt-1 truncate">
-                                            {kpiData.summary.topStudio?.nome ? `Estúdio Líder: ${kpiData.summary.topStudio.nome}` : ''}
+                                            {kpiData.summary.topStudio?.nome ? `Estúdio: ${kpiData.summary.topStudio.nome}` : ''}
                                         </div>
                                     </div>
 
-                                    {/* Card 4: Matriz de Estúdios (Manter vs Descartar) */}
+                                    {/* Card 4: Matriz de Estúdios */}
                                     <div className="p-5 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl relative overflow-hidden group hover:border-rose-500/30 transition-all">
                                         <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1 flex items-center gap-1.5">
-                                            <Building2 size={12} className="text-zinc-400" /> Decisão de Estúdios
+                                            <Building2 size={12} className="text-zinc-400" /> Estúdios Parceiros
                                         </span>
                                         <div className="flex items-center gap-3 mt-1">
                                             <div className="flex items-center gap-1.5">
                                                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
                                                 <span className="text-xs font-black text-white">
-                                                    {kpiData.summary.contadores?.studios?.manter || 0} Manter
+                                                    {kpiData.summary.contadores?.studios?.manter || 0} Ativos
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
                                                 <span className="text-xs font-black text-zinc-300">
-                                                    {kpiData.summary.contadores?.studios?.observar || 0} Obs.
+                                                    {kpiData.summary.contadores?.studios?.observar || 0} Atenção
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
                                                 <span className="text-xs font-black text-rose-400">
-                                                    {kpiData.summary.contadores?.studios?.descartar || 0} Descarte
+                                                    {kpiData.summary.contadores?.studios?.descartar || 0} Sem Vendas
                                                 </span>
                                             </div>
                                         </div>
                                         <div className="text-[10px] text-zinc-500 font-medium mt-2">
-                                            {kpiData.summary.contadores?.studios?.descartar || 0} assinaturas com mensalidade e zero vendas
+                                            {kpiData.summary.contadores?.studios?.descartar || 0} com assinatura e sem vendas no período
                                         </div>
                                     </div>
                                 </div>
@@ -1351,7 +1341,7 @@ function SalesContent() {
                                         }`}
                                     >
                                         <Layers size={14} />
-                                        Séries que Venderam ({kpiData?.series?.length || 0})
+                                        Séries ({kpiData?.series?.length || 0})
                                     </button>
                                     <button
                                         onClick={() => setKpiSegment('studios')}
@@ -1362,7 +1352,7 @@ function SalesContent() {
                                         }`}
                                     >
                                         <Building2 size={14} />
-                                        Estúdios Ativos & Custom ({kpiData?.studios?.length || 0})
+                                        Estúdios ({kpiData?.studios?.length || 0})
                                     </button>
                                     <button
                                         onClick={() => setKpiSegment('categorias')}
@@ -1384,7 +1374,7 @@ function SalesContent() {
                                         }`}
                                     >
                                         <Trophy size={14} />
-                                        Figuras que Venderam ({kpiData?.figurasVendidas?.length || 0})
+                                        Figuras Vendidas ({kpiData?.figurasVendidas?.length || 0})
                                     </button>
                                 </div>
 
@@ -1408,7 +1398,7 @@ function SalesContent() {
                                 </div>
                             </div>
 
-                            {/* Linha de Busca & Filtros de Decisão */}
+                            {/* Linha de Busca & Filtros de Status */}
                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
                                 {/* Busca */}
                                 <div className="relative flex-1 max-w-md">
@@ -1430,11 +1420,11 @@ function SalesContent() {
                                     )}
                                 </div>
 
-                                {/* Filtro por Decisão / Status Conforme o Segmento */}
+                                {/* Filtro por Status */}
                                 {kpiSegment === 'studios' && (
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className="text-zinc-500 text-[10px] font-black uppercase tracking-wider mr-1">
-                                            Decisão:
+                                            Status:
                                         </span>
                                         <button
                                             onClick={() => setKpiFilterStatus('todos')}
@@ -1455,7 +1445,7 @@ function SalesContent() {
                                             }`}
                                         >
                                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                            Manter (ou sem custo)
+                                            Ativos / Sem Custo
                                         </button>
                                         <button
                                             onClick={() => setKpiFilterStatus('observar')}
@@ -1477,14 +1467,14 @@ function SalesContent() {
                                             }`}
                                         >
                                             <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                                            Candidato a Descarte
+                                            Sem Vendas
                                         </button>
                                     </div>
                                 )}
                                 {kpiSegment === 'series' && (
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className="text-zinc-500 text-[10px] font-black uppercase tracking-wider mr-1">
-                                            Tração:
+                                            Status:
                                         </span>
                                         <button
                                             onClick={() => setKpiFilterStatus('todos')}
@@ -1523,7 +1513,7 @@ function SalesContent() {
                                 {kpiSegment === 'categorias' && (
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className="text-zinc-500 text-[10px] font-black uppercase tracking-wider mr-1">
-                                            Relevância:
+                                            Status:
                                         </span>
                                         <button
                                             onClick={() => setKpiFilterStatus('todos')}
@@ -1544,7 +1534,7 @@ function SalesContent() {
                                             }`}
                                         >
                                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                            Pilares Estratégicos
+                                            Destaques
                                         </button>
                                         <button
                                             onClick={() => setKpiFilterStatus('observar')}
@@ -1555,7 +1545,7 @@ function SalesContent() {
                                             }`}
                                         >
                                             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                                            Nichos Secundários
+                                            Outras
                                         </button>
                                     </div>
                                 )}
@@ -1585,9 +1575,9 @@ function SalesContent() {
                                                 <th className="py-4 px-4 text-center">Modelos no Acervo</th>
                                                 <th className="py-4 px-4 text-center">Vendas (Qtd)</th>
                                                 <th className="py-4 px-4 text-right">Faturamento Total</th>
-                                                <th className="py-4 px-4 text-right">Lucro Real</th>
-                                                <th className="py-4 px-4 text-center">Share da Loja (%)</th>
-                                                <th className="py-4 px-6 text-center">Decisão Executiva (KPI)</th>
+                                                <th className="py-4 px-4 text-right">Lucro</th>
+                                                <th className="py-4 px-4 text-center">Share (%)</th>
+                                                <th className="py-4 px-6 text-center">Status</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-zinc-800/60">
@@ -2226,7 +2216,7 @@ function SalesContent() {
                                         return;
                                     }
                                     const firstName = postEditResult.clientName ? postEditResult.clientName.trim().split(' ')[0] : 'Cliente';
-                                    let msg = `Olá ${firstName}, tudo bem? Aqui é da Franga Toys! 🚀\n\n`;
+                                    let msg = `Olá ${firstName}, tudo bem? Aqui é da Franga Toys! 🐥\n\n`;
                                     if (postEditResult.type === 'credit' && postEditResult.link) {
                                         msg += `Segue o link atualizado para pagamento via Cartão de Crédito:\n${postEditResult.link}\n\n`;
                                     } else if (postEditResult.type === 'pix' && postEditResult.pixCode) {

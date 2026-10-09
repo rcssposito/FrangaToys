@@ -295,8 +295,8 @@ export async function GET(req: Request) {
                 shareReceita: 0,
                 taxaGiro: 0,
                 statusDecisao: custoPeriodo <= 0 ? 'manter' : 'descartar',
-                statusLabel: custoPeriodo <= 0 ? 'MANTER (SEM CUSTO)' : 'CANDIDATO A DESCARTE',
-                motivo: custoPeriodo <= 0 ? 'Estúdio sem custo registrado no período.' : 'Zero vendas no período com custo fixo ativo.'
+                statusLabel: custoPeriodo <= 0 ? 'SEM CUSTO' : 'SEM VENDAS',
+                motivo: custoPeriodo <= 0 ? 'Sem custo no período' : `Custo R$ ${custoPeriodo.toFixed(2)} sem vendas`
             };
         });
 
@@ -314,7 +314,7 @@ export async function GET(req: Request) {
                 shareReceita: 0,
                 taxaGiro: 0,
                 statusDecisao: 'observar',
-                statusLabel: 'NICHO SECUNDÁRIO',
+                statusLabel: 'REGULAR',
                 motivo: 'Sem vendas no período'
             };
         });
@@ -439,12 +439,12 @@ export async function GET(req: Request) {
 
                 let statusDecisao: 'manter' | 'observar' = 'observar';
                 let statusLabel = 'EM OBSERVAÇÃO';
-                let motivo = `Giro moderado (${item.unidadesVendidas} vendas, ${item.totalViews} views). Franquia ativa no período.`;
+                let motivo = `${item.unidadesVendidas} vendas · ${item.totalViews} views`;
 
                 if (item.faturamentoTotal >= 1000 || item.unidadesVendidas >= 3) {
                     statusDecisao = 'manter';
-                    statusLabel = 'TOP SELLER / CARRO-CHEFE';
-                    motivo = `Franquia de alta tração (R$ ${item.faturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}, ${item.unidadesVendidas} vendas). Recomenda-se expandir variações.`;
+                    statusLabel = 'TOP SELLER';
+                    motivo = `${item.unidadesVendidas} vendas · R$ ${item.faturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
                 }
 
                 return {
@@ -466,25 +466,24 @@ export async function GET(req: Request) {
             const giro = item.totalModelos > 0 ? (item.unidadesVendidas / item.totalModelos) : 0;
 
             let statusDecisao: 'manter' | 'observar' | 'descartar' = 'descartar';
-            let statusLabel = 'CANDIDATO A DESCARTE';
-            const periodoDesc = range === 'mensal' ? 'mês' : `${item.extra?.mesesAtivosPeriodo || 0} meses ativos`;
-            let motivo = `Custo de R$ ${custo.toFixed(2)} (${periodoDesc}) sem vendas no período (${item.totalModelos} modelos). Avaliar cancelamento da assinatura.`;
+            let statusLabel = 'SEM VENDAS';
+            let motivo = custo > 0 ? `Custo R$ ${custo.toFixed(2)} sem vendas (${item.totalModelos} peças)` : 'Sem vendas no período';
 
             // Regra crucial: Estúdios com custo zero ou negativo SEMPRE constam como "manter"
             if (custo <= 0) {
                 statusDecisao = 'manter';
-                statusLabel = 'MANTER (SEM CUSTO NO PERÍODO)';
+                statusLabel = 'SEM CUSTO';
                 motivo = item.unidadesVendidas > 0
-                    ? `Sob encomenda ou inativo. Forte tração (R$ ${item.faturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}, ${item.unidadesVendidas} vendas) com custo fixo ZERO.`
-                    : `Estúdio sem mensalidade ou inativo no período. Sem custo de manutenção da assinatura.`;
+                    ? `${item.unidadesVendidas} vendas · Custo zero`
+                    : `Sem custo de assinatura`;
             } else if (item.faturamentoTotal >= 1000 || item.unidadesVendidas >= 3 || item.lucroTotal >= (custo * 1.5)) {
                 statusDecisao = 'manter';
-                statusLabel = 'MANTER & EXPANDIR';
-                motivo = `Alta rentabilidade (R$ ${item.faturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}). Cobre o custo de R$ ${custo.toFixed(2)} com folga.`;
+                statusLabel = 'ATIVO';
+                motivo = `R$ ${item.faturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (Cobre custo de R$ ${custo.toFixed(2)})`;
             } else if (item.unidadesVendidas >= 1 || item.totalViews >= 45) {
                 statusDecisao = 'observar';
                 statusLabel = 'EM OBSERVAÇÃO';
-                motivo = `Giro intermediário (${item.unidadesVendidas} vendas, ${item.totalViews} views). Acompanhar se o lucro supera o custo apurado (R$ ${custo.toFixed(2)}).`;
+                motivo = `${item.unidadesVendidas} vendas · ${item.totalViews} views`;
             }
 
             return {
@@ -506,17 +505,17 @@ export async function GET(req: Request) {
                 const share = totalFaturamentoGeral > 0 ? ((item.faturamentoTotal / totalFaturamentoGeral) * 100) : 0;
 
                 let statusDecisao: 'manter' | 'observar' | 'descartar' = 'observar';
-                let statusLabel = 'NICHO SECUNDÁRIO';
-                let motivo = `Participação de ${share.toFixed(1)}% no faturamento total da loja.`;
+                let statusLabel = 'REGULAR';
+                let motivo = `${share.toFixed(1)}% da receita da loja`;
 
                 if (share >= 25 || item.faturamentoTotal >= 2000) {
                     statusDecisao = 'manter';
-                    statusLabel = 'PILAR ESTRATÉGICO';
-                    motivo = `Pilar central de receita (${share.toFixed(1)}% do faturamento da loja). Manter catálogo aquecido.`;
+                    statusLabel = 'DESTAQUE';
+                    motivo = `${share.toFixed(1)}% da receita da loja`;
                 } else if (share < 3 && item.unidadesVendidas <= 1) {
                     statusDecisao = 'descartar';
-                    statusLabel = 'BAIXO INTERESSE';
-                    motivo = `Baixa representatividade financeira (<3% da receita).`;
+                    statusLabel = 'BAIXO GIRO';
+                    motivo = `< 3% da receita`;
                 }
 
                 return {

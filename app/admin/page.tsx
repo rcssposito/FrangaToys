@@ -1410,11 +1410,10 @@ export default function AdminDashboard() {
                 <PatreonWidget />
             </div>
 
-            {/* EXECUTIVE ANALYTICS HUB: CASCATA DRE + MATRIZ BCG DE ESTÚDIOS */}
+            {/* EXECUTIVE ANALYTICS HUB: CASCATA DRE */}
             {canViewFinance && (
                 <ExecutiveAnalyticsHub 
                     financialData={data?.charts?.financialFlow} 
-                    studioMatrix={data?.charts?.studioMatrix}
                     hideValues={hideValues} 
                 />
             )}

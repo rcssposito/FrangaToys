@@ -81,7 +81,8 @@ export async function GET(req: NextRequest) {
 
         if (!patreonCheck.isAuthorized) {
             console.warn(`Acesso negado para ${email}: ${patreonCheck.reason}`);
-            return NextResponse.redirect(`${releasePageUrl}?error=not_active_patron`);
+            const errorParam = patreonCheck.isFreeMember ? 'free_patron_upgrade_needed' : 'not_active_patron';
+            return NextResponse.redirect(`${releasePageUrl}?error=${errorParam}`);
         }
 
         // 4. Buscar a URL DINÂMICA do repositório salva pelo Criador no banco de dados

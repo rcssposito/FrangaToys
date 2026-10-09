@@ -18,7 +18,7 @@ export default function AdminPatreonRepositoryPage() {
     const isAdmin = user?.roles?.includes('admin') ?? false;
 
     // Aba Ativa: 'gumroad' | 'auditoria' | 'drive'
-    const [activeTab, setActiveTab] = useState<'gumroad' | 'auditoria' | 'drive'>('auditoria');
+    const [activeTab, setActiveTab] = useState<'gumroad' | 'auditoria' | 'drive'>('gumroad');
 
     // Filtros e busca da Tela de Auditoria
     const [auditSearch, setAuditSearch] = useState('');
@@ -71,16 +71,21 @@ export default function AdminPatreonRepositoryPage() {
     const [deliveryMode, setDeliveryMode] = useState<'gumroad' | 'drive' | 'both'>('gumroad');
     const [updatingDeliveryMode, setUpdatingDeliveryMode] = useState(false);
 
+    // --- REGRA DE ACESSO PATREON (Somente Pagantes vs Free + Pagantes) ---
+    const [patreonAccessRule, setPatreonAccessRule] = useState<'paid_only' | 'all'>('paid_only');
+    const [updatingPatreonAccessRule, setUpdatingPatreonAccessRule] = useState(false);
+
     const [recentLogs, setRecentLogs] = useState<any[]>([]);
     const [loadingLogs, setLoadingLogs] = useState(false);
 
-    // Carregar configurações (modo de entrega e produtos habilitados)
+    // Carregar configurações (modo de entrega, regra patreon e produtos habilitados)
     const fetchDeliveryMode = async () => {
         try {
             const res = await fetch('/api/admin/franga-studio/config');
             if (res.ok) {
                 const data = await res.json();
                 if (data.deliveryMode) setDeliveryMode(data.deliveryMode);
+                if (data.patreonAccessRule) setPatreonAccessRule(data.patreonAccessRule);
                 if (Array.isArray(data.enabledProducts)) setEnabledProducts(data.enabledProducts);
             }
         } catch (e) {
@@ -103,6 +108,24 @@ export default function AdminPatreonRepositoryPage() {
             toast.error('Erro ao atualizar modo de entrega');
         } finally {
             setUpdatingDeliveryMode(false);
+        }
+    };
+
+    const handleUpdatePatreonAccessRule = async (rule: 'paid_only' | 'all') => {
+        setUpdatingPatreonAccessRule(true);
+        setPatreonAccessRule(rule);
+        try {
+            const res = await fetch('/api/admin/franga-studio/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patreonAccessRule: rule })
+            });
+            if (!res.ok) throw new Error('Falha ao atualizar regra');
+            toast.success(`Regra Patreon atualizada: ${rule === 'paid_only' ? 'Somente Pagantes (Paid Only)' : 'Qualquer Membro (Free + Pagantes)'}`);
+        } catch (e: any) {
+            toast.error('Erro ao atualizar regra de acesso');
+        } finally {
+            setUpdatingPatreonAccessRule(false);
         }
     };
 
@@ -552,102 +575,156 @@ export default function AdminPatreonRepositoryPage() {
                     </div>
                 </div>
 
-                {/* CONTROLE MESTRE DE ACESSO PARA MEMBROS (/release) */}
-                <div className="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-6 shadow-xl space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <ShieldCheck size={18} className="text-orange-400" />
-                                <h2 className="text-sm font-black uppercase tracking-wider text-white">
-                                    Modo de Entrega Visível para os Membros (/release)
-                                </h2>
+                {/* CONTROLES EXECUTIVOS: MODO DE ENTREGA, REGRA PATREON E SIMULAÇÃO */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* CARD 1: MODO DE ENTREGA */}
+                    <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                            <ShieldCheck size={16} className="text-orange-400 shrink-0" />
+                            <div>
+                                <span className="text-xs font-bold text-white block">Modo de Entrega (/release)</span>
+                                <span className="text-[11px] text-zinc-400">Canal de distribuição dos arquivos</span>
                             </div>
-                            <p className="text-xs text-zinc-400 mt-1">
-                                Defina qual tela os apoiadores verão ao logar no portal. Você tem controle total para isolar métodos.
-                            </p>
                         </div>
-                        <span className="text-[10px] font-mono uppercase tracking-wider bg-zinc-950 px-3 py-1.5 rounded-xl border border-zinc-800 self-start sm:self-auto flex items-center gap-1.5 text-zinc-400">
-                            Modo Ativo: <strong className="text-orange-400 font-bold">{deliveryMode === 'gumroad' ? 'GUMROAD ANTI-LEAK' : deliveryMode === 'drive' ? 'GOOGLE DRIVE' : 'AMBOS'}</strong>
-                        </span>
+
+                        <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800 self-start sm:self-auto text-xs">
+                            <button
+                                type="button"
+                                onClick={() => handleUpdateDeliveryMode('gumroad')}
+                                disabled={updatingDeliveryMode}
+                                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                    deliveryMode === 'gumroad'
+                                        ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                                        : 'text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                <ShoppingBag size={13} />
+                                <span>Gumroad</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleUpdateDeliveryMode('drive')}
+                                disabled={updatingDeliveryMode}
+                                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                    deliveryMode === 'drive'
+                                        ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20'
+                                        : 'text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                <FolderGit2 size={13} />
+                                <span>Drive</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleUpdateDeliveryMode('both')}
+                                disabled={updatingDeliveryMode}
+                                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                    deliveryMode === 'both'
+                                        ? 'bg-zinc-800 text-white shadow-md'
+                                        : 'text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                <Sparkles size={13} />
+                                <span>Ambos</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
-                        {/* OPÇÃO 1: GUMROAD */}
-                        <button
-                            type="button"
-                            onClick={() => handleUpdateDeliveryMode('gumroad')}
-                            disabled={updatingDeliveryMode}
-                            className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative ${
-                                deliveryMode === 'gumroad'
-                                    ? 'bg-orange-950/30 border-orange-500/60 shadow-lg shadow-orange-500/10'
-                                    : 'bg-zinc-950/60 border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/50'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5 text-white">
-                                    <ShoppingBag size={15} className="text-orange-400" />
-                                    Exclusivo Gumroad
+                    {/* CARD 2: REGRA DE ACESSO PATREON + TOGGLE FREE/PAGANTES */}
+                    <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                            <UserCheck size={16} className="text-emerald-400 shrink-0" />
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-white block">Regra de Acesso Patreon</span>
+                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                                        patreonAccessRule === 'paid_only'
+                                            ? 'text-amber-400 bg-amber-500/10 border-amber-500/30'
+                                            : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+                                    }`}>
+                                        {patreonAccessRule === 'paid_only' ? 'Somente Pagantes' : 'Free + Pagantes'}
+                                    </span>
+                                </div>
+                                <span className="text-[11px] text-zinc-400">
+                                    {patreonAccessRule === 'paid_only' ? 'Bloqueia membros gratuitos (Free) com convite de assinatura' : 'Libera seguidores free e assinantes pagos'}
                                 </span>
-                                {deliveryMode === 'gumroad' && (
-                                    <span className="w-2.5 h-2.5 rounded-full bg-orange-400 animate-pulse" />
-                                )}
                             </div>
-                            <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
-                                Membros só veem e resgatam cupons únicos do Gumroad. <strong className="text-orange-300">Google Drive 100% oculto</strong>.
-                            </p>
-                        </button>
+                        </div>
 
-                        {/* OPÇÃO 2: DRIVE */}
-                        <button
-                            type="button"
-                            onClick={() => handleUpdateDeliveryMode('drive')}
-                            disabled={updatingDeliveryMode}
-                            className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative ${
-                                deliveryMode === 'drive'
-                                    ? 'bg-amber-950/30 border-amber-500/60 shadow-lg shadow-amber-500/10'
-                                    : 'bg-zinc-950/60 border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/50'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5 text-white">
-                                    <FolderGit2 size={15} className="text-amber-400" />
-                                    Exclusivo Google Drive
-                                </span>
-                                {deliveryMode === 'drive' && (
-                                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-                                )}
-                            </div>
-                            <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
-                                Membros só veem a pasta do Google Drive. <strong className="text-amber-300">Gumroad 100% oculto</strong>.
-                            </p>
-                        </button>
-
-                        {/* OPÇÃO 3: BOTH */}
-                        <button
-                            type="button"
-                            onClick={() => handleUpdateDeliveryMode('both')}
-                            disabled={updatingDeliveryMode}
-                            className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative ${
-                                deliveryMode === 'both'
-                                    ? 'bg-zinc-900 border-zinc-700 shadow-lg'
-                                    : 'bg-zinc-950/60 border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/50'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5 text-white">
-                                    <Sparkles size={15} className="text-orange-400" />
-                                    Ambos Habilitados
-                                </span>
-                                {deliveryMode === 'both' && (
-                                    <span className="w-2.5 h-2.5 rounded-full bg-orange-400 animate-pulse" />
-                                )}
-                            </div>
-                            <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed">
-                                Exibe tanto o resgate de cupom do Gumroad quanto o link da pasta do Google Drive.
-                            </p>
-                        </button>
+                        <div className="flex items-center bg-zinc-950 p-1 rounded-xl border border-zinc-800 self-start sm:self-auto text-xs shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => handleUpdatePatreonAccessRule('paid_only')}
+                                disabled={updatingPatreonAccessRule}
+                                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                    patreonAccessRule === 'paid_only'
+                                        ? 'bg-amber-500 text-black shadow-md font-black shadow-amber-500/20'
+                                        : 'text-zinc-400 hover:text-white'
+                                }`}
+                                title="Apenas assinantes com valor financeiro mensal ativo no Patreon têm acesso"
+                            >
+                                <Lock size={13} />
+                                <span>Somente Pagantes</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleUpdatePatreonAccessRule('all')}
+                                disabled={updatingPatreonAccessRule}
+                                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                    patreonAccessRule === 'all'
+                                        ? 'bg-emerald-500 text-black shadow-md font-black shadow-emerald-500/20'
+                                        : 'text-zinc-400 hover:text-white'
+                                }`}
+                                title="Permite que seguidores gratuitos (Free tier) e pagantes acessem os modelos"
+                            >
+                                <Globe size={13} />
+                                <span>Free + Pagantes</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                {/* BARRA DE TESTES & SIMULAÇÃO RÁPIDA (PARA VALIDAR EXPERIÊNCIA DE MEMBRO FREE VS PAGANTE) */}
+                <div className="bg-gradient-to-r from-zinc-900/90 via-zinc-950 to-zinc-900/90 border border-zinc-800/90 rounded-2xl px-5 py-3 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 font-black text-xs">
+                            🧪
+                        </div>
+                        <div>
+                            <span className="text-xs font-bold text-white flex items-center gap-2">
+                                Testar Experiência dos Usuários (/release)
+                                <span className="text-[10px] text-orange-400 font-mono bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-md">Simulador Ativo</span>
+                            </span>
+                            <span className="text-[11px] text-zinc-400">
+                                Valide na prática como cada usuário vê a tela de resgate sem precisar de duas contas reais no Patreon.
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <Link
+                            href="/release?test_patron=paid"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-emerald-500/30 hover:border-emerald-500 text-emerald-400 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-sm cursor-pointer"
+                        >
+                            <UserCheck size={13} />
+                            <span>Simular Usuário Pagante</span>
+                            <ExternalLink size={11} className="text-emerald-500" />
+                        </Link>
+                        <Link
+                            href="/release?test_patron=free"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-amber-500/30 hover:border-amber-500 text-amber-400 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-sm cursor-pointer"
+                        >
+                            <Lock size={13} />
+                            <span>Simular Usuário Free</span>
+                            <ExternalLink size={11} className="text-amber-500" />
+                        </Link>
+                    </div>
+                </div>
+
 
                 {/* NAVEGAÇÃO DE ABAS */}
                 <div className="flex items-center gap-2 border-b border-zinc-800/80 pb-1 flex-wrap">
@@ -705,59 +782,52 @@ export default function AdminPatreonRepositoryPage() {
                 {activeTab === 'gumroad' && (
                     <div className="space-y-8 animate-in fade-in duration-300">
                         
-                        {/* BANNER STATUS DA LOJA */}
-                        <div className="bg-gradient-to-r from-orange-950/30 via-zinc-900/60 to-amber-950/30 border border-orange-500/20 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-                            <div className="flex items-center gap-4">
-                                {gumroadUser?.profile_picture_url ? (
-                                    <img 
-                                        src={gumroadUser.profile_picture_url} 
-                                        alt="Avatar Gumroad" 
-                                        className="w-16 h-16 rounded-2xl border-2 border-orange-500/40 object-cover shadow-lg"
-                                    />
-                                ) : (
-                                    <div className="w-16 h-16 rounded-2xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-orange-400">
-                                        <ShoppingBag size={28} />
-                                    </div>
-                                )}
+                        {/* BARRA DE STATUS DA LOJA GUMROAD */}
+                        <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl px-5 py-3 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 shrink-0">
+                                    <ShoppingBag size={18} />
+                                </div>
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <h2 className="text-lg font-black text-white">
+                                        <h2 className="text-sm font-black text-white">
                                             {gumroadUser?.name || 'Franga Toys'}
                                         </h2>
-                                        <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
+                                        <span className="bg-emerald-500/15 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                                             Loja Ativa
                                         </span>
                                     </div>
-                                    <p className="text-xs text-orange-300 font-mono mt-0.5">
-                                        {gumroadUser?.url || 'https://frangatoys.gumroad.com'}
-                                    </p>
-                                    <p className="text-[11px] text-zinc-400 mt-1">
-                                        E-mail da Conta: <span className="text-zinc-300 font-medium">{gumroadUser?.email || '-'}</span> • Moeda: <span className="uppercase text-zinc-300 font-bold">{gumroadUser?.currency_type || 'USD'}</span>
-                                    </p>
+                                    <div className="flex items-center gap-2 text-[11px] text-zinc-400 mt-0.5">
+                                        <span>{gumroadUser?.email || '-'}</span>
+                                        <span>•</span>
+                                        <span className="text-orange-400/90 font-mono">{gumroadUser?.url?.replace('https://', '') || 'frangatoys.gumroad.com'}</span>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 self-end md:self-auto">
                                 <div className="text-right">
-                                    <div className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Produtos no Gumroad</div>
-                                    <div className="text-2xl font-black text-white mt-0.5">{gumroadProducts.length}</div>
+                                    <div className="text-[10px] text-zinc-500 font-black uppercase tracking-wider">Produtos</div>
+                                    <div className="text-sm font-black text-white font-mono">{gumroadProducts.length}</div>
                                 </div>
-                                <div className="h-10 w-[1px] bg-zinc-800"></div>
+                                <div className="h-7 w-[1px] bg-zinc-800"></div>
                                 <div className="text-right">
-                                    <div className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Cupons Emitidos</div>
-                                    <div className="text-2xl font-black text-orange-400 mt-0.5">{claims.length}</div>
+                                    <div className="text-[10px] text-zinc-500 font-black uppercase tracking-wider">Cupons</div>
+                                    <div className="text-sm font-black text-orange-400 font-mono">{claims.length}</div>
                                 </div>
-                                <div className="h-10 w-[1px] bg-zinc-800"></div>
+                                <div className="h-7 w-[1px] bg-zinc-800"></div>
                                 <button
                                     onClick={fetchGumroadData}
                                     disabled={loadingGumroad}
-                                    className="p-3 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-all cursor-pointer"
+                                    className="p-2 bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-all cursor-pointer"
                                     title="Atualizar dados do Gumroad"
                                 >
-                                    <RefreshCw size={16} className={loadingGumroad ? 'animate-spin text-orange-400' : ''} />
+                                    <RefreshCw size={14} className={loadingGumroad ? 'animate-spin text-orange-400' : ''} />
                                 </button>
                             </div>
                         </div>
+
 
                         {/* CONTROLE INTELIGENTE DE MODELOS LIBERADOS EM /release */}
                         {(() => {
@@ -1498,29 +1568,34 @@ export default function AdminPatreonRepositoryPage() {
                             );
                         })()}
 
-                        {/* GRID: EMISSOR DE CUPOM & EXPLICATIVO */}
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        {/* GRID: EMISSOR DE CUPOM & ATALHO FORENSE */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                             
                             {/* FORM: GERADOR DE CUPOM ÚNICO */}
                             <div className="lg:col-span-7 bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-5">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2.5 bg-orange-500/10 text-orange-400 rounded-xl border border-orange-500/20">
-                                        <Ticket size={20} />
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2.5 bg-orange-500/10 text-orange-400 rounded-xl border border-orange-500/20">
+                                            <Ticket size={20} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-base font-black text-white uppercase tracking-wider">
+                                                Gerador de Cupom Avulso (100% OFF)
+                                            </h3>
+                                            <p className="text-xs text-zinc-400">
+                                                Emita um código de uso único (max 1 uso) na API do Gumroad vinculado ao e-mail do assinante.
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="text-base font-black text-white uppercase tracking-wider">
-                                            Gerador de Cupom Anti-Leak (100% OFF)
-                                        </h3>
-                                        <p className="text-xs text-zinc-400">
-                                            Gera um código de uso único (max 1 uso) na API do Gumroad vinculado ao e-mail do assinante.
-                                        </p>
-                                    </div>
+                                    <span className="text-[10px] bg-zinc-800/80 text-orange-300 font-mono font-bold px-2.5 py-1 rounded-full border border-zinc-700/50 hidden sm:inline-block">
+                                        1 Uso Exclusivo
+                                    </span>
                                 </div>
 
                                 <form onSubmit={handleGenerateCoupon} className="space-y-4 pt-1">
                                     <div>
                                         <label className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-1">
-                                            1. Selecione o Produto / Modelo no Gumroad
+                                            Produto / Modelo no Gumroad
                                         </label>
                                         <select
                                             value={selectedProductId}
@@ -1543,7 +1618,7 @@ export default function AdminPatreonRepositoryPage() {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-[10px] uppercase font-black tracking-widest text-zinc-500 mb-1">
-                                                2. E-mail do Patrono / Assinante
+                                                E-mail do Patrono / Assinante
                                             </label>
                                             <input
                                                 type="email"
@@ -1612,202 +1687,77 @@ export default function AdminPatreonRepositoryPage() {
                                 )}
                             </div>
 
-                            {/* CARD INFORMATIVO: POR QUE É ANTI-LEAK */}
-                            <div className="lg:col-span-5 bg-gradient-to-br from-zinc-900/80 to-zinc-950/80 border border-zinc-800 rounded-3xl p-6 shadow-2xl flex flex-col justify-between space-y-4">
+                            {/* ATALHO E RESUMO DA CENTRAL FORENSE & RESGATES */}
+                            <div className="lg:col-span-5 bg-gradient-to-br from-zinc-900/80 via-zinc-900/60 to-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-2xl flex flex-col justify-between space-y-5">
                                 <div className="space-y-4">
-                                    <div className="flex items-center gap-2 text-orange-400">
-                                        <ShieldCheck size={22} />
-                                        <h3 className="text-sm font-black uppercase tracking-wider text-white">
-                                            Como o Mecanismo Protege seus STLs
-                                        </h3>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="p-2 bg-orange-500/10 border border-orange-500/20 rounded-xl text-orange-400">
+                                                <ShieldAlert size={18} />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-sm font-black uppercase tracking-wider text-white">
+                                                    Central Forense Anti-Leak
+                                                </h3>
+                                                <p className="text-[11px] text-zinc-400">Rastreamento de resgates e downloads</p>
+                                            </div>
+                                        </div>
+                                        {auditStats.leaks > 0 ? (
+                                            <span className="bg-red-500/20 border border-red-500/40 text-red-400 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
+                                                🚨 {auditStats.leaks} Alerta{auditStats.leaks > 1 ? 's' : ''}
+                                            </span>
+                                        ) : (
+                                            <span className="bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                <CheckCircle2 size={11} /> 100% Seguro
+                                            </span>
+                                        )}
                                     </div>
 
-                                    <ul className="space-y-3 text-xs text-zinc-300 leading-relaxed">
-                                        <li className="flex items-start gap-2.5">
-                                            <div className="w-5 h-5 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">1</div>
-                                            <div>
-                                                <strong className="text-white">Uso Estritamente Único:</strong> O cupom é criado na API com <code className="text-orange-300 bg-orange-500/10 px-1 py-0.5 rounded">max_purchase_count: 1</code>. Assim que o assinante resgata, o código queima e se torna inválido.
-                                            </div>
-                                        </li>
-                                        <li className="flex items-start gap-2.5">
-                                            <div className="w-5 h-5 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">2</div>
-                                            <div>
-                                                <strong className="text-white">Identificação Pessoal:</strong> Para baixar por $0 no Gumroad, o usuário precisa vincular sua conta do Gumroad. O Gumroad emite um recibo oficial com data, hora e e-mail.
-                                            </div>
-                                        </li>
-                                        <li className="flex items-start gap-2.5">
-                                            <div className="w-5 h-5 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-[10px]">3</div>
-                                            <div>
-                                                <strong className="text-white">Rastreamento de Vazamentos:</strong> Se um arquivo aparecer vazado, a API do Gumroad revela exatamente qual cupom foi usado e o e-mail do comprador que fez o resgate.
-                                            </div>
-                                        </li>
-                                    </ul>
+                                    {/* MINI KPIS */}
+                                    <div className="grid grid-cols-3 gap-2.5 pt-1">
+                                        <div className="bg-zinc-950/80 border border-zinc-800/80 rounded-xl p-3 text-center">
+                                            <div className="text-[10px] text-zinc-500 uppercase font-black">Emitidos</div>
+                                            <div className="text-base font-black text-white font-mono mt-0.5">{claims.length}</div>
+                                        </div>
+                                        <div className="bg-zinc-950/80 border border-emerald-500/20 rounded-xl p-3 text-center">
+                                            <div className="text-[10px] text-emerald-400 uppercase font-black">Resgatados</div>
+                                            <div className="text-base font-black text-emerald-400 font-mono mt-0.5">{auditStats.redeemed}</div>
+                                        </div>
+                                        <div className={`rounded-xl p-3 text-center border ${auditStats.leaks > 0 ? 'bg-red-950/40 border-red-500/40' : 'bg-zinc-950/80 border-zinc-800/80'}`}>
+                                            <div className={`text-[10px] uppercase font-black ${auditStats.leaks > 0 ? 'text-red-400' : 'text-zinc-500'}`}>Vazamentos</div>
+                                            <div className={`text-base font-black font-mono mt-0.5 ${auditStats.leaks > 0 ? 'text-red-400' : 'text-zinc-400'}`}>{auditStats.leaks}</div>
+                                        </div>
+                                    </div>
+
+                                    <p className="text-xs text-zinc-400 leading-relaxed">
+                                        Todos os cupons emitidos e os e-mails de quem realizou o checkout no Gumroad estão consolidados na aba forense dedicada com filtros de busca rápida.
+                                    </p>
                                 </div>
 
-                                <div className="p-3 bg-zinc-950/80 rounded-2xl border border-zinc-800 text-[11px] text-zinc-400 flex items-center gap-2">
-                                    <AlertTriangle size={16} className="text-amber-400 shrink-0" />
-                                    <span>Se o patrono tentar repassar o link para amigos ou em grupos, ninguém conseguirá usar após o primeiro download.</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* TABELA DE AUDITORIA & CUPONS EMITIDOS */}
-                        <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-4">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <div className="flex items-center gap-2">
-                                    <Terminal size={18} className="text-orange-400" />
-                                    <h3 className="text-base font-black text-white uppercase tracking-wider">
-                                        Auditoria de Cupons Emitidos & Resgates
-                                    </h3>
-                                    <span className="text-[10px] bg-zinc-800 text-zinc-400 font-bold px-2 py-0.5 rounded-full">
-                                        {claims.length} registros
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button 
+                                <div className="space-y-2 pt-2">
+                                    <button
+                                        type="button"
                                         onClick={() => setActiveTab('auditoria')}
-                                        className="px-3.5 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/30 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer transition-all"
+                                        className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all border border-zinc-700 hover:border-orange-500/40 group shadow-md"
                                     >
-                                        <ShieldAlert size={13} />
+                                        <ShieldAlert size={14} className="text-orange-400 group-hover:scale-110 transition-transform" />
                                         <span>Abrir Painel Forense Completo</span>
+                                        <ChevronRight size={14} className="text-zinc-400 group-hover:translate-x-1 transition-transform" />
                                     </button>
 
-                                    <button 
-                                        onClick={handleSyncSales} 
+                                    <button
+                                        type="button"
+                                        onClick={handleSyncSales}
                                         disabled={syncingSales}
-                                        className="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-xs text-orange-300 font-bold rounded-xl flex items-center gap-1.5 cursor-pointer transition-all disabled:opacity-50"
-                                        title="Cruzar cupons emitidos com o extrato de vendas do Gumroad"
+                                        className="w-full py-2 bg-zinc-950/80 hover:bg-zinc-950 text-zinc-400 hover:text-orange-300 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all border border-zinc-800/80 disabled:opacity-50"
                                     >
-                                        <RefreshCw size={13} className={syncingSales ? 'animate-spin text-orange-400' : ''} />
-                                        {syncingSales ? 'Sincronizando...' : 'Verificar Resgates no Gumroad'}
+                                        <RefreshCw size={12} className={syncingSales ? 'animate-spin text-orange-400' : ''} />
+                                        <span>{syncingSales ? 'Sincronizando com Gumroad...' : 'Sincronizar Resgates do Gumroad'}</span>
                                     </button>
                                 </div>
                             </div>
-
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-xs text-zinc-300">
-                                    <thead className="bg-zinc-950 text-[10px] uppercase font-black tracking-widest text-zinc-500 border-b border-zinc-800">
-                                        <tr>
-                                            <th className="py-3 px-4">Patrono Autorizado</th>
-                                            <th className="py-3 px-4">Produto</th>
-                                            <th className="py-3 px-4">Código do Cupom</th>
-                                            <th className="py-3 px-4">Quem Resgatou no Gumroad</th>
-                                            <th className="py-3 px-4">Data Emissão</th>
-                                            <th className="py-3 px-4 text-right">Ação</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-zinc-800/50 font-mono">
-                                        {claims.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={6} className="py-8 text-center text-zinc-600 italic">
-                                                    Nenhum cupom gerado ainda. Gere o primeiro cupom acima!
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            claims.map((c: any) => {
-                                                const pEmail = (c.patron_email || '').toLowerCase();
-                                                const rEmail = (c.redeemer_email || '').toLowerCase();
-                                                const isLeak = Boolean(c.is_leak_detected || (c.is_redeemed && rEmail && pEmail && rEmail !== pEmail));
-
-                                                return (
-                                                    <tr key={c.id} className={`transition-colors ${isLeak ? 'bg-red-950/25 hover:bg-red-950/35 border-l-4 border-l-red-500' : 'hover:bg-zinc-800/40'}`}>
-                                                        <td className="py-3.5 px-4">
-                                                            <div className="font-sans font-bold text-white text-xs">{c.patron_email}</div>
-                                                            {c.patron_name && (
-                                                                <div className="text-[11px] text-zinc-400 font-sans mt-0.5">{c.patron_name}</div>
-                                                            )}
-                                                            <span className="inline-block mt-1 text-[9px] font-mono uppercase bg-zinc-900 px-1.5 py-0.5 rounded text-zinc-400 border border-zinc-800">
-                                                                Apoiador Oficial
-                                                            </span>
-                                                        </td>
-                                                        <td className="py-3.5 px-4 font-sans text-zinc-300">
-                                                            <div className="font-bold text-white text-xs">{c.product_name || 'Produto Gumroad'}</div>
-                                                        </td>
-                                                        <td className="py-3.5 px-4">
-                                                            <span className="bg-zinc-950 px-2 py-1 rounded border border-zinc-800 text-orange-400 font-bold text-xs">
-                                                                {c.coupon_code}
-                                                            </span>
-                                                        </td>
-                                                        <td className="py-3.5 px-4">
-                                                            {c.is_redeemed ? (
-                                                                c.redeemer_email ? (
-                                                                    isLeak ? (
-                                                                        <div className="bg-red-500/15 border border-red-500/40 rounded-xl px-3 py-2 text-left space-y-1">
-                                                                            <div className="flex items-center gap-1.5 text-red-400 font-black text-[11px] uppercase tracking-wider">
-                                                                                <ShieldAlert size={14} className="shrink-0 animate-pulse" />
-                                                                                <span>🚨 VAZAMENTO DETECTADO!</span>
-                                                                            </div>
-                                                                            <div className="font-mono text-xs font-bold text-white bg-red-950/80 px-2 py-1 rounded border border-red-500/30">
-                                                                                {c.redeemer_email}
-                                                                            </div>
-                                                                            <p className="text-[10px] text-red-300 font-sans leading-tight">
-                                                                                Resgatado por e-mail diferente do apoiador!
-                                                                            </p>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-3 py-1.5 text-left space-y-0.5">
-                                                                            <div className="flex items-center gap-1 text-emerald-400 font-black text-[10px] uppercase tracking-wider">
-                                                                                <CheckCircle2 size={13} className="shrink-0" />
-                                                                                <span>✓ Resgate Autêntico</span>
-                                                                            </div>
-                                                                            <div className="font-mono text-xs font-bold text-emerald-300">
-                                                                                {c.redeemer_email}
-                                                                            </div>
-                                                                        </div>
-                                                                    )
-                                                                ) : (
-                                                                    <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold px-2.5 py-1 rounded-xl inline-flex items-center gap-1.5">
-                                                                        <Check size={13} /> Resgatado no Gumroad
-                                                                    </span>
-                                                                )
-                                                            ) : (
-                                                                <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold px-2.5 py-1 rounded-xl inline-flex items-center gap-1.5">
-                                                                    <Clock size={13} /> ⏳ Pendente
-                                                                </span>
-                                                            )}
-                                                        </td>
-                                                        <td className="py-3.5 px-4 text-zinc-400 text-[11px] font-sans">
-                                                            {new Date(c.created_at).toLocaleString('pt-BR')}
-                                                        </td>
-                                                        <td className="py-3 px-4 text-right">
-                                                            <div className="flex items-center justify-end gap-1.5">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleToggleClaimStatus(c.id, c.is_redeemed)}
-                                                                    className={`px-2 py-1 rounded-lg text-[10px] font-bold font-sans cursor-pointer transition-all inline-flex items-center gap-1 ${
-                                                                        c.is_redeemed
-                                                                            ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white'
-                                                                            : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20'
-                                                                    }`}
-                                                                    title={c.is_redeemed ? 'Reverter para Pendente' : 'Marcar como Resgatado manualmente'}
-                                                                >
-                                                                    <Check size={11} />
-                                                                    <span>{c.is_redeemed ? 'Desmarcar' : 'Validar'}</span>
-                                                                </button>
-
-                                                                {c.checkout_url && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            navigator.clipboard.writeText(c.checkout_url);
-                                                                            toast.success('Link copiado!');
-                                                                        }}
-                                                                        className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-[10px] font-bold font-sans cursor-pointer transition-all inline-flex items-center gap-1"
-                                                                        title="Copiar link com cupom"
-                                                                    >
-                                                                        <Copy size={11} /> Copiar
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
                         </div>
+
 
                     </div>
                 )}

@@ -30,6 +30,7 @@ export async function GET(req: Request) {
         (configRows || []).forEach(r => { configMap[r.key] = r.value; });
 
         const deliveryMode = configMap['delivery_mode'] || 'gumroad';
+        const patreonAccessRule = configMap['patreon_access_rule'] || 'paid_only';
         let enabledProductIds: string[] = [];
         try {
             if (configMap['enabled_gumroad_products']) {
@@ -80,6 +81,7 @@ export async function GET(req: Request) {
 
         return NextResponse.json({
             deliveryMode,
+            patreonAccessRule,
             products: mappedProducts
         });
 

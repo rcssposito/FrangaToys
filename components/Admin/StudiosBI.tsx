@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { 
     TrendingUp, 
@@ -10,20 +11,29 @@ import {
     Loader2, 
     Calendar, 
     Search,
-    ShoppingBag,
-    Percent,
-    PieChart as PieIcon,
-    BarChart2 as BarIcon,
-    Layers,
     ChevronDown,
     Activity,
-    HelpCircle,
-    X,
-    Target
+    Target,
+    Star,
+    Zap,
+    Scale,
+    AlertTriangle,
+    ArrowRight,
+    Sparkles
 } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
-import { clsx } from 'clsx';
+import { 
+    ResponsiveContainer, 
+    XAxis, 
+    YAxis, 
+    CartesianGrid, 
+    Tooltip, 
+    Cell,
+    ScatterChart,
+    Scatter,
+    ZAxis,
+    ReferenceLine
+} from 'recharts';
 
 interface Studio {
     id: number;
@@ -48,18 +58,9 @@ interface Studio {
     ticket_medio?: number;
     total_cliques?: number;
     created_at?: string;
-    custo_anual?: number;
-    lucro_medio_unitario?: number;
-    break_even_pecas_ano?: number;
-    break_even_pecas_restantes?: number;
-    break_even_progresso_pct?: number;
-    break_even_faturamento_anual?: number;
-    break_even_status?: 'isento' | 'pago' | 'proximo' | 'em_progresso' | 'sem_vendas';
 }
 
 type DateRangeType = 'all' | 'year' | 'last12m' | '90days' | '30days' | 'month' | 'custom';
-
-const CHART_COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#14b8a6', '#6366f1', '#a855f7', '#06b6d4', '#f43f5e'];
 
 export default function StudiosBI() {
     const [studios, setStudios] = useState<Studio[]>([]);
@@ -68,9 +69,9 @@ export default function StudiosBI() {
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
-    const [showHelpModal, setShowHelpModal] = useState(false);
     const [startDateLimit, setStartDateLimit] = useState<string | null>(null);
     const [endDateLimit, setEndDateLimit] = useState<string | null>(null);
+    const [activeStudioName, setActiveStudioName] = useState<string | null>(null);
 
     const { hasRole } = usePermission();
     const canEdit = hasRole('admin') || hasRole('pricing');
@@ -143,139 +144,89 @@ export default function StudiosBI() {
         }
     };
 
-    // Calculate elapsed months for proportional costs
-    const getMonthsInInterval = (createdAt?: string) => {
-        const now = new Date();
-        let start: Date;
-
-        if (dateRange === 'year') {
-            start = new Date(now.getFullYear(), 0, 1);
-        } else if (dateRange === 'last12m') {
-            start = new Date();
-            start.setFullYear(start.getFullYear() - 1);
-        } else if (dateRange === '90days') {
-            start = new Date();
-            start.setDate(start.getDate() - 90);
-        } else if (dateRange === '30days') {
-            return 1;
-        } else if (dateRange === 'month') {
-            return 1;
-        } else if (dateRange === 'custom') {
-            start = customStartDate ? new Date(customStartDate) : new Date(createdAt || '2024-01-01');
-            const end = customEndDate ? new Date(customEndDate) : now;
-            const diffMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
-            return Math.max(1, diffMonths);
-        } else {
-            start = new Date(createdAt || '2024-01-01');
-        }
-
-        const effectiveStart = createdAt && new Date(createdAt) > start ? new Date(createdAt) : start;
-        const diffMonths = (now.getFullYear() - effectiveStart.getFullYear()) * 12 + (now.getMonth() - effectiveStart.getMonth()) + 1;
-        return Math.max(1, diffMonths);
-    };
-
-    // Summary Totals
+    // Totais Consolidados
     const totalRevenue = studios.reduce((acc, s) => acc + (s.receita_bruta || 0), 0);
     const totalProfit = studios.reduce((acc, s) => acc + (s.lucro_liquido || 0), 0);
     const totalUnits = studios.reduce((acc, s) => acc + (s.total_itens || 0), 0);
     const totalClicks = studios.reduce((acc, s) => acc + (s.total_cliques || 0), 0);
-    const totalFiguresCount = studios.reduce((acc, s) => acc + (s.total_figuras || 0), 0);
 
-    const getStudioVerdict = (studio: Studio, clicks: number, sales: number, profit: number, cost: number) => {
-        const netBalance = profit - cost;
-        
-        if (studio.nome.toLowerCase() === 'custom' || !studio.custo_mensal) {
-            return {
-                label: 'Manter (Custo Zero)',
-                badge: 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)]',
-                desc: 'Catálogo próprio ou sem custo mensal de licença.'
-            };
-        }
-        
-        if (sales === 0 && clicks === 0) {
-            return {
-                label: 'Reavaliar (Sem uso)',
-                badge: 'border-zinc-850 text-zinc-500 bg-zinc-950/40',
-                desc: 'Sem cliques e sem vendas no período selecionado.'
-            };
-        }
-        
-        if (netBalance >= 0) {
-            return {
-                label: 'Manter (Lucrativo)',
-                badge: 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)]',
-                desc: 'O lucro das peças supera o custo de licenciamento.'
-            };
-        }
+    // Filtrar e Calcular Bolinhas de Distribuição (Scatter / Matriz BCG)
+    const filteredStudios = studios
+        .filter(s => s.nome.toLowerCase().includes(searchTerm.toLowerCase()));
 
-        if (clicks >= 50 && sales > 0) {
-            return {
-                label: 'Manter (Atrai Público)',
-                badge: 'border-blue-500/30 text-blue-400 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.15)]',
-                desc: 'Gera alto tráfego e interesse na loja.'
-            };
-        }
+    const validStudios = filteredStudios.filter(s => (s.receita_bruta || 0) > 0);
+    
+    const avgStudioMargin = validStudios.length > 0 
+        ? validStudios.reduce((acc, s) => {
+            const rev = s.receita_bruta || 0;
+            const prof = s.lucro_liquido || 0;
+            return acc + (rev > 0 ? (prof / rev) * 100 : 0);
+        }, 0) / validStudios.length 
+        : 35;
+    
+    const revenues = validStudios.map(s => s.receita_bruta || 0).sort((a, b) => a - b);
+    const medianStudioRevenue = revenues.length > 0
+        ? revenues[Math.floor(revenues.length / 2)]
+        : 200;
 
-        if (sales === 0 && cost > 0) {
-            return {
-                label: 'Cortar (Custo puro)',
-                badge: 'border-rose-500/30 text-rose-400 bg-rose-500/10 shadow-[0_0_15px_rgba(244,63,94,0.15)]',
-                desc: 'Gera custo sem retorno ou conversões.'
-            };
+    const categorizedStudios = validStudios.map(s => {
+        const revenue = s.receita_bruta || 0;
+        const profit = s.lucro_liquido || 0;
+        const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+        const isHighRevenue = revenue >= medianStudioRevenue;
+        const isHighMargin = margin >= Math.max(0, avgStudioMargin);
+
+        let quadrant: 'star' | 'opportunity' | 'cash_cow' | 'review';
+        let quadrantLabel: string;
+        let badgeColor: string;
+        let recommendation: string;
+        let icon: any;
+
+        if (isHighRevenue && isHighMargin) {
+            quadrant = 'star';
+            quadrantLabel = 'Estrela (Alto Volume + Alta Margem)';
+            badgeColor = 'text-amber-400 bg-amber-500/10 border-amber-500/30';
+            recommendation = 'Motor de lucro. Priorizar novos lançamentos e manter estoque de resina pronto.';
+            icon = Star;
+        } else if (!isHighRevenue && isHighMargin) {
+            quadrant = 'opportunity';
+            quadrantLabel = 'Oportunidade (Alta Margem)';
+            badgeColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
+            recommendation = 'Altamente rentável. Vale impulsionar marketing e fotos pintadas nas redes sociais.';
+            icon = Zap;
+        } else if (isHighRevenue && !isHighMargin) {
+            quadrant = 'cash_cow';
+            quadrantLabel = 'Volume (Margem Apertada)';
+            badgeColor = 'text-blue-400 bg-blue-500/10 border-blue-500/30';
+            recommendation = 'Gera caixa rápido, mas consome muita resina. Otimizar suportes ou reajustar preço base.';
+            icon = Scale;
+        } else {
+            quadrant = 'review';
+            quadrantLabel = 'Revisar Precificação & Consumo';
+            badgeColor = 'text-rose-400 bg-rose-500/10 border-rose-500/30';
+            recommendation = 'Baixo retorno ou margem negativa. O peso de resina está superando o preço cobrado.';
+            icon = AlertTriangle;
         }
 
         return {
-            label: 'Manter (Em Maturação)',
-            badge: 'border-amber-500/30 text-amber-400 bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.15)]',
-            desc: 'Vendas iniciais em crescimento.'
-        };
-    };
-
-    // Filter and sort studios
-    const filteredStudios = studios
-        .filter(s => s.nome.toLowerCase().includes(searchTerm.toLowerCase()))
-        .map(s => {
-            const revenue = s.receita_bruta || 0;
-            const profit = s.lucro_liquido || 0;
-            const ticket = s.ticket_medio || 0;
-            const clicks = s.total_cliques || 0;
-            const sales = s.total_vendas || 0;
-            const commConversion = clicks > 0 ? (sales / clicks) * 100 : 0;
-            const monthsCount = getMonthsInInterval(s.created_at);
-            const costInPeriod = (Number(s.custo_mensal) || 0) * monthsCount;
-            const netBalance = profit - costInPeriod;
-            const verdict = getStudioVerdict(s, clicks, sales, profit, costInPeriod);
-
-            return {
-                ...s,
-                revenue,
-                profit,
-                ticket,
-                clicks,
-                sales,
-                commConversion,
-                costInPeriod,
-                netBalance,
-                verdict
-            };
-        })
-        .sort((a, b) => {
-            if (b.revenue !== a.revenue) {
-                return b.revenue - a.revenue;
-            }
-            if (b.sales !== a.sales) {
-                return b.sales - a.sales;
-            }
-            return b.clicks - a.clicks;
-        });
-
-    const revenueShareData = filteredStudios
-        .filter(s => (s.receita_bruta || 0) > 0)
-        .map(s => ({
+            ...s,
             name: s.nome,
-            value: Number(s.receita_bruta?.toFixed(2)) || 0
-        }))
-        .sort((a, b) => b.value - a.value);
+            revenue,
+            profit,
+            margin,
+            quadrant,
+            quadrantLabel,
+            badgeColor,
+            recommendation,
+            icon,
+            x: revenue,
+            y: Math.max(-100, Math.min(100, margin)),
+            actualMargin: margin,
+            z: Math.max(1, s.total_itens || 1)
+        };
+    }).sort((a, b) => b.revenue - a.revenue);
+
+    const focusedStudio = categorizedStudios.find(s => s.name === activeStudioName) || categorizedStudios[0] || null;
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
@@ -283,14 +234,14 @@ export default function StudiosBI() {
             <div className="flex flex-col sm:flex-row flex-wrap gap-4 items-stretch sm:items-center justify-between bg-zinc-950/40 border border-zinc-900 p-4 rounded-3xl">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl">
-                        <TrendingUp size={16} />
+                        <Target size={16} />
                     </div>
                     <div>
                         <h3 className="text-sm font-black text-white uppercase tracking-wider">
-                            Análise Operacional & Viabilidade
+                            Distribuição dos Estúdios
                         </h3>
                         <p className="text-[10px] text-zinc-500">
-                            Classificação de parceiros por retorno real sobre o investimento.
+                            Faturamento vs Margem Líquida no período selecionado.
                         </p>
                     </div>
                 </div>
@@ -319,7 +270,7 @@ export default function StudiosBI() {
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
                         <input
                             type="text"
-                            placeholder="Filtrar parceiro..."
+                            placeholder="Buscar parceiro..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             className="w-full bg-zinc-900 border border-zinc-800 focus:border-blue-500/50 p-2.5 pl-8 rounded-xl outline-none text-xs text-zinc-300 placeholder:text-zinc-600"
@@ -353,7 +304,7 @@ export default function StudiosBI() {
                 <div className="py-24 flex flex-col items-center justify-center gap-3">
                     <Loader2 className="animate-spin text-blue-500 w-10 h-10" />
                     <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 animate-pulse">
-                        Calculando métricas operacionais e break-even...
+                        Carregando indicadores dos estúdios...
                     </p>
                 </div>
             ) : (
@@ -397,190 +348,242 @@ export default function StudiosBI() {
                         </div>
                     </div>
 
-                    {/* Studios Operational Table */}
-                    <div className="bg-zinc-950/40 border border-zinc-900 rounded-3xl overflow-hidden">
-                        <div className="p-5 border-b border-zinc-900 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Layers size={16} className="text-blue-500" />
-                                <h3 className="text-sm font-black text-white uppercase tracking-wider">
-                                    Classificação dos Parceiros & Break-Even
-                                </h3>
-                            </div>
-                            <span className="text-[10px] font-black uppercase text-zinc-500 bg-zinc-900 px-3 py-1 rounded-xl">
-                                {filteredStudios.length} Estúdios
+                    {/* Banner de Direcionamento para KPIs em Vendas */}
+                    <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                        <div className="flex items-center gap-2.5">
+                            <Activity size={16} className="text-blue-400 shrink-0" />
+                            <span className="text-xs text-zinc-300">
+                                Visão tabular de desempenho por série, estúdio e categoria:
                             </span>
                         </div>
 
-                        <div className="overflow-x-auto w-full">
-                            <table className="min-w-[1100px] w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b border-zinc-900 text-[9px] font-black uppercase tracking-widest text-zinc-500 bg-zinc-950/30">
-                                        <th className="py-3 px-4">Parceiro</th>
-                                        <th className="py-3 px-4">
-                                            <div className="flex items-center gap-1">
-                                                <span>Decisão</span>
-                                                <button 
-                                                    onClick={() => setShowHelpModal(true)} 
-                                                    className="p-0.5 hover:text-blue-400 transition-colors"
-                                                    title="Ver critérios"
-                                                >
-                                                    <HelpCircle size={10} />
-                                                </button>
-                                            </div>
-                                        </th>
-                                        <th className="py-3 px-4 text-center">Cliques</th>
-                                        <th className="py-3 px-4 text-center">Conversão</th>
-                                        <th className="py-3 px-4 text-center">Unidades</th>
-                                        <th className="py-3 px-4 text-right">Faturamento</th>
-                                        <th className="py-3 px-4 text-right">Lucro Peças</th>
-                                        <th className="py-3 px-4 text-right">Custo Período</th>
-                                        <th className="py-3 px-4 text-right">Líquido</th>
-                                        <th className="py-3 px-4 text-center min-w-[140px]">Break-Even Anual</th>
-                                        <th className="py-3 px-4 text-right">Ticket Médio</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-zinc-900/60 text-xs font-bold text-zinc-300">
-                                    {filteredStudios.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={11} className="py-12 text-center text-zinc-600 uppercase font-black tracking-widest">
-                                                Nenhum estúdio encontrado
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        filteredStudios.map((studio) => {
-                                            const { revenue, profit, ticket, clicks, sales, commConversion, costInPeriod, netBalance, verdict } = studio as any;
-                                            const custoAnual = studio.custo_anual ?? ((Number(studio.custo_mensal) || 0) * 12);
-                                            const pct = studio.break_even_progresso_pct ?? (custoAnual > 0 ? Math.round((profit / custoAnual) * 100) : 100);
-                                            const targetPieces = studio.break_even_pecas_ano ?? 0;
-                                            const remainingPieces = studio.break_even_pecas_restantes ?? Math.max(0, targetPieces - (studio.total_itens || 0));
-                                            const isPaid = custoAnual > 0 && profit >= custoAnual;
-
-                                            return (
-                                                <tr key={studio.id} className="hover:bg-zinc-900/20 transition-colors">
-                                                    <td className="py-3 px-4 whitespace-nowrap">
-                                                        <div className="flex items-center gap-2.5">
-                                                            <div className="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 overflow-hidden flex items-center justify-center shrink-0">
-                                                                {studio.logo_url ? (
-                                                                    <img src={studio.logo_url} alt={studio.nome} className="w-full h-full object-cover" />
-                                                                ) : (
-                                                                    <span className="text-[9px] font-black text-zinc-600">
-                                                                        {studio.nome.slice(0, 2).toUpperCase()}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <span className="text-zinc-200 text-xs font-black tracking-tight">{studio.nome}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-3 px-4 whitespace-nowrap">
-                                                        <span className={`inline-flex items-center justify-center px-2 py-1 rounded-md border text-[8px] font-black uppercase tracking-wider ${verdict.badge}`}>
-                                                            {verdict.label}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-3 px-4 text-center text-zinc-300 font-bold whitespace-nowrap">
-                                                        {clicks.toLocaleString('pt-BR')}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-center whitespace-nowrap">
-                                                        {clicks > 0 ? (
-                                                            <span className={`text-[10px] font-black ${
-                                                                commConversion >= 10 ? 'text-emerald-400' :
-                                                                commConversion >= 3 ? 'text-blue-400' : 'text-zinc-500'
-                                                            }`}>
-                                                                {commConversion.toFixed(1)}%
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-zinc-600">-</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-center text-zinc-200 font-black whitespace-nowrap">
-                                                        {studio.total_itens || 0}
-                                                        <span className="block text-[8px] text-zinc-500 font-bold uppercase mt-0.5">{sales} vend.</span>
-                                                    </td>
-                                                    <td className="py-3 px-4 text-right text-zinc-300 font-bold whitespace-nowrap">
-                                                        R$ {revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-right text-emerald-400 font-black whitespace-nowrap">
-                                                        R$ {profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-right text-zinc-400 font-medium whitespace-nowrap">
-                                                        {costInPeriod > 0 ? `R$ ${costInPeriod.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : <span className="text-zinc-600">Isento</span>}
-                                                    </td>
-                                                    <td className={`py-3 px-4 text-right font-black text-xs whitespace-nowrap ${netBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                        R$ {netBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                    </td>
-                                                    <td className="py-3 px-4 whitespace-nowrap text-center">
-                                                        {custoAnual === 0 ? (
-                                                            <span className="text-[8px] font-black uppercase text-zinc-500 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded">
-                                                                Isento
-                                                            </span>
-                                                        ) : (
-                                                            <div className="flex flex-col gap-1 w-28 mx-auto">
-                                                                <div className="flex items-center justify-between text-[9px] font-black">
-                                                                    <span className={isPaid ? "text-emerald-400" : remainingPieces <= 2 ? "text-amber-400" : "text-blue-400"}>
-                                                                        {pct}%
-                                                                    </span>
-                                                                    <span className="text-[8px] text-zinc-500 font-bold">
-                                                                        {isPaid ? "Pago!" : `Falta ${remainingPieces} pç${remainingPieces > 1 ? 's' : ''}`}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800/80">
-                                                                    <div 
-                                                                        className={clsx(
-                                                                            "h-full rounded-full transition-all duration-500",
-                                                                            isPaid ? "bg-emerald-400" : remainingPieces <= 2 ? "bg-amber-400" : "bg-blue-500"
-                                                                        )}
-                                                                        style={{ width: `${Math.min(100, Math.max((studio.total_itens || 0) > 0 ? 8 : 0, pct))}%` }}
-                                                                    />
-                                                                </div>
-                                                                <span className="text-[7px] text-zinc-500 font-bold text-center">
-                                                                    {studio.total_itens || 0} de {targetPieces} pçs/ano
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-right text-zinc-200 font-bold whitespace-nowrap">
-                                                        R$ {ticket.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                        <Link
+                            href="/admin/sales?tab=kpis"
+                            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 hover:text-blue-300 border border-blue-500/30 rounded-xl text-xs font-bold transition-all shadow-sm group shrink-0"
+                        >
+                            <span>Ver KPIs em Vendas</span>
+                            <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+                        </Link>
                     </div>
-                </div>
-            )}
 
-            {/* Help Modal */}
-            {showHelpModal && (
-                <div 
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
-                    onClick={() => setShowHelpModal(false)}
-                >
-                    <div 
-                        className="bg-zinc-950 border border-zinc-800 p-6 rounded-3xl max-w-lg w-full space-y-4 shadow-2xl"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                            <h4 className="text-sm font-black text-white uppercase tracking-wider">Critérios de Viabilidade</h4>
-                            <button onClick={() => setShowHelpModal(false)} className="text-zinc-500 hover:text-white">
-                                <X size={16} />
-                            </button>
-                        </div>
-                        <div className="space-y-3 text-xs text-zinc-300">
-                            <div>
-                                <strong className="text-emerald-400">Manter (Lucrativo):</strong> O lucro gerado pelas vendas supera o custo da licença no período.
+                    {/* Matriz de Dispersão das Bolinhas (Scatter BCG) */}
+                    <div className="space-y-6">
+                        {categorizedStudios.length === 0 ? (
+                            <div className="text-center py-16 bg-zinc-950/40 border border-zinc-900 rounded-3xl text-zinc-500 text-sm font-bold">
+                                Nenhum estúdio com faturamento registrado no período selecionado.
                             </div>
-                            <div>
-                                <strong className="text-blue-400">Manter (Atrai Público):</strong> Teve mais de 50 cliques e ao menos 1 venda, trazendo audiência para a loja.
-                            </div>
-                            <div>
-                                <strong className="text-rose-400">Cortar (Custo puro):</strong> Gera custo mensal constante de licença sem vendas no período.
-                            </div>
-                            <div>
-                                <strong className="text-zinc-400">Break-Even Anual:</strong> Mede o progresso do lucro obtido em relação ao custo anual do Patreon/licença e estima quantas peças faltam para pagar o ano.
-                            </div>
-                        </div>
+                        ) : (
+                            <>
+                                {/* Painel Inspetor do Estúdio Focado */}
+                                {focusedStudio && (
+                                    <div className="bg-zinc-950/60 border border-zinc-800 p-5 rounded-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-lg">
+                                        <div className="flex items-center gap-3.5">
+                                            <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-white shrink-0">
+                                                {(() => {
+                                                    const Icon = focusedStudio.icon;
+                                                    return <Icon size={24} className={focusedStudio.badgeColor.split(' ')[0]} />;
+                                                })()}
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2.5 flex-wrap">
+                                                    <h3 className="text-base font-black text-white tracking-tight">{focusedStudio.nome}</h3>
+                                                    <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${focusedStudio.badgeColor}`}>
+                                                        {focusedStudio.quadrantLabel}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-zinc-400 mt-1 font-medium">{focusedStudio.recommendation}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-5 self-start lg:self-center bg-zinc-900/90 px-5 py-2.5 rounded-xl border border-zinc-800 shrink-0">
+                                            <div>
+                                                <span className="text-[10px] font-bold text-zinc-400 uppercase block">Faturamento</span>
+                                                <span className="text-sm font-mono font-black text-white">
+                                                    R$ {focusedStudio.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                            <div className="h-6 w-px bg-zinc-800" />
+                                            <div>
+                                                <span className="text-[10px] font-bold text-zinc-400 uppercase block">Lucro Real</span>
+                                                <span className={`text-sm font-mono font-black ${focusedStudio.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                    R$ {focusedStudio.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                            <div className="h-6 w-px bg-zinc-800" />
+                                            <div>
+                                                <span className="text-[10px] font-bold text-zinc-400 uppercase block">Margem Líquida</span>
+                                                <span className={`text-sm font-black ${focusedStudio.actualMargin >= 30 ? 'text-emerald-400' : focusedStudio.actualMargin >= 0 ? 'text-amber-400' : 'text-rose-400'}`}>
+                                                    {focusedStudio.actualMargin.toFixed(1)}%
+                                                </span>
+                                            </div>
+                                            <div className="h-6 w-px bg-zinc-800" />
+                                            <div>
+                                                <span className="text-[10px] font-bold text-zinc-400 uppercase block">Volume</span>
+                                                <span className="text-sm font-bold text-zinc-200">{focusedStudio.total_itens || 0} un</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                    {/* Gráfico Scatter 2D (8 Colunas) */}
+                                    <div className="lg:col-span-8 bg-zinc-950/40 border border-zinc-900 p-6 rounded-3xl relative">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-xs font-black uppercase tracking-wider text-zinc-300">
+                                                Distribuição de Faturamento e Margem
+                                            </h3>
+                                            <span className="text-[10px] font-mono text-zinc-400">
+                                                Margem Média: <strong className="text-zinc-200">{avgStudioMargin.toFixed(1)}%</strong>
+                                            </span>
+                                        </div>
+
+                                        <div className="h-[360px] w-full">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 10 }}>
+                                                    <CartesianGrid strokeDasharray="2 4" stroke="#27272a" />
+                                                    <XAxis 
+                                                        type="number" 
+                                                        dataKey="x" 
+                                                        name="Faturamento" 
+                                                        tick={{ fill: '#a1a1aa', fontSize: 10, fontWeight: 700 }}
+                                                        tickFormatter={(v) => `R$ ${v}`}
+                                                        axisLine={{ stroke: '#27272a' }}
+                                                    />
+                                                    <YAxis 
+                                                        type="number" 
+                                                        dataKey="y" 
+                                                        name="Margem de Lucro" 
+                                                        tick={{ fill: '#a1a1aa', fontSize: 10, fontWeight: 700 }}
+                                                        tickFormatter={(v) => `${v}%`}
+                                                        axisLine={{ stroke: '#27272a' }}
+                                                        domain={[-100, 100]}
+                                                    />
+                                                    <ZAxis type="number" dataKey="z" range={[120, 500]} name="Peças Vendidas" />
+                                                    
+                                                    {/* Linha da Margem Média */}
+                                                    <ReferenceLine 
+                                                        y={Math.max(-100, Math.min(100, avgStudioMargin))} 
+                                                        stroke="#3b82f6" 
+                                                        strokeDasharray="3 3" 
+                                                        label={{ value: 'Margem Média', fill: '#60a5fa', fontSize: 10, position: 'right' }} 
+                                                    />
+                                                    {/* Linha do Faturamento Mediano */}
+                                                    <ReferenceLine 
+                                                        x={medianStudioRevenue} 
+                                                        stroke="#71717a" 
+                                                        strokeDasharray="3 3" 
+                                                        label={{ value: 'Faturamento Mediano', fill: '#9ca3af', fontSize: 10, position: 'top' }} 
+                                                    />
+                                                    <Tooltip
+                                                        cursor={false}
+                                                        wrapperStyle={{ zIndex: 99999, pointerEvents: 'none' }}
+                                                        content={({ active, payload }) => {
+                                                            if (!active || !payload || !payload.length) return null;
+                                                            const s = payload[0].payload;
+                                                            return (
+                                                                <div className="bg-zinc-950 border-2 border-zinc-700 p-3.5 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.95)] min-w-[220px]">
+                                                                    <div className="flex items-center justify-between gap-3 mb-2">
+                                                                        <h4 className="text-sm font-black text-white">{s.nome}</h4>
+                                                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${s.badgeColor}`}>
+                                                                            {s.actualMargin.toFixed(1)}%
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="space-y-1 text-xs pt-2 border-t border-zinc-800">
+                                                                        <div className="flex justify-between gap-4">
+                                                                            <span className="text-zinc-400 font-medium">Faturamento:</span>
+                                                                            <span className="font-mono font-bold text-white">
+                                                                                R$ {s.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="flex justify-between gap-4">
+                                                                            <span className="text-zinc-400 font-medium">Lucro Líquido:</span>
+                                                                            <span className={`font-mono font-bold ${s.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                                                R$ {s.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="flex justify-between gap-4">
+                                                                            <span className="text-zinc-400 font-medium">Peças Vendidas:</span>
+                                                                            <span className="font-bold text-zinc-200">{s.total_itens || 0} un</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }}
+                                                    />
+
+                                                    <Scatter 
+                                                        data={categorizedStudios} 
+                                                        fill="#3b82f6" 
+                                                        onClick={(e) => setActiveStudioName(e.nome)}
+                                                        onMouseEnter={(e) => setActiveStudioName(e.nome)}
+                                                        className="cursor-pointer"
+                                                    >
+                                                        {categorizedStudios.map((entry, index) => {
+                                                            const colors = {
+                                                                star: '#f59e0b',       // Amber
+                                                                opportunity: '#10b981', // Emerald
+                                                                cash_cow: '#3b82f6',   // Blue
+                                                                review: '#f43f5e'       // Rose
+                                                            };
+                                                            const isSelected = focusedStudio?.nome === entry.nome;
+                                                            return (
+                                                                <Cell 
+                                                                    key={`cell-${index}`} 
+                                                                    fill={colors[entry.quadrant]}
+                                                                    stroke={isSelected ? '#ffffff' : 'rgba(255,255,255,0.4)'}
+                                                                    strokeWidth={isSelected ? 3 : 1}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </Scatter>
+                                                </ScatterChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+
+                                    {/* Ranking Estratégico por Quadrante (4 Colunas) */}
+                                    <div className="lg:col-span-4 space-y-3">
+                                        <h3 className="text-xs font-black uppercase tracking-wider text-zinc-300 mb-3 flex items-center justify-between">
+                                            <span>Classificação do Portfólio</span>
+                                            <span className="text-[10px] text-zinc-400 font-bold">{categorizedStudios.length} estúdios</span>
+                                        </h3>
+
+                                        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                                            {categorizedStudios.map((st) => {
+                                                const Icon = st.icon;
+                                                const isSelected = focusedStudio?.nome === st.nome;
+                                                return (
+                                                    <div 
+                                                        key={st.id}
+                                                        onClick={() => setActiveStudioName(st.nome)}
+                                                        onMouseEnter={() => setActiveStudioName(st.nome)}
+                                                        className={`p-3 rounded-2xl border transition-all cursor-pointer ${
+                                                            isSelected 
+                                                                ? 'bg-zinc-900 border-zinc-400 shadow-md ring-1 ring-zinc-400' 
+                                                                : 'bg-zinc-950/60 border-zinc-900 hover:border-zinc-800'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                                                            <span className="text-xs font-bold text-white truncate">{st.nome}</span>
+                                                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border flex items-center gap-1 ${st.badgeColor}`}>
+                                                                <Icon size={10} />
+                                                                {st.actualMargin.toFixed(1)}%
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center text-[11px] text-zinc-400">
+                                                            <span>R$ {st.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                            <span className={`font-mono font-bold ${st.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                                                R$ {st.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} limpo
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}

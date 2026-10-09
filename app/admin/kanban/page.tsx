@@ -403,7 +403,7 @@ export default function KanbanPage() {
         const trackingParam = selectedNfeSale.access_token || phone;
         const trackingUrl = `${window.location.origin}/rastreio/${trackingParam}`;
         const primeiroNome = (nfeCustomerNome || selectedNfeSale.cliente_nome || 'Cliente').trim().split(' ')[0];
-        const msg = `Olá ${primeiroNome}! Sua peça na Franga Toys já está em produção! 🚀\n\nPara emitirmos a sua Nota Fiscal (NF-e) e prepararmos o envio com segurança, por favor preencha seus dados de faturamento (CPF e Endereço) no seu link de acompanhamento:\n\n👉 ${trackingUrl}\n\n(Leva menos de 1 minuto!)`;
+        const msg = `Olá ${primeiroNome}! Sua peça na Franga Toys já está em produção! 🐥\n\nPara emitirmos a sua Nota Fiscal (NF-e) e prepararmos o envio com segurança, por favor preencha seus dados de faturamento (CPF e Endereço) no seu link de acompanhamento:\n\n👉 ${trackingUrl}\n\n(Leva menos de 1 minuto!)`;
 
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';

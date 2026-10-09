@@ -1,3 +1,5 @@
+import { supabaseAdmin as supabase } from '@/lib/supabase';
+
 export interface PatreonMembership {
     campaignId: string;
     campaignName: string;
@@ -29,14 +31,29 @@ export async function getUsdBrlRate(): Promise<number> {
 }
 
 /**
- * Valida se um e-mail é de um membro ativo da campanha do Patreon.
+ * Valida se um e-mail é de um membro do Patreon, respeitando a regra de acesso (Somente Pagantes ou Aberto).
  */
-export async function verifyActivePatreonMember(emailToVerify: string): Promise<{ isAuthorized: boolean; patronName: string; reason?: string }> {
+export async function verifyActivePatreonMember(emailToVerify: string): Promise<{ isAuthorized: boolean; patronName: string; isFreeMember?: boolean; reason?: string }> {
     const normalizedEmail = emailToVerify.trim().toLowerCase();
     const token = process.env.PATREON_CREATOR_ACCESS_TOKEN;
 
     if (!normalizedEmail) {
-        return { isAuthorized: false, patronName: '', reason: 'E-mail não informado.' };
+        return { isAuthorized: false, patronName: '', isFreeMember: false, reason: 'E-mail não informado.' };
+    }
+
+    // Buscar regra de acesso configurada no Franga Studio
+    let accessRule: 'paid_only' | 'all' = 'paid_only';
+    try {
+        const { data: configRows } = await supabase
+            .from('franga_studio_config')
+            .select('key, value')
+            .eq('key', 'patreon_access_rule')
+            .single();
+        if (configRows?.value === 'all') {
+            accessRule = 'all';
+        }
+    } catch {
+        accessRule = 'paid_only';
     }
 
     if (token) {
@@ -57,7 +74,7 @@ export async function verifyActivePatreonMember(emailToVerify: string): Promise<
 
                 if (campaignId) {
                     // 2. Buscar membros da campanha no Patreon (SEM CACHE)
-                    const memRes = await fetch(`https://www.patreon.com/api/oauth2/v2/campaigns/${campaignId}/members?include=user&fields[member]=patron_status,email,full_name&fields[user]=email,full_name&t=${Date.now()}`, {
+                    const memRes = await fetch(`https://www.patreon.com/api/oauth2/v2/campaigns/${campaignId}/members?include=user&fields[member]=patron_status,email,full_name,currently_entitled_amount_cents&fields[user]=email,full_name&t=${Date.now()}`, {
                         headers: { 
                             'Authorization': `Bearer ${token}`,
                             'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -87,18 +104,41 @@ export async function verifyActivePatreonMember(emailToVerify: string): Promise<
 
                         if (matchingMember) {
                             const status = matchingMember.attributes?.patron_status;
-                            // Aceita active_patron, null, ou qualquer status que não seja cancelado/rejeitado
-                            if (status !== 'former_patron' && status !== 'declined_patron') {
-                                return {
-                                    isAuthorized: true,
-                                    patronName: matchingMember.attributes?.full_name || 'Apoiador Ativo'
-                                };
+                            const entitledAmountCents = matchingMember.attributes?.currently_entitled_amount_cents || 0;
+                            const isPaid = status === 'active_patron' && entitledAmountCents > 0;
+                            const patronFullName = matchingMember.attributes?.full_name || 'Apoiador Patreon';
+
+                            if (accessRule === 'paid_only') {
+                                if (isPaid) {
+                                    return {
+                                        isAuthorized: true,
+                                        patronName: patronFullName,
+                                        isFreeMember: false
+                                    };
+                                } else {
+                                    return {
+                                        isAuthorized: false,
+                                        patronName: patronFullName,
+                                        isFreeMember: true,
+                                        reason: `Assinatura paga necessária. Sua conta consta como gratuita no Patreon.`
+                                    };
+                                }
                             } else {
-                                return {
-                                    isAuthorized: false,
-                                    patronName: '',
-                                    reason: `A assinatura do e-mail ${normalizedEmail} no Patreon consta como inativa (${status}).`
-                                };
+                                // Regra: 'all' (permite membros gratuitos e pagantes)
+                                if (status !== 'former_patron' && status !== 'declined_patron') {
+                                    return {
+                                        isAuthorized: true,
+                                        patronName: patronFullName,
+                                        isFreeMember: !isPaid
+                                    };
+                                } else {
+                                    return {
+                                        isAuthorized: false,
+                                        patronName: patronFullName,
+                                        isFreeMember: !isPaid,
+                                        reason: `A assinatura do e-mail ${normalizedEmail} no Patreon consta como inativa (${status}).`
+                                    };
+                                }
                             }
                         }
                     }
@@ -109,12 +149,14 @@ export async function verifyActivePatreonMember(emailToVerify: string): Promise<
         }
     }
 
-    // Se o usuário completou o OAuth2 com o Patreon com sucesso, considera autorizado por padrão
+    // Se o token falhar ou não encontrar membro na listagem mas concluiu OAuth2:
     return {
         isAuthorized: true,
-        patronName: 'Apoiador Patreon'
+        patronName: 'Apoiador Patreon',
+        isFreeMember: false
     };
 }
+
 
 export async function fetchPatreonMemberships(): Promise<PatreonMembership[]> {
     const accessToken = process.env.PATREON_CREATOR_ACCESS_TOKEN;
