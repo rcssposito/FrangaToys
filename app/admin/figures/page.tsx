@@ -1403,12 +1403,12 @@ function DataGridContent() {
                 body: JSON.stringify({ id }),
             });
 
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || 'Erro ao excluir');
+            const data = await res.json();
+            if (data.sheets?.deleted) {
+                toast.success(`Figura e linha da planilha (${data.sheets.sheet} / Linha ${data.sheets.row}) excluídas!`);
+            } else {
+                toast.success('Figura removida com sucesso');
             }
-
-            toast.success('Figura removida com sucesso');
             // Não precisa de fetchFigures() aqui pois já removemos otimisticamente
         } catch (err: any) {
             // Reverte se der erro

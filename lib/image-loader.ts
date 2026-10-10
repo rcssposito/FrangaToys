@@ -26,16 +26,17 @@ export default function imageKitLoader({ src, width, quality }: ImageLoaderParam
 
         // Modo Cloudflare R2 Ativo
         if (activeProvider === 'cloudflare') {
-            // Se já for URL do R2, entrega direta e limpa
+            // Se já for URL do R2, entrega direta com parâmetro width para o Next.js
             if (urlObj.hostname.includes('r2.dev') || urlObj.hostname.includes('r2.cloudflarestorage.com')) {
-                return src.split('?')[0];
+                const base = src.split('?')[0];
+                return `${base}?w=${width}`;
             }
 
             // Se for do ImageKit, mapeia transparentemente para a réplica idêntica no R2
             if (urlObj.hostname.includes('imagekit.io')) {
                 let cleanPath = urlObj.pathname;
                 cleanPath = cleanPath.replace(/^\/lojinha3d\//, '/');
-                return `${r2PublicBase}${cleanPath}`;
+                return `${r2PublicBase}${cleanPath}?w=${width}`;
             }
         }
 

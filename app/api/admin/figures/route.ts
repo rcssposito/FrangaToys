@@ -3,6 +3,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase/server';
+import { deleteFigureRowFromSheets } from '@/lib/google-sheets';
 
 export const dynamic = 'force-dynamic';
 
@@ -412,25 +413,37 @@ export async function DELETE(req: Request) {
         const { id } = await req.json();
         if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 });
 
-        // 1. Buscar dados da figura para limpeza (Slug e Imagem)
+        // 1. Buscar dados completos da figura para limpeza (Nome, Código, Categoria, Slug e Imagens)
         const { data: figura } = await supabase
             .from('figuras')
-            .select('slug, imagem_url')
+            .select('id, nome, codigo, categoria, slug, imagem_url, imagem_secundaria, fotos_extras')
             .eq('id', id)
             .single();
 
-        // 1.5 Limpeza no ImageKit (Aguardamos para garantir que a Vercel não mate o processo)
-        if (figura?.imagem_url) {
+        // 1.2 Limpeza sincronizada na planilha Google Sheets
+        let sheetsResult: any = null;
+        if (figura?.nome) {
             try {
-                console.log(`[CleanUp] Iniciando limpeza para: ${figura.imagem_url}`);
-                await deleteImageFromImageKit(figura.imagem_url);
-            } catch (err) {
-                console.error('[ImageKit] Falha na limpeza automática:', err);
-                // Não travamos a execução principal se a limpeza falhar
+                console.log(`[GoogleSheets] Excluindo linha da figura: "${figura.nome}" (Cat: ${figura.categoria || 'N/A'})`);
+                sheetsResult = await deleteFigureRowFromSheets({
+                    nome: figura.nome,
+                    codigo: figura.codigo,
+                    categoria: figura.categoria,
+                });
+            } catch (sheetsErr) {
+                console.error('[GoogleSheets] Erro na exclusão de linha:', sheetsErr);
             }
         }
 
-        // 2. Desvincular Vendas...
+        // 1.5 Limpeza de Imagens no ImageKit
+        if (figura?.imagem_url) {
+            try {
+                console.log(`[CleanUp] Iniciando limpeza de imagem para: ${figura.imagem_url}`);
+                await deleteImageFromImageKit(figura.imagem_url);
+            } catch (err) {
+                console.error('[ImageKit] Falha na limpeza automática:', err);
+            }
+        }
 
         // 2. Desvincular Vendas (Preserva o histórico financeiro, apenas remove a ligação com o ID)
         const { error: errorVendas } = await supabase
@@ -474,7 +487,10 @@ export async function DELETE(req: Request) {
 
         if (errorFigura) throw errorFigura;
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ 
+            success: true,
+            sheets: sheetsResult
+        });
     } catch (error: any) {
         console.error('Erro fatal na exclusão:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
