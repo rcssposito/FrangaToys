@@ -414,22 +414,25 @@ export async function DELETE(req: Request) {
         const { id } = await req.json();
         if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 });
 
-        // 1. Buscar dados completos da figura para limpeza (Nome, Código, Categoria, Slug e Imagens)
-        const { data: figura } = await supabase
+        // 1. Buscar dados completos da figura para limpeza (Nome, Código, Slug e Imagens)
+        const { data: figura, error: errorBusca } = await supabase
             .from('figuras')
-            .select('id, nome, codigo, categoria, slug, imagem_url, imagem_secundaria, fotos_extras')
+            .select('id, nome, codigo, slug, imagem_url, imagem_secundaria, fotos_extras')
             .eq('id', id)
             .single();
+
+        if (errorBusca) {
+            console.error('[DeleteFigura] ⚠️ Erro ao buscar figura no Supabase:', errorBusca);
+        }
 
         // 1.2 Limpeza sincronizada na planilha Google Sheets
         let sheetsResult: any = null;
         try {
-            console.log(`[GoogleSheets] Excluindo linha da figura ID: ${figura?.id || id}, Nome: "${figura?.nome || 'N/A'}" (Cat: ${figura?.categoria || 'N/A'})`);
+            console.log(`[GoogleSheets] Excluindo linha da figura ID: ${figura?.id || id}, Nome: "${figura?.nome || 'N/A'}"`);
             sheetsResult = await deleteFigureRowFromSheets({
                 id: figura?.id || id,
                 nome: figura?.nome,
                 codigo: figura?.codigo,
-                categoria: figura?.categoria,
             });
         } catch (sheetsErr) {
             console.error('[GoogleSheets] Erro na exclusão de linha:', sheetsErr);
