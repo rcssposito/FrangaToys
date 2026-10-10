@@ -42,13 +42,13 @@ export function getOptimizedImageUrl(url: string | null): string {
 
 /**
  * Redimensiona e comprime uma imagem no navegador antes do upload.
- * Reduz fotos de câmeras de celular (geralmente 4MB-10MB) para ~100KB-250KB WebP,
- * economizando espaço no ImageKit e agilizando o upload.
+ * Reduz fotos de câmeras de celular (geralmente 4MB-10MB) para WebP leve,
+ * garantindo nitidez cristalina com 85% de qualidade e agilizando o upload.
  */
 export async function compressImageForUpload(
   file: File,
-  maxDimension = 1280,
-  quality = 0.75
+  maxDimension = 1920,
+  quality = 0.85
 ): Promise<File> {
   // Se não estiver em ambiente de navegador ou se o arquivo não for imagem, retorna original
   if (typeof window === 'undefined' || !file || !file.type.startsWith('image/')) {

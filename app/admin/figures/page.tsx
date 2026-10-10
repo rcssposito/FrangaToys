@@ -708,7 +708,7 @@ const PhotoManagerModal = ({ figure, onClose, onSaved }: PhotoManagerModalProps)
                 }
             }
 
-            toast.success(`${filesArray.length} foto(s) extra(s) otimizada(s) e salva(s) no ImageKit!`);
+            toast.success(`${filesArray.length} foto(s) extra(s) otimizada(s) e salva(s) no Cloudflare R2!`);
         } catch (err: any) {
             toast.error(err.message || 'Erro durante o upload');
         } finally {
@@ -951,7 +951,7 @@ const PhotoManagerModal = ({ figure, onClose, onSaved }: PhotoManagerModalProps)
                                 <>
                                     <Loader2 size={24} className="animate-spin text-orange-500" />
                                     <span className="text-xs font-bold text-orange-400">{uploadStatus}</span>
-                                    <span className="text-[10px] text-zinc-500">Enviando e renomeando no ImageKit...</span>
+                                    <span className="text-[10px] text-zinc-500">Enviando e salvando no Cloudflare R2...</span>
                                 </>
                             ) : (
                                 <>
@@ -962,7 +962,7 @@ const PhotoManagerModal = ({ figure, onClose, onSaved }: PhotoManagerModalProps)
                                         Arraste fotos extras aqui ou <span className="text-orange-400 underline underline-offset-2">clique para selecionar do PC</span>
                                     </div>
                                     <p className="text-[11px] text-zinc-500 max-w-md">
-                                        Pode subir com qualquer nome bruto do estúdio (ex: <code className="text-zinc-400">BS_01.png</code>, <code className="text-zinc-400">Colored_01.png</code>). O sistema renomeia automaticamente e envia para o ImageKit.
+                                        Pode subir com qualquer nome bruto do estúdio (ex: <code className="text-zinc-400">BS_01.png</code>, <code className="text-zinc-400">Colored_01.png</code>). O sistema renomeia, converte para WebP leve e envia para o Cloudflare R2.
                                     </p>
                                 </>
                             )}
@@ -972,7 +972,7 @@ const PhotoManagerModal = ({ figure, onClose, onSaved }: PhotoManagerModalProps)
                     {/* Adicionar Foto via URL Direta (Fallback) */}
                     <div className="bg-zinc-900/40 border border-zinc-850 rounded-2xl p-3.5 space-y-2">
                         <label className="text-[11px] font-bold text-zinc-400 block">
-                            Ou adicione via URL direta / ImageKit já existente
+                            Ou adicione via URL direta já existente
                         </label>
                         <div className="flex gap-2">
                             <input

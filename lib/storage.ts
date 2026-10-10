@@ -31,8 +31,8 @@ export interface UploadResult {
  * Provedor de armazenamento ativo ('cloudflare' ou 'imagekit')
  */
 export function getActiveStorageProvider(): 'cloudflare' | 'imagekit' {
-    const envProvider = (process.env.STORAGE_PROVIDER || 'imagekit').toLowerCase().trim();
-    return envProvider === 'cloudflare' ? 'cloudflare' : 'imagekit';
+    const envProvider = (process.env.STORAGE_PROVIDER || 'cloudflare').toLowerCase().trim();
+    return envProvider === 'imagekit' ? 'imagekit' : 'cloudflare';
 }
 
 /**
@@ -138,6 +138,49 @@ export async function uploadFile(options: UploadOptions): Promise<UploadResult> 
             options.fileName
         );
     }
+}
+
+/**
+ * Exclui um objeto do Cloudflare R2
+ */
+export async function deleteFromR2(keyOrUrl: string): Promise<boolean> {
+    try {
+        if (!keyOrUrl) return false;
+
+        let key = keyOrUrl.split('?')[0];
+        if (key.startsWith('http')) {
+            const urlObj = new URL(key);
+            key = urlObj.pathname;
+            // Remove prefixos conhecidos se vierem da URL
+            key = key.replace(/^\/lojinha3d\//, '/').replace(/^\/+/, '');
+        } else {
+            key = key.replace(/^\/+/, '');
+        }
+
+        if (!key) return false;
+
+        const bucket = process.env.CLOUDFLARE_R2_BUCKET_NAME || 'frangatoys-images';
+        const command = new DeleteObjectCommand({
+            Bucket: bucket,
+            Key: key,
+        });
+
+        await r2Client.send(command);
+        console.log(`[R2] ✅ Arquivo deletado com sucesso: [${bucket}/${key}]`);
+        return true;
+    } catch (err: any) {
+        console.error(`[R2] ❌ Erro ao deletar objeto "${keyOrUrl}":`, err.message);
+        return false;
+    }
+}
+
+/**
+ * Exclui uma imagem de todos os provedores ativos (Cloudflare R2 e ImageKit)
+ */
+export async function deleteImageFromStorage(urlOrKey: string): Promise<{ r2: boolean }> {
+    if (!urlOrKey) return { r2: false };
+    const r2Deleted = await deleteFromR2(urlOrKey);
+    return { r2: r2Deleted };
 }
 
 /**

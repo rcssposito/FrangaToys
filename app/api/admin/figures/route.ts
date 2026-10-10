@@ -4,6 +4,7 @@ import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase/server';
 import { deleteFigureRowFromSheets } from '@/lib/google-sheets';
+import { deleteFromR2 } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
 
@@ -422,26 +423,30 @@ export async function DELETE(req: Request) {
 
         // 1.2 Limpeza sincronizada na planilha Google Sheets
         let sheetsResult: any = null;
-        if (figura?.nome) {
-            try {
-                console.log(`[GoogleSheets] Excluindo linha da figura: "${figura.nome}" (Cat: ${figura.categoria || 'N/A'})`);
-                sheetsResult = await deleteFigureRowFromSheets({
-                    nome: figura.nome,
-                    codigo: figura.codigo,
-                    categoria: figura.categoria,
-                });
-            } catch (sheetsErr) {
-                console.error('[GoogleSheets] Erro na exclusão de linha:', sheetsErr);
-            }
+        try {
+            console.log(`[GoogleSheets] Excluindo linha da figura ID: ${figura?.id || id}, Nome: "${figura?.nome || 'N/A'}" (Cat: ${figura?.categoria || 'N/A'})`);
+            sheetsResult = await deleteFigureRowFromSheets({
+                id: figura?.id || id,
+                nome: figura?.nome,
+                codigo: figura?.codigo,
+                categoria: figura?.categoria,
+            });
+        } catch (sheetsErr) {
+            console.error('[GoogleSheets] Erro na exclusão de linha:', sheetsErr);
         }
 
-        // 1.5 Limpeza de Imagens no ImageKit
-        if (figura?.imagem_url) {
+        // 1.5 Limpeza de Imagens nos Storages (Cloudflare R2 e ImageKit)
+        const fotosExtras = Array.isArray(figura?.fotos_extras) ? figura.fotos_extras : [];
+        const todasFotos = [figura?.imagem_url, figura?.imagem_secundaria, ...fotosExtras].filter(Boolean) as string[];
+
+        for (const fotoUrl of todasFotos) {
             try {
-                console.log(`[CleanUp] Iniciando limpeza de imagem para: ${figura.imagem_url}`);
-                await deleteImageFromImageKit(figura.imagem_url);
-            } catch (err) {
-                console.error('[ImageKit] Falha na limpeza automática:', err);
+                // 1.5.1 Deleta da réplica no Cloudflare R2
+                await deleteFromR2(fotoUrl);
+                // 1.5.2 Deleta do ImageKit
+                await deleteImageFromImageKit(fotoUrl);
+            } catch (storageErr) {
+                console.error(`[StorageCleanup] Falha ao deletar foto (${fotoUrl}):`, storageErr);
             }
         }
 
@@ -511,13 +516,13 @@ async function deleteImageFromImageKit(url: string) {
         // 1. Extrair o path relativo (ignora query params e o hostname)
         // Ex: https://ik.imagekit.io/lojinha3d/random/figura.webp -> random/figura.webp
         const cleanUrl = url.split('?')[0];
-        
-        if (!cleanUrl.includes(endpoint)) {
-            console.log('[ImageKit] URL não pertence ao endpoint configurado. Ignorando.');
-            return;
+        let path = cleanUrl;
+        if (cleanUrl.startsWith('http')) {
+            try {
+                const urlObj = new URL(cleanUrl);
+                path = urlObj.pathname.replace(/^\/lojinha3d\//, '/');
+            } catch (_) {}
         }
-
-        let path = cleanUrl.replace(endpoint, '');
         if (path.startsWith('/')) path = path.substring(1);
         
         if (!path) return;
