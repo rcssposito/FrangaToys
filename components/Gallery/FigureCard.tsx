@@ -160,6 +160,12 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                                 <Sparkles size={10} className="fill-purple-400" /> Oferta
                            </div>
                         )}
+                        {/* Combo / Bundle Badge */}
+                        {!!(figure.is_bundle || figure.precos?.desconto_bundle_pct) && (
+                           <div className="bg-gradient-to-r from-purple-950/90 to-indigo-950/90 backdrop-blur-md text-purple-300 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-purple-500/40">
+                                <Sparkles size={10} className="fill-purple-400" /> Combo -{figure.precos?.desconto_bundle_pct || figure.desconto_bundle_pct || 20}%
+                           </div>
+                        )}
                     </div>
  
                     {/* Footer Info (Glassmorphism Overlay for Contrast) */}
@@ -177,8 +183,13 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                             
                             {/* Starting Price Badge (High Visibility) */}
                             {figure.precos && (
-                                <div className="mt-2 sm:mt-3 bg-zinc-950/80 backdrop-blur-xl border border-orange-500/20 px-3.5 py-1.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-tighter shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-                                    <span className="text-[7px] sm:text-[8px] text-zinc-500 uppercase font-black mr-1.5 tracking-widest">A partir de</span>
+                                <div className="mt-2 sm:mt-3 bg-zinc-950/80 backdrop-blur-xl border border-orange-500/20 px-3.5 py-1.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-tighter shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-center gap-1.5">
+                                    <span className="text-[7px] sm:text-[8px] text-zinc-500 uppercase font-black mr-0.5 tracking-widest">A partir de</span>
+                                    {figure.precos.original_pix_colorido && figurePrice < figure.precos.original_pix_colorido && (
+                                        <span className="text-[8px] sm:text-[9px] text-zinc-500 line-through font-mono">
+                                            {formatPrice(figure.precos.original_pix_colorido)}
+                                        </span>
+                                    )}
                                     <span className="text-orange-400 font-extrabold">{formatPrice(figurePrice)}</span>
                                 </div>
                             )}

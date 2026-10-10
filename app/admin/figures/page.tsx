@@ -3,11 +3,12 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { toast } from 'sonner';
-import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, Upload, ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, Upload, ZoomIn, ZoomOut, RotateCcw, Maximize2, Boxes, Package } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import ThemeToggle from '@/components/common/ThemeToggle';
 import Tooltip from '@/components/ui/Tooltip';
+import BundleManagerTab from '@/components/Admin/BundleManagerTab';
 
 interface Figure {
     id: number;
@@ -1051,6 +1052,7 @@ function DataGridContent() {
     const [savingId, setSavingId] = useState<number | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | string | null>(null);
+    const [mainTab, setMainTab] = useState<'figures' | 'bundles'>('figures');
 
     const { hasRole } = usePermission();
     const canEdit = hasRole('admin') || hasRole('pricing');
@@ -1535,8 +1537,38 @@ function DataGridContent() {
                     </div>
                 </div>
 
-                <div className="flex gap-4 items-center mb-6">
-                    <div className="flex-1 flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[var(--card-border)]">
+                {/* Seletor de Visão Principal: Figuras Avulsas vs Bundles & Kits */}
+                <div className="flex items-center gap-2 mb-6 border-b border-zinc-800 pb-3">
+                    <button
+                        onClick={() => setMainTab('figures')}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                            mainTab === 'figures'
+                                ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
+                                : 'bg-zinc-900/60 text-zinc-400 hover:text-white border border-zinc-800'
+                        }`}
+                    >
+                        <Package size={16} />
+                        Catálogo de Figuras Individuais
+                    </button>
+                    <button
+                        onClick={() => setMainTab('bundles')}
+                        className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                            mainTab === 'bundles'
+                                ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20'
+                                : 'bg-zinc-900/60 text-zinc-400 hover:text-white border border-zinc-800'
+                        }`}
+                    >
+                        <Boxes size={16} />
+                        Bundles & Kits de Figuras
+                    </button>
+                </div>
+
+                {mainTab === 'bundles' ? (
+                    <BundleManagerTab />
+                ) : (
+                    <>
+                        <div className="flex gap-4 items-center mb-6">
+                            <div className="flex-1 flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[var(--card-border)]">
                         {studioParam && (
                             <button
                                 onClick={() => router.push('/admin/figures')}
@@ -1605,43 +1637,43 @@ function DataGridContent() {
                         </div>
                     )}
                     {/* Fim do Container Principal */}
-                </div >
-            </div >
+                    </div>
+                </>
+            )}
+            </div>
 
             {/* Image Preview Modal */}
-            {
-                previewImage && (
+            {previewImage && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => setPreviewImage(null)}
+                >
                     <div
-                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200"
-                        onClick={() => setPreviewImage(null)}
+                        className="relative max-w-4xl w-full bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-zinc-800"
+                        onClick={e => e.stopPropagation()}
                     >
-                        <div
-                            className="relative max-w-4xl w-full bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-zinc-800"
-                            onClick={e => e.stopPropagation()}
-                        >
-                            <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/50">
-                                <h3 className="font-bold text-lg">{previewImage.nome}</h3>
-                                <button
-                                    onClick={() => setPreviewImage(null)}
-                                    className="p-2 hover:bg-zinc-800 rounded-full transition-colors"
-                                >
-                                    <X size={20} />
-                                </button>
-                            </div>
-                            <div className="p-2 flex justify-center bg-zinc-950">
-                                <img
-                                    src={previewImage.url}
-                                    alt={previewImage.nome}
-                                    className="max-h-[70vh] w-auto object-contain rounded-lg"
-                                />
-                            </div>
-                            <div className="p-4 text-center text-zinc-500 text-xs">
-                                Imagens carregadas via ImageKit
-                            </div>
+                        <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/50">
+                            <h3 className="font-bold text-lg">{previewImage.nome}</h3>
+                            <button
+                                onClick={() => setPreviewImage(null)}
+                                className="p-2 hover:bg-zinc-800 rounded-full transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-2 flex justify-center bg-zinc-950">
+                            <img
+                                src={previewImage.url}
+                                alt={previewImage.nome}
+                                className="max-h-[70vh] w-auto object-contain rounded-lg"
+                            />
+                        </div>
+                        <div className="p-4 text-center text-zinc-500 text-xs">
+                            Visualização de Imagem HD
                         </div>
                     </div>
-                )
-            }
+                </div>
+            )}
 
             {/* Photo Manager & Reorder Modal */}
             {photoManagerFigure && (

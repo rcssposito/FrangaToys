@@ -35,12 +35,20 @@ export const FiguraSchema = z.object({
     pix_estilizado: z.number().optional(),
     pix_colorido: z.number().optional(),
     pix_premium: z.number().optional(),
+    original_estilizado: z.number().optional(),
+    original_colorido: z.number().optional(),
+    original_pix_estilizado: z.number().optional(),
+    original_pix_colorido: z.number().optional(),
+    desconto_bundle_pct: z.number().optional(),
   }).optional(),
   tem_extras: z.boolean().nullable().optional(),
   tem_pintura_real: z.boolean().nullable().optional(),
   is_merchant: z.boolean().optional().default(false),
   imagem_secundaria: z.string().nullable().optional(),
   fotos_extras: z.array(z.string()).nullable().optional(),
+  is_bundle: z.boolean().nullable().optional(),
+  desconto_bundle_pct: z.number().nullable().optional(),
+  preco_fixo_bundle: z.number().nullable().optional(),
 });
 
 export type FiguraDTO = z.infer<typeof FiguraSchema>;

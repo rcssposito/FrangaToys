@@ -45,6 +45,9 @@ export async function GET(req: NextRequest) {
             serie_id,
             tem_pintura_real,
             slug,
+            is_bundle,
+            desconto_bundle_pct,
+            preco_fixo_bundle,
             ${seriesJoin} (
                 id,
                 nome,
@@ -222,7 +225,13 @@ export async function GET(req: NextRequest) {
         // Transform to DTO
         const items = data.map((item: any) => {
             const meta = Array.isArray(item.figuras_meta) ? item.figuras_meta[0] : item.figuras_meta;
-            const pricesData = settings && meta ? calculateFigurePrices(meta, settings) : null;
+            const metaWithBundle = meta ? {
+                ...meta,
+                is_bundle: item.is_bundle,
+                desconto_bundle_pct: item.desconto_bundle_pct,
+                preco_fixo_bundle: item.preco_fixo_bundle,
+            } : null;
+            const pricesData = settings && metaWithBundle ? calculateFigurePrices(metaWithBundle, settings) : null;
             
             // Pre-calculate prices to avoid ternary issues in large objects
             let precos = null;
@@ -233,7 +242,12 @@ export async function GET(req: NextRequest) {
                     premium: pricesData.premium,
                     pix_estilizado: pricesData.pix_estilizado,
                     pix_colorido: pricesData.pix_colorido,
-                    pix_premium: pricesData.pix_premium
+                    pix_premium: pricesData.pix_premium,
+                    original_estilizado: pricesData.original_estilizado,
+                    original_colorido: pricesData.original_colorido,
+                    original_pix_estilizado: pricesData.original_pix_estilizado,
+                    original_pix_colorido: pricesData.original_pix_colorido,
+                    desconto_bundle_pct: pricesData.desconto_bundle_pct,
                 };
             }
 
@@ -272,7 +286,9 @@ export async function GET(req: NextRequest) {
                 is_campanha_active: meta?.is_campanha_active || false,
                 desconto_campanha: meta?.desconto_campanha || 0,
                 preco_fixo_campanha: meta?.preco_fixo_campanha || 0,
-                is_merchant: studioData?.merchant ?? false
+                is_merchant: studioData?.merchant ?? false,
+                is_bundle: item.is_bundle || false,
+                desconto_bundle_pct: item.desconto_bundle_pct || null,
             };
         });
 

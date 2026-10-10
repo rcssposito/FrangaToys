@@ -127,8 +127,32 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
     };
 
     const finishOptions = [
-        { id: 'estilizado', label: 'Sem Pintura', icon: Paintbrush, description: 'Apenas Impresso & Limpo', color: 'text-zinc-400', bg: 'bg-zinc-400/10', border: 'border-zinc-400/20', price: figure.precos?.estilizado, pixPrice: figure.precos?.pix_estilizado },
-        { id: 'colorido', label: 'Colorido', icon: Palette, description: 'Pintura Premium', color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/20', price: figure.precos?.colorido, pixPrice: figure.precos?.pix_colorido },
+        { 
+            id: 'estilizado', 
+            label: 'Sem Pintura', 
+            icon: Paintbrush, 
+            description: 'Apenas Impresso & Limpo', 
+            color: 'text-zinc-400', 
+            bg: 'bg-zinc-400/10', 
+            border: 'border-zinc-400/20', 
+            price: figure.precos?.estilizado, 
+            pixPrice: figure.precos?.pix_estilizado,
+            originalPrice: figure.precos?.original_estilizado,
+            originalPixPrice: figure.precos?.original_pix_estilizado,
+        },
+        { 
+            id: 'colorido', 
+            label: 'Colorido', 
+            icon: Palette, 
+            description: 'Pintura Premium', 
+            color: 'text-amber-500', 
+            bg: 'bg-amber-500/10', 
+            border: 'border-amber-500/20', 
+            price: figure.precos?.colorido, 
+            pixPrice: figure.precos?.pix_colorido,
+            originalPrice: figure.precos?.original_colorido,
+            originalPixPrice: figure.precos?.original_pix_colorido,
+        },
     ] as const;
 
     // Coleta todas as fotos disponíveis (capa, hover e extras)
@@ -414,6 +438,11 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                     <Instagram size={10} className="fill-white" /> Ver Fotos
                                 </span>
                             )}
+                            {(figure.is_bundle || !!figure.precos?.desconto_bundle_pct) && (
+                                <span className="text-[10px] bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black px-3 py-1 rounded-full border border-purple-400/40 shadow-lg shadow-purple-600/30 uppercase tracking-[0.2em] flex items-center gap-1">
+                                    <Sparkles size={12} className="fill-white" /> COMBO {figure.precos?.desconto_bundle_pct || figure.desconto_bundle_pct || 20}% OFF
+                                </span>
+                            )}
                         </div>
                         <h2 className="text-xl md:text-3xl font-black text-white tracking-tighter leading-[0.95]">{figure.nome}</h2>
 
@@ -508,6 +537,12 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                     )}>
                                         {opt.label}
                                     </span>
+
+                                    {opt.originalPrice && opt.price && opt.originalPrice > opt.price && (
+                                        <span className="text-[10px] text-zinc-500 line-through font-mono leading-none">
+                                            {formatPrice(opt.originalPrice)}
+                                        </span>
+                                    )}
 
                                     <span className={clsx(
                                         "text-xs font-black tracking-tight",

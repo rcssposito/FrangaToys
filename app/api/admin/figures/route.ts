@@ -5,6 +5,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase/server';
 import { deleteFigureRowFromSheets } from '@/lib/google-sheets';
 import { deleteFromR2 } from '@/lib/storage';
+import { calculateFigurePrices } from '@/lib/pricing';
 
 export const dynamic = 'force-dynamic';
 
@@ -171,6 +172,7 @@ export async function GET(req: NextRequest) {
                 desconto_campanha: meta.desconto_campanha || 0,
                 preco_fixo_campanha: meta.preco_fixo_campanha || 0,
                 custo_producao: custoProducao,
+                precos: settings ? calculateFigurePrices(meta, settings) : null,
             };
         });
 
@@ -256,7 +258,28 @@ export async function PUT(req: Request) {
         if (imagem_url !== undefined) updateFields.imagem_url = imagem_url;
         if (body.imagem_secundaria !== undefined) updateFields.imagem_secundaria = body.imagem_secundaria;
         if (body.fotos_extras !== undefined) updateFields.fotos_extras = body.fotos_extras;
-        if (disponivel !== undefined) updateFields.disponivel = disponivel;
+        if (disponivel !== undefined) {
+            updateFields.disponivel = disponivel;
+            // Se desativou a figura, desativa preventivamente qualquer bundle que dependa dela
+            if (disponivel === false) {
+                try {
+                    const { data: bLinks } = await supabase
+                        .from('figuras_bundles')
+                        .select('bundle_id')
+                        .eq('componente_id', id);
+
+                    if (bLinks && bLinks.length > 0) {
+                        const bIds = Array.from(new Set(bLinks.map((b: any) => b.bundle_id)));
+                        await supabase
+                            .from('figuras')
+                            .update({ disponivel: false })
+                            .in('id', bIds);
+                    }
+                } catch (cascadeErr) {
+                    console.error('[Figure Update] Erro ao desativar bundles dependentes:', cascadeErr);
+                }
+            }
+        }
         if (tem_extras !== undefined) updateFields.tem_extras = tem_extras;
         if (tem_pintura_real !== undefined) updateFields.tem_pintura_real = tem_pintura_real;
         if (studio_id !== undefined) updateFields.studio_id = studio_id;

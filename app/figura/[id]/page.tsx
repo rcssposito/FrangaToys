@@ -121,7 +121,13 @@ export default async function FiguraPage({ params }: Props) {
     }
 
     const metaData = Array.isArray(figure.figuras_meta) ? figure.figuras_meta[0] : figure.figuras_meta;
-    const prices = settings && metaData ? calculateFigurePrices(metaData, settings) : undefined;
+    const metaWithBundle = metaData ? {
+        ...metaData,
+        is_bundle: figure.is_bundle,
+        desconto_bundle_pct: figure.desconto_bundle_pct,
+        preco_fixo_bundle: figure.preco_fixo_bundle,
+    } : null;
+    const prices = settings && metaWithBundle ? calculateFigurePrices(metaWithBundle, settings) : undefined;
 
     const seriesData = Array.isArray(figure.series) ? figure.series[0] : (figure.series as any);
     const studioData = Array.isArray((figure as any).studios) ? (figure as any).studios[0] : (figure as any).studios;
@@ -139,6 +145,8 @@ export default async function FiguraPage({ params }: Props) {
         largura_cm: metaData?.largura_cm,
         profundidade_cm: metaData?.profundidade_cm,
         codigo: figure.codigo,
+        is_bundle: figure.is_bundle || false,
+        desconto_bundle_pct: figure.desconto_bundle_pct || null,
         precos: prices ? {
             estilizado: prices.estilizado,
             colorido: prices.colorido,
@@ -146,6 +154,11 @@ export default async function FiguraPage({ params }: Props) {
             pix_estilizado: prices.pix_estilizado,
             pix_colorido: prices.pix_colorido,
             pix_premium: prices.pix_premium,
+            original_estilizado: prices.original_estilizado,
+            original_colorido: prices.original_colorido,
+            original_pix_estilizado: prices.original_pix_estilizado,
+            original_pix_colorido: prices.original_pix_colorido,
+            desconto_bundle_pct: prices.desconto_bundle_pct,
             // Redundância absoluta para garantir que o client veja a campanha
             is_campanha: metaData?.is_campanha_active || !!metaData?.preco_fixo_campanha || !!metaData?.desconto_campanha
         } : undefined,
