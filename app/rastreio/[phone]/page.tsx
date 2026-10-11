@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw, ShoppingBag, Copy, QrCode, Check, Camera, X, Eye, FileText, CheckCircle2, AlertCircle, Edit3, MapPin, ShieldCheck, Heart, Coffee, Sparkles } from 'lucide-react';
+import { ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw, ShoppingBag, Copy, QrCode, Check, Camera, X, Eye, FileText, CheckCircle2, AlertCircle, Edit3, MapPin, ShieldCheck, Heart, Coffee, Sparkles, Paintbrush } from 'lucide-react';
 import { OrderTracker } from '@/components/OrderTracker';
 import Image from 'next/image';
 import imageKitLoader from '@/lib/image-loader';
@@ -280,7 +280,7 @@ function ArtistTipWidget({ order }: { order: any }) {
                             </span>
                         </h4>
                         <p className="text-[10px] text-zinc-400 font-medium">
-                            Gostou do colecionável? Envie um café ou incentivo extra para quem modelou e pintou sua peça!
+                            Gostou do colecionável? Envie um café ou incentivo extra para quem modelou e pintou sua peça{order.pintor_display ? ` (${order.pintor_display})` : ''}!
                         </p>
                     </div>
                 </div>
@@ -995,10 +995,19 @@ export default function CustomerDashboard() {
                                             </div>
                                             <div>
                                                 <h3 className="text-lg font-black text-white leading-none mb-1">{order.figura?.nome}</h3>
-                                                <div className="flex items-center gap-3 text-[10px] uppercase font-bold text-zinc-500 tracking-widest">
+                                                <div className="flex flex-wrap items-center gap-2.5 text-[10px] uppercase font-bold text-zinc-500 tracking-widest">
                                                     <span>{order.figura?.studio}</span>
                                                     <span className="w-1 h-1 bg-zinc-700 rounded-full" />
                                                     <span className="flex items-center gap-1"><Calendar size={10} /> {new Date(order.data).toLocaleDateString('pt-BR')}</span>
+                                                    {(order.pintor_display || order.pintor_nome) && (
+                                                        <>
+                                                            <span className="w-1 h-1 bg-zinc-700 rounded-full" />
+                                                            <span className="flex items-center gap-1 text-purple-400 font-black normal-case">
+                                                                <Paintbrush size={11} className="text-purple-400 shrink-0" />
+                                                                Artista: <strong className="text-purple-300 font-extrabold">{order.pintor_display || order.pintor_nome}</strong>
+                                                            </span>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -1018,7 +1027,11 @@ export default function CustomerDashboard() {
 
                                     {/* The Visual Tracker */}
                                     <div className="pt-4 border-t border-zinc-800/50">
-                                        <OrderTracker status={order.status} checklist={order.checklist} />
+                                        <OrderTracker 
+                                            status={order.status} 
+                                            checklist={order.checklist} 
+                                            pintorNome={order.pintor_display || order.pintor_nome}
+                                        />
                                     </div>
 
                                     {/* Fotos dos Bastidores / WIP se houver */}

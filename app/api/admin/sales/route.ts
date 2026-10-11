@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { sendTelegramAlert } from '@/lib/telegram';
+import { isRodrigoPintor } from '@/lib/painters';
 
 // LISTAR VENDAS (Histórico)
 export async function GET() {
@@ -204,9 +205,11 @@ export async function POST(req: Request) {
             }
 
             let custo_pintura_freelancer = 0;
-            if (pintura_freelancer) {
-                // Custo do freelancer = horas de pintura * R$ 50
-                custo_pintura_freelancer = Math.ceil((meta.horas_pintura || 0) * 50) * item.quantidade;
+            const isRodrigo = isRodrigoPintor(pintor_nome);
+
+            if (pintura_freelancer && !isRodrigo) {
+                // Custo do freelancer = horas de pintura * custo_h_pintura
+                custo_pintura_freelancer = Math.ceil((meta.horas_pintura || 0) * (settings.custo_h_pintura || 50)) * item.quantidade;
             }
 
             // Lucro Real = Valor Final - Custos da Impressora - Custo Terceiro - Comissão
@@ -221,7 +224,7 @@ export async function POST(req: Request) {
                 canal_venda,
                 vendedor,
                 comissao_vendedor,
-                pintura_freelancer,
+                pintura_freelancer: pintura_freelancer && !isRodrigo,
                 pintor_nome: pintor_nome || null,
                 valor_venda_final: item.valor_final,
                 valor_frete: salesToInsert.length === 0 ? (Number(valor_frete) || 0) : 0, // Apenas no primeiro item para não duplicar no dashboard
@@ -420,9 +423,12 @@ export async function PATCH(req: Request) {
             comissao_vendedor = Math.round(finalValorVendaFinal * 0.15);
         }
 
+        const finalPintorNome = pintor_nome !== undefined ? pintor_nome : currentSale.pintor_nome;
+        const isRodrigo = isRodrigoPintor(finalPintorNome);
+
         let custo_pintura_freelancer = 0;
-        if (finalPinturaFreelancer) {
-            custo_pintura_freelancer = Math.ceil((meta.horas_pintura || 0) * 50) * finalQuantidade;
+        if (finalPinturaFreelancer && !isRodrigo) {
+            custo_pintura_freelancer = Math.ceil((meta.horas_pintura || 0) * (settings.custo_h_pintura || 50)) * finalQuantidade;
         }
 
         // Lucro Real = Valor Final - Custos da Impressora - Custo Terceiro - Comissão
@@ -438,8 +444,8 @@ export async function PATCH(req: Request) {
                 vendedor: finalVendedor,
                 status,
                 observacao,
-                pintura_freelancer: finalPinturaFreelancer,
-                pintor_nome,
+                pintura_freelancer: finalPinturaFreelancer && !isRodrigo,
+                pintor_nome: finalPintorNome || null,
                 valor_pago_pintor,
                 custo_producao_snapshot: custo_total_real,
                 comissao_vendedor,

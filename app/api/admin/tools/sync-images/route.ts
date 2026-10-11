@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { google } from 'googleapis';
+import { renameFileInStorage, extractStorageKey, getActiveStorageProvider } from '@/lib/storage';
 
 const SPREADSHEET_ID = '10HlBpX_9yz85V0zxnItQ61G2kdEAYECP65GwbnEwwew';
 const VALID_TABS = ['Anime', 'Games', 'Marvel', 'DC', 'Random'];
@@ -23,7 +24,7 @@ function getGoogleSheetsClient() {
     return google.sheets({ version: 'v4', auth });
 }
 
-function toImageKitFileName(name: string) {
+function toCleanFileName(name: string) {
     return name
         .trim()
         .replace(/[^\w-]/g, '_')
@@ -54,7 +55,7 @@ export interface MismatchItem {
     fileVersion?: string | null;
 }
 
-// GET: Analisa descasamentos de imagens
+// GET: Analisa descasamentos de imagens no Google Sheets
 export async function GET(req: NextRequest) {
     try {
         const sessionOrResponse = await requireRoles(['admin']);
@@ -72,6 +73,14 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'Aba inválida' }, { status: 400 });
         }
 
+        const activeProvider = getActiveStorageProvider();
+        const r2PublicBase = (
+            process.env.CLOUDFLARE_R2_PUBLIC_URL ||
+            process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL ||
+            'https://pub-ab391b8f43ea4791b533669f933ac2b5.r2.dev'
+        ).replace(/\/+$/, '');
+        const ikBase = (process.env.IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/lojinha3d').replace(/\/+$/, '');
+
         const mismatches: MismatchItem[] = [];
         let totalRowsScanned = 0;
 
@@ -88,19 +97,24 @@ export async function GET(req: NextRequest) {
                 const figureName = rows[i][1];
                 const currentUrl = rows[i][2];
 
-                if (!figureName || !currentUrl || !currentUrl.includes('imagekit.io')) continue;
+                if (!figureName || !currentUrl) continue;
 
-                const urlWithoutQuery = currentUrl.split('?')[0];
-                const rawFileName = urlWithoutQuery.split('/').pop() || '';
+                const isImageKit = currentUrl.includes('imagekit.io');
+                const isR2 = currentUrl.includes('r2.dev') || currentUrl.includes('cloudflarestorage') || currentUrl.includes('cdn.frangatoys');
+
+                if (!isImageKit && !isR2) continue;
+
+                const storageKey = extractStorageKey(currentUrl);
+                const rawFileName = storageKey.split('/').pop() || '';
                 let currentFileNameWithExt = rawFileName;
                 try {
                     currentFileNameWithExt = decodeURIComponent(rawFileName);
                 } catch {}
 
                 const extMatch = currentFileNameWithExt.match(/\.(webp|png|jpg|jpeg)$/i);
-                const ext = extMatch ? extMatch[0] : '';
-                const currentFileNameWithoutExt = ext ? currentFileNameWithExt.slice(0, -ext.length) : currentFileNameWithExt;
-                const expectedFileNameWithoutExt = toImageKitFileName(figureName);
+                const ext = extMatch ? extMatch[0] : '.webp';
+                const currentFileNameWithoutExt = extMatch ? currentFileNameWithExt.slice(0, -ext.length) : currentFileNameWithExt;
+                const expectedFileNameWithoutExt = toCleanFileName(figureName);
 
                 const vName = figureName.match(/v(\d+)\b/i)?.[1] || null;
                 const vFile = currentFileNameWithoutExt.match(/v(\d+)\b/i)?.[1] || null;
@@ -110,25 +124,23 @@ export async function GET(req: NextRequest) {
                 const baseFile = cleanBase(currentFileNameWithoutExt);
                 const isBaseMismatch = baseName !== '' && baseFile !== '' && baseName !== baseFile;
 
-                if (isVersionMismatch || isBaseMismatch) {
-                    let currentFilePath = '';
-                    try {
-                        const parsed = new URL(urlWithoutQuery);
-                        currentFilePath = parsed.pathname.replace(/^\/lojinha3d/, '');
-                    } catch {
-                        currentFilePath = `/${tab.toLowerCase()}/${currentFileNameWithExt}`;
-                    }
+                // Detecta também se a URL ainda é do ImageKit e o provedor ativo é o R2
+                const isProviderMismatch = (activeProvider === 'cloudflare' && isImageKit);
 
+                if (isVersionMismatch || isBaseMismatch || isProviderMismatch) {
                     const proposedFileName = `${expectedFileNameWithoutExt}${ext}`;
-                    const lastSlashIdx = urlWithoutQuery.lastIndexOf('/');
-                    const proposedUrl = urlWithoutQuery.substring(0, lastSlashIdx + 1) + proposedFileName + (currentUrl.includes('?') ? '?' + currentUrl.split('?')[1] : '');
+                    const targetFolder = tab.toLowerCase();
+
+                    const proposedUrl = activeProvider === 'cloudflare'
+                        ? `${r2PublicBase}/${targetFolder}/${proposedFileName}`
+                        : `${ikBase}/${targetFolder}/${proposedFileName}?tr=w-500,q-80,f-auto`;
 
                     mismatches.push({
                         sheet: tab,
                         row: i + 1,
                         figureName,
                         currentUrl,
-                        currentFilePath,
+                        currentFilePath: storageKey,
                         currentFileName: currentFileNameWithExt,
                         proposedFileName,
                         proposedUrl,
@@ -144,6 +156,7 @@ export async function GET(req: NextRequest) {
             tabsScanned: tabsToScan,
             totalRowsScanned,
             totalMismatches: mismatches.length,
+            activeProvider,
             mismatches
         });
     } catch (err: any) {
@@ -152,7 +165,7 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// POST: Executa a renomeação no ImageKit, no Google Sheets e no Supabase
+// POST: Executa a renomeação no storage ativo (Cloudflare R2 ou ImageKit), no Google Sheets e no Supabase
 export async function POST(req: NextRequest) {
     try {
         const sessionOrResponse = await requireRoles(['admin']);
@@ -165,61 +178,46 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Nenhum item informado para sincronização' }, { status: 400 });
         }
 
-        const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
-        if (!privateKey) {
-            return NextResponse.json({ error: 'IMAGEKIT_PRIVATE_KEY não configurada no servidor' }, { status: 500 });
-        }
-
         const sheets = getGoogleSheetsClient();
-        const authHeader = `Basic ${Buffer.from(`${privateKey}:`).toString('base64')}`;
-
+        const activeProvider = getActiveStorageProvider();
         const results = [];
 
         for (const item of items) {
-            let ikSuccess = false;
+            let storageSuccess = false;
             let sheetSuccess = false;
             let dbSuccess = false;
+            let finalUrl = item.proposedUrl;
             let errorMessage = '';
 
-            // 1. Renomear no ImageKit
+            // 1. Renomear no Storage (Cloudflare R2 ou ImageKit)
             try {
-                const ikRes = await fetch('https://api.imagekit.io/v1/files/rename', {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': authHeader,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        filePath: item.currentFilePath,
-                        newFileName: item.proposedFileName,
-                        purgeCache: true
-                    })
+                const renameResult = await renameFileInStorage({
+                    oldFilePathOrUrl: item.currentUrl,
+                    newFileName: item.proposedFileName,
+                    folder: item.sheet.toLowerCase()
                 });
 
-                if (ikRes.ok) {
-                    ikSuccess = true;
-                } else {
-                    const ikErr = await ikRes.json().catch(() => ({}));
-                    // Se o arquivo de destino já existir com esse nome, consideramos aceitável seguir para atualizar o link
-                    if (ikRes.status === 409 || ikErr.message?.toLowerCase().includes('already exists')) {
-                        ikSuccess = true;
-                    } else {
-                        errorMessage = `ImageKit: ${ikErr.message || ikRes.statusText}`;
+                if (renameResult.success) {
+                    storageSuccess = true;
+                    if (renameResult.url) {
+                        finalUrl = renameResult.url;
                     }
+                } else {
+                    errorMessage = `Storage (${renameResult.provider}): ${renameResult.error}`;
                 }
             } catch (err: any) {
-                errorMessage = `ImageKit Error: ${err.message}`;
+                errorMessage = `Storage Exception: ${err.message}`;
             }
 
-            // 2. Atualizar no Google Sheets (se ImageKit deu certo ou foi 409)
-            if (ikSuccess) {
+            // 2. Atualizar no Google Sheets (se o storage concluiu com sucesso)
+            if (storageSuccess) {
                 try {
                     await sheets.spreadsheets.values.update({
                         spreadsheetId: SPREADSHEET_ID,
                         range: `${item.sheet}!C${item.row}`,
                         valueInputOption: 'USER_ENTERED',
                         requestBody: {
-                            values: [[item.proposedUrl]]
+                            values: [[finalUrl]]
                         }
                     });
                     sheetSuccess = true;
@@ -231,7 +229,7 @@ export async function POST(req: NextRequest) {
                 try {
                     const { error: dbErr } = await supabase
                         .from('figuras')
-                        .update({ imagem_url: item.proposedUrl })
+                        .update({ imagem_url: finalUrl })
                         .ilike('nome', item.figureName);
 
                     if (dbErr) {
@@ -248,21 +246,23 @@ export async function POST(req: NextRequest) {
                 figureName: item.figureName,
                 sheet: item.sheet,
                 row: item.row,
-                proposedUrl: item.proposedUrl,
-                success: ikSuccess && sheetSuccess && dbSuccess,
-                ikSuccess,
+                proposedUrl: finalUrl,
+                success: storageSuccess && sheetSuccess && dbSuccess,
+                storageSuccess,
                 sheetSuccess,
                 dbSuccess,
+                provider: activeProvider,
                 error: errorMessage || undefined
             });
 
-            // Delay de 150ms para respeitar limites de requisição
-            await new Promise(r => setTimeout(r, 150));
+            // Pequeno delay para proteger cotas do Google Sheets
+            await new Promise(r => setTimeout(r, 120));
         }
 
         const successCount = results.filter(r => r.success).length;
         return NextResponse.json({
-            message: `${successCount} de ${items.length} imagens sincronizadas com sucesso.`,
+            message: `${successCount} de ${items.length} imagens sincronizadas com sucesso no ${activeProvider === 'cloudflare' ? 'Cloudflare R2' : 'ImageKit'}.`,
+            provider: activeProvider,
             results
         });
     } catch (err: any) {

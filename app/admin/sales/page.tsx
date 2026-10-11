@@ -47,6 +47,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
 import { generatePixPayload } from '@/lib/pix';
+import { isRodrigoPintor } from '@/lib/painters';
 
 interface Sale {
     id: number;
@@ -2109,12 +2110,23 @@ function SalesContent() {
                                     <div className="space-y-2">
                                         <select
                                             value={editingSale.pintor_nome || ''}
-                                            onChange={e => setEditingSale({ ...editingSale, pintor_nome: e.target.value })}
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                const isRodrigo = isRodrigoPintor(val);
+                                                setEditingSale({ 
+                                                    ...editingSale, 
+                                                    pintor_nome: val,
+                                                    pintura_freelancer: !isRodrigo && val !== ''
+                                                });
+                                            }}
                                             className="w-full bg-zinc-950 border border-cyan-500/30 rounded-xl px-3 py-2 text-sm outline-none font-black appearance-none cursor-pointer text-cyan-200"
                                         >
-                                            <option value="">Pintor</option>
-                                            {vendedores.filter(v => (v.roles && v.roles.includes('painter')) || v.nome === editingSale.pintor_nome).map(v => (
-                                                <option key={v.email} value={v.nome || v.email}>{v.nome || v.email}</option>
+                                            <option value="">Pintor Interno (Sem atribuição)</option>
+                                            <option value="Rodrigo Sposito" className="text-purple-400 font-bold">
+                                                🎨 Rodrigo Sposito (Ateliê Principal • Sem Custo)
+                                            </option>
+                                            {vendedores.filter(v => (v.roles && v.roles.includes('painter')) && !isRodrigoPintor(v.nome || v.email)).map(v => (
+                                                <option key={v.email} value={v.nome || v.email}>{v.nome || v.email} (-R$ 50/h)</option>
                                             ))}
                                         </select>
                                     </div>

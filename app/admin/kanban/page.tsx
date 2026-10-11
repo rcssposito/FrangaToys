@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import { compressImageForUpload } from '@/lib/image-utils';
+import { isRodrigoPintor } from '@/lib/painters';
 import { clsx } from 'clsx';
 
 export interface WipPhoto {
@@ -982,7 +983,9 @@ export default function KanbanPage() {
         return p === u || (u && (p.includes(u) || u.includes(p)));
     });
     const myPaintingsCount = myPaintings.length;
-    const myPaintingsTotal = myPaintings.reduce((sum, s) => sum + (Number(s.valor_pago_pintor) || Number(s.valor_estimado_pintor) || 0), 0);
+    const myPaintingsTotal = isRodrigoPintor(currentUserName) 
+        ? 0 
+        : myPaintings.reduce((sum, s) => sum + (Number(s.valor_pago_pintor) || Number(s.valor_estimado_pintor) || 0), 0);
 
     const filteredSales = sales.filter(task => {
         if (searchQuery.trim()) {
@@ -1400,9 +1403,11 @@ export default function KanbanPage() {
                                                                             <div className="flex items-center gap-1.5 text-[9px] font-black text-purple-300 bg-purple-950/60 border border-purple-500/30 px-2 py-1 rounded-lg backdrop-blur-sm shadow-inner">
                                                                                 <Paintbrush size={10} className="text-purple-400 shrink-0" />
                                                                                 <span className="truncate max-w-[110px]">@{task.pintor_nome}</span>
-                                                                                {valorPintura > 0 && (
+                                                                                {isRodrigoPintor(task.pintor_nome) ? (
+                                                                                    <span className="text-purple-400/80 font-bold ml-0.5 text-[8.5px] uppercase">(Ateliê)</span>
+                                                                                ) : valorPintura > 0 ? (
                                                                                     <span className="text-emerald-400 font-bold ml-0.5">R$ {valorPintura.toFixed(2)}</span>
-                                                                                )}
+                                                                                ) : null}
                                                                             </div>
                                                                             {(isAssignedToMe || hasRole('admin')) && (
                                                                                 <button

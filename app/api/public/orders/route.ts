@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { isValidCpfOrCnpj, VALID_UFS_SET } from '@/lib/fiscal-validation';
+import { formatPainterDisplayName } from '@/lib/painters';
 
 export async function GET(req: NextRequest) {
     try {
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest) {
             chave_nfe,
             wip_fotos,
             checklist,
+            pintor_nome,
             figuras (
                 nome,
                 imagem_url,
@@ -184,6 +186,8 @@ export async function GET(req: NextRequest) {
                 link_danfe: linkDanfe,
                 wip_fotos: Array.isArray(s.wip_fotos) ? s.wip_fotos : [],
                 checklist: Array.isArray(s.checklist) ? s.checklist : [],
+                pintor_nome: s.pintor_nome || null,
+                pintor_display: s.pintor_nome ? formatPainterDisplayName(s.pintor_nome) : null,
                 cliente_contato: s.cliente_contato,
                 cliente: {
                     is_nfe_ready: isNfeReady,

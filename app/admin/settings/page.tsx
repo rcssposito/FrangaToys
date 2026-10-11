@@ -75,6 +75,7 @@ function SettingsContent() {
         tabsScanned: string[];
         totalRowsScanned: number;
         totalMismatches: number;
+        activeProvider?: string;
         mismatches: MismatchItem[];
     } | null>(null);
     const [selectedMismatchIndexes, setSelectedMismatchIndexes] = useState<number[]>([]);
@@ -176,7 +177,7 @@ function SettingsContent() {
     const handleSyncImages = async () => {
         if (!scanResult || selectedMismatchIndexes.length === 0) return;
         const itemsToSync = selectedMismatchIndexes.map(idx => scanResult.mismatches[idx]);
-        if (!confirm(`Deseja renomear ${itemsToSync.length} imagem(ns) no ImageKit e atualizar na Planilha e no Banco de Dados?`)) return;
+        if (!confirm(`Deseja renomear ${itemsToSync.length} imagem(ns) no Storage (${scanResult?.activeProvider === 'cloudflare' ? 'Cloudflare R2' : 'ImageKit'}) e atualizar na Planilha e no Banco de Dados?`)) return;
 
         setIsSyncing(true);
         setSyncProgress({ current: 0, total: itemsToSync.length });
@@ -381,10 +382,10 @@ function SettingsContent() {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[var(--card-border)]">
                         <div>
                             <h2 className="text-xl font-black flex items-center gap-3 tracking-tight">
-                                <ImageIcon className="text-orange-500" size={24} /> Sincronização de Imagens (ImageKit)
+                                <ImageIcon className="text-orange-500" size={24} /> Sincronização de Imagens ({scanResult?.activeProvider === 'imagekit' ? 'ImageKit' : 'Cloudflare R2'})
                             </h2>
                             <p className="text-[var(--text-muted)] text-xs mt-1 font-medium">
-                                Detecte e corrija descasamentos de nomes de figuras e arquivos no ImageKit após exclusões ou renomeações de versões.
+                                Detecte e corrija descasamentos de nomes de figuras e arquivos no storage ativo ({scanResult?.activeProvider === 'imagekit' ? 'ImageKit' : 'Cloudflare R2'}) após exclusões ou renomeações de versões.
                             </p>
                         </div>
                     </div>
@@ -418,7 +419,7 @@ function SettingsContent() {
                             {isScanning ? (
                                 <>
                                     <Loader2 size={16} className="animate-spin text-orange-500" />
-                                    Analisando Planilha & ImageKit...
+                                    Analisando Planilha & Storage...
                                 </>
                             ) : (
                                 <>
@@ -448,7 +449,7 @@ function SettingsContent() {
                                         <div className="flex items-center gap-3">
                                             <AlertTriangle size={20} className="shrink-0" />
                                             <div className="text-xs font-bold">
-                                                <strong>{scanResult.totalMismatches}</strong> descasamento(s) encontrado(s) entre o nome da figura e o arquivo no ImageKit.
+                                                <strong>{scanResult.totalMismatches}</strong> descasamento(s) encontrado(s) entre o nome da figura e o arquivo no {scanResult.activeProvider === 'imagekit' ? 'ImageKit' : 'Cloudflare R2'}.
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -536,7 +537,7 @@ function SettingsContent() {
                                             {isSyncing ? (
                                                 <>
                                                     <Loader2 size={16} className="animate-spin" />
-                                                    Renomeando no ImageKit & Atualizando Planilha... ({syncProgress?.current || 0}/{syncProgress?.total || selectedMismatchIndexes.length})
+                                                    Renomeando no Storage & Atualizando Planilha... ({syncProgress?.current || 0}/{syncProgress?.total || selectedMismatchIndexes.length})
                                                 </>
                                             ) : (
                                                 <>

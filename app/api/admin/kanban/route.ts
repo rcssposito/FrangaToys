@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { notificarMudancaStatusKanban } from '@/lib/kanban-email';
+import { isRodrigoPintor } from '@/lib/painters';
 
 // LER TAREFAS DO KANBAN
 // Retorna todas as vendas ativas (Não concluídas) com horas e remuneração de pintura
@@ -66,8 +67,10 @@ export async function GET() {
                 checklist: Array.isArray(s.checklist) ? s.checklist : [],
                 wip_fotos: Array.isArray(s.wip_fotos) ? s.wip_fotos : [],
                 horas_pintura: horasPintura,
-                valor_estimado_pintor: valorPinturaCalculado,
-                valor_pago_pintor: Number(s.valor_pago_pintor) || (s.pintura_freelancer ? valorPinturaCalculado : 0),
+                valor_estimado_pintor: isRodrigoPintor(s.pintor_nome) ? 0 : valorPinturaCalculado,
+                valor_pago_pintor: isRodrigoPintor(s.pintor_nome) 
+                    ? 0 
+                    : (Number(s.valor_pago_pintor) || (s.pintura_freelancer ? valorPinturaCalculado : 0)),
                 vendedor_nome: (() => {
                     const name = userMap[s.vendedor] || userMap[(s.vendedor || '').toLowerCase()] || 'Ateliê';
                     return name.toLowerCase().includes('rodrigo') ? '@frangatoys' : name;
@@ -144,6 +147,7 @@ export async function PATCH(req: Request) {
 
             if (action === 'assign_painter') {
                 const targetPintor = (customPintorNome || session.nome || session.email || 'Pintor').trim();
+                const isRodrigo = isRodrigoPintor(targetPintor);
                 
                 // Buscar custo_h_pintura
                 const { data: pricing } = await supabase
@@ -157,7 +161,10 @@ export async function PATCH(req: Request) {
                 const meta = Array.isArray(figure?.figuras_meta) ? figure?.figuras_meta[0] : figure?.figuras_meta;
                 const horasPintura = Number(meta?.horas_pintura) || 0;
                 const quantidade = Number(sale.quantidade) || 1;
-                const valorPagoPintor = Math.ceil(horasPintura * custoHPintura) * quantidade;
+                
+                // Se for o Rodrigo Sposito, mão de obra própria não gera custo de terceiro
+                const valorPagoPintor = isRodrigo ? 0 : (Math.ceil(horasPintura * custoHPintura) * quantidade);
+                const pinturaFreelancer = !isRodrigo;
 
                 const valorVendaFinal = Number(sale.valor_venda_final) || 0;
                 const custoProducao = Number(sale.custo_producao_snapshot) || 0;
@@ -168,7 +175,7 @@ export async function PATCH(req: Request) {
                     .from('vendas')
                     .update({
                         pintor_nome: targetPintor,
-                        pintura_freelancer: true,
+                        pintura_freelancer: pinturaFreelancer,
                         valor_pago_pintor: valorPagoPintor,
                         lucro_real: novoLucroReal
                     })

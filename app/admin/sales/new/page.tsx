@@ -7,6 +7,7 @@ import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import { generatePixPayload } from '@/lib/pix';
+import { isRodrigoPintor } from '@/lib/painters';
 
 interface CatalogItem {
     id: number;
@@ -1247,12 +1248,16 @@ function NewSaleContent() {
                                     onChange={(e) => {
                                         const valor = e.target.value;
                                         setPintorNome(valor);
-                                        setPinturaFreelancer(valor !== '');
+                                        const isRodrigo = isRodrigoPintor(valor);
+                                        setPinturaFreelancer(valor !== '' && !isRodrigo);
                                     }}
                                 >
-                                    <option value="" className="bg-zinc-900 text-zinc-400">Pintura Interna (Própria da Loja)</option>
-                                    <optgroup label="Freelancers Disponíveis" className="bg-zinc-900">
-                                        {vendedores.filter(v => v.roles?.includes('painter')).map(pintor => (
+                                    <option value="" className="bg-zinc-900 text-zinc-400">Pintura Interna (Sem atribuição)</option>
+                                    <option value="Rodrigo Sposito" className="bg-zinc-900 text-purple-400 font-bold">
+                                        🎨 Rodrigo Sposito (Ateliê Principal • Sem Custo Adicional)
+                                    </option>
+                                    <optgroup label="Freelancers / Equipe" className="bg-zinc-900">
+                                        {vendedores.filter(v => v.roles?.includes('painter') && !isRodrigoPintor(v.nome || v.email)).map(pintor => (
                                             <option key={pintor.email} value={pintor.nome || pintor.email} className="text-orange-400 font-bold">
                                                 {pintor.nome || pintor.email} (-R$ 50/h)
                                             </option>

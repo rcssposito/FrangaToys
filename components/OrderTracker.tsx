@@ -13,6 +13,7 @@ export interface ChecklistItem {
 interface OrderTrackerProps {
     status: string;
     checklist?: ChecklistItem[];
+    pintorNome?: string | null;
 }
 
 const STAGES = [
@@ -33,7 +34,7 @@ const DEFAULT_STEPS = [
     { id: 'verniz', label: 'Verniz', phase: 'Finalização' }
 ];
 
-export function OrderTracker({ status, checklist }: OrderTrackerProps) {
+export function OrderTracker({ status, checklist, pintorNome }: OrderTrackerProps) {
     // Encontrar o índice do status atual
     const currentIdx = STAGES.findIndex(s => s.id === status);
     const isCompleted = status === 'Concluída';
@@ -165,9 +166,17 @@ export function OrderTracker({ status, checklist }: OrderTrackerProps) {
                                 <ListChecks size={16} />
                             </div>
                             <div>
-                                <span className="text-xs font-black uppercase tracking-wider text-zinc-200 flex items-center gap-1.5">
-                                    Etapas Artesanais no Ateliê
-                                </span>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-xs font-black uppercase tracking-wider text-zinc-200">
+                                        Etapas Artesanais no Ateliê
+                                    </span>
+                                    {pintorNome && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-500/15 text-purple-300 border border-purple-500/30 shadow-sm">
+                                            <Paintbrush size={10} className="text-purple-400" />
+                                            Artista: {pintorNome}
+                                        </span>
+                                    )}
+                                </div>
                                 <p className="text-[10px] text-zinc-500 font-medium">
                                     Acompanhamento fino do processo manual em nossa oficina
                                 </p>
