@@ -16,9 +16,9 @@ export function isRodrigoPintor(nameOrEmail?: string | null): boolean {
  * Retorna o nome de exibição formatado e humanizado do pintor para o cliente no Rastreio
  */
 export function formatPainterDisplayName(nameOrEmail?: string | null): string {
-    if (!nameOrEmail) return 'Ateliê Franga Toys';
+    if (!nameOrEmail) return 'Rodrigo Sposito';
     if (isRodrigoPintor(nameOrEmail)) {
-        return 'Rodrigo Sposito (Ateliê Principal)';
+        return 'Rodrigo Sposito';
     }
     if (nameOrEmail.includes('@')) {
         return nameOrEmail.split('@')[0];

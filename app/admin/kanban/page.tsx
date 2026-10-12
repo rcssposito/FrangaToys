@@ -1403,9 +1403,7 @@ export default function KanbanPage() {
                                                                             <div className="flex items-center gap-1.5 text-[9px] font-black text-purple-300 bg-purple-950/60 border border-purple-500/30 px-2 py-1 rounded-lg backdrop-blur-sm shadow-inner">
                                                                                 <Paintbrush size={10} className="text-purple-400 shrink-0" />
                                                                                 <span className="truncate max-w-[110px]">@{task.pintor_nome}</span>
-                                                                                {isRodrigoPintor(task.pintor_nome) ? (
-                                                                                    <span className="text-purple-400/80 font-bold ml-0.5 text-[8.5px] uppercase">(Ateliê)</span>
-                                                                                ) : valorPintura > 0 ? (
+                                                                                {isRodrigoPintor(task.pintor_nome) ? null : valorPintura > 0 ? (
                                                                                     <span className="text-emerald-400 font-bold ml-0.5">R$ {valorPintura.toFixed(2)}</span>
                                                                                 ) : null}
                                                                             </div>

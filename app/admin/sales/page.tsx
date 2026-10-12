@@ -2123,7 +2123,7 @@ function SalesContent() {
                                         >
                                             <option value="">Pintor Interno (Sem atribuição)</option>
                                             <option value="Rodrigo Sposito" className="text-purple-400 font-bold">
-                                                🎨 Rodrigo Sposito (Ateliê Principal • Sem Custo)
+                                                Rodrigo Sposito
                                             </option>
                                             {vendedores.filter(v => (v.roles && v.roles.includes('painter')) && !isRodrigoPintor(v.nome || v.email)).map(v => (
                                                 <option key={v.email} value={v.nome || v.email}>{v.nome || v.email} (-R$ 50/h)</option>

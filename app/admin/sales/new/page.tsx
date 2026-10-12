@@ -1254,7 +1254,7 @@ function NewSaleContent() {
                                 >
                                     <option value="" className="bg-zinc-900 text-zinc-400">Pintura Interna (Sem atribuição)</option>
                                     <option value="Rodrigo Sposito" className="bg-zinc-900 text-purple-400 font-bold">
-                                        🎨 Rodrigo Sposito (Ateliê Principal • Sem Custo Adicional)
+                                        Rodrigo Sposito
                                     </option>
                                     <optgroup label="Freelancers / Equipe" className="bg-zinc-900">
                                         {vendedores.filter(v => v.roles?.includes('painter') && !isRodrigoPintor(v.nome || v.email)).map(pintor => (
