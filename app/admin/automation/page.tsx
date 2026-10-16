@@ -21,7 +21,12 @@ import {
     Play,
     Box,
     Layers,
-    HardDrive
+    HardDrive,
+    Database,
+    FileSpreadsheet,
+    Brain,
+    Rocket,
+    Pencil
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ArchivePreviewModal from '@/components/Admin/ArchivePreviewModal';
@@ -44,7 +49,7 @@ interface AnalyzedItem {
 }
 
 export default function AutomationPage() {
-    const [baseFolder, setBaseFolder] = useState('D:\\rcssp\\Downloads\\3d\\3 - Com suporte\\04 - Random');
+    const [baseFolder, setBaseFolder] = useState('D:\\rcssp\\Downloads\\3d\\3 - Com suporte');
     const [loadingScan, setLoadingScan] = useState(false);
     const [loadingAnalyze, setLoadingAnalyze] = useState(false);
     const [loadingExecute, setLoadingExecute] = useState(false);
@@ -79,14 +84,17 @@ export default function AutomationPage() {
     // Terminal de logs
     const [logs, setLogs] = useState<string[]>([]);
     const [runningScript, setRunningScript] = useState<string | null>(null);
-    const terminalEndRef = useRef<HTMLDivElement>(null);
+    const terminalContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         fetchOrganizedArchives();
     }, []);
 
     useEffect(() => {
-        terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        // Rola apenas dentro da caixinha do terminal, sem rolar a janela principal do usuário
+        if (terminalContainerRef.current) {
+            terminalContainerRef.current.scrollTop = terminalContainerRef.current.scrollHeight;
+        }
     }, [logs]);
 
     const addLog = (msg: string) => {
@@ -257,6 +265,14 @@ export default function AutomationPage() {
         setAnalyzedItems(prev => prev.map((item, i) => i === idx ? { ...item, selected: !item.selected } : item));
     };
 
+    const updateProposedName = (idx: number, newName: string) => {
+        setAnalyzedItems(prev => prev.map((item, i) => i === idx ? { ...item, proposedName: newName } : item));
+    };
+
+    const updateTargetFolder = (idx: number, newFolder: string) => {
+        setAnalyzedItems(prev => prev.map((item, i) => i === idx ? { ...item, targetFolder: newFolder } : item));
+    };
+
     const uniqueCategories = Array.from(new Set(organizedArchives.map(a => a.category))).filter(Boolean);
     const readyCoversCount = organizedArchives.filter(a => a.hasWebpCover).length;
     const pendingCoversCount = organizedArchives.length - readyCoversCount;
@@ -405,34 +421,75 @@ export default function AutomationPage() {
                             </button>
                         </div>
 
-                        <div className="space-y-1.5 max-h-56 overflow-y-auto p-1 custom-scrollbar">
+                        <div className="space-y-2 max-h-80 overflow-y-auto p-1 custom-scrollbar">
                             {analyzedItems.map((item, idx) => (
                                 <div 
                                     key={idx} 
-                                    onClick={() => toggleSelect(idx)}
-                                    className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 text-xs ${
+                                    className={`p-3 rounded-xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs ${
                                         item.selected 
                                             ? 'bg-orange-500/10 border-orange-500/40 text-white' 
-                                            : 'bg-zinc-900/20 border-zinc-800/50 text-zinc-500 opacity-50'
+                                            : 'bg-zinc-900/20 border-zinc-800/50 text-zinc-500 opacity-60'
                                     }`}
                                 >
-                                    <div className="flex items-center gap-2.5 min-w-0 flex-1 font-mono">
+                                    {/* Arquivo Original + Checkbox */}
+                                    <div 
+                                        onClick={() => toggleSelect(idx)}
+                                        className="flex items-center gap-2.5 min-w-0 md:w-1/3 cursor-pointer select-none group"
+                                        title="Clique para selecionar / desmarcar"
+                                    >
                                         <input 
                                             type="checkbox" 
                                             checked={item.selected} 
-                                            onChange={() => {}} 
-                                            className="rounded text-orange-500 focus:ring-orange-500 border-zinc-700 bg-zinc-900 shrink-0"
+                                            onChange={() => toggleSelect(idx)}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="rounded text-orange-500 focus:ring-orange-500 border-zinc-700 bg-zinc-900 shrink-0 cursor-pointer"
                                         />
-                                        <span className="text-zinc-400 truncate">{item.originalFile}</span>
-                                        <ArrowRight className="w-3 h-3 text-orange-400 shrink-0" />
-                                        <span className="font-bold text-orange-300 truncate">{item.proposedName}</span>
-                                        <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-400 shrink-0">
-                                            ➔ {item.targetFolder}
+                                        <span className="text-zinc-400 font-mono text-[11px] truncate group-hover:text-zinc-200 transition-colors" title={item.originalFile}>
+                                            {item.originalFile}
                                         </span>
                                     </div>
-                                    <span className="text-[10px] font-bold text-orange-400 shrink-0">
-                                        {Math.round(item.confidence * 100)}%
-                                    </span>
+
+                                    {/* Seta + Nome Proposto Editável */}
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                        <ArrowRight className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+                                        <div className="relative flex-1 group">
+                                            <input
+                                                type="text"
+                                                value={item.proposedName}
+                                                onChange={(e) => updateProposedName(idx, e.target.value)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                placeholder="Nome final (ex: Categoria - Franquia - Personagem.zip)"
+                                                className="w-full bg-zinc-950/90 border border-orange-500/30 hover:border-orange-500/60 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 rounded-lg pl-8 pr-3 py-1.5 font-mono text-xs text-orange-300 font-bold transition-all outline-none"
+                                                title="Edite o nome final do arquivo antes de aplicar a renomeação"
+                                            />
+                                            <Pencil className="w-3 h-3 text-orange-400/60 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none group-hover:text-orange-400 transition-colors" />
+                                        </div>
+                                    </div>
+
+                                    {/* Pasta de Destino + Confiança */}
+                                    <div className="flex items-center gap-2 shrink-0 justify-end">
+                                        {categoryFolders && categoryFolders.length > 0 ? (
+                                            <select
+                                                value={item.targetFolder}
+                                                onChange={(e) => updateTargetFolder(idx, e.target.value)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 focus:border-orange-500 text-[11px] font-mono text-zinc-300 rounded-lg px-2.5 py-1.5 outline-none transition-colors cursor-pointer"
+                                                title="Pasta de destino onde o arquivo será movido"
+                                            >
+                                                {categoryFolders.map(cf => (
+                                                    <option key={cf} value={cf}>➔ {cf}</option>
+                                                ))}
+                                            </select>
+                                        ) : (
+                                            <span className="px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-[10px] font-mono text-zinc-400">
+                                                ➔ {item.targetFolder}
+                                            </span>
+                                        )}
+
+                                        <span className="text-[10px] font-bold text-orange-400 shrink-0 px-1.5 py-0.5 rounded bg-orange-500/10">
+                                            {Math.round(item.confidence * 100)}%
+                                        </span>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -612,50 +669,157 @@ export default function AutomationPage() {
                 )}
             </div>
 
-            {/* SEÇÃO 3: AÇÕES DA ESTEIRA (SCRIPTS) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
-                {/* Script 1: Otimizar Imagens & Ícones */}
-                <div className="p-5 rounded-2xl bg-zinc-950/60 border border-zinc-900 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                        <div className="flex items-center gap-2 text-sm font-bold text-white">
-                            <Wand2 className="w-4 h-4 text-emerald-400" />
-                            Otimizar WebP & Ícones
-                        </div>
-                        <p className="text-xs text-zinc-500 truncate mt-1">
-                            Gera WebP e .ico de pasta para o Windows Explorer (Script.ps1)
+            {/* SEÇÃO 3: SCRIPTS E SINCRONIZAÇÃO (lojinha3d.bat & .py individuais) */}
+            <div className="space-y-4 relative z-10">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-zinc-900">
+                    <div>
+                        <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                            <Rocket className="w-4 h-4 text-orange-500" />
+                            Ações da Esteira & Nuvem (Scripts Python)
+                        </h2>
+                        <p className="text-xs text-zinc-500">
+                            Execute cada etapa individualmente ou rode o pipeline completo (lojinha3d.bat).
                         </p>
                     </div>
 
+                    {/* Botão de Pipeline Completo */}
                     <button
-                        onClick={() => handleRunScript('powershell_imagens', 'Script.ps1 - Passo 2')}
+                        onClick={() => handleRunScript('lojinha3d', 'Pipeline Completo (lojinha3d.bat)')}
                         disabled={runningScript !== null}
-                        className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-wider text-xs flex items-center gap-1.5 transition-all shrink-0 shadow-md shadow-emerald-600/20 disabled:opacity-50"
+                        className="py-2.5 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-black uppercase tracking-wider text-xs flex items-center gap-2 transition-all shrink-0 shadow-lg shadow-orange-500/20 disabled:opacity-50"
                     >
-                        <Play className={`w-3.5 h-3.5 ${runningScript === 'powershell_imagens' ? 'animate-spin' : ''}`} />
-                        {runningScript === 'powershell_imagens' ? 'Rodando...' : 'Executar'}
+                        <Play className={`w-3.5 h-3.5 ${runningScript === 'lojinha3d' ? 'animate-spin' : ''}`} />
+                        {runningScript === 'lojinha3d' ? 'Executando Pipeline...' : 'Executar Todos (lojinha3d.bat)'}
                     </button>
                 </div>
 
-                {/* Script 2: Publicar Nuvem */}
-                <div className="p-5 rounded-2xl bg-zinc-950/60 border border-zinc-900 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                        <div className="flex items-center gap-2 text-sm font-bold text-white">
-                            <UploadCloud className="w-4 h-4 text-orange-500" />
-                            Publicar na Nuvem & Sync
+                {/* Grade dos 6 passos ordenados rigorosamente de 1 a 6 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Passo 1: Criar Pastas */}
+                    <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-900 flex items-center justify-between gap-3 hover:border-zinc-800 transition-colors">
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2 text-xs font-bold text-white">
+                                <FolderSearch className="w-4 h-4 text-amber-500" />
+                                1. Criar Pastas (Script.ps1 - Passo 1)
+                            </div>
+                            <p className="text-[11px] text-zinc-500 truncate mt-0.5">
+                                Cria uma pasta para cada RAR/ZIP solto e move para dentro
+                            </p>
                         </div>
-                        <p className="text-xs text-zinc-500 truncate mt-1">
-                            Upload CDN ImageKit e sincronização Supabase (lojinha3d.bat)
-                        </p>
+                        <button
+                            onClick={() => handleRunScript('powershell_organizar', '1. Criar Pastas (Script.ps1)')}
+                            disabled={runningScript !== null}
+                            className="py-2 px-3 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 disabled:opacity-50"
+                        >
+                            <Play className={`w-3 h-3 ${runningScript === 'powershell_organizar' ? 'animate-spin' : ''}`} />
+                            {runningScript === 'powershell_organizar' ? 'Rodando...' : 'Rodar'}
+                        </button>
                     </div>
 
-                    <button
-                        onClick={() => handleRunScript('lojinha3d', 'lojinha3d.bat')}
-                        disabled={runningScript !== null}
-                        className="py-2.5 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-black uppercase tracking-wider text-xs flex items-center gap-1.5 transition-all shrink-0 shadow-md shadow-orange-500/20 disabled:opacity-50"
-                    >
-                        <Play className={`w-3.5 h-3.5 ${runningScript === 'lojinha3d' ? 'animate-spin' : ''}`} />
-                        {runningScript === 'lojinha3d' ? 'Rodando...' : 'Sincronizar'}
-                    </button>
+                    {/* Passo 2: WebP e GSheets */}
+                    <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-900 flex items-center justify-between gap-3 hover:border-zinc-800 transition-colors">
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2 text-xs font-bold text-white">
+                                <Wand2 className="w-4 h-4 text-violet-400" />
+                                2. WebP e GSheets (Script.ps1 - Passo 2)
+                            </div>
+                            <p className="text-[11px] text-zinc-500 truncate mt-0.5">
+                                Otimiza para WebP, gera ícones do Windows e atualiza a Planilha
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => handleRunScript('powershell_imagens', '2. WebP e GSheets (Script.ps1)')}
+                            disabled={runningScript !== null}
+                            className="py-2 px-3 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 disabled:opacity-50"
+                        >
+                            <Play className={`w-3 h-3 ${runningScript === 'powershell_imagens' ? 'animate-spin' : ''}`} />
+                            {runningScript === 'powershell_imagens' ? 'Rodando...' : 'Rodar'}
+                        </button>
+                    </div>
+
+                    {/* Passo 3: Upload de Imagens */}
+                    <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-900 flex items-center justify-between gap-3 hover:border-zinc-800 transition-colors">
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2 text-xs font-bold text-white">
+                                <UploadCloud className="w-4 h-4 text-cyan-400" />
+                                3. Upload de Imagens (upload.py)
+                            </div>
+                            <p className="text-[11px] text-zinc-500 truncate mt-0.5">
+                                Envia fotos para o Cloudflare R2 / ImageKit e preenche coluna Imagem no Sheets
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => handleRunScript('upload', '3. Upload de Imagens (upload.py)')}
+                            disabled={runningScript !== null}
+                            className="py-2 px-3 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 disabled:opacity-50"
+                        >
+                            <Play className={`w-3 h-3 ${runningScript === 'upload' ? 'animate-spin' : ''}`} />
+                            {runningScript === 'upload' ? 'Rodando...' : 'Rodar'}
+                        </button>
+                    </div>
+
+                    {/* Passo 4: Planilha ➔ Supabase */}
+                    <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-900 flex items-center justify-between gap-3 hover:border-zinc-800 transition-colors">
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2 text-xs font-bold text-white">
+                                <Database className="w-4 h-4 text-emerald-400" />
+                                4. Planilha ➔ Supabase (importar.py)
+                            </div>
+                            <p className="text-[11px] text-zinc-500 truncate mt-0.5">
+                                Lê todas as abas da Planilha e sincroniza no banco Supabase
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => handleRunScript('importar', '4. Planilha ➔ Supabase (importar.py)')}
+                            disabled={runningScript !== null}
+                            className="py-2 px-3 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 disabled:opacity-50"
+                        >
+                            <Play className={`w-3 h-3 ${runningScript === 'importar' ? 'animate-spin' : ''}`} />
+                            {runningScript === 'importar' ? 'Rodando...' : 'Rodar'}
+                        </button>
+                    </div>
+
+                    {/* Passo 5: Supabase ➔ Planilha */}
+                    <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-900 flex items-center justify-between gap-3 hover:border-zinc-800 transition-colors">
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2 text-xs font-bold text-white">
+                                <FileSpreadsheet className="w-4 h-4 text-blue-400" />
+                                5. Supabase ➔ Planilha (atualizar.py)
+                            </div>
+                            <p className="text-[11px] text-zinc-500 truncate mt-0.5">
+                                Atualiza IDs do Supabase de volta na coluna ID do Google Sheets
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => handleRunScript('atualizar', '5. Supabase ➔ Planilha (atualizar.py)')}
+                            disabled={runningScript !== null}
+                            className="py-2 px-3 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 disabled:opacity-50"
+                        >
+                            <Play className={`w-3 h-3 ${runningScript === 'atualizar' ? 'animate-spin' : ''}`} />
+                            {runningScript === 'atualizar' ? 'Rodando...' : 'Rodar'}
+                        </button>
+                    </div>
+
+                    {/* Passo 6: Sinônimos IA */}
+                    <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-900 flex items-center justify-between gap-3 hover:border-zinc-800 transition-colors">
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2 text-xs font-bold text-white">
+                                <Brain className="w-4 h-4 text-purple-400" />
+                                6. Sinônimos IA (gen_sinonimos.py)
+                            </div>
+                            <p className="text-[11px] text-zinc-500 truncate mt-0.5">
+                                Gera sinônimos e palavras-chave de busca com IA no Supabase
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => handleRunScript('gen_sinonimos', '6. Sinônimos IA (gen_sinonimos.py)')}
+                            disabled={runningScript !== null}
+                            className="py-2 px-3 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 disabled:opacity-50"
+                        >
+                            <Play className={`w-3 h-3 ${runningScript === 'gen_sinonimos' ? 'animate-spin' : ''}`} />
+                            {runningScript === 'gen_sinonimos' ? 'Rodando...' : 'Rodar'}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -696,7 +860,10 @@ export default function AutomationPage() {
                     </div>
                 </div>
 
-                <div className="h-44 overflow-y-auto font-mono text-[11px] text-zinc-300 space-y-1 custom-scrollbar pr-1 select-text bg-black/40 rounded-xl p-3 border border-zinc-900">
+                <div 
+                    ref={terminalContainerRef}
+                    className="h-96 md:h-[420px] overflow-y-auto font-mono text-[11px] text-zinc-300 space-y-1 custom-scrollbar pr-1 select-text bg-black/40 rounded-xl p-4 border border-zinc-900"
+                >
                     {logs.length === 0 ? (
                         <div className="h-full flex items-center justify-center text-zinc-600 text-xs italic">
                             Aguardando comandos da esteira...
@@ -708,7 +875,6 @@ export default function AutomationPage() {
                             </div>
                         ))
                     )}
-                    <div ref={terminalEndRef} />
                 </div>
             </div>
         </div>

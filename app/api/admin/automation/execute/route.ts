@@ -47,15 +47,27 @@ export async function POST(req: NextRequest) {
                 continue;
             }
 
-            let destFolder = baseFolder;
-            if (item.moveToCategory && item.targetFolder) {
-                destFolder = path.join(baseFolder, item.targetFolder);
-                if (!fs.existsSync(destFolder)) {
-                    fs.mkdirSync(destFolder, { recursive: true });
-                }
+            const ext = path.extname(item.originalName);
+            let finalCleanName = item.newName.trim();
+            if (ext && !finalCleanName.toLowerCase().endsWith(ext.toLowerCase())) {
+                finalCleanName += ext;
             }
 
-            const targetPath = path.join(destFolder, item.newName);
+            // Nome da figura (sem extensão) para criar a pasta da figura
+            const figureFolderName = path.parse(finalCleanName).name;
+
+            let destCategoryFolder = baseFolder;
+            if (item.moveToCategory && item.targetFolder) {
+                destCategoryFolder = path.join(baseFolder, item.targetFolder);
+            }
+
+            // Pasta dedicada da figura: Categoria / Nome_da_Figura
+            const destFolder = path.join(destCategoryFolder, figureFolderName);
+            if (!fs.existsSync(destFolder)) {
+                fs.mkdirSync(destFolder, { recursive: true });
+            }
+
+            const targetPath = path.join(destFolder, finalCleanName);
 
             // Proteção contra sobrescrita acidental
             if (fs.existsSync(targetPath) && targetPath.toLowerCase() !== sourcePath.toLowerCase()) {

@@ -3,12 +3,13 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { toast } from 'sonner';
-import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, Upload, ZoomIn, ZoomOut, RotateCcw, Maximize2, Boxes, Package } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, Upload, ZoomIn, ZoomOut, RotateCcw, Maximize2, Boxes, Package, Box } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import ThemeToggle from '@/components/common/ThemeToggle';
 import Tooltip from '@/components/ui/Tooltip';
 import BundleManagerTab from '@/components/Admin/BundleManagerTab';
+import { GooMetadataModal } from '@/components/Admin/GooMetadataModal';
 
 interface Figure {
     id: number;
@@ -55,7 +56,8 @@ interface PricingSettings {
 
 const FigureCard = ({
     f, prices, canEdit, savingId, deletingId, hasRole,
-    handleChange, handleSave, handleDelete, handleDownloadImage, setPreviewImage, setPhotoManagerFigure
+    handleChange, handleSave, handleDelete, handleDownloadImage, setPreviewImage, setPhotoManagerFigure,
+    setGooModalFigure
 }: any) => {
     const [expanded, setExpanded] = useState(false);
 
@@ -169,6 +171,15 @@ const FigureCard = ({
                             {deletingId === f.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                         </button>
                     )}
+                    <button
+                        type="button"
+                        onClick={() => setGooModalFigure && setGooModalFigure(f)}
+                        className="p-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-md transition-all border border-amber-500/20 shadow-sm active:scale-95 flex items-center gap-1.5"
+                        title="Importar Metadados 3D (.goo)"
+                    >
+                        <Box size={14} />
+                        <span className="text-[10px] font-black">.goo</span>
+                    </button>
                 </div>
 
                 <button
@@ -218,7 +229,18 @@ const FigureCard = ({
 
                         {/* KG Resina */}
                         <div className="flex flex-col gap-1">
-                            <label className="text-[10px] uppercase font-bold text-[var(--text-muted)]">KG Resina</label>
+                            <div className="flex items-center justify-between">
+                                <label className="text-[10px] uppercase font-bold text-[var(--text-muted)]">KG Resina</label>
+                                <button
+                                    type="button"
+                                    onClick={() => setGooModalFigure && setGooModalFigure(f)}
+                                    className="text-[9px] font-bold text-amber-400 hover:text-amber-300 flex items-center gap-0.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 px-1 py-0.2 rounded transition-all cursor-pointer"
+                                    title="Calcular automaticamente via arquivo .goo fatiado"
+                                >
+                                    <Box size={9} />
+                                    <span>.goo</span>
+                                </button>
+                            </div>
                             <div className="relative flex items-center">
                                 <input
                                     type="number" step="0.001"
@@ -1059,6 +1081,7 @@ function DataGridContent() {
 
     const [previewImage, setPreviewImage] = useState<{ url: string, nome: string } | null>(null);
     const [photoManagerFigure, setPhotoManagerFigure] = useState<Figure | null>(null);
+    const [gooModalFigure, setGooModalFigure] = useState<Figure | null>(null);
 
     // Fetch settings & studios on mount
     useEffect(() => {
@@ -1260,6 +1283,55 @@ function DataGridContent() {
             toast.error('Erro ao salvar');
         } finally {
             setSavingId(null);
+        }
+    };
+
+    const handleApplyGoo = async (resinaKg: number, horasImpressao: number) => {
+        if (!gooModalFigure) return;
+        const figId = gooModalFigure.id;
+
+        // Atualiza pendingChanges
+        setPendingChanges(prev => ({
+            ...prev,
+            [figId]: {
+                ...prev[figId],
+                resina_kg: resinaKg.toString(),
+                horas_impressao: horasImpressao.toString()
+            }
+        }));
+
+        // Atualiza estado local da lista
+        setFigures(prev => prev.map(f => f.id === figId ? {
+            ...f,
+            resina_kg: resinaKg,
+            horas_impressao: horasImpressao
+        } : f));
+
+        // Persiste automaticamente no backend
+        try {
+            const res = await fetch('/api/admin/figures', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: figId,
+                    resina_kg: resinaKg,
+                    horas_impressao: horasImpressao
+                })
+            });
+            if (!res.ok) throw new Error('Erro ao salvar no banco');
+            toast.success(`Metadados .goo salvos: ${resinaKg.toFixed(3)}kg | ${horasImpressao}h`);
+            // Limpa de pendingChanges pois já foi persistido
+            setPendingChanges(prev => {
+                const next = { ...prev };
+                if (next[figId]) {
+                    delete next[figId].resina_kg;
+                    delete next[figId].horas_impressao;
+                    if (Object.keys(next[figId]).length === 0) delete next[figId];
+                }
+                return next;
+            });
+        } catch (e: any) {
+            toast.error('Salvo localmente, mas falhou ao sincronizar: ' + e.message);
         }
     };
 
@@ -1619,6 +1691,7 @@ function DataGridContent() {
                                     handleDownloadImage={handleDownloadImage}
                                     setPreviewImage={setPreviewImage}
                                     setPhotoManagerFigure={setPhotoManagerFigure}
+                                    setGooModalFigure={setGooModalFigure}
                                 />
                             );
                         })}
@@ -1682,6 +1755,22 @@ function DataGridContent() {
                     onClose={() => setPhotoManagerFigure(null)}
                     onSaved={(updated) => {
                         setFigures(prev => prev.map(f => f.id === photoManagerFigure.id ? { ...f, ...updated } : f));
+                    }}
+                />
+            )}
+
+            {/* Goo Metadata Slicer Extractor Modal */}
+            {gooModalFigure && (
+                <GooMetadataModal
+                    isOpen={!!gooModalFigure}
+                    figureName={gooModalFigure.nome}
+                    figureId={gooModalFigure.id}
+                    currentResinaKg={gooModalFigure.resina_kg}
+                    currentHorasImpressao={gooModalFigure.horas_impressao}
+                    onClose={() => setGooModalFigure(null)}
+                    onApply={async (resinaKg, horasImpressao) => {
+                        await handleApplyGoo(resinaKg, horasImpressao);
+                        setGooModalFigure(null);
                     }}
                 />
             )}

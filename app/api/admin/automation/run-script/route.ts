@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
         cwd = manualDir;
     } else if (scriptType === 'lojinha3d') {
         command = 'cmd.exe';
-        args = ['/c', 'lojinha3d.bat'];
+        args = ['/c', 'lojinha3d.bat', '--nopause'];
         cwd = manualDir;
     } else if (scriptType === 'importar') {
         command = 'python';
@@ -42,9 +42,21 @@ export async function POST(req: NextRequest) {
         command = 'python';
         args = ['upload.py'];
         cwd = scriptsDir;
+    } else if (scriptType === 'importar') {
+        command = 'python';
+        args = ['importar.py'];
+        cwd = scriptsDir;
+    } else if (scriptType === 'atualizar') {
+        command = 'python';
+        args = ['atualizar.py'];
+        cwd = scriptsDir;
     } else if (scriptType === 'gen_sinonimos') {
         command = 'python';
         args = ['gen_sinonimos.py'];
+        cwd = scriptsDir;
+    } else if (scriptType === 'validar') {
+        command = 'python';
+        args = ['validar.py'];
         cwd = scriptsDir;
     } else {
         return new Response(JSON.stringify({ error: 'Tipo de script inválido.' }), { status: 400 });
@@ -58,7 +70,7 @@ export async function POST(req: NextRequest) {
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
             };
 
-            sendEvent({ type: 'start', message: `🚀 Iniciando execução: ${command} ${args.join(' ')}` });
+            sendEvent({ type: 'start', text: `🚀 Iniciando execução: ${command} ${args.join(' ')}`, message: `🚀 Iniciando execução: ${command} ${args.join(' ')}` });
 
             const child = spawn(command, args, {
                 cwd,
@@ -66,23 +78,28 @@ export async function POST(req: NextRequest) {
                 env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUNBUFFERED: '1' }
             });
 
+            // Fecha stdin para não travar em comandos interativos
+            if (child.stdin) {
+                child.stdin.end();
+            }
+
             child.stdout.on('data', (chunk) => {
                 const text = chunk.toString('utf-8');
-                sendEvent({ type: 'stdout', message: text });
+                sendEvent({ type: 'stdout', text, message: text });
             });
 
             child.stderr.on('data', (chunk) => {
                 const text = chunk.toString('utf-8');
-                sendEvent({ type: 'stderr', message: text });
+                sendEvent({ type: 'stderr', text, message: text });
             });
 
             child.on('close', (code) => {
-                sendEvent({ type: 'end', code, message: `🏁 Processo encerrado com código ${code}.` });
+                sendEvent({ type: 'end', done: true, code, text: `🏁 Processo encerrado com código ${code}.`, message: `🏁 Processo encerrado com código ${code}.` });
                 controller.close();
             });
 
             child.on('error', (err) => {
-                sendEvent({ type: 'error', message: `❌ Erro ao iniciar processo: ${err.message}` });
+                sendEvent({ type: 'error', done: true, code: 1, text: `❌ Erro ao iniciar processo: ${err.message}`, message: `❌ Erro ao iniciar processo: ${err.message}` });
                 controller.close();
             });
         }
