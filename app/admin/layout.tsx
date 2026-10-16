@@ -23,6 +23,7 @@ const routeRoles: Record<string, string[]> = {
     '/admin/patreon/repository': ['admin', 'franga_studio'],
     '/admin/users': ['admin'],
     '/admin/coupons': ['admin', 'sales', 'pricing', 'orcamento'],
+    '/admin/automation': ['admin'],
     '/admin/settings': ['admin']
 };
 

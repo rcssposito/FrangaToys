@@ -25,7 +25,8 @@ import {
     TrendingUp,
     Flame,
     Tag,
-    FolderGit2
+    FolderGit2,
+    Cpu
 } from 'lucide-react';
 import ThemeToggle from '@/components/common/ThemeToggle';
 
@@ -87,6 +88,12 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             href: '/admin/franga-studio',
             icon: FolderGit2,
             roles: ['admin', 'franga_studio']
+        },
+        {
+            name: 'Automações & IA',
+            href: '/admin/automation',
+            icon: Cpu,
+            roles: ['admin']
         },
         {
             name: 'Configurações',
