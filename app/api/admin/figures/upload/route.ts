@@ -24,9 +24,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Arquivo e nome da figura são obrigatórios' }, { status: 400 });
         }
 
-        // 1. Padronizar nome canônico sempre com extensão .webp
+        // 1. Extrair extensão e tipo de mídia do arquivo original
+        const originalName = file.name || '';
+        const extMatch = originalName.match(/\.([a-zA-Z0-9]+)$/);
+        let ext = extMatch ? `.${extMatch[1].toLowerCase()}` : '';
+        if (!ext) {
+            if (file.type === 'image/png') ext = '.png';
+            else if (file.type === 'image/jpeg' || file.type === 'image/jpg') ext = '.jpg';
+            else ext = '.webp';
+        }
+
         const baseClean = toCleanFileName(figureName);
-        const targetFileName = `${baseClean}_${index}.webp`;
+        const targetFileName = `${baseClean}_${index}${ext}`;
 
         // 2. Pasta de destino padronizada por categoria
         const rawCategory = categoria.trim().toLowerCase();
@@ -37,11 +46,13 @@ export async function POST(req: NextRequest) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
+        const contentType = file.type || (ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg');
+
         const result = await uploadFile({
             buffer,
             folder,
             fileName: targetFileName,
-            contentType: 'image/webp',
+            contentType,
         });
 
         return NextResponse.json({
