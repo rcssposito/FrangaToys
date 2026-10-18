@@ -58,43 +58,69 @@ export async function GET(req: NextRequest) {
             });
         } else if (ext === '.zip' || ext === '.7z') {
             try {
-                const zip = new AdmZip(archivePath);
-                const entries = zip.getEntries();
+                // Usa tar nativo do Windows para listar conteúdo por streaming
+                // Isso evita o erro de Buffer do Node.js ao abrir ZIPs maiores que 2 GiB
+                const output = execSync(`tar -tf "${archivePath}"`, {
+                    encoding: 'utf-8',
+                    maxBuffer: 25 * 1024 * 1024
+                });
 
-                for (const entry of entries) {
-                    if (entry.isDirectory) continue;
-                    const name = entry.entryName;
+                const lines = output.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+                for (const line of lines) {
+                    const normalized = line.replace(/\\/g, '/');
+                    if (normalized.endsWith('/')) continue; // diretório
 
                     // 1. Fotos diretas
-                    if (isValidImageEntry(name, entry.header.size)) {
-                        rawEntries.push({ innerPath: name, fileName: path.basename(name) });
+                    if (isValidImageEntry(normalized)) {
+                        rawEntries.push({ innerPath: normalized, fileName: path.basename(normalized) });
                     }
                     // 2. Sub-compactados aninhados
-                    else if (/\.(zip)$/i.test(name) && !name.includes('__MACOSX') && !path.basename(name).startsWith('._')) {
-                        const isLikelyRenders = /render|image|foto|pic|preview|art/i.test(name) || entry.header.size < 60 * 1024 * 1024;
+                    else if (/\.(zip)$/i.test(normalized) && !normalized.includes('__MACOSX') && !path.basename(normalized).startsWith('._')) {
+                        const isLikelyRenders = /render|image|foto|pic|preview|art/i.test(normalized);
                         if (isLikelyRenders) {
                             try {
-                                const subBuffer = entry.getData();
+                                const subBuffer = execSync(`tar -xf "${archivePath}" -O "${line}"`, {
+                                    maxBuffer: 60 * 1024 * 1024
+                                });
                                 const subZip = new AdmZip(subBuffer);
                                 const subEntries = subZip.getEntries();
                                 for (const sub of subEntries) {
                                     if (sub.isDirectory) continue;
                                     if (isValidImageEntry(sub.entryName, sub.header.size)) {
                                         rawEntries.push({
-                                            innerPath: `${name}::${sub.entryName}`,
+                                            innerPath: `${normalized}::${sub.entryName}`,
                                             fileName: path.basename(sub.entryName)
                                         });
                                     }
                                 }
                             } catch (subErr) {
-                                console.warn('Erro ao abrir sub-zip:', name, subErr);
+                                console.warn('Erro ao abrir sub-zip:', line, subErr);
                             }
                         }
                     }
                 }
             } catch (zipErr: any) {
-                console.error('Erro AdmZip:', zipErr);
-                return NextResponse.json({ error: 'Erro ao ler arquivo ZIP: ' + zipErr.message }, { status: 500 });
+                console.error('Erro ao inspecionar ZIP com tar:', zipErr);
+                // Fallback para AdmZip se o arquivo for menor que 2GB
+                try {
+                    const stats = fs.statSync(archivePath);
+                    if (stats.size < 2 * 1024 * 1024 * 1024) {
+                        const zip = new AdmZip(archivePath);
+                        const entries = zip.getEntries();
+                        for (const entry of entries) {
+                            if (entry.isDirectory) continue;
+                            const name = entry.entryName;
+                            if (isValidImageEntry(name, entry.header.size)) {
+                                rawEntries.push({ innerPath: name, fileName: path.basename(name) });
+                            }
+                        }
+                    } else {
+                        return NextResponse.json({ error: 'Erro ao ler arquivo ZIP: ' + zipErr.message }, { status: 500 });
+                    }
+                } catch {
+                    return NextResponse.json({ error: 'Erro ao ler arquivo ZIP: ' + zipErr.message }, { status: 500 });
+                }
             }
         } else {
             return NextResponse.json({ error: 'Formato não suportado. Use .rar ou .zip' }, { status: 400 });

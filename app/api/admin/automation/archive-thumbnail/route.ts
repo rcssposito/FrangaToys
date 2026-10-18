@@ -28,12 +28,21 @@ export async function GET(req: NextRequest) {
         // Caso 1: Imagem dentro de ZIP aninhado (sub.zip::foto.jpg)
         if (innerPath.includes('::')) {
             const [nestedArchiveName, targetImageName] = innerPath.split('::');
-            const mainZip = new AdmZip(archivePath);
-            const nestedEntry = mainZip.getEntry(nestedArchiveName);
-            if (!nestedEntry) {
-                return new Response('Sub-compactado não encontrado.', { status: 404 });
+            let nestedBuffer: Buffer;
+
+            if (ext === '.rar') {
+                if (!fs.existsSync(UNRAR_PATH)) {
+                    return new Response('UnRAR.exe não encontrado.', { status: 500 });
+                }
+                nestedBuffer = execSync(`"${UNRAR_PATH}" p -inul "${archivePath}" "${nestedArchiveName}"`, {
+                    maxBuffer: 60 * 1024 * 1024
+                });
+            } else {
+                nestedBuffer = execSync(`tar -xf "${archivePath}" -O "${nestedArchiveName}"`, {
+                    maxBuffer: 60 * 1024 * 1024
+                });
             }
-            const nestedBuffer = nestedEntry.getData();
+
             const nestedZip = new AdmZip(nestedBuffer);
             const imgEntry = nestedZip.getEntry(targetImageName);
             if (!imgEntry) {
@@ -52,12 +61,21 @@ export async function GET(req: NextRequest) {
         }
         // Caso 3: Arquivo ZIP direto
         else if (ext === '.zip' || ext === '.7z') {
-            const zip = new AdmZip(archivePath);
-            const entry = zip.getEntry(innerPath);
-            if (!entry) {
-                return new Response('Imagem não encontrada no ZIP.', { status: 404 });
+            try {
+                buffer = execSync(`tar -xf "${archivePath}" -O "${innerPath}"`, {
+                    maxBuffer: 20 * 1024 * 1024
+                });
+            } catch (tarErr) {
+                // Fallback para AdmZip se o arquivo for menor que 2GB
+                const stats = fs.statSync(archivePath);
+                if (stats.size < 2 * 1024 * 1024 * 1024) {
+                    const zip = new AdmZip(archivePath);
+                    const entry = zip.getEntry(innerPath);
+                    if (entry) buffer = entry.getData();
+                } else {
+                    throw tarErr;
+                }
             }
-            buffer = entry.getData();
         } else {
             return new Response('Formato não suportado.', { status: 400 });
         }

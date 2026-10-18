@@ -30,10 +30,19 @@ export async function POST(req: NextRequest) {
             // Se for imagem aninhada em sub-zip
             if (innerPath.includes('::')) {
                 const [nestedArchiveName, targetImageName] = innerPath.split('::');
-                const mainZip = new AdmZip(archivePath);
-                const nestedEntry = mainZip.getEntry(nestedArchiveName);
-                if (!nestedEntry) throw new Error('Sub-compactado não encontrado.');
-                const nestedZip = new AdmZip(nestedEntry.getData());
+                let nestedBuffer: Buffer;
+
+                if (ext === '.rar') {
+                    nestedBuffer = execSync(`"${UNRAR_PATH}" p -inul "${archivePath}" "${nestedArchiveName}"`, {
+                        maxBuffer: 60 * 1024 * 1024
+                    });
+                } else {
+                    nestedBuffer = execSync(`tar -xf "${archivePath}" -O "${nestedArchiveName}"`, {
+                        maxBuffer: 60 * 1024 * 1024
+                    });
+                }
+
+                const nestedZip = new AdmZip(nestedBuffer);
                 const imgEntry = nestedZip.getEntry(targetImageName);
                 if (!imgEntry) throw new Error('Imagem não encontrada no sub-compactado.');
                 fs.writeFileSync(destFile, imgEntry.getData());
@@ -50,10 +59,22 @@ export async function POST(req: NextRequest) {
             }
             // Se for ZIP direto
             else {
-                const zip = new AdmZip(archivePath);
-                const entry = zip.getEntry(innerPath);
-                if (!entry) throw new Error('Imagem não encontrada no ZIP.');
-                fs.writeFileSync(destFile, entry.getData());
+                try {
+                    const imgBuffer = execSync(`tar -xf "${archivePath}" -O "${innerPath}"`, {
+                        maxBuffer: 30 * 1024 * 1024
+                    });
+                    fs.writeFileSync(destFile, imgBuffer);
+                } catch (tarErr) {
+                    const stats = fs.statSync(archivePath);
+                    if (stats.size < 2 * 1024 * 1024 * 1024) {
+                        const zip = new AdmZip(archivePath);
+                        const entry = zip.getEntry(innerPath);
+                        if (!entry) throw new Error('Imagem não encontrada no ZIP.');
+                        fs.writeFileSync(destFile, entry.getData());
+                    } else {
+                        throw tarErr;
+                    }
+                }
             }
         };
 
