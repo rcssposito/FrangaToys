@@ -82,6 +82,10 @@ export async function GET(req: NextRequest) {
             query = query.is('disponivel', true);
         }
 
+        if (filters.temExtras === 'true' || searchParams.get('tem_extras') === 'true') {
+            query = query.is('tem_extras', true);
+        }
+
         // --- Price Range Filtering (Unified with storefront tiers) ---
         if (filters.priceRange) {
             let allMeta: any[] = [];

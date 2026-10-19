@@ -19,6 +19,7 @@ const fetchFiguras = async ({ pageParam = 0, queryKey }: any) => {
     if (filters.studioIds) params.set('studioIds', filters.studioIds);
     if (filters.incluirNaoVendaveis) params.set('incluirNaoVendaveis', filters.incluirNaoVendaveis);
     if (filters.novidades) params.set('novidades', filters.novidades);
+    if (filters.temExtras) params.set('temExtras', filters.temExtras);
     if (filters.sort) params.set('sort', filters.sort);
     if (filters.priceRange) params.set('priceRange', filters.priceRange);
     if (filters.sizeRange) params.set('sizeRange', filters.sizeRange);

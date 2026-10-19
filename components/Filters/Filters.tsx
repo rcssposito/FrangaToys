@@ -139,7 +139,7 @@ export const Filters = ({ filters, onChange, categories }: FiltersProps) => {
                     </div>
 
                     {/* Extra Options */}
-                    <div className="mb-6">
+                    <div className="mb-6 space-y-3">
                         <label className="flex items-center gap-2 select-none cursor-pointer">
                             <input
                                 type="checkbox"
@@ -148,6 +148,15 @@ export const Filters = ({ filters, onChange, categories }: FiltersProps) => {
                                 onChange={(e) => onChange({ ...filters, incluirNaoVendaveis: e.target.checked ? 'true' : 'false' })}
                             />
                             <span className="text-sm text-white">Exibir itens indisponíveis</span>
+                        </label>
+                        <label className="flex items-center gap-2 select-none cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="accent-orange-500 w-4 h-4"
+                                checked={filters.temExtras === 'true'}
+                                onChange={(e) => onChange({ ...filters, temExtras: e.target.checked ? 'true' : undefined })}
+                            />
+                            <span className="text-sm text-white">Apenas peças com extras (armas/cabeças)</span>
                         </label>
                     </div>
 

@@ -59,6 +59,7 @@ export const FiltersSchema = z.object({
   studioIds: z.string().optional(), // '1,2,3'
   incluirNaoVendaveis: z.string().optional(), // 'true' or 'false'
   novidades: z.string().optional(), // 'true' or 'false'
+  temExtras: z.string().optional(), // 'true' or 'false'
   limit: z.string().optional(),
   cursor: z.string().optional(),
   sort: z.string().optional(),

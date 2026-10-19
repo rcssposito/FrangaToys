@@ -100,6 +100,12 @@ export async function GET(req: NextRequest) {
 
         // 3. Sorting / Specific Filters
         const isSemPreco = searchParams.get('sem_preco') === 'true';
+        const isTemExtras = searchParams.get('tem_extras') === 'true';
+
+        if (isTemExtras) {
+            query = query.eq('tem_extras', true);
+        }
+
         if (isSemPreco) {
             // Sort by newest first to review recent additions
             query = query.order('id', { ascending: false });

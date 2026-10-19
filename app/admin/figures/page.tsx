@@ -1129,6 +1129,8 @@ function DataGridContent() {
             const params = new URLSearchParams();
             if (catId === 'sem_preco') {
                 params.append('sem_preco', 'true');
+            } else if (catId === 'tem_extras') {
+                params.append('tem_extras', 'true');
             } else if (catId !== null && catId !== undefined && catId !== '') {
                 params.append('categoria_id', catId.toString());
             }
@@ -1252,6 +1254,9 @@ function DataGridContent() {
                 };
                 setFigures(prev => {
                     if (selectedCategoryId === 'sem_preco' && Number(m.resina_kg) > 0) {
+                        return prev.filter(f => f.id !== figure.id);
+                    }
+                    if (selectedCategoryId === 'tem_extras' && !figure.tem_extras) {
                         return prev.filter(f => f.id !== figure.id);
                     }
                     return prev.map(f => f.id === figure.id ? { 
@@ -1418,6 +1423,8 @@ function DataGridContent() {
                         }
                         return Number(f.resina_kg) === 0 || !f.resina_kg;
                     });
+                } else if (selectedCategoryId === 'tem_extras') {
+                    updated = updated.filter(f => f.tem_extras);
                 }
                 return updated;
             });
@@ -1547,6 +1554,7 @@ function DataGridContent() {
 
     const CATEGORY_FILTERS = [
         { id: 'sem_preco', label: 'Falta Preço' },
+        { id: 'tem_extras', label: 'Tem Extra' },
         { id: 1, label: 'Anime' },
         { id: 2, label: 'Games' },
         { id: 3, label: 'Marvel' },
