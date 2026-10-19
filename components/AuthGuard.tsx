@@ -22,8 +22,11 @@ export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
     }
 
     if (!user) {
-        // Redirecionamento é tratado no usePermission (onAuthStateChange)
-        return null; 
+        return (
+            <div className="flex-1 min-h-screen flex items-center justify-center bg-[var(--background)]">
+                <Loader2 className="animate-spin text-orange-500 w-12 h-12" />
+            </div>
+        );
     }
 
     // Verifica se o usuário tem alguma das roles permitidas

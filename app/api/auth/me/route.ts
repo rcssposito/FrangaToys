@@ -21,7 +21,7 @@ export async function GET(req: Request) {
 
         if (dbError || !adminUser) {
             // User authenticated in Supabase but not in admin_users table
-            return NextResponse.json({ user: null }, { status: 403 });
+            return NextResponse.json({ user: null, error: 'unauthorized', email: user.email }, { status: 403 });
         }
 
         return NextResponse.json({

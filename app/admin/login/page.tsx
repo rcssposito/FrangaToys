@@ -22,8 +22,17 @@ function LoginContent() {
         if (error === 'unauthorized') {
             toast.error('Acesso Negado: Seu email não tem permissão de administrador.', {
                 duration: 5000,
-                // icon: <AlertCircle className="text-red-500" /> // Sonner icons are automatic or tricky with JSX sometimes, let's stick to text for stability or test.
                 description: 'Entre em contato com o suporte se acredita ser um erro.'
+            });
+        } else if (error === 'auth_callback_failed') {
+            toast.error('Falha na autenticação com o Google.', {
+                duration: 5000,
+                description: 'O código de login expirou ou não pôde ser validado. Tente novamente.'
+            });
+        } else if (error) {
+            toast.error('Erro de autenticação', {
+                duration: 5000,
+                description: decodeURIComponent(error)
             });
         }
     }, [searchParams]);

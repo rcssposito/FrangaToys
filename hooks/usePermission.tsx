@@ -31,11 +31,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (res.ok) {
                 const data = await res.json();
                 setUser(data.user);
+            } else if (res.status === 403) {
+                // Usuário autenticado pelo Google/Supabase, mas NÃO cadastrado no admin_users
+                await supabase.auth.signOut();
+                setUser(null);
+                router.push('/admin/login?error=unauthorized');
             } else {
                 setUser(null);
+                router.push('/admin/login');
             }
         } catch (error) {
             setUser(null);
+            router.push('/admin/login');
         } finally {
             setLoading(false);
         }
