@@ -3,8 +3,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { CartProvider } from '@/context/CartContext';
+import { WishlistProvider } from '@/context/WishlistContext';
 import { ThemeProvider } from 'next-themes';
 import { CartDrawer } from '@/components/Cart/CartDrawer';
+import { WishlistDrawer } from '@/components/Wishlist/WishlistDrawer';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
     const [queryClient] = useState(() => new QueryClient({
@@ -19,8 +21,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <QueryClientProvider client={queryClient}>
             <ThemeProvider attribute="data-theme" defaultTheme="dark" enableSystem={false}>
                 <CartProvider>
-                    {children}
-                    <CartDrawer />
+                    <WishlistProvider>
+                        {children}
+                        <CartDrawer />
+                        <WishlistDrawer />
+                    </WishlistProvider>
                 </CartProvider>
             </ThemeProvider>
         </QueryClientProvider>

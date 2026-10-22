@@ -60,6 +60,12 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             roles: ['admin', 'sales', 'pricing', 'orcamento']
         },
         {
+            name: 'Carrinhos Abandonados',
+            href: '/admin/abandoned-carts',
+            icon: PackageOpen,
+            roles: ['admin', 'sales', 'finance']
+        },
+        {
             name: 'Vendas & Acertos',
             href: '/admin/sales',
             icon: ShoppingCart,

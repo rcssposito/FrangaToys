@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Truck, Flame, Settings, Instagram, LibraryBig, Palette, Compass } from 'lucide-react';
 import ThemeToggle from '@/components/common/ThemeToggle';
 import { CartIndicator } from '@/components/Cart/CartIndicator';
+import { WishlistIndicator } from '@/components/Wishlist/WishlistIndicator';
 import { useCart } from '@/context/CartContext';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
@@ -41,10 +42,10 @@ export default function Header() {
               "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group whitespace-nowrap",
               pathname === '/rastreio' ? "text-orange-400" : "text-zinc-400 hover:text-orange-400"
             )}
-            title="Rastrear meu Pedido"
+            title="Área do Cliente"
           >
             <Truck size={16} className="group-hover:animate-bounce" />
-            <span className="hidden lg:inline">Rastrear</span>
+            <span className="hidden lg:inline">Área do Cliente</span>
           </Link>
 
           <div className="h-4 w-px bg-zinc-800/30 hidden md:block" />
@@ -116,8 +117,9 @@ export default function Header() {
 
           <div className="h-4 w-px bg-zinc-800/50" />
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <ThemeToggle />
+            <WishlistIndicator className="hover:bg-zinc-900/10 dark:hover:bg-zinc-800/50 p-2 rounded-lg" />
             <CartIndicator
               onClick={() => setIsCartOpen(true)}
               className="hover:bg-zinc-900/10 dark:hover:bg-zinc-800/50 px-3 py-2 rounded-lg"
@@ -135,9 +137,10 @@ export default function Header() {
 
       {/* Mobile Header (Brand Only) - Filters component handles the rest of the mobile bar */}
       <div className="flex sm:hidden items-center justify-between px-4 py-2 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--card-border)] sticky top-0 z-30">
-        <div className="flex-1 flex justify-start items-center gap-3">
+        <div className="flex-1 flex justify-start items-center gap-2">
+          <WishlistIndicator className="p-1" />
           <CartIndicator onClick={() => setIsCartOpen(true)} />
-          <Link href="/rastreio" className="p-1 text-orange-500" title="Rastrear Pedido">
+          <Link href="/rastreio" className="p-1 text-orange-500" title="Área do Cliente">
             <Truck size={20} />
           </Link>
           <Link href="/campanha" className="p-1 text-purple-500" title="Campanha Especial">

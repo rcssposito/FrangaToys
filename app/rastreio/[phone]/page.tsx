@@ -3,7 +3,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw, ShoppingBag, Copy, QrCode, Check, Camera, X, Eye, FileText, CheckCircle2, AlertCircle, Edit3, MapPin, ShieldCheck, Heart, Coffee, Sparkles, Paintbrush } from 'lucide-react';
+import { clsx } from 'clsx';
+import { 
+    ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw, 
+    ShoppingBag, Copy, QrCode, Check, Camera, X, Eye, FileText, CheckCircle2, 
+    AlertCircle, Edit3, MapPin, ShieldCheck, Heart, Coffee, Sparkles, Paintbrush,
+    ChevronDown, ChevronUp, Trash2, Share2, ArrowRight, Clock
+} from 'lucide-react';
 import { OrderTracker } from '@/components/OrderTracker';
 import Image from 'next/image';
 import imageKitLoader from '@/lib/image-loader';
@@ -11,6 +17,8 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { generatePixPayload } from '@/lib/pix';
 import { isValidCpfOrCnpj, isValidFullName, VALID_UFS_SET, BRAZILIAN_UFS } from '@/lib/fiscal-validation';
+import { useWishlist } from '@/context/WishlistContext';
+import { useCart } from '@/context/CartContext';
 
 function PixPaymentWidget({ order }: { order: any }) {
     const [copied, setCopied] = useState(false);
@@ -900,6 +908,26 @@ export default function CustomerDashboard() {
     const identifier = params?.phone as string; // Pode ser telefone ou token
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<'pedidos' | 'wishlist'>('pedidos');
+    const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
+    const [clientProfileName, setClientProfileName] = useState<string>('');
+
+    const { items: wishlistItems, removeFromWishlist, shareOnWhatsApp, syncWithPhone } = useWishlist();
+    const { addToCart, setIsCartOpen } = useCart();
+
+    const formatBRL = (val?: number) => {
+        if (!val) return 'R$ 0,00';
+        return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    const isOrderCompleted = (status: string) => ['Concluída', 'Concluído', 'Entregue'].includes(status);
+
+    const toggleOrderExpanded = (orderId: string | number) => {
+        setExpandedOrders(prev => ({
+            ...prev,
+            [orderId]: !prev[orderId]
+        }));
+    };
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -910,7 +938,30 @@ export default function CustomerDashboard() {
             
             const res = await fetch(`/api/public/orders?${queryParam}`);
             const data = await res.json();
-            setOrders(data.items || []);
+            const loadedOrders = data.items || [];
+            setOrders(loadedOrders);
+
+            // Se não tem pedidos em andamento, abre direto na aba de Favoritos!
+            if (loadedOrders.length === 0) {
+                setActiveTab('wishlist');
+            }
+
+            // Busca perfil do cliente para saudar pelo nome mesmo com 0 pedidos
+            const profileParam = isToken ? `token=${identifier}` : `phone=${identifier}`;
+            fetch(`/api/public/client/profile?${profileParam}`)
+                .then(r => r.json())
+                .then(d => {
+                    if (d.client?.nome) {
+                        setClientProfileName(d.client.nome);
+                    }
+                })
+                .catch(e => console.error('Perfil client error:', e));
+
+            // Sincroniza wishlist com o telefone do cliente se disponível
+            const phone = !isToken ? identifier : loadedOrders[0]?.cliente_contato;
+            if (phone) {
+                syncWithPhone(phone);
+            }
         } catch (err) {
             toast.error('Erro ao carregar seus pedidos');
         } finally {
@@ -921,6 +972,16 @@ export default function CustomerDashboard() {
     useEffect(() => {
         if (identifier) fetchOrders();
     }, [identifier]);
+
+    const activeOrders = useMemo(() => {
+        return orders.filter(o => !isOrderCompleted(o.status) && o.status !== 'Cancelada');
+    }, [orders]);
+
+    const completedOrders = useMemo(() => {
+        return orders.filter(o => isOrderCompleted(o.status) || o.status === 'Cancelada');
+    }, [orders]);
+
+    const clientName = clientProfileName || orders[0]?.cliente_nome || orders[0]?.nome_cliente || '';
 
     if (loading) {
         return (
@@ -939,7 +1000,7 @@ export default function CustomerDashboard() {
                 <div className="flex items-center justify-between">
                     <button 
                         onClick={() => router.push('/rastreio')}
-                        className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors text-xs font-black uppercase tracking-widest"
+                        className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors text-xs font-black uppercase tracking-widest cursor-pointer"
                     >
                         <ArrowLeft size={16} />
                         Sair / Voltar
@@ -948,128 +1009,480 @@ export default function CustomerDashboard() {
                          <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest bg-zinc-900 px-3 py-1 rounded-full border border-white/5">
                             ACESSO PROTEGIDO
                          </span>
-                         <button onClick={fetchOrders} className="p-2 text-zinc-500 hover:text-orange-500 transition-colors">
+                         <button onClick={fetchOrders} className="p-2 text-zinc-500 hover:text-orange-500 transition-colors cursor-pointer" title="Recarregar">
                             <RefreshCw size={18} />
                          </button>
                     </div>
                 </div>
 
+                {/* Área do Cliente Header */}
                 <div className="space-y-2">
-                    <h1 className="text-3xl md:text-5xl font-black tracking-tighter">MEUS <span className="text-orange-500">PEDIDOS</span></h1>
-                    <p className="text-zinc-500 text-sm font-medium">Você tem {orders.length} figura(s) em nossa linha de produção.</p>
+                    <div className="flex items-center gap-2">
+                        <span className="text-orange-500 text-[10px] font-black uppercase tracking-[0.2em] bg-orange-500/10 border border-orange-500/20 px-3 py-0.5 rounded-full">
+                            Painel Exclusivo
+                        </span>
+                    </div>
+                    <h1 className="text-3xl md:text-5xl font-black tracking-tighter">
+                        ÁREA DO <span className="text-orange-500">CLIENTE</span>
+                    </h1>
+                    <p className="text-zinc-400 text-sm font-medium">
+                        {clientName ? `Olá, ${clientName}! ` : ''}Acompanhe a produção dos seus colecionáveis e gerencie seus Favoritos.
+                    </p>
                 </div>
 
-                {/* Orders List */}
-                <div className="space-y-6">
-                    {orders.length === 0 ? (
-                        <div className="bg-zinc-900/30 border-2 border-dashed border-zinc-800 rounded-3xl p-20 text-center space-y-4">
-                            <ShoppingBag size={48} className="mx-auto text-zinc-800" />
-                            <p className="text-zinc-600 font-bold uppercase tracking-widest text-xs">Nenhum pedido ativo no momento.</p>
-                            <Link href="/" className="inline-block text-orange-500 font-bold text-sm hover:underline">Ver catálogo para novas compras</Link>
-                        </div>
-                    ) : (
-                        orders.map((order) => (
-                            <div 
-                                key={order.id} 
-                                className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl transition-all hover:bg-zinc-900/60"
-                            >
-                                <div className="p-6 md:p-8 space-y-8">
-                                    {/* Order Info Row */}
-                                    <div className="flex flex-col md:flex-row gap-6 md:items-center justify-between">
-                                        <div className="flex gap-4 items-center">
-                                            <div className="w-16 h-16 rounded-2xl bg-black border border-zinc-800 overflow-hidden relative shadow-inner">
-                                                {order.figura?.imagem ? (
-                                                    <Image
-                                                        loader={imageKitLoader}
-                                                        src={order.figura.imagem}
-                                                        alt=""
-                                                        fill
-                                                        className="object-cover opacity-80"
-                                                        sizes="64px"
+                {/* Tabs Switcher */}
+                <div className="flex items-center gap-2 border-b border-zinc-800/80 pb-3">
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('pedidos')}
+                        className={clsx(
+                            "flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer touch-manipulation",
+                            activeTab === 'pedidos'
+                                ? "bg-orange-500 text-black shadow-lg shadow-orange-500/20 scale-[1.02]"
+                                : "bg-zinc-900/60 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                        )}
+                    >
+                        <Package size={15} />
+                        Meus Pedidos
+                        <span className={clsx(
+                            "ml-1 px-2 py-0.5 rounded-full text-[10px] font-black",
+                            activeTab === 'pedidos' ? "bg-black/20 text-black" : "bg-zinc-800 text-zinc-300"
+                        )}>
+                            {orders.length}
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('wishlist')}
+                        className={clsx(
+                            "flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer touch-manipulation",
+                            activeTab === 'wishlist'
+                                ? "bg-orange-500 text-black shadow-lg shadow-orange-500/20 scale-[1.02]"
+                                : "bg-zinc-900/60 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                        )}
+                    >
+                        <Heart size={15} className={clsx(activeTab === 'wishlist' && "fill-black")} />
+                        Favoritos
+                        {wishlistItems.length > 0 && (
+                            <span className={clsx(
+                                "ml-1 px-2 py-0.5 rounded-full text-[10px] font-black",
+                                activeTab === 'wishlist' ? "bg-black/20 text-black" : "bg-orange-500/20 text-orange-400"
+                            )}>
+                                {wishlistItems.length}
+                            </span>
+                        )}
+                    </button>
+                </div>
+
+                {/* TAB 1: MEUS PEDIDOS */}
+                {activeTab === 'pedidos' && (
+                    <div className="space-y-8">
+                        {/* Pedidos Ativos em Produção */}
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                                    <Clock size={14} className="text-orange-500" />
+                                    Em Produção / Ativos ({activeOrders.length})
+                                </h3>
+                            </div>
+
+                            {activeOrders.length === 0 ? (
+                                <div className="bg-zinc-900/20 border border-dashed border-zinc-800/80 rounded-3xl p-10 text-center space-y-3">
+                                    <Package size={36} className="mx-auto text-zinc-700" />
+                                    <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">
+                                        Nenhum pedido em produção no momento.
+                                    </p>
+                                    <Link href="/" className="inline-block text-orange-500 font-bold text-xs hover:underline">
+                                        Explorar vitrine para encomendar
+                                    </Link>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {activeOrders.map((order) => (
+                                        <div 
+                                            key={order.id} 
+                                            className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl transition-all hover:bg-zinc-900/60"
+                                        >
+                                            <div className="p-6 md:p-8 space-y-8">
+                                                {/* Order Info Row */}
+                                                <div className="flex flex-col md:flex-row gap-6 md:items-center justify-between">
+                                                    <div className="flex gap-4 items-center">
+                                                        <div className="w-16 h-16 rounded-2xl bg-black border border-zinc-800 overflow-hidden relative shadow-inner shrink-0">
+                                                            {order.figura?.imagem ? (
+                                                                <Image
+                                                                    loader={imageKitLoader}
+                                                                    src={order.figura.imagem}
+                                                                    alt=""
+                                                                    fill
+                                                                    className="object-cover opacity-80"
+                                                                    sizes="64px"
+                                                                />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center text-zinc-800">
+                                                                    <Package size={24} />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="text-lg font-black text-white leading-none mb-1">{order.figura?.nome}</h3>
+                                                            <div className="flex flex-wrap items-center gap-2.5 text-[10px] uppercase font-bold text-zinc-500 tracking-widest">
+                                                                <span>{order.figura?.studio}</span>
+                                                                <span className="w-1 h-1 bg-zinc-700 rounded-full" />
+                                                                <span className="flex items-center gap-1"><Calendar size={10} /> {new Date(order.data).toLocaleDateString('pt-BR')}</span>
+                                                                {(order.pintor_display || order.pintor_nome) && (
+                                                                    <>
+                                                                        <span className="w-1 h-1 bg-zinc-700 rounded-full" />
+                                                                        <span className="flex items-center gap-1 text-purple-400 font-black normal-case">
+                                                                            <Paintbrush size={11} className="text-purple-400 shrink-0" />
+                                                                            Artista: <strong className="text-purple-300 font-extrabold">{order.pintor_display || order.pintor_nome}</strong>
+                                                                        </span>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-3">
+                                                        <a 
+                                                            href={`/verificar/${order.token}`}
+                                                            target="_blank"
+                                                            className="flex items-center gap-2 bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] px-5 py-3 rounded-full hover:bg-emerald-500 hover:text-white transition-all shadow-xl active:scale-95"
+                                                        >
+                                                            <Award size={14} />
+                                                            Visualizar Certificado
+                                                        </a>
+                                                    </div>
+                                                </div>
+
+                                                {/* The Visual Tracker */}
+                                                <div className="pt-4 border-t border-zinc-800/50">
+                                                    <OrderTracker 
+                                                        status={order.status} 
+                                                        checklist={order.checklist} 
+                                                        pintorNome={order.pintor_display || order.pintor_nome}
                                                     />
+                                                </div>
+
+                                                {/* Fotos dos Bastidores / WIP se houver */}
+                                                {order.wip_fotos && order.wip_fotos.length > 0 && (
+                                                    <WipGalleryWidget photos={order.wip_fotos} />
+                                                )}
+
+                                                {/* Seção de Nota Fiscal (NF-e) emitida ou formulário de preenchimento */}
+                                                {order.chave_nfe ? (
+                                                    <NfeWidget order={order} />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-zinc-800">
-                                                        <Package size={24} />
+                                                    <NfeDataFormWidget order={order} identifier={identifier} onSaved={fetchOrders} />
+                                                )}
+
+                                                {/* Seção de Pagamento PIX */}
+                                                {((order.status_pagamento === 'Pendente' ||
+                                                   order.status_pagamento === 'Pendente/Incompleto' || 
+                                                   order.status_pagamento === 'Aguardando Pagamento' || 
+                                                   order.status_pagamento === 'Parcial' ||
+                                                   order.status === 'Aguardando Pagamento') && 
+                                                  order.status !== 'Cancelada') && (
+                                                    <PixPaymentWidget order={order} />
+                                                )}
+
+                                                {/* Gorjeta para os Artistas */}
+                                                {order.status !== 'Cancelada' && (
+                                                    <ArtistTipWidget order={order} />
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Pedidos Concluídos Colapsados por Padrão */}
+                        {completedOrders.length > 0 && (
+                            <div className="space-y-4 pt-4 border-t border-zinc-850">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xs font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                                        <CheckCircle2 size={14} className="text-emerald-500" />
+                                        Pedidos Concluídos / Histórico ({completedOrders.length})
+                                    </h3>
+                                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                                        Colapsados
+                                    </span>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {completedOrders.map((order) => {
+                                        const isExpanded = !!expandedOrders[order.id];
+                                        const isCanceled = order.status === 'Cancelada';
+
+                                        return (
+                                            <div 
+                                                key={order.id}
+                                                className="bg-zinc-950/70 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-lg transition-all"
+                                            >
+                                                {/* Summary Header (Collapsed Row) */}
+                                                <div 
+                                                    onClick={() => toggleOrderExpanded(order.id)}
+                                                    className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:bg-zinc-900/40 transition-colors"
+                                                >
+                                                    <div className="flex items-center gap-3.5 min-w-0">
+                                                        <div className="w-12 h-12 rounded-xl bg-black border border-zinc-800 overflow-hidden relative shadow-inner shrink-0">
+                                                            {order.figura?.imagem ? (
+                                                                <Image
+                                                                    loader={imageKitLoader}
+                                                                    src={order.figura.imagem}
+                                                                    alt=""
+                                                                    fill
+                                                                    className="object-cover opacity-80"
+                                                                    sizes="48px"
+                                                                />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center text-zinc-800">
+                                                                    <Package size={20} />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className="flex items-center gap-2 mb-0.5">
+                                                                <h4 className="text-sm font-black text-white truncate">{order.figura?.nome}</h4>
+                                                                <span className={clsx(
+                                                                    "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider shrink-0",
+                                                                    isCanceled 
+                                                                        ? "bg-zinc-800 text-zinc-400 border border-zinc-700" 
+                                                                        : "bg-emerald-950/50 text-emerald-400 border border-emerald-500/30"
+                                                                )}>
+                                                                    {order.status}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider flex items-center gap-2">
+                                                                <span>{order.figura?.studio || 'Studio Indiferente'}</span>
+                                                                <span className="w-1 h-1 bg-zinc-700 rounded-full" />
+                                                                <span>{new Date(order.data).toLocaleDateString('pt-BR')}</span>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                                        {order.token && !isCanceled && (
+                                                            <a
+                                                                href={`/verificar/${order.token}`}
+                                                                target="_blank"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full bg-zinc-900 hover:bg-emerald-950/60 text-zinc-300 hover:text-emerald-400 border border-zinc-700 transition-colors"
+                                                            >
+                                                                <Award size={12} />
+                                                                Certificado
+                                                            </a>
+                                                        )}
+
+                                                        <button
+                                                            type="button"
+                                                            className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 hover:text-white px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 transition-colors"
+                                                        >
+                                                            <span>{isExpanded ? 'Ocultar' : 'Detalhes'}</span>
+                                                            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Expanded Body */}
+                                                {isExpanded && (
+                                                    <div className="p-6 border-t border-zinc-800/80 bg-zinc-900/30 space-y-6">
+                                                        <div className="pt-2">
+                                                            <OrderTracker 
+                                                                status={order.status} 
+                                                                checklist={order.checklist} 
+                                                                pintorNome={order.pintor_display || order.pintor_nome}
+                                                            />
+                                                        </div>
+
+                                                        {order.wip_fotos && order.wip_fotos.length > 0 && (
+                                                            <WipGalleryWidget photos={order.wip_fotos} />
+                                                        )}
+
+                                                        {order.chave_nfe && (
+                                                            <NfeWidget order={order} />
+                                                        )}
+
+                                                        {!isCanceled && (
+                                                            <ArtistTipWidget order={order} />
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
-                                            <div>
-                                                <h3 className="text-lg font-black text-white leading-none mb-1">{order.figura?.nome}</h3>
-                                                <div className="flex flex-wrap items-center gap-2.5 text-[10px] uppercase font-bold text-zinc-500 tracking-widest">
-                                                    <span>{order.figura?.studio}</span>
-                                                    <span className="w-1 h-1 bg-zinc-700 rounded-full" />
-                                                    <span className="flex items-center gap-1"><Calendar size={10} /> {new Date(order.data).toLocaleDateString('pt-BR')}</span>
-                                                    {(order.pintor_display || order.pintor_nome) && (
-                                                        <>
-                                                            <span className="w-1 h-1 bg-zinc-700 rounded-full" />
-                                                            <span className="flex items-center gap-1 text-purple-400 font-black normal-case">
-                                                                <Paintbrush size={11} className="text-purple-400 shrink-0" />
-                                                                Artista: <strong className="text-purple-300 font-extrabold">{order.pintor_display || order.pintor_nome}</strong>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* TAB 2: FAVORITOS */}
+                {activeTab === 'wishlist' && (
+                    <div className="space-y-6">
+                        {/* Wishlist Header & Actions */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-950/80 border border-zinc-800 rounded-3xl p-6">
+                            <div className="space-y-1">
+                                <h3 className="text-base font-black text-white flex items-center gap-2">
+                                    <Heart size={18} className="fill-orange-500 text-orange-500" />
+                                    Favoritos Sincronizados
+                                </h3>
+                                <p className="text-xs text-zinc-400">
+                                    {wishlistItems.length} peça(s) salva(s) vinculada(s) ao seu número.
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <button
+                                    type="button"
+                                    onClick={shareOnWhatsApp}
+                                    disabled={wishlistItems.length === 0}
+                                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-40 cursor-pointer"
+                                >
+                                    <Share2 size={14} />
+                                    Enviar no WhatsApp
+                                </button>
+                                <Link
+                                    href="/"
+                                    className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl border border-zinc-700 transition-all cursor-pointer"
+                                >
+                                    Explorar Catálogo
+                                    <ArrowRight size={14} />
+                                </Link>
+                            </div>
+                        </div>
+
+                        {/* Wishlist Items List / Grid */}
+                        {wishlistItems.length === 0 ? (
+                            <div className="bg-zinc-900/20 border-2 border-dashed border-zinc-800 rounded-3xl p-16 text-center space-y-4">
+                                <div className="w-16 h-16 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 mx-auto">
+                                    <Heart size={28} />
+                                </div>
+                                <div className="space-y-1">
+                                    <h4 className="text-sm font-black uppercase tracking-wider text-zinc-300">
+                                        Sua Lista de Favoritos está Vazia
+                                    </h4>
+                                    <p className="text-xs text-zinc-500 max-w-md mx-auto">
+                                        Navegue pelo nosso catálogo e clique no ícone de coração nos cards para salvar suas figuras favoritas na sua lista.
+                                    </p>
+                                </div>
+                                <Link
+                                    href="/"
+                                    className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-black text-xs font-black uppercase tracking-widest px-6 py-3 rounded-full transition-all shadow-lg active:scale-95"
+                                >
+                                    Ver Vitrine de Figuras
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                {wishlistItems.map((item) => {
+                                    const pixPrice = item.precos?.pix_colorido || item.precos?.pix_estilizado;
+                                    const cardPrice = item.preco || item.precos?.colorido || item.precos?.estilizado || 0;
+
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            className="bg-zinc-950/80 border border-zinc-800 rounded-3xl overflow-hidden shadow-xl flex flex-col group hover:border-orange-500/30 transition-all"
+                                        >
+                                            {/* Image with Direct Link */}
+                                            <div className="relative aspect-[4/5] bg-[#09090b] overflow-hidden">
+                                                <Link href={`/figura/${item.slug || item.id}?ref=wishlist`} className="absolute inset-0 z-10" />
+                                                {item.imagem_url ? (
+                                                    <Image
+                                                        loader={imageKitLoader}
+                                                        src={item.imagem_url}
+                                                        alt={item.nome}
+                                                        fill
+                                                        className="object-contain p-3 group-hover:scale-105 transition-transform duration-500"
+                                                        sizes="(max-width: 768px) 100vw, 33vw"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-zinc-800">
+                                                        <Package size={32} />
+                                                    </div>
+                                                )}
+
+                                                {/* Remove Heart Button (Top Right) */}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        removeFromWishlist(item.id);
+                                                    }}
+                                                    className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-black/70 backdrop-blur-md border border-white/20 hover:border-red-500/50 flex items-center justify-center text-red-400 hover:text-red-300 transition-all cursor-pointer shadow-lg"
+                                                    title="Remover dos Favoritos"
+                                                >
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            </div>
+
+                                            {/* Details & Actions */}
+                                            <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between gap-3 bg-zinc-900/30">
+                                                <div>
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mb-0.5 truncate">
+                                                        {item.studio || 'Studio Indiferente'}
+                                                    </p>
+                                                    <h4 className="text-sm font-black text-white line-clamp-1 leading-snug">
+                                                        {item.nome}
+                                                    </h4>
+                                                    <div className="mt-2 flex items-baseline gap-2">
+                                                        <span className="text-sm font-black text-orange-400">
+                                                            {formatBRL(cardPrice)}
+                                                        </span>
+                                                        {pixPrice && (
+                                                            <span className="text-[10px] font-bold text-emerald-400">
+                                                                PIX: {formatBRL(pixPrice)}
                                                             </span>
-                                                        </>
-                                                    )}
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-2 pt-2 border-t border-zinc-800/60">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            addToCart(
+                                                                {
+                                                                    id: item.id,
+                                                                    nome: item.nome,
+                                                                    imagem_url: item.imagem_url,
+                                                                    codigo: item.codigo,
+                                                                    precos: item.precos,
+                                                                    serie: item.serie,
+                                                                    studio: item.studio,
+                                                                    slug: item.slug
+                                                                } as any,
+                                                                'colorido'
+                                                            );
+                                                            setIsCartOpen(true);
+                                                        }}
+                                                        className="flex-1 bg-orange-500 hover:bg-orange-400 text-black text-[10px] font-black uppercase tracking-wider py-2.5 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                                                    >
+                                                        <ShoppingBag size={13} />
+                                                        Mover p/ Carrinho
+                                                    </button>
+                                                    <Link
+                                                        href={`/figura/${item.slug || item.id}?ref=wishlist`}
+                                                        className="px-3 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider border border-zinc-700 transition-colors"
+                                                    >
+                                                        Ver
+                                                    </Link>
                                                 </div>
                                             </div>
                                         </div>
-
-                                        <div className="flex items-center gap-3">
-                                            {/* Somente exibe certificado se estiver pronto/concluido ou se tiver ID */}
-                                            <a 
-                                                href={`/verificar/${order.token}`}
-                                                target="_blank"
-                                                className="flex items-center gap-2 bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] px-5 py-3 rounded-full hover:bg-emerald-500 hover:text-white transition-all shadow-xl active:scale-95"
-                                            >
-                                                <Award size={14} />
-                                                Visualizar Certificado
-                                            </a>
-                                        </div>
-                                    </div>
-
-                                    {/* The Visual Tracker */}
-                                    <div className="pt-4 border-t border-zinc-800/50">
-                                        <OrderTracker 
-                                            status={order.status} 
-                                            checklist={order.checklist} 
-                                            pintorNome={order.pintor_display || order.pintor_nome}
-                                        />
-                                    </div>
-
-                                    {/* Fotos dos Bastidores / WIP se houver */}
-                                    {order.wip_fotos && order.wip_fotos.length > 0 && (
-                                        <WipGalleryWidget photos={order.wip_fotos} />
-                                    )}
-
-                                    {/* Seção de Nota Fiscal (NF-e) emitida ou formulário de preenchimento */}
-                                    {order.chave_nfe ? (
-                                        <NfeWidget order={order} />
-                                    ) : (
-                                        <NfeDataFormWidget order={order} identifier={identifier} onSaved={fetchOrders} />
-                                    )}
-
-                                    {/* Seção de Pagamento PIX */}
-                                    {((order.status_pagamento === 'Pendente' ||
-                                       order.status_pagamento === 'Pendente/Incompleto' || 
-                                       order.status_pagamento === 'Aguardando Pagamento' || 
-                                       order.status_pagamento === 'Parcial' ||
-                                       order.status === 'Aguardando Pagamento') && 
-                                      order.status !== 'Cancelada') && (
-                                        <PixPaymentWidget order={order} />
-                                    )}
-
-                                    {/* Gorjeta para os Artistas (Apoio Voluntário aos Pintores e Modelistas) */}
-                                    {order.status !== 'Cancelada' && (
-                                        <ArtistTipWidget order={order} />
-                                    )}
-                                </div>
+                                    );
+                                })}
                             </div>
-                        ))
-                    )}
-                </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Help Section */}
                 <div className="bg-orange-500/5 border border-orange-500/10 rounded-3xl p-6 text-center">
                     <p className="text-zinc-500 text-xs font-medium">
-                        Dúvidas sobre o status ou envio? 
+                        Dúvidas sobre seu pedido, envio ou customizações? 
                         <a href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ''}`} className="text-orange-500 font-bold ml-1 hover:underline">Fale com o Ateliê no WhatsApp</a>
                     </p>
                 </div>

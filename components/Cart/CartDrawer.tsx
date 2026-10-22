@@ -130,7 +130,15 @@ export const CartDrawer = () => {
                         nome, 
                         contato, 
                         itemsCount: items.length,
-                        total: calculateTotal()
+                        total: calculateTotal(),
+                        items: items.map(i => ({
+                            id: i.id,
+                            nome: i.nome,
+                            imagem_url: i.imagem_url,
+                            finish: i.finish,
+                            quantity: i.quantity,
+                            preco: getItemPrice(i)
+                        }))
                     })
                 });
                 setHasSentLead(true);

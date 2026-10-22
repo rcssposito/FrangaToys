@@ -309,6 +309,16 @@ export async function POST(req: NextRequest) {
                 .eq('id', cupom_ativo.id);
         }
 
+        // Mark abandoned cart as recovered if exists
+        const cleanPhone = (cliente_contato || '').replace(/\D/g, '');
+        if (cleanPhone) {
+            await supabase
+                .from('carrinhos_abandonados')
+                .update({ status: 'recuperado', resgatado: true, updated_at: new Date().toISOString() })
+                .eq('cliente_contato', cleanPhone)
+                .in('status', ['abandonado', 'contatado']);
+        }
+
         // --- PAYMENT INTEGRATION ---
         let payment_url = null;
         let preference_id = null;

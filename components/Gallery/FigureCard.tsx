@@ -4,11 +4,12 @@ import { useState } from 'react';
 import { FiguraDTO } from '@/lib/dto';
 import Image from 'next/image';
 import { clsx } from 'clsx';
-import { Sparkles, Paintbrush, Palette, ChevronRight, Instagram, ArrowLeft, ArrowUpDown, ArrowLeftRight, Box, ShoppingCart, Check } from 'lucide-react';
+import { Sparkles, Paintbrush, Palette, ChevronRight, Instagram, ArrowLeft, ArrowUpDown, ArrowLeftRight, Box, ShoppingCart, Check, Heart } from 'lucide-react';
 import Link from 'next/link';
 import imageKitLoader from '@/lib/image-loader';
 import { getOptimizedImageUrl } from '@/lib/image-utils';
 import { getFigureTier, getTierBadgeStyle } from '@/lib/pricing';
+import { useWishlist } from '@/context/WishlistContext';
  
 interface FigureCardProps {
     figure: FiguraDTO;
@@ -18,7 +19,9 @@ interface FigureCardProps {
  
 export const FigureCard = ({ figure, className, priority }: FigureCardProps) => {
     const [isFlipped, setIsFlipped] = useState(false);
- 
+    const { isInWishlist, toggleWishlist } = useWishlist();
+    const inWishlist = isInWishlist(figure.id);
+
     const formatPrice = (val?: number) => {
         if (!val) return 'Sob consulta';
         return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -83,14 +86,54 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                         onClick={() => trackClick()}
                     />
  
-                    {/* Navigation Hint (Top Right) - Stacking context child of flip-card-front */}
-                    <div
-                        className="absolute top-0 right-0 p-2 sm:p-4 z-30"
-                        onClick={handleFlip}
-                    >
-                        <div className="bg-black/80 backdrop-blur-xl border border-white/10 text-white text-[8px] sm:text-[9px] px-3 py-1.5 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-2xl active:scale-95 touch-manipulation cursor-pointer">
+                    {/* Top Right Action Controls (IHC: Prominent, non-overlapping, high-contrast, min 44px ergonomics) */}
+                    <div className="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 z-30 flex items-center gap-1.5 sm:gap-2">
+                        {/* Navigation Hint (Flip to see details) */}
+                        <button
+                            type="button"
+                            onClick={handleFlip}
+                            className="bg-black/75 backdrop-blur-xl border border-white/15 text-white/90 text-[8px] sm:text-[9px] px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-xl active:scale-95 touch-manipulation cursor-pointer"
+                            title="Girar para ver dimensões e opções"
+                        >
                             Detalhes
-                        </div>
+                        </button>
+
+                        {/* Wishlist Heart Button - Always visible on card with high contrast */}
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleWishlist({
+                                    id: figure.id,
+                                    nome: figure.nome,
+                                    imagem_url: figure.imagem_url,
+                                    codigo: figure.codigo,
+                                    preco: figurePrice,
+                                    precos: figure.precos,
+                                    serie: figure.serie,
+                                    studio: figure.studio,
+                                    slug: figure.slug,
+                                    is_campanha: !!(figure.is_campanha_active || (figure.preco_fixo_campanha && figure.preco_fixo_campanha > 0))
+                                });
+                            }}
+                            className={clsx(
+                                "w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center backdrop-blur-xl border transition-all duration-300 shadow-xl active:scale-90 cursor-pointer touch-manipulation",
+                                inWishlist
+                                    ? "bg-orange-500/25 border-orange-500 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.35)] scale-105"
+                                    : "bg-black/75 border-white/20 text-white/80 hover:text-orange-400 hover:border-orange-500/50 hover:bg-black/95 hover:scale-105"
+                            )}
+                            title={inWishlist ? "Remover dos Favoritos" : "Adicionar aos Favoritos"}
+                            aria-label={inWishlist ? "Remover dos Favoritos" : "Adicionar aos Favoritos"}
+                        >
+                            <Heart 
+                                size={15} 
+                                className={clsx(
+                                    "transition-all duration-300", 
+                                    inWishlist ? "fill-orange-500 text-orange-500 scale-110" : "hover:scale-110"
+                                )} 
+                            />
+                        </button>
                     </div>
 
                     {/* Mini Indicador de Galeria (Estilo Stories / Luxury - sutil no topo) */}
@@ -167,6 +210,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                            </div>
                         )}
                     </div>
+
  
                     {/* Footer Info (Glassmorphism Overlay for Contrast) */}
                     <div className="absolute bottom-0 inset-x-0 p-3 sm:p-5 pt-12 pb-4 sm:pb-6 bg-gradient-to-t from-black via-black/80 to-transparent z-20 pointer-events-none">
@@ -220,16 +264,47 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                         {/* Header Hint */}
                         <div className="px-4 pt-4 sm:px-5 sm:pt-5 flex justify-between items-center text-zinc-500 text-[8px] sm:text-[9px] font-black uppercase tracking-widest relative z-20">
                             <span>Informações</span>
-                            <button 
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setIsFlipped(false);
-                                }} 
-                                className="flex items-center gap-1 text-orange-400 hover:text-orange-300 transition-colors font-black uppercase tracking-widest"
-                            >
-                                <ArrowLeft size={11} className="stroke-[3]" /> Voltar
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        toggleWishlist({
+                                            id: figure.id,
+                                            nome: figure.nome,
+                                            imagem_url: figure.imagem_url,
+                                            codigo: figure.codigo,
+                                            preco: figurePrice,
+                                            precos: figure.precos,
+                                            serie: figure.serie,
+                                            studio: figure.studio,
+                                            slug: figure.slug,
+                                            is_campanha: !!(figure.is_campanha_active || (figure.preco_fixo_campanha && figure.preco_fixo_campanha > 0))
+                                        });
+                                    }}
+                                    className={clsx(
+                                        "p-1.5 rounded-full transition-all duration-200 border cursor-pointer",
+                                        inWishlist
+                                            ? "bg-orange-500/20 border-orange-500/60 text-orange-400"
+                                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white"
+                                    )}
+                                    title={inWishlist ? "Remover dos Favoritos" : "Adicionar aos Favoritos"}
+                                    aria-label="Adicionar aos Favoritos"
+                                >
+                                    <Heart size={12} className={clsx(inWishlist && "fill-orange-500 text-orange-500")} />
+                                </button>
+                                <button 
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setIsFlipped(false);
+                                    }} 
+                                    className="flex items-center gap-1 text-orange-400 hover:text-orange-300 transition-colors font-black uppercase tracking-widest"
+                                >
+                                    <ArrowLeft size={11} className="stroke-[3]" /> Voltar
+                                </button>
+                            </div>
                         </div>
  
                         <div className="flex-1 px-4 sm:px-5 flex flex-col justify-between py-4 sm:py-5 gap-4">

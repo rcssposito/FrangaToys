@@ -62,7 +62,7 @@ export default function Footer() {
                 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-orange-500 transition-colors flex items-center gap-2"
               >
                 <Truck size={14} />
-                Rastrear Pedido
+                Área do Cliente
               </Link>
               <Link
                 href="/campanha"

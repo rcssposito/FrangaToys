@@ -13,12 +13,14 @@ import {
     ShoppingCart, ExternalLink, Sparkles, Instagram, Clock, Truck, ShieldCheck,
     Share2, Paintbrush, Palette, Crown, CheckCircle2, X, HelpCircle, Info,
     Maximize2, ArrowLeft, Tag, MessageCircle,
-    ChevronRight, ChevronLeft
+    ChevronRight, ChevronLeft, Heart
 } from 'lucide-react';
+import { useWishlist } from '@/context/WishlistContext';
 import { toast } from 'sonner';
 
 import { ImageMagnifier } from './ImageMagnifier';
 import { getFigureTier, getTierBadgeStyle } from '@/lib/pricing';
+import { IdleOfferModal } from './IdleOfferModal';
 
 interface FigureDetailsProps {
     figure: FiguraDTO;
@@ -34,6 +36,8 @@ interface FigureDetailsProps {
 export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
     const router = useRouter();
     const { addToCart, removeFromCart, isInCart, setIsCartOpen } = useCart();
+    const { isInWishlist, toggleWishlist } = useWishlist();
+    const inWishlist = isInWishlist(figure.id);
     // Verificação de campanha super agressiva (Lê da raiz, do objeto precos e por assinatura de valor)
     const isCampanha = !!(
         figure.is_campanha_active ||
@@ -619,6 +623,32 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                         >
                             <Share2 size={24} className="group-hover:rotate-12 transition-transform" />
                         </button>
+
+                        <button
+                            type="button"
+                            onClick={() => toggleWishlist({
+                                id: figure.id,
+                                nome: figure.nome,
+                                imagem_url: figure.imagem_url,
+                                codigo: figure.codigo,
+                                preco: figure.precos?.colorido || figure.preco || 0,
+                                precos: figure.precos,
+                                serie: figure.serie,
+                                studio: figure.studio,
+                                slug: figure.slug,
+                                is_campanha: !!isCampanha
+                            })}
+                            className={clsx(
+                                "p-5 rounded-2xl border transition-all duration-300 relative z-10 cursor-pointer active:scale-[0.95]",
+                                inWishlist
+                                    ? "bg-orange-500/20 border-orange-500/50 text-orange-500 hover:bg-orange-500/30 shadow-lg shadow-orange-500/10"
+                                    : "bg-zinc-900 border-white/5 hover:border-white/20 text-zinc-400 hover:text-white"
+                            )}
+                            title={inWishlist ? "Remover dos Favoritos" : "Adicionar aos Favoritos"}
+                            aria-label={inWishlist ? "Remover dos Favoritos" : "Salvar nos Favoritos"}
+                        >
+                            <Heart size={24} className={clsx("transition-transform duration-300", inWishlist && "fill-orange-500 scale-110")} />
+                        </button>
                     </div>
 
                     {/* Cross-Sell Section */}
@@ -660,6 +690,16 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                     )}
                 </div>
             </div>
+
+            {/* Modal de Oferta Especial (Exit-Intent / Idle com trava de 30 dias) */}
+            <IdleOfferModal
+                figure={figure}
+                currentFinish={selectedFinish}
+                onAcceptOffer={() => {
+                    addToCart(figure, selectedFinish);
+                    setIsCartOpen(true);
+                }}
+            />
         </div>
     );
 }
