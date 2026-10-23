@@ -155,13 +155,15 @@ export function WishlistDrawer() {
 
         setIsRegistering(true);
         try {
+            const visitorId = typeof window !== 'undefined' ? localStorage.getItem('franga_visitor_id') : null;
             const res = await fetch('/api/public/client/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     nome: regNome.trim(),
                     telefone: cleanPhone,
-                    wishlist: wishlistIds
+                    wishlist: wishlistIds,
+                    visitorId: visitorId || undefined
                 })
             });
 
@@ -171,11 +173,35 @@ export function WishlistDrawer() {
                 return;
             }
 
+            const clientObj = data.cliente || data.client;
+            const finalNome = clientObj?.nome || regNome.trim();
+            const clienteId = clientObj?.id;
+
             localStorage.setItem('frangatoys_tracking_phone', cleanPhone);
-            localStorage.setItem('frangatoys_client_nome', data.cliente?.nome || regNome.trim());
+            localStorage.setItem('frangatoys_client_nome', finalNome);
+            if (clienteId) {
+                localStorage.setItem('franga_cliente_id', String(clienteId));
+            }
+
             setSavedPhone(cleanPhone);
-            setSavedNome(data.cliente?.nome || regNome.trim());
+            setSavedNome(finalNome);
             setShowRegisterForm(false);
+
+            if (typeof window !== 'undefined' && clienteId) {
+                try {
+                    fetch('/api/analytics/beacon', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            visitorId: visitorId || '',
+                            clienteId: String(clienteId),
+                            pathname: window.location.pathname
+                        }),
+                        keepalive: true
+                    }).catch(() => {});
+                } catch {}
+            }
+
             syncWithPhone(cleanPhone);
 
             toast.success('Favoritos salvos com sucesso! 🎉', {

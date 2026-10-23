@@ -54,7 +54,8 @@ export async function GET(req: Request) {
                 clientes (
                     id,
                     nome,
-                    email
+                    email,
+                    telefone
                 )
             `)
             .neq('cidade', 'Localhost')

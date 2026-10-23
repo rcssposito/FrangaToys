@@ -5,6 +5,7 @@ import { Truck, Flame, Settings, Instagram, LibraryBig, Palette, Compass, HelpCi
 import ThemeToggle from '@/components/common/ThemeToggle';
 import { CartIndicator } from '@/components/Cart/CartIndicator';
 import { WishlistIndicator } from '@/components/Wishlist/WishlistIndicator';
+import UserSessionBadge from '@/components/common/UserSessionBadge';
 import { useCart } from '@/context/CartContext';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
@@ -141,6 +142,7 @@ export default function Header() {
           <div className="h-4 w-px bg-zinc-800/50" />
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <UserSessionBadge />
             <ThemeToggle />
             <WishlistIndicator className="hover:bg-zinc-900/10 dark:hover:bg-zinc-800/50 p-2 rounded-lg" />
             <CartIndicator
@@ -184,7 +186,8 @@ export default function Header() {
             className="h-10 object-contain"
           />
         </Link>
-        <div className="flex-1 flex justify-end items-center gap-3">
+        <div className="flex-1 flex justify-end items-center gap-2">
+          <UserSessionBadge className="text-[11px]" />
           <a href="https://www.instagram.com/frangatoys/" target="_blank" rel="noopener noreferrer" className="p-1 text-pink-500">
             <Instagram size={18} />
           </a>

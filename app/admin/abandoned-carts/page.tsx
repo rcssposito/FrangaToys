@@ -41,7 +41,7 @@ interface CartStats {
     recoveryRate: number;
 }
 
-export default function AbandonedCartsPage() {
+export function AbandonedCartsView() {
     const [carts, setCarts] = useState<AbandonedCart[]>([]);
     const [stats, setStats] = useState<CartStats>({
         totalCarts: 0,
@@ -406,4 +406,8 @@ export default function AbandonedCartsPage() {
             )}
         </div>
     );
+}
+
+export default function AbandonedCartsPage() {
+    return <AbandonedCartsView />;
 }

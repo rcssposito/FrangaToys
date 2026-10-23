@@ -42,7 +42,7 @@ const MESES = [
     { value: 12, label: 'Dezembro' }
 ];
 
-export default function DrePage() {
+export function DreView() {
     const now = new Date();
     const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
@@ -618,4 +618,8 @@ export default function DrePage() {
 
         </div>
     );
+}
+
+export default function DrePage() {
+    return <DreView />;
 }

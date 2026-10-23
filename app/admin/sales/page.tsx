@@ -10,6 +10,7 @@ import {
     Calendar, 
     Trash2, 
     Package, 
+    PackageOpen,
     Paintbrush, 
     DollarSign, 
     RotateCcw, 
@@ -48,6 +49,8 @@ import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
 import { generatePixPayload } from '@/lib/pix';
 import { isRodrigoPintor } from '@/lib/painters';
+import { AbandonedCartsView } from '@/app/admin/abandoned-carts/page';
+import { DreView } from '@/app/admin/dre/page';
 
 interface Sale {
     id: number;
@@ -124,9 +127,23 @@ function SalesContent() {
     const router = useRouter();
     const customerFilter = searchParams.get('cliente_id');
     const tabParam = searchParams.get('tab');
-    const [viewTab, setViewTab] = useState<'vendas' | 'comissoes' | 'kpis'>(
-        tabParam === 'kpis' ? 'kpis' : (tabParam === 'comissoes' ? 'comissoes' : 'vendas')
-    );
+    type SalesTabType = 'vendas' | 'carrinhos' | 'dre' | 'comissoes' | 'kpis';
+    const [viewTab, setViewTab] = useState<SalesTabType>(() => {
+        if (tabParam === 'carrinhos') return 'carrinhos';
+        if (tabParam === 'dre') return 'dre';
+        if (tabParam === 'comissoes') return 'comissoes';
+        if (tabParam === 'kpis') return 'kpis';
+        return 'vendas';
+    });
+
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab === 'carrinhos' || tab === 'dre' || tab === 'comissoes' || tab === 'kpis') {
+            setViewTab(tab);
+        } else if (!tab) {
+            setViewTab('vendas');
+        }
+    }, [searchParams]);
 
     // KPIs & Matriz de Decisão States (3ª Aba)
     const [kpiData, setKpiData] = useState<any>(null);
@@ -668,7 +685,11 @@ function SalesContent() {
                         </Link>
                         <div>
                             <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white flex items-center gap-3">
-                                {viewTab === 'kpis' ? 'KPIs de Vendas' : viewTab === 'comissoes' ? 'Acertos & Comissões' : (customerFilter ? 'Vendas do Cliente' : 'Vendas & Livro Caixa')}
+                                {viewTab === 'kpis' ? 'KPIs de Vendas' : 
+                                 viewTab === 'comissoes' ? 'Acertos & Comissões' : 
+                                 viewTab === 'carrinhos' ? 'Carrinhos Abandonados' :
+                                 viewTab === 'dre' ? 'DRE & Fechamento Financeiro' :
+                                 (customerFilter ? 'Vendas do Cliente' : 'Vendas & Livro Caixa')}
                                 {customerFilter && (
                                     <button 
                                         onClick={() => router.push('/admin/sales')}
@@ -679,14 +700,18 @@ function SalesContent() {
                                 )}
                             </h1>
                             <p className="text-zinc-500 text-sm font-medium mt-1 uppercase tracking-widest text-[10px]">
-                                {viewTab === 'kpis' ? 'Faturamento, volume e desempenho por segmento de catálogo' : viewTab === 'comissoes' ? 'Fechamentos mensais e repasses para vendedores e pintores' : 'Livro Caixa Tático de Receitas e Pedidos.'}
+                                {viewTab === 'kpis' ? 'Faturamento, volume e desempenho por segmento de catálogo' : 
+                                 viewTab === 'comissoes' ? 'Fechamentos mensais e repasses para vendedores e pintores' : 
+                                 viewTab === 'carrinhos' ? 'Anti-abandono, recuperação via cupons dinâmicos e WhatsApp' :
+                                 viewTab === 'dre' ? 'Demonstrativo do Resultado do Exercício consolidado com resina, estúdios e lucro real' :
+                                 'Livro Caixa Tático de Receitas e Pedidos.'}
                             </p>
                         </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-between xl:justify-end">
-                        {/* Tab Switcher: Vendas vs Comissões vs KPIs */}
-                        <div className="flex items-center gap-1.5 bg-zinc-900/80 p-1.5 rounded-2xl border border-zinc-800">
+                        {/* Tab Switcher: Vendas vs Carrinhos vs DRE vs Comissões vs KPIs */}
+                        <div className="flex flex-wrap items-center gap-1.5 bg-zinc-900/80 p-1.5 rounded-2xl border border-zinc-800">
                             <button
                                 onClick={() => {
                                     setViewTab('vendas');
@@ -702,6 +727,38 @@ function SalesContent() {
                             >
                                 <ShoppingCart size={15} />
                                 Pedidos & Vendas ({allSales.length})
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setViewTab('carrinhos');
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.set('tab', 'carrinhos');
+                                    window.history.replaceState({}, '', url.toString());
+                                }}
+                                className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                    viewTab === 'carrinhos'
+                                        ? 'bg-orange-500 text-black shadow-md shadow-orange-500/30'
+                                        : 'text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                <PackageOpen size={15} />
+                                Carrinhos Abandonados
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setViewTab('dre');
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.set('tab', 'dre');
+                                    window.history.replaceState({}, '', url.toString());
+                                }}
+                                className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                    viewTab === 'dre'
+                                        ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                                        : 'text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                <TrendingUp size={15} />
+                                DRE & Fechamento
                             </button>
                             <button
                                 onClick={() => {
@@ -732,7 +789,7 @@ function SalesContent() {
                                         : 'text-zinc-400 hover:text-white'
                                 }`}
                             >
-                                <TrendingUp size={15} />
+                                <BarChart3 size={15} />
                                 KPIs de Vendas
                             </button>
                         </div>
@@ -908,7 +965,21 @@ function SalesContent() {
                     )
                 )}
 
-                {/* ABA 2: ACERTOS & COMISSÕES */}
+                {/* ABA: CARRINHOS ABANDONADOS */}
+                {viewTab === 'carrinhos' && (
+                    <div className="space-y-6 animate-in fade-in duration-300">
+                        <AbandonedCartsView />
+                    </div>
+                )}
+
+                {/* ABA: DRE & FECHAMENTO */}
+                {viewTab === 'dre' && (
+                    <div className="space-y-6 animate-in fade-in duration-300">
+                        <DreView />
+                    </div>
+                )}
+
+                {/* ABA: ACERTOS & COMISSÕES */}
                 {viewTab === 'comissoes' && (
                     <div className="space-y-6 animate-in fade-in duration-300">
                         {/* Barra de Filtros de Comissões & Métricas Rápidas */}

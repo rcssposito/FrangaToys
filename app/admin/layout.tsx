@@ -24,6 +24,7 @@ const routeRoles: Record<string, string[]> = {
     '/admin/users': ['admin'],
     '/admin/coupons': ['admin', 'sales', 'pricing', 'orcamento'],
     '/admin/abandoned-carts': ['admin', 'sales', 'finance'],
+    '/admin/dre': ['admin', 'finance', 'sales'],
     '/admin/automation': ['admin'],
     '/admin/settings': ['admin']
 };

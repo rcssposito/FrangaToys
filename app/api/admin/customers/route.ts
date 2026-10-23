@@ -38,6 +38,8 @@ export async function GET(req: Request) {
                 )
             `);
 
+        const sortBy = searchParams.get('sortBy') || 'recent';
+
         if (query) {
             supabaseQuery = supabaseQuery.or(`nome.ilike.%${query}%,telefone.ilike.%${query}%,email.ilike.%${query}%`);
         }
@@ -46,7 +48,16 @@ export async function GET(req: Request) {
             supabaseQuery = supabaseQuery.contains('tags', [tag]);
         }
 
-        const { data, error } = await supabaseQuery.order('nome', { ascending: true }).limit(100);
+        if (sortBy === 'nome') {
+            supabaseQuery = supabaseQuery.order('nome', { ascending: true });
+        } else if (sortBy === 'acesso') {
+            supabaseQuery = supabaseQuery.order('ultimo_acesso_em', { ascending: false, nullsFirst: false });
+        } else {
+            // Padrão de CRM moderno: Novos cadastros e leads recentes no topo
+            supabaseQuery = supabaseQuery.order('data_cadastro', { ascending: false, nullsFirst: false });
+        }
+
+        const { data, error } = await supabaseQuery.limit(500);
 
         if (error) throw error;
 

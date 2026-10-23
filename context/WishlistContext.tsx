@@ -37,6 +37,7 @@ interface WishlistContextType {
     savedPhone: string | null;
     savedNome: string | null;
     identifyClient: (nome: string, telefone: string) => Promise<void>;
+    logoutClient: () => void;
     syncWithPhone: (phone: string) => Promise<void>;
     getShareableLink: () => string;
     shareOnWhatsApp: () => void;
@@ -180,6 +181,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     const identifyClient = useCallback(async (nome: string, telefone: string) => {
         const cleanPhone = telefone.replace(/\D/g, '');
         const cleanName = nome.trim();
+        const visitorId = typeof window !== 'undefined' ? localStorage.getItem('franga_visitor_id') : null;
 
         const res = await fetch('/api/public/client/register', {
             method: 'POST',
@@ -187,7 +189,8 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
             body: JSON.stringify({
                 nome: cleanName,
                 telefone: cleanPhone,
-                wishlist: wishlistIdsRef.current
+                wishlist: wishlistIdsRef.current,
+                visitorId: visitorId || undefined
             })
         });
 
@@ -196,11 +199,34 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
             throw new Error(data.error || 'Erro ao salvar cadastro');
         }
 
-        const finalNome = data.cliente?.nome || cleanName;
+        const clientObj = data.cliente || data.client;
+        const finalNome = clientObj?.nome || cleanName;
+        const clienteId = clientObj?.id;
+
         localStorage.setItem('frangatoys_tracking_phone', cleanPhone);
         localStorage.setItem('frangatoys_client_nome', finalNome);
+        if (clienteId) {
+            localStorage.setItem('franga_cliente_id', String(clienteId));
+        }
+
         setSavedPhone(cleanPhone);
         setSavedNome(finalNome);
+
+        // Dispara ping de beacon em background para atualizar o Radar do CRM imediatamente
+        if (typeof window !== 'undefined' && clienteId) {
+            try {
+                fetch('/api/analytics/beacon', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        visitorId: visitorId || '',
+                        clienteId: String(clienteId),
+                        pathname: window.location.pathname
+                    }),
+                    keepalive: true
+                }).catch(() => {});
+            } catch {}
+        }
 
         await syncWithPhone(cleanPhone);
     }, [syncWithPhone]);
@@ -266,6 +292,19 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
     };
 
+    const logoutClient = useCallback(() => {
+        try {
+            localStorage.removeItem('frangatoys_tracking_phone');
+            localStorage.removeItem('frangatoys_client_nome');
+            localStorage.removeItem('franga_cliente_id');
+            setSavedPhone(null);
+            setSavedNome(null);
+            toast.info('Sessão desconectada.');
+        } catch (e) {
+            console.error('Erro ao sair', e);
+        }
+    }, []);
+
     return (
         <WishlistContext.Provider
             value={{
@@ -284,6 +323,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
                 savedPhone,
                 savedNome,
                 identifyClient,
+                logoutClient,
                 syncWithPhone,
                 getShareableLink,
                 shareOnWhatsApp
