@@ -1,15 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { Truck, Flame, Settings, Instagram, LibraryBig, Palette, Compass, HelpCircle } from 'lucide-react';
-import ThemeToggle from '@/components/common/ThemeToggle';
+import { Flame, Palette, Compass, HelpCircle, Instagram } from 'lucide-react';
 import { CartIndicator } from '@/components/Cart/CartIndicator';
 import { WishlistIndicator } from '@/components/Wishlist/WishlistIndicator';
 import UserSessionBadge from '@/components/common/UserSessionBadge';
 import { useCart } from '@/context/CartContext';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
-
 
 export default function Header() {
   const { setIsCartOpen } = useCart();
@@ -23,68 +21,56 @@ export default function Header() {
   return (
     <header className="w-full">
       {/* Desktop Header */}
-      <div className="hidden sm:flex items-center justify-between relative py-4 sm:py-6 px-4 max-w-[95%] mx-auto border-b border-white/5 mb-6">
+      <div className="hidden sm:flex items-center justify-between relative py-4 sm:py-5 px-4 max-w-[95%] mx-auto border-b border-white/5 mb-6">
         {/* Left: Logo */}
         <div className="flex-1 flex justify-start">
-          <Link href="/" className="hover:opacity-80 transition-opacity flex-shrink-0">
+          <Link href="/" className="hover:opacity-85 transition-opacity flex-shrink-0">
             <img
               src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
               alt="Franga Toys Logo"
-              className="h-16 md:h-20 object-contain"
+              className="h-14 md:h-18 object-contain"
             />
           </Link>
         </div>
 
         {/* Center: Navigation Links */}
-        <div className="flex items-center gap-8 justify-center">
-          <Link
-            href="/rastreio"
-            className={clsx(
-              "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group whitespace-nowrap",
-              pathname === '/rastreio' ? "text-orange-400" : "text-zinc-400 hover:text-orange-400"
-            )}
-            title="Área do Cliente"
-          >
-            <Truck size={16} className="group-hover:animate-bounce" />
-            <span className="hidden lg:inline">Área do Cliente</span>
-          </Link>
-
-          <div className="h-4 w-px bg-zinc-800/30 hidden md:block" />
-
+        <nav className="flex items-center gap-6 lg:gap-8 justify-center">
           <Link
             href="/campanha"
             className={clsx(
               "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group whitespace-nowrap",
               pathname === '/campanha' ? "text-purple-400" : "text-purple-500 hover:text-purple-400"
             )}
+            title="Campanhas e Promoções Especiais"
           >
-            <Flame size={16} className="group-hover:animate-pulse" />
-            <span className="hidden lg:inline">Promoções</span>
+            <Flame size={15} className="group-hover:animate-pulse" />
+            <span>Promoções</span>
           </Link>
 
-          <div className="h-4 w-px bg-zinc-800/30 hidden md:block" />
+          <div className="h-3.5 w-px bg-zinc-800/40" />
 
           <Link
             href="/parceiros"
             className={clsx(
               "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group whitespace-nowrap",
               pathname === '/parceiros'
-                ? "text-blue-500"
-                : "text-zinc-400 hover:text-blue-500"
+                ? "text-blue-400"
+                : "text-zinc-400 hover:text-blue-400"
             )}
+            title="Nossos Estúdios e Escultores"
           >
             <Palette
-              size={16}
+              size={15}
               className={clsx(
                 pathname === '/parceiros'
-                  ? "text-blue-500"
-                  : "group-hover:text-blue-500"
+                  ? "text-blue-400"
+                  : "group-hover:text-blue-400"
               )}
             />
-            <span className="hidden lg:inline">Estúdios</span>
+            <span>Estúdios</span>
           </Link>
 
-          <div className="h-4 w-px bg-zinc-800/30 hidden md:block" />
+          <div className="h-3.5 w-px bg-zinc-800/40" />
 
           <Link
             href="/universo"
@@ -97,13 +83,13 @@ export default function Header() {
             title="Explorar Universo 3D em Grafo"
           >
             <Compass
-              size={16}
+              size={15}
               className="text-orange-400 group-hover:rotate-45 transition-transform"
             />
-            <span className="hidden lg:inline">Universo 3D</span>
+            <span>Universo 3D</span>
           </Link>
 
-          <div className="h-4 w-px bg-zinc-800/30 hidden md:block" />
+          <div className="h-3.5 w-px bg-zinc-800/40" />
 
           <Link
             href="/faq"
@@ -113,88 +99,70 @@ export default function Header() {
                 ? "text-amber-400"
                 : "text-zinc-400 hover:text-amber-400"
             )}
-            title="Dúvidas Frequentes & Guia de Cuidados"
+            title="Dúvidas Frequentes (FAQ)"
           >
             <HelpCircle
-              size={16}
+              size={15}
               className={clsx(
                 pathname === '/faq'
                   ? "text-amber-400"
                   : "group-hover:text-amber-400"
               )}
             />
-            <span className="hidden lg:inline">FAQ & Cuidados</span>
+            <span>FAQ</span>
           </Link>
-        </div>
+        </nav>
 
-        {/* Right Menu / Utilities */}
-        <div className="flex-1 flex items-center justify-end gap-4 md:gap-6">
-          <a
-            href="https://www.instagram.com/frangatoys/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-2 text-zinc-500 hover:text-pink-500 transition-colors"
-            title="Siga no Instagram"
-          >
-            <Instagram size={18} />
-          </a>
-
-          <div className="h-4 w-px bg-zinc-800/50" />
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <UserSessionBadge />
-            <ThemeToggle />
+        {/* Right: Utilities / Session / Cart */}
+        <div className="flex-1 flex items-center justify-end gap-3 md:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <WishlistIndicator className="hover:bg-zinc-900/10 dark:hover:bg-zinc-800/50 p-2 rounded-lg" />
             <CartIndicator
               onClick={() => setIsCartOpen(true)}
               className="hover:bg-zinc-900/10 dark:hover:bg-zinc-800/50 px-3 py-2 rounded-lg"
             />
-            <Link
-              href="/admin"
-              prefetch={false}
-              className="p-2 text-zinc-500 hover:text-orange-500 transition-colors"
-              title="Acessar Admin"
+            <a
+              href="https://www.instagram.com/frangatoys/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 text-zinc-400 hover:text-pink-500 hover:bg-zinc-800/50 rounded-lg transition-colors flex items-center justify-center"
+              title="Instagram @frangatoys"
+              aria-label="Instagram da Franga Toys"
             >
-              <Settings size={18} />
-            </Link>
+              <Instagram size={18} />
+            </a>
           </div>
+
+          <div className="h-4 w-px bg-zinc-800/40" />
+
+          <UserSessionBadge />
         </div>
       </div>
 
-      {/* Mobile Header (Brand Only) - Filters component handles the rest of the mobile bar */}
-      <div className="flex sm:hidden items-center justify-between px-4 py-2 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--card-border)] sticky top-0 z-30">
-        <div className="flex-1 flex justify-start items-center gap-2">
-          <WishlistIndicator className="p-1" />
-          <CartIndicator onClick={() => setIsCartOpen(true)} />
-          <Link href="/rastreio" className="p-1 text-orange-500" title="Área do Cliente">
-            <Truck size={20} />
-          </Link>
-          <Link href="/campanha" className="p-1 text-purple-500" title="Campanha Especial">
-            <Flame size={20} />
-          </Link>
-          <Link href="/universo" className="p-1 text-amber-500" title="Universo 3D">
-            <Compass size={20} />
-          </Link>
-          <Link href="/faq" className="p-1 text-amber-400" title="Central de Ajuda & FAQ">
-            <HelpCircle size={20} />
-          </Link>
-        </div>
-        <Link href="/" className="flex-shrink-0 flex justify-center">
+      {/* Mobile Header (Clean & Compact) */}
+      <div className="flex sm:hidden items-center justify-between px-4 py-3 bg-[var(--background)]/90 backdrop-blur-md border-b border-[var(--card-border)] sticky top-0 z-30">
+        <Link href="/" className="flex items-center hover:opacity-85 transition-opacity">
           <img
             src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
-            alt="Logo"
-            className="h-10 object-contain"
+            alt="Franga Toys Logo"
+            className="h-9 object-contain"
           />
         </Link>
-        <div className="flex-1 flex justify-end items-center gap-2">
-          <UserSessionBadge className="text-[11px]" />
-          <a href="https://www.instagram.com/frangatoys/" target="_blank" rel="noopener noreferrer" className="p-1 text-pink-500">
+        
+        <div className="flex items-center gap-2">
+          <WishlistIndicator className="p-1.5" />
+          <CartIndicator onClick={() => setIsCartOpen(true)} className="p-1.5" />
+          <a
+            href="https://www.instagram.com/frangatoys/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1.5 text-zinc-400 hover:text-pink-500 rounded-lg transition-colors flex items-center justify-center"
+            title="Instagram @frangatoys"
+            aria-label="Instagram da Franga Toys"
+          >
             <Instagram size={18} />
           </a>
-          <ThemeToggle />
-          <Link href="/admin" prefetch={false} className="p-1 text-[var(--text-muted)] hover:text-orange-500">
-            <Settings size={18} />
-          </Link>
+          <UserSessionBadge className="text-[11px]" />
         </div>
       </div>
     </header>

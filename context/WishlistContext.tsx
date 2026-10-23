@@ -36,8 +36,15 @@ interface WishlistContextType {
     closeAuthModal: () => void;
     savedPhone: string | null;
     savedNome: string | null;
+    avatarUrl: string | null;
+    hasPhone: boolean;
+    isBindPhoneModalOpen: boolean;
+    openBindPhoneModal: () => void;
+    closeBindPhoneModal: () => void;
     identifyClient: (nome: string, telefone: string) => Promise<void>;
-    logoutClient: () => void;
+    bindPhone: (telefone: string) => Promise<void>;
+    loginWithGoogle: () => Promise<void>;
+    logoutClient: () => Promise<void>;
     syncWithPhone: (phone: string) => Promise<void>;
     getShareableLink: () => string;
     shareOnWhatsApp: () => void;
@@ -53,6 +60,9 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [savedPhone, setSavedPhone] = useState<string | null>(null);
     const [savedNome, setSavedNome] = useState<string | null>(null);
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [hasPhone, setHasPhone] = useState<boolean>(true);
+    const [isBindPhoneModalOpen, setIsBindPhoneModalOpen] = useState(false);
 
     // Refs para evitar loops de render e concorrência na sincronização
     const wishlistIdsRef = useRef<number[]>([]);
@@ -67,9 +77,14 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
             const savedItems = localStorage.getItem('franga_wishlist_items');
             const phone = localStorage.getItem('frangatoys_tracking_phone');
             const nome = localStorage.getItem('frangatoys_client_nome');
+            const avatar = localStorage.getItem('frangatoys_avatar_url');
             
-            if (phone) setSavedPhone(phone);
+            if (phone) {
+                setSavedPhone(phone);
+                setHasPhone(true);
+            }
             if (nome) setSavedNome(nome);
+            if (avatar) setAvatarUrl(avatar);
 
             if (savedIds) {
                 const parsedIds = JSON.parse(savedIds);
@@ -84,6 +99,50 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsInitialized(true);
         }
+
+        // Hidratação a partir da sessão ativa no servidor (Google Auth, Cookies ou LocalStorage)
+        const storedPhone = typeof window !== 'undefined' ? localStorage.getItem('frangatoys_tracking_phone') : null;
+        const storedId = typeof window !== 'undefined' ? localStorage.getItem('franga_cliente_id') : null;
+        const params = new URLSearchParams();
+        if (storedPhone) params.set('phone', storedPhone);
+        if (storedId) params.set('id', storedId);
+
+        const url = `/api/public/client/me${params.toString() ? `?${params.toString()}` : ''}`;
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (data.authenticated && data.client) {
+                    const c = data.client;
+                    if (c.nome) {
+                        setSavedNome(c.nome);
+                        localStorage.setItem('frangatoys_client_nome', c.nome);
+                        document.cookie = `frangatoys_client_nome=${encodeURIComponent(c.nome)}; path=/; max-age=31536000; SameSite=Lax`;
+                    }
+                    if (c.id) {
+                        localStorage.setItem('franga_cliente_id', String(c.id));
+                        document.cookie = `franga_cliente_id=${c.id}; path=/; max-age=31536000; SameSite=Lax`;
+                    }
+                    if (c.avatar_url) {
+                        setAvatarUrl(c.avatar_url);
+                        localStorage.setItem('frangatoys_avatar_url', c.avatar_url);
+                    }
+                    if (c.telefone) {
+                        const clean = c.telefone.replace(/\D/g, '');
+                        if (clean.length >= 10) {
+                            setSavedPhone(clean);
+                            localStorage.setItem('frangatoys_tracking_phone', clean);
+                            document.cookie = `frangatoys_tracking_phone=${clean}; path=/; max-age=31536000; SameSite=Lax`;
+                            setHasPhone(true);
+                        }
+                    } else if (data.hasGoogle) {
+                        setHasPhone(false);
+                    }
+                    if (Array.isArray(c.wishlist) && c.wishlist.length > 0) {
+                        setWishlistIds(prev => Array.from(new Set([...prev, ...c.wishlist])));
+                    }
+                }
+            })
+            .catch(() => {});
     }, []);
 
     // 1b. Detecção de Coleção Compartilhada via link (?wishlist=1,2,3)
@@ -292,13 +351,69 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
     };
 
-    const logoutClient = useCallback(() => {
+    const openBindPhoneModal = useCallback(() => setIsBindPhoneModalOpen(true), []);
+    const closeBindPhoneModal = useCallback(() => setIsBindPhoneModalOpen(false), []);
+
+    const bindPhone = useCallback(async (telefone: string) => {
+        const cleanPhone = telefone.replace(/\D/g, '');
+        if (cleanPhone.length < 10) {
+            throw new Error('Informe um WhatsApp válido com DDD');
+        }
+
+        const res = await fetch('/api/public/client/bind-phone', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telefone: cleanPhone })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || 'Erro ao vincular WhatsApp');
+        }
+
+        localStorage.setItem('frangatoys_tracking_phone', cleanPhone);
+        setSavedPhone(cleanPhone);
+        setHasPhone(true);
+        setIsBindPhoneModalOpen(false);
+        toast.success('WhatsApp vinculado com sucesso! 🎉');
+        await syncWithPhone(cleanPhone);
+    }, [syncWithPhone]);
+
+    const loginWithGoogle = useCallback(async () => {
         try {
+            const { createClient } = await import('@/lib/supabase/client');
+            const supabase = createClient();
+            const returnUrl = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/';
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(returnUrl)}`
+                }
+            });
+            if (error) {
+                toast.error('Erro ao conectar com Google: ' + error.message);
+            }
+        } catch (err: any) {
+            toast.error('Falha na autenticação do Google');
+            console.error(err);
+        }
+    }, []);
+
+    const logoutClient = useCallback(async () => {
+        try {
+            try {
+                const { createClient } = await import('@/lib/supabase/client');
+                const supabase = createClient();
+                await supabase.auth.signOut();
+            } catch {}
+
             localStorage.removeItem('frangatoys_tracking_phone');
             localStorage.removeItem('frangatoys_client_nome');
+            localStorage.removeItem('frangatoys_avatar_url');
             localStorage.removeItem('franga_cliente_id');
             setSavedPhone(null);
             setSavedNome(null);
+            setAvatarUrl(null);
+            setHasPhone(true);
             toast.info('Sessão desconectada.');
         } catch (e) {
             console.error('Erro ao sair', e);
@@ -322,7 +437,14 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
                 closeAuthModal,
                 savedPhone,
                 savedNome,
+                avatarUrl,
+                hasPhone,
+                isBindPhoneModalOpen,
+                openBindPhoneModal,
+                closeBindPhoneModal,
                 identifyClient,
+                bindPhone,
+                loginWithGoogle,
                 logoutClient,
                 syncWithPhone,
                 getShareableLink,

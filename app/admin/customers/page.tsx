@@ -121,12 +121,18 @@ interface Cadencia {
     created_at: string;
 }
 
-export default function CustomersPage() {
+export function CustomersView({ forcedMode }: { forcedMode?: 'clientes' | 'cadencias' | 'telemetria' } = {}) {
     const { hasRole } = usePermission();
     const router = useRouter();
 
     // Mode Switcher (Clientes vs Cadências vs Telemetria)
-    const [viewMode, setViewMode] = useState<'clientes' | 'cadencias' | 'telemetria'>('clientes');
+    const [viewMode, setViewMode] = useState<'clientes' | 'cadencias' | 'telemetria'>(forcedMode || 'clientes');
+
+    useEffect(() => {
+        if (forcedMode && forcedMode !== viewMode) {
+            setViewMode(forcedMode);
+        }
+    }, [forcedMode]);
 
     // Radar de Acessos (Telemetria Beacon)
     const [telemetriaLogs, setTelemetriaLogs] = useState<any[]>([]);
@@ -3179,4 +3185,8 @@ export default function CustomersPage() {
             )}
         </div>
     );
+}
+
+export default function CustomersPage() {
+    return <CustomersView />;
 }

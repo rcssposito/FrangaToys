@@ -54,12 +54,6 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             roles: ['admin', 'pricing', 'orcamento']
         },
         {
-            name: 'Promoções & Marketing',
-            href: '/admin/coupons',
-            icon: Tag,
-            roles: ['admin', 'sales', 'pricing', 'orcamento']
-        },
-        {
             name: 'Vendas & Financeiro',
             href: '/admin/sales',
             icon: ShoppingCart,
@@ -72,22 +66,16 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             roles: ['admin', 'sales', 'production', 'painter']
         },
         {
-            name: 'Clientes',
-            href: '/admin/customers',
-            icon: Users,
-            roles: ['admin', 'sales', 'finance']
+            name: 'Marketing & Clientes',
+            href: '/admin/marketing',
+            icon: Flame,
+            roles: ['admin', 'sales', 'pricing', 'finance', 'orcamento']
         },
         {
             name: 'Estúdios',
             href: '/admin/studios',
             icon: Activity,
-            roles: ['admin', 'pricing']
-        },
-        {
-            name: 'Franga Studio',
-            href: '/admin/franga-studio',
-            icon: FolderGit2,
-            roles: ['admin', 'franga_studio']
+            roles: ['admin', 'pricing', 'franga_studio']
         },
         {
             name: 'Automações & IA',
@@ -162,7 +150,9 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
                         if (!canView) return null;
 
                         const isActive = pathname === item.href || 
-                            (item.name === 'Franga Studio' && (pathname.startsWith('/admin/patreon/repository') || pathname.startsWith('/admin/franga-studio')));
+                            (item.href === '/admin/studios' && (pathname.startsWith('/admin/patreon/repository') || pathname.startsWith('/admin/franga-studio'))) ||
+                            (item.href === '/admin/sales' && (pathname === '/admin/abandoned-carts' || pathname === '/admin/dre')) ||
+                            (item.href === '/admin/marketing' && (pathname === '/admin/coupons' || pathname === '/admin/customers'));
 
                         return (
                             <Link

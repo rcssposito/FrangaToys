@@ -380,7 +380,7 @@ export default function AutomationPage() {
                         className="py-2.5 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-black uppercase tracking-wider text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-orange-500/20 disabled:opacity-50"
                     >
                         <Sparkles className={`w-3.5 h-3.5 ${loadingAnalyze ? 'animate-spin' : ''}`} />
-                        {loadingAnalyze ? 'Analisando...' : 'Analisar com IA'}
+                        {loadingAnalyze ? 'Analisando...' : 'Analisar'}
                     </button>
                 </div>
 

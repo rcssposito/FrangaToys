@@ -73,17 +73,26 @@ interface TopSeries {
     vendas: number;
 }
 
-function CouponsContent() {
+export function CouponsView({ forcedTab }: { forcedTab?: 'cupons' | 'campanhas' | 'demanda' } = {}) {
     const router = useRouter();
     const searchParams = useSearchParams();
     
     // Tab state: 'cupons' | 'campanhas' | 'demanda'
-    const initialTab = searchParams.get('tab') === 'demanda' || searchParams.get('tab') === 'popularidade' 
-        ? 'demanda' 
-        : searchParams.get('tab') === 'campanhas'
-        ? 'campanhas'
-        : 'cupons';
+    const queryTab = searchParams.get('tab');
+    const initialTab = forcedTab || (
+        queryTab === 'demanda' || queryTab === 'popularidade' 
+            ? 'demanda' 
+            : queryTab === 'campanhas'
+            ? 'campanhas'
+            : 'cupons'
+    );
     const [activeTab, setActiveTab] = useState<'cupons' | 'campanhas' | 'demanda'>(initialTab);
+
+    useEffect(() => {
+        if (forcedTab && forcedTab !== activeTab) {
+            setActiveTab(forcedTab);
+        }
+    }, [forcedTab]);
 
     // Coupons State
     const [cupons, setCupons] = useState<Cupom[]>([]);
@@ -1512,7 +1521,7 @@ export default function AdminCouponsPage() {
                 <Loader2 className="animate-spin text-orange-500 w-8 h-8" />
             </div>
         }>
-            <CouponsContent />
+            <CouponsView />
         </Suspense>
     );
 }

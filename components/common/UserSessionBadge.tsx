@@ -3,13 +3,16 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useWishlist } from '@/context/WishlistContext';
-import { User, LogOut, Heart, Truck, ChevronDown, Sparkles } from 'lucide-react';
+import { User, LogOut, Heart, Truck, ChevronDown, Phone, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function UserSessionBadge({ className = '' }: { className?: string }) {
     const { 
         savedNome, 
-        savedPhone, 
+        savedPhone,
+        avatarUrl,
+        hasPhone,
+        openBindPhoneModal,
         wishlistCount, 
         setIsWishlistOpen, 
         openAuthModal, 
@@ -52,13 +55,12 @@ export default function UserSessionBadge({ className = '' }: { className?: strin
             <button
                 onClick={openAuthModal}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all bg-zinc-900/60 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 hover:border-orange-500/40 shadow-sm cursor-pointer active:scale-95 group ${className}`}
-                title="Identifique-se para salvar seus favoritos e acompanhar pedidos"
+                title="Identifique-se com Google ou WhatsApp"
             >
                 <div className="w-5 h-5 rounded-full bg-zinc-800 group-hover:bg-orange-500/20 flex items-center justify-center text-zinc-400 group-hover:text-orange-400 transition-colors">
                     <User size={12} />
                 </div>
-                <span className="hidden sm:inline">Entrar</span>
-                <span className="sm:hidden">Entrar</span>
+                <span>Entrar</span>
             </button>
         );
     }
@@ -67,18 +69,28 @@ export default function UserSessionBadge({ className = '' }: { className?: strin
         <div ref={menuRef} className={`relative inline-block ${className}`}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer active:scale-95 ${
+                className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold transition-all border cursor-pointer active:scale-95 ${
                     isOpen 
                         ? 'bg-zinc-900 border-orange-500/50 text-white shadow-[0_0_15px_rgba(249,115,22,0.15)]' 
                         : 'bg-zinc-950/80 hover:bg-zinc-900 border-zinc-800 hover:border-zinc-700 text-zinc-200'
                 }`}
                 title={`Conectado como ${savedNome || savedPhone}`}
             >
-                <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
-                <span className="font-extrabold text-zinc-100 max-w-[110px] truncate">
+                {/* Avatar ou Status Dot */}
+                {avatarUrl ? (
+                    <img 
+                        src={avatarUrl} 
+                        alt={savedNome || 'Avatar'} 
+                        className="w-5 h-5 rounded-full object-cover border border-orange-500/40"
+                    />
+                ) : (
+                    <span className="relative flex h-2 w-2">
+                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${hasPhone ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                        <span className={`relative inline-flex rounded-full h-2 w-2 ${hasPhone ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                    </span>
+                )}
+                
+                <span className="font-extrabold text-zinc-100 max-w-[100px] truncate">
                     Oi, {primeiroNome || 'Colecionador'}
                 </span>
                 <ChevronDown size={13} className={`text-zinc-400 transition-transform duration-200 ${isOpen ? 'rotate-180 text-orange-400' : ''}`} />
@@ -97,21 +109,53 @@ export default function UserSessionBadge({ className = '' }: { className?: strin
                         {/* Header do Usuário */}
                         <div className="px-3 py-2.5 bg-zinc-900/70 border border-zinc-800/80 rounded-xl mb-1.5">
                             <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-full bg-orange-500/15 border border-orange-500/30 text-orange-400 flex items-center justify-center font-black text-xs shrink-0">
-                                    {(savedNome ? savedNome[0] : 'U').toUpperCase()}
-                                </div>
+                                {avatarUrl ? (
+                                    <img 
+                                        src={avatarUrl} 
+                                        alt={savedNome || 'Avatar'} 
+                                        className="w-8 h-8 rounded-full object-cover border border-orange-500/40 shrink-0" 
+                                    />
+                                ) : (
+                                    <div className="w-8 h-8 rounded-full bg-orange-500/15 border border-orange-500/30 text-orange-400 flex items-center justify-center font-black text-xs shrink-0">
+                                        {(savedNome ? savedNome[0] : 'U').toUpperCase()}
+                                    </div>
+                                )}
                                 <div className="min-w-0 flex-1">
                                     <p className="text-xs font-black text-white truncate">
                                         {savedNome || 'Colecionador'}
                                     </p>
-                                    {savedPhone && (
+                                    {savedPhone ? (
                                         <p className="text-[10px] text-zinc-400 font-mono">
                                             {savedPhone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')}
+                                        </p>
+                                    ) : (
+                                        <p className="text-[10px] text-amber-400/90 font-medium flex items-center gap-1">
+                                            <AlertCircle size={10} />
+                                            WhatsApp não vinculado
                                         </p>
                                     )}
                                 </div>
                             </div>
                         </div>
+
+                        {/* Aviso / Ação para vincular WhatsApp se ainda não tiver */}
+                        {!hasPhone && (
+                            <button
+                                onClick={() => {
+                                    setIsOpen(false);
+                                    openBindPhoneModal();
+                                }}
+                                className="w-full mb-1 flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-all cursor-pointer group"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Phone size={13} className="text-amber-400 animate-pulse" />
+                                    <span>Vincular WhatsApp</span>
+                                </div>
+                                <span className="text-[9px] uppercase font-black bg-amber-500/20 px-2 py-0.5 rounded-full text-amber-300">
+                                    Ativar Rastreio
+                                </span>
+                            </button>
+                        )}
 
                         {/* Ações */}
                         <div className="space-y-1">

@@ -39,6 +39,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { useRouter, useSearchParams } from 'next/navigation';
 import StudiosBI from '@/components/Admin/StudiosBI';
 import StudiosMonthlyControl from '@/components/Admin/StudiosMonthlyControl';
+import AdminPatreonRepositoryPage from '../patreon/repository/page';
 
 import { clsx } from 'clsx';
 
@@ -86,12 +87,13 @@ function StudiosContent() {
 
     const searchParams = useSearchParams();
     const tabParam = searchParams.get('tab');
-    const initialTab: 'acervo' | 'bi' | 'mensalidades' = 
+    const initialTab: 'acervo' | 'bi' | 'mensalidades' | 'franga-studio' = 
         tabParam === 'bi' || tabParam === 'analytics' ? 'bi' :
-        tabParam === 'mensalidades' || tabParam === 'gastos' ? 'mensalidades' : 'acervo';
-    const [activeTab, setActiveTab] = useState<'acervo' | 'bi' | 'mensalidades'>(initialTab);
+        tabParam === 'mensalidades' || tabParam === 'gastos' ? 'mensalidades' :
+        tabParam === 'franga-studio' || tabParam === 'patreon' ? 'franga-studio' : 'acervo';
+    const [activeTab, setActiveTab] = useState<'acervo' | 'bi' | 'mensalidades' | 'franga-studio'>(initialTab);
 
-    const changeTab = (tab: 'acervo' | 'bi' | 'mensalidades') => {
+    const changeTab = (tab: 'acervo' | 'bi' | 'mensalidades' | 'franga-studio') => {
         setActiveTab(tab);
         const params = new URLSearchParams(window.location.search);
         params.set('tab', tab);
@@ -293,14 +295,18 @@ function StudiosContent() {
                             Controle Mensal & Gastos
                         </button>
 
-                        <Link
-                            href="/admin/franga-studio"
-                            className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/20 cursor-pointer"
+                        <button
+                            onClick={() => changeTab('franga-studio')}
+                            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                                activeTab === 'franga-studio'
+                                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/25'
+                                    : 'text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/20'
+                            }`}
                             title="Gerenciar lançamentos e repositórios do Franga Studio"
                         >
                             <FolderGit2 size={14} />
                             Franga Studio
-                        </Link>
+                        </button>
                     </div>
                 </div>
 
@@ -308,6 +314,10 @@ function StudiosContent() {
                     <StudiosMonthlyControl />
                 ) : activeTab === 'bi' ? (
                     <StudiosBI />
+                ) : activeTab === 'franga-studio' ? (
+                    <div className="bg-zinc-950/60 rounded-3xl p-4 border border-zinc-900 shadow-xl">
+                        <AdminPatreonRepositoryPage />
+                    </div>
                 ) : (
                     <>
                         {/* Search & Sort Controls */}

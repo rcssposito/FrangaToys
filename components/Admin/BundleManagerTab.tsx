@@ -20,7 +20,10 @@ import {
     Package,
     Image as ImageIcon,
     Columns,
-    CheckCircle2
+    CheckCircle2,
+    ChevronDown,
+    ChevronUp,
+    ChevronsUpDown
 } from 'lucide-react';
 import Image from 'next/image';
 import { toast } from 'sonner';
@@ -73,6 +76,25 @@ export default function BundleManagerTab() {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingBundle, setEditingBundle] = useState<BundleData | null>(null);
+
+    // Controle de cards colapsados
+    const [expandedBundleIds, setExpandedBundleIds] = useState<Record<number, boolean>>({});
+
+    const toggleBundleExpand = (id: number) => {
+        setExpandedBundleIds(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    const isAllExpanded = bundles.length > 0 && bundles.every(b => expandedBundleIds[b.id]);
+
+    const toggleExpandAll = () => {
+        if (isAllExpanded) {
+            setExpandedBundleIds({});
+        } else {
+            const all: Record<number, boolean> = {};
+            bundles.forEach(b => { all[b.id] = true; });
+            setExpandedBundleIds(all);
+        }
+    };
 
     // Form State
     const [nome, setNome] = useState('');
@@ -488,13 +510,26 @@ export default function BundleManagerTab() {
                         Crie combos de produtos (SKUs compostos). Os tempos de pintura e insumos são somados automaticamente, e o desconto é aplicado em tempo real.
                     </p>
                 </div>
-                <button
-                    onClick={handleOpenCreate}
-                    className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-purple-600/20 active:scale-95 flex items-center gap-2 shrink-0 cursor-pointer"
-                >
-                    <Plus size={16} />
-                    Criar Novo Bundle
-                </button>
+                <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+                    {bundles.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={toggleExpandAll}
+                            className="px-3.5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white font-bold text-xs rounded-xl transition-all border border-zinc-700/60 flex items-center gap-2 cursor-pointer active:scale-95 shrink-0"
+                            title={isAllExpanded ? "Recolher todos os cards" : "Expandir todos os cards"}
+                        >
+                            <ChevronsUpDown size={15} />
+                            <span>{isAllExpanded ? 'Colapsar Todos' : 'Expandir Todos'}</span>
+                        </button>
+                    )}
+                    <button
+                        onClick={handleOpenCreate}
+                        className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-purple-600/20 active:scale-95 flex items-center gap-2 shrink-0 cursor-pointer"
+                    >
+                        <Plus size={16} />
+                        Criar Novo Bundle
+                    </button>
+                </div>
             </div>
 
             {/* Listagem de Bundles */}
@@ -523,158 +558,215 @@ export default function BundleManagerTab() {
                     </button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {bundles.map(bundle => (
-                        <div
-                            key={bundle.id}
-                            className="bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-5 space-y-5 transition-all shadow-xl"
-                        >
-                            {/* Header do Card */}
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-black border border-zinc-800 shrink-0">
-                                        {bundle.imagem_url ? (
-                                            <Image
-                                                src={bundle.imagem_url}
-                                                alt={bundle.nome}
-                                                fill
-                                                className="object-cover"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-zinc-600">
-                                                <Boxes size={24} />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                                                Bundle SKU #{bundle.id}
-                                            </span>
-                                            {bundle.codigo && (
-                                                <span className="text-[10px] font-mono text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded">
-                                                    {bundle.codigo}
-                                                </span>
-                                            )}
-                                            {bundle.todas_pecas_disponiveis === false ? (
-                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-950/50 text-red-400 border border-red-500/30 flex items-center gap-1" title="Peça componente ou estúdio inativo">
-                                                    ⚠️ Indisponível (Componente Inativo)
-                                                </span>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {bundles.map(bundle => {
+                        const isExpanded = !!expandedBundleIds[bundle.id];
+
+                        return (
+                            <div
+                                key={bundle.id}
+                                className={`bg-zinc-900/80 border rounded-2xl transition-all shadow-xl overflow-hidden ${
+                                    isExpanded 
+                                        ? 'border-purple-500/40 p-5 space-y-4 shadow-purple-500/5' 
+                                        : 'border-zinc-800 hover:border-zinc-700 p-3.5 sm:p-4'
+                                }`}
+                            >
+                                {/* Header do Card (clicável para expandir/colapsar) */}
+                                <div className="flex items-center justify-between gap-3">
+                                    <div 
+                                        onClick={() => toggleBundleExpand(bundle.id)}
+                                        className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer select-none group"
+                                        title={isExpanded ? 'Clique para colapsar' : 'Clique para expandir'}
+                                    >
+                                        <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-black border border-zinc-800 shrink-0 group-hover:border-purple-500/50 transition-colors">
+                                            {bundle.imagem_url ? (
+                                                <Image
+                                                    src={bundle.imagem_url}
+                                                    alt={bundle.nome}
+                                                    fill
+                                                    className="object-cover"
+                                                />
                                             ) : (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleToggleDisponivel(bundle)}
-                                                    className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border transition-colors cursor-pointer flex items-center gap-1.5 ${
-                                                        bundle.disponivel
-                                                            ? 'bg-emerald-950/50 text-emerald-400 border-emerald-500/30 hover:bg-emerald-900/50'
-                                                            : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-750'
-                                                    }`}
-                                                    title="Clique para alternar disponibilidade na vitrine"
-                                                >
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${bundle.disponivel ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`} />
-                                                    {bundle.disponivel ? 'Disponível na Vitrine' : 'Pausado'}
-                                                </button>
+                                                <div className="w-full h-full flex items-center justify-center text-zinc-600">
+                                                    <Boxes size={22} />
+                                                </div>
                                             )}
                                         </div>
-                                        <h3 className="text-base font-black text-white mt-1 leading-tight">{bundle.nome}</h3>
-                                        <p className="text-[11px] text-zinc-400 mt-0.5">
-                                            {bundle.componentes.length} {bundle.componentes.length === 1 ? 'peça componente' : 'peças componentes'}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-1.5">
-                                    <button
-                                        onClick={() => handleOpenEdit(bundle)}
-                                        className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-all cursor-pointer"
-                                        title="Editar Bundle"
-                                    >
-                                        <Edit3 size={15} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteBundle(bundle)}
-                                        className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 transition-all cursor-pointer"
-                                        title="Excluir Bundle"
-                                    >
-                                        <Trash2 size={15} />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Componentes do Kit */}
-                            <div className="bg-black/50 border border-zinc-850 rounded-xl p-3 space-y-2">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
-                                    Peças Inclusas no Kit:
-                                </span>
-                                <div className="space-y-1.5">
-                                    {bundle.componentes.map(comp => (
-                                        <div key={comp.id} className="flex items-center justify-between text-xs py-1 px-2 rounded-lg bg-zinc-900/50 border border-zinc-800/40">
-                                            <div className="flex items-center gap-2 truncate">
-                                                <span className="w-5 h-5 rounded bg-purple-950/60 text-purple-400 font-bold text-[10px] flex items-center justify-center shrink-0">
-                                                    {comp.quantidade}x
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                                                    #{bundle.id}
                                                 </span>
-                                                <span className="font-semibold text-zinc-200 truncate">{comp.nome}</span>
-                                                {comp.disponivel === false && (
-                                                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-red-950/60 text-red-400 border border-red-500/30 shrink-0">
-                                                        ⚠️ Inativa
+                                                {bundle.codigo && (
+                                                    <span className="text-[9px] font-mono text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded">
+                                                        {bundle.codigo}
+                                                    </span>
+                                                )}
+                                                {bundle.todas_pecas_disponiveis === false ? (
+                                                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-950/50 text-red-400 border border-red-500/30 flex items-center gap-1">
+                                                        ⚠️ Indisponível
+                                                    </span>
+                                                ) : (
+                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border flex items-center gap-1 ${
+                                                        bundle.disponivel
+                                                            ? 'bg-emerald-950/50 text-emerald-400 border-emerald-500/30'
+                                                            : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                                                    }`}>
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${bundle.disponivel ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
+                                                        {bundle.disponivel ? 'Ativo' : 'Pausado'}
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="flex items-center gap-3 text-[11px] text-zinc-400 shrink-0 font-mono">
-                                                <span>🎨 {comp.horas_pintura}h</span>
-                                                <span>🧪 {(comp.resina_kg || 0) * 1000}g</span>
-                                                {comp.preco_colorido ? (
-                                                    <span className="text-emerald-400 font-bold">R$ {comp.preco_colorido}</span>
-                                                ) : null}
+                                            <h3 className="text-sm sm:text-base font-black text-white mt-1 leading-tight truncate group-hover:text-purple-400 transition-colors">
+                                                {bundle.nome}
+                                            </h3>
+                                            <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-400 flex-wrap">
+                                                <span className="font-semibold text-zinc-300">
+                                                    {bundle.componentes.length} {bundle.componentes.length === 1 ? 'peça' : 'peças'}
+                                                </span>
+                                                <span>•</span>
+                                                <span className="text-emerald-400 font-bold font-mono">
+                                                    R$ {bundle.summary.preco_bundle_colorido}
+                                                </span>
+                                                {bundle.summary.desconto_pct > 0 && (
+                                                    <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-black px-1.5 py-0.2 rounded">
+                                                        -{bundle.summary.desconto_pct}%
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
+                                    </div>
 
-                            {/* Métricas e Precificação Dinâmica */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                                <div className="bg-zinc-950/60 border border-zinc-800/60 rounded-xl p-2.5">
-                                    <div className="text-[10px] uppercase font-bold text-zinc-400 flex items-center justify-center gap-1">
-                                        <Clock size={11} className="text-orange-400" /> Pintura Total
-                                    </div>
-                                    <div className="text-sm font-black text-orange-400 mt-1 font-mono">
-                                        {bundle.summary.horas_pintura_total} h
+                                    {/* Ações e Botão Chevron */}
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleToggleDisponivel(bundle);
+                                            }}
+                                            className={`p-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                                bundle.disponivel 
+                                                    ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30 hover:bg-emerald-900/40' 
+                                                    : 'bg-zinc-800 text-zinc-400 border-zinc-750 hover:bg-zinc-750'
+                                            }`}
+                                            title={bundle.disponivel ? 'Pausar da vitrine' : 'Ativar na vitrine'}
+                                        >
+                                            <span className={`block w-2.5 h-2.5 rounded-full ${bundle.disponivel ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleOpenEdit(bundle);
+                                            }}
+                                            className="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-all cursor-pointer"
+                                            title="Editar Bundle"
+                                        >
+                                            <Edit3 size={14} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteBundle(bundle);
+                                            }}
+                                            className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 transition-all cursor-pointer"
+                                            title="Excluir Bundle"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleBundleExpand(bundle.id)}
+                                            className={`p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-all cursor-pointer ${isExpanded ? 'bg-purple-900/40 text-purple-300 border border-purple-500/30' : ''}`}
+                                            title={isExpanded ? 'Recolher detalhes' : 'Expandir detalhes'}
+                                        >
+                                            <ChevronDown size={15} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180 text-purple-400' : ''}`} />
+                                        </button>
                                     </div>
                                 </div>
-                                <div className="bg-zinc-950/60 border border-zinc-800/60 rounded-xl p-2.5">
-                                    <div className="text-[10px] uppercase font-bold text-zinc-400 flex items-center justify-center gap-1">
-                                        <Layers size={11} className="text-blue-400" /> Resina Total
+
+                                {/* Conteúdo Expandido (Componentes do Kit + Métricas) */}
+                                {isExpanded && (
+                                    <div className="pt-3 border-t border-zinc-800/80 space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                                        {/* Componentes do Kit */}
+                                        <div className="bg-black/50 border border-zinc-850 rounded-xl p-3 space-y-2">
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
+                                                Peças Inclusas no Kit:
+                                            </span>
+                                            <div className="space-y-1.5">
+                                                {bundle.componentes.map(comp => (
+                                                    <div key={comp.id} className="flex items-center justify-between text-xs py-1 px-2 rounded-lg bg-zinc-900/50 border border-zinc-800/40">
+                                                        <div className="flex items-center gap-2 truncate">
+                                                            <span className="w-5 h-5 rounded bg-purple-950/60 text-purple-400 font-bold text-[10px] flex items-center justify-center shrink-0">
+                                                                {comp.quantidade}x
+                                                            </span>
+                                                            <span className="font-semibold text-zinc-200 truncate">{comp.nome}</span>
+                                                            {comp.disponivel === false && (
+                                                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-red-950/60 text-red-400 border border-red-500/30 shrink-0">
+                                                                    ⚠️ Inativa
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-3 text-[11px] text-zinc-400 shrink-0 font-mono">
+                                                            <span>🎨 {comp.horas_pintura}h</span>
+                                                            <span>🧪 {(comp.resina_kg || 0) * 1000}g</span>
+                                                            {comp.preco_colorido ? (
+                                                                <span className="text-emerald-400 font-bold">R$ {comp.preco_colorido}</span>
+                                                            ) : null}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Métricas e Precificação Dinâmica */}
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                                            <div className="bg-zinc-950/60 border border-zinc-800/60 rounded-xl p-2.5">
+                                                <div className="text-[10px] uppercase font-bold text-zinc-400 flex items-center justify-center gap-1">
+                                                    <Clock size={11} className="text-orange-400" /> Pintura Total
+                                                </div>
+                                                <div className="text-sm font-black text-orange-400 mt-1 font-mono">
+                                                    {bundle.summary.horas_pintura_total} h
+                                                </div>
+                                            </div>
+                                            <div className="bg-zinc-950/60 border border-zinc-800/60 rounded-xl p-2.5">
+                                                <div className="text-[10px] uppercase font-bold text-zinc-400 flex items-center justify-center gap-1">
+                                                    <Layers size={11} className="text-blue-400" /> Resina Total
+                                                </div>
+                                                <div className="text-sm font-black text-blue-400 mt-1 font-mono">
+                                                    {(bundle.summary.resina_kg_total * 1000).toFixed(0)} g
+                                                </div>
+                                            </div>
+                                            <div className="bg-zinc-950/60 border border-zinc-800/60 rounded-xl p-2.5">
+                                                <div className="text-[10px] uppercase font-bold text-zinc-400 flex items-center justify-center gap-1">
+                                                    <DollarSign size={11} className="text-zinc-400" /> Soma Avulsa
+                                                </div>
+                                                <div className="text-sm font-black text-zinc-400 line-through mt-1 font-mono">
+                                                    R$ {bundle.summary.preco_cheio_colorido}
+                                                </div>
+                                                <div className="text-[9px] text-zinc-500 font-bold">
+                                                    Pintadas
+                                                </div>
+                                            </div>
+                                            <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-2.5">
+                                                <div className="text-[10px] uppercase font-bold text-emerald-400 flex items-center justify-center gap-1">
+                                                    <Percent size={11} /> Kit Pintado
+                                                </div>
+                                                <div className="text-base font-black text-emerald-400 mt-0.5 font-mono">
+                                                    R$ {bundle.summary.preco_bundle_colorido}
+                                                </div>
+                                                <div className="text-[9px] text-emerald-300 font-bold">
+                                                    -{bundle.summary.desconto_pct}% OFF
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="text-sm font-black text-blue-400 mt-1 font-mono">
-                                        {(bundle.summary.resina_kg_total * 1000).toFixed(0)} g
-                                    </div>
-                                </div>
-                                <div className="bg-zinc-950/60 border border-zinc-800/60 rounded-xl p-2.5">
-                                    <div className="text-[10px] uppercase font-bold text-zinc-400 flex items-center justify-center gap-1">
-                                        <DollarSign size={11} className="text-zinc-400" /> Soma Avulsa
-                                    </div>
-                                    <div className="text-sm font-black text-zinc-400 line-through mt-1 font-mono">
-                                        R$ {bundle.summary.preco_cheio_colorido}
-                                    </div>
-                                    <div className="text-[9px] text-zinc-500 font-bold">
-                                        Pintadas
-                                    </div>
-                                </div>
-                                <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-2.5">
-                                    <div className="text-[10px] uppercase font-bold text-emerald-400 flex items-center justify-center gap-1">
-                                        <Percent size={11} /> Kit Pintado
-                                    </div>
-                                    <div className="text-base font-black text-emerald-400 mt-0.5 font-mono">
-                                        R$ {bundle.summary.preco_bundle_colorido}
-                                    </div>
-                                    <div className="text-[9px] text-emerald-300 font-bold">
-                                        -{bundle.summary.desconto_pct}% OFF
-                                    </div>
-                                </div>
+                                )}
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 

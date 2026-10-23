@@ -998,13 +998,13 @@ export default function CustomerDashboard() {
                 
                 {/* Header Nav */}
                 <div className="flex items-center justify-between">
-                    <button 
-                        onClick={() => router.push('/rastreio')}
-                        className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors text-xs font-black uppercase tracking-widest cursor-pointer"
+                    <Link 
+                        href="/"
+                        className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors text-xs font-black uppercase tracking-widest cursor-pointer group"
                     >
-                        <ArrowLeft size={16} />
-                        Sair / Voltar
-                    </button>
+                        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                        Voltar para a Loja
+                    </Link>
                     <div className="flex items-center gap-3">
                          <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest bg-zinc-900 px-3 py-1 rounded-full border border-white/5">
                             ACESSO PROTEGIDO
