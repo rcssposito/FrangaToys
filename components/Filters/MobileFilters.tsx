@@ -114,19 +114,36 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
         const newIds = current.includes(idStr)
             ? current.filter(x => x !== idStr)
             : [...current, idStr];
-        onChange({ ...filters, studioIds: newIds.join(',') });
+        onChange({ 
+            ...filters, 
+            studioIds: newIds.join(','),
+            prontaEntrega: undefined 
+        });
     };
 
     const handlePriceRangeChange = (newRange: string | undefined) => {
         if (newRange) {
-            onChange({ ...filters, priceRange: newRange, sort: 'name_asc' });
+            onChange({ 
+                ...filters, 
+                priceRange: newRange, 
+                sort: 'name_asc',
+                prontaEntrega: undefined 
+            });
         } else {
-            onChange({ ...filters, priceRange: newRange });
+            onChange({ 
+                ...filters, 
+                priceRange: newRange,
+                prontaEntrega: undefined 
+            });
         }
     };
 
     const handleSizeRangeChange = (newRange: string | undefined) => {
-        onChange({ ...filters, sizeRange: newRange });
+        onChange({ 
+            ...filters, 
+            sizeRange: newRange,
+            prontaEntrega: undefined 
+        });
     };
 
     const handleSortChange = (newSort: string) => {
@@ -187,7 +204,7 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                 
                 <div className="w-full overflow-x-auto no-scrollbar px-6 flex gap-2 py-1 items-center">
                     <button
-                        onClick={() => onChange({ ...filters, categoria: undefined })}
+                        onClick={() => onChange({ ...filters, categoria: undefined, prontaEntrega: undefined })}
                         className={clsx(
                             "whitespace-nowrap px-5 py-2 rounded-full text-xs font-bold border transition-all active:scale-95 shadow-sm",
                             (!filters.categoria || filters.categoria === 'Todos')
@@ -212,7 +229,11 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                     {categories.map(cat => (
                         <button
                             key={cat}
-                            onClick={() => onChange({ ...filters, categoria: filters.categoria === cat ? undefined : cat })}
+                            onClick={() => onChange({ 
+                                ...filters, 
+                                categoria: filters.categoria === cat ? undefined : cat,
+                                prontaEntrega: undefined 
+                            })}
                             className={clsx(
                                 "whitespace-nowrap px-5 py-2 rounded-full text-xs font-bold border transition-all active:scale-95 shadow-sm",
                                 filters.categoria === cat

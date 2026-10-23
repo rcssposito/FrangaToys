@@ -88,7 +88,11 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
     }, [debouncedSearch, localSearch, filters, onChange]);
 
     const toggleCategory = (cat: string) => {
-        onChange({ ...filters, categoria: filters.categoria === cat ? undefined : cat });
+        onChange({ 
+            ...filters, 
+            categoria: filters.categoria === cat ? undefined : cat,
+            prontaEntrega: undefined 
+        });
     };
 
     const toggleStudio = (id: number) => {
@@ -97,7 +101,11 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
         const newIds = current.includes(idStr)
             ? current.filter(x => x !== idStr)
             : [...current, idStr];
-        onChange({ ...filters, studioIds: newIds.join(',') });
+        onChange({ 
+            ...filters, 
+            studioIds: newIds.join(','),
+            prontaEntrega: undefined 
+        });
     };
 
     const handleClear = () => {
@@ -115,14 +123,27 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
 
     const handlePriceRangeChange = (newRange: string | undefined) => {
         if (newRange) {
-            onChange({ ...filters, priceRange: newRange, sort: 'name_asc' });
+            onChange({ 
+                ...filters, 
+                priceRange: newRange, 
+                sort: 'name_asc',
+                prontaEntrega: undefined 
+            });
         } else {
-            onChange({ ...filters, priceRange: newRange });
+            onChange({ 
+                ...filters, 
+                priceRange: newRange,
+                prontaEntrega: undefined 
+            });
         }
     };
 
     const handleSizeRangeChange = (newRange: string | undefined) => {
-        onChange({ ...filters, sizeRange: newRange });
+        onChange({ 
+            ...filters, 
+            sizeRange: newRange,
+            prontaEntrega: undefined 
+        });
     };
 
     return (
@@ -174,7 +195,7 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
 
             <div className="max-w-5xl mx-auto mb-8 bg-zinc-950/40 backdrop-blur-md border border-white/5 rounded-2xl p-1.5 shadow-xl flex items-center justify-between">
                 <button
-                    onClick={() => onChange({ ...filters, categoria: undefined })}
+                    onClick={() => onChange({ ...filters, categoria: undefined, prontaEntrega: undefined })}
                     className={clsx(
                         "flex-1 flex items-center justify-center gap-2.5 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative border border-transparent",
                         (!filters.categoria || filters.categoria === 'Todos')

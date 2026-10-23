@@ -7,6 +7,7 @@ import { WishlistProvider } from '@/context/WishlistContext';
 import { ThemeProvider } from 'next-themes';
 import { CartDrawer } from '@/components/Cart/CartDrawer';
 import { WishlistDrawer } from '@/components/Wishlist/WishlistDrawer';
+import { WishlistAuthModal } from '@/components/Wishlist/WishlistAuthModal';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
     const [queryClient] = useState(() => new QueryClient({
@@ -25,6 +26,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                         {children}
                         <CartDrawer />
                         <WishlistDrawer />
+                        <WishlistAuthModal />
                     </WishlistProvider>
                 </CartProvider>
             </ThemeProvider>

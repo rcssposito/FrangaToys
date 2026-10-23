@@ -31,6 +31,12 @@ interface WishlistContextType {
     wishlistCount: number;
     isWishlistOpen: boolean;
     setIsWishlistOpen: (open: boolean) => void;
+    isAuthModalOpen: boolean;
+    openAuthModal: () => void;
+    closeAuthModal: () => void;
+    savedPhone: string | null;
+    savedNome: string | null;
+    identifyClient: (nome: string, telefone: string) => Promise<void>;
     syncWithPhone: (phone: string) => Promise<void>;
     getShareableLink: () => string;
     shareOnWhatsApp: () => void;
@@ -43,6 +49,9 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     const [items, setItems] = useState<WishlistItem[]>([]);
     const [isInitialized, setIsInitialized] = useState(false);
     const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const [savedPhone, setSavedPhone] = useState<string | null>(null);
+    const [savedNome, setSavedNome] = useState<string | null>(null);
 
     // Refs para evitar loops de render e concorrência na sincronização
     const wishlistIdsRef = useRef<number[]>([]);
@@ -50,12 +59,17 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     const isSyncingRef = useRef(false);
     const lastSyncedSignatureRef = useRef<string>('');
 
-    // 1. Carrega do LocalStorage na montagem
+    // 1. Carrega do LocalStorage na montagem (incluindo dados de identificação)
     useEffect(() => {
         try {
             const savedIds = localStorage.getItem('franga_wishlist_ids');
             const savedItems = localStorage.getItem('franga_wishlist_items');
+            const phone = localStorage.getItem('frangatoys_tracking_phone');
+            const nome = localStorage.getItem('frangatoys_client_nome');
             
+            if (phone) setSavedPhone(phone);
+            if (nome) setSavedNome(nome);
+
             if (savedIds) {
                 const parsedIds = JSON.parse(savedIds);
                 if (Array.isArray(parsedIds)) setWishlistIds(parsedIds);
@@ -160,6 +174,37 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         }
     }, [isInitialized, wishlistIds, syncWithPhone]);
 
+    const openAuthModal = useCallback(() => setIsAuthModalOpen(true), []);
+    const closeAuthModal = useCallback(() => setIsAuthModalOpen(false), []);
+
+    const identifyClient = useCallback(async (nome: string, telefone: string) => {
+        const cleanPhone = telefone.replace(/\D/g, '');
+        const cleanName = nome.trim();
+
+        const res = await fetch('/api/public/client/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nome: cleanName,
+                telefone: cleanPhone,
+                wishlist: wishlistIdsRef.current
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || 'Erro ao salvar cadastro');
+        }
+
+        const finalNome = data.cliente?.nome || cleanName;
+        localStorage.setItem('frangatoys_tracking_phone', cleanPhone);
+        localStorage.setItem('frangatoys_client_nome', finalNome);
+        setSavedPhone(cleanPhone);
+        setSavedNome(finalNome);
+
+        await syncWithPhone(cleanPhone);
+    }, [syncWithPhone]);
+
     const isInWishlist = useCallback((id: number) => {
         return wishlistIds.includes(id);
     }, [wishlistIds]);
@@ -173,7 +218,8 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
             setItems(prev => prev.filter(item => item.id !== id));
             toast.info('Removido da Lista de Desejos');
         } else {
-            setWishlistIds(prev => [...prev, id]);
+            const nextIds = [...wishlistIds, id];
+            setWishlistIds(nextIds);
             if (typeof figure !== 'number') {
                 setItems(prev => {
                     if (prev.some(i => i.id === id)) return prev;
@@ -181,6 +227,12 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
                 });
             }
             toast.success('Adicionado à sua Lista de Desejos! ❤️');
+
+            // Se o usuário ainda não tiver telefone salvo, dispara o modal de identificação
+            const hasPhone = savedPhone || (typeof window !== 'undefined' ? localStorage.getItem('frangatoys_tracking_phone') : null);
+            if (!hasPhone) {
+                setIsAuthModalOpen(true);
+            }
         }
     };
 
@@ -226,6 +278,12 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
                 wishlistCount: wishlistIds.length,
                 isWishlistOpen,
                 setIsWishlistOpen,
+                isAuthModalOpen,
+                openAuthModal,
+                closeAuthModal,
+                savedPhone,
+                savedNome,
+                identifyClient,
                 syncWithPhone,
                 getShareableLink,
                 shareOnWhatsApp
