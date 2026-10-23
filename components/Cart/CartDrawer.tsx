@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Trash2, Send, ChevronLeft, User, Phone, MessageSquare, ChevronRight, Truck, MapPin, CreditCard, QrCode, Loader2 } from 'lucide-react';
+import { X, Trash2, Send, ChevronLeft, User, Phone, MessageSquare, ChevronRight, Truck, MapPin, CreditCard, QrCode, Loader2, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -499,7 +499,28 @@ export const CartDrawer = () => {
                                                 <p className="font-bold tracking-tight text-sm uppercase tracking-widest">Carrinho vazio</p>
                                             </div>
                                         ) : (
-                                            items.map((item) => (
+                                            <>
+                                                {items.every(i => i.pronta_entrega) ? (
+                                                    <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
+                                                        <div className="w-7 h-7 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0 text-amber-400">
+                                                            <Zap size={15} className="fill-amber-400" />
+                                                        </div>
+                                                        <div className="flex-1 text-[11px] font-bold">
+                                                            <span className="font-black uppercase text-amber-400">Despacho Turbo:</span> Todos os itens em estoque com envio em até 24h úteis!
+                                                        </div>
+                                                    </div>
+                                                ) : items.some(i => i.pronta_entrega) ? (
+                                                    <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-zinc-900/80 border border-amber-500/20 text-zinc-300 text-xs">
+                                                        <div className="w-7 h-7 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0 text-amber-400">
+                                                            <Zap size={15} className="fill-amber-400" />
+                                                        </div>
+                                                        <div className="flex-1 text-[10px] text-zinc-400 font-medium">
+                                                            Seu pedido contém itens de <span className="text-amber-400 font-bold">Pronta Entrega (24h)</span> e peças sob encomenda artesanal.
+                                                        </div>
+                                                    </div>
+                                                ) : null}
+
+                                                {items.map((item) => (
                                                 <motion.div
                                                     key={item.id}
                                                     layout
@@ -522,8 +543,14 @@ export const CartDrawer = () => {
                                                         <div className="flex-1 min-w-0 flex flex-col justify-between">
                                                             <div className="flex justify-between items-start gap-2">
                                                                 <div>
-                                                                    <div className="flex items-center gap-2">
+                                                                    <div className="flex items-center gap-2 flex-wrap">
                                                                         <h3 className="font-black text-white truncate text-sm leading-tight tracking-tight">{item.nome}</h3>
+                                                                        {item.pronta_entrega && (
+                                                                            <span className="flex-shrink-0 bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[8px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-tighter flex items-center gap-0.5 shadow-sm">
+                                                                                <Zap size={9} className="fill-amber-400" />
+                                                                                24h
+                                                                            </span>
+                                                                        )}
                                                                         {((item as any).is_campanha || (item as any).is_campanha_active) && (
                                                                             <span className="flex-shrink-0 bg-purple-600 text-[8px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-tighter text-white animate-pulse">
                                                                                 Oferta
@@ -595,7 +622,8 @@ export const CartDrawer = () => {
                                                         </div>
                                                     </div>
                                                 </motion.div>
-                                            ))
+                                            ))}
+                                            </>
                                         )}
                                     </motion.div>
                                 ) : step === 'shipping' ? (

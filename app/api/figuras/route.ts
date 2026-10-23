@@ -48,6 +48,8 @@ export async function GET(req: NextRequest) {
             is_bundle,
             desconto_bundle_pct,
             preco_fixo_bundle,
+            pronta_entrega,
+            estoque_pronta_entrega,
             ${seriesJoin} (
                 id,
                 nome,
@@ -84,6 +86,10 @@ export async function GET(req: NextRequest) {
 
         if (filters.temExtras === 'true' || searchParams.get('tem_extras') === 'true') {
             query = query.is('tem_extras', true);
+        }
+
+        if (filters.prontaEntrega === 'true' || searchParams.get('pronta_entrega') === 'true') {
+            query = query.eq('pronta_entrega', true);
         }
 
         // --- Price Range Filtering (Unified with storefront tiers) ---
@@ -293,6 +299,9 @@ export async function GET(req: NextRequest) {
                 is_merchant: studioData?.merchant ?? false,
                 is_bundle: item.is_bundle || false,
                 desconto_bundle_pct: item.desconto_bundle_pct || null,
+                preco_fixo_bundle: item.preco_fixo_bundle || null,
+                pronta_entrega: item.pronta_entrega || false,
+                estoque_pronta_entrega: Number(item.estoque_pronta_entrega) || 0,
             };
         });
 

@@ -57,6 +57,8 @@ export async function GET(req: NextRequest) {
         studio_id,
         tem_pintura_real,
         slug,
+        pronta_entrega,
+        estoque_pronta_entrega,
         studios (
           nome
         ),
@@ -101,9 +103,14 @@ export async function GET(req: NextRequest) {
         // 3. Sorting / Specific Filters
         const isSemPreco = searchParams.get('sem_preco') === 'true';
         const isTemExtras = searchParams.get('tem_extras') === 'true';
+        const isProntaEntrega = searchParams.get('pronta_entrega') === 'true';
 
         if (isTemExtras) {
             query = query.eq('tem_extras', true);
+        }
+
+        if (isProntaEntrega) {
+            query = query.eq('pronta_entrega', true);
         }
 
         if (isSemPreco) {
@@ -179,6 +186,8 @@ export async function GET(req: NextRequest) {
                 preco_fixo_campanha: meta.preco_fixo_campanha || 0,
                 custo_producao: custoProducao,
                 precos: settings ? calculateFigurePrices(meta, settings) : null,
+                pronta_entrega: item.pronta_entrega || false,
+                estoque_pronta_entrega: Number(item.estoque_pronta_entrega) || 0,
             };
         });
 
@@ -289,6 +298,8 @@ export async function PUT(req: Request) {
         if (tem_extras !== undefined) updateFields.tem_extras = tem_extras;
         if (tem_pintura_real !== undefined) updateFields.tem_pintura_real = tem_pintura_real;
         if (studio_id !== undefined) updateFields.studio_id = studio_id;
+        if (body.pronta_entrega !== undefined) updateFields.pronta_entrega = Boolean(body.pronta_entrega);
+        if (body.estoque_pronta_entrega !== undefined) updateFields.estoque_pronta_entrega = Number(body.estoque_pronta_entrega) || 0;
         // Removido: O catálogo não pode escrever diretamente o sinônimo na tabela figuras.
         // if (sinonimos !== undefined) updateFields.sinonimos = sinonimos;
 

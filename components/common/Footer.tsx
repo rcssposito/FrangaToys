@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Instagram, Mail, MessageSquare, Truck, Flame, Palette, ShieldCheck, Heart } from 'lucide-react';
+import { Instagram, Mail, MessageSquare, Truck, Flame, Palette, ShieldCheck, Heart, HelpCircle } from 'lucide-react';
 
 export default function Footer() {
   const pathname = usePathname();
@@ -57,6 +57,13 @@ export default function Footer() {
               Navegação
             </h4>
             <nav className="flex flex-col gap-3">
+              <Link
+                href="/faq"
+                className="text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-amber-500 transition-colors flex items-center gap-2"
+              >
+                <HelpCircle size={14} className="text-amber-500" />
+                Central de Ajuda & FAQ
+              </Link>
               <Link
                 href="/rastreio"
                 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:text-orange-500 transition-colors flex items-center gap-2"

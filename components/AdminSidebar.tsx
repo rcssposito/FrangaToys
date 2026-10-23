@@ -72,6 +72,12 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             roles: ['admin', 'sales', 'finance']
         },
         {
+            name: 'DRE & Fechamento',
+            href: '/admin/dre',
+            icon: TrendingUp,
+            roles: ['admin', 'finance']
+        },
+        {
             name: 'Kanban',
             href: '/admin/kanban',
             icon: KanbanSquare,

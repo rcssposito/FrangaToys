@@ -23,6 +23,7 @@ const fetchFiguras = async ({ pageParam = 0, queryKey }: any) => {
     if (filters.sort) params.set('sort', filters.sort);
     if (filters.priceRange) params.set('priceRange', filters.priceRange);
     if (filters.sizeRange) params.set('sizeRange', filters.sizeRange);
+    if (filters.prontaEntrega) params.set('prontaEntrega', filters.prontaEntrega);
 
     // Pass 'page' to backend
     params.set('page', pageParam.toString());

@@ -49,6 +49,8 @@ export const FiguraSchema = z.object({
   is_bundle: z.boolean().nullable().optional(),
   desconto_bundle_pct: z.number().nullable().optional(),
   preco_fixo_bundle: z.number().nullable().optional(),
+  pronta_entrega: z.boolean().nullable().optional(),
+  estoque_pronta_entrega: z.number().nullable().optional(),
 });
 
 export type FiguraDTO = z.infer<typeof FiguraSchema>;
@@ -60,6 +62,7 @@ export const FiltersSchema = z.object({
   incluirNaoVendaveis: z.string().optional(), // 'true' or 'false'
   novidades: z.string().optional(), // 'true' or 'false'
   temExtras: z.string().optional(), // 'true' or 'false'
+  prontaEntrega: z.string().optional(), // 'true' or 'false'
   limit: z.string().optional(),
   cursor: z.string().optional(),
   sort: z.string().optional(),

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { FiguraDTO } from '@/lib/dto';
 import Image from 'next/image';
 import { getOptimizedImageUrl } from '@/lib/image-utils';
@@ -13,7 +14,7 @@ import {
     ShoppingCart, ExternalLink, Sparkles, Instagram, Clock, Truck, ShieldCheck,
     Share2, Paintbrush, Palette, Crown, CheckCircle2, X, HelpCircle, Info,
     Maximize2, ArrowLeft, Tag, MessageCircle,
-    ChevronRight, ChevronLeft, Heart
+    ChevronRight, ChevronLeft, Heart, Zap
 } from 'lucide-react';
 import { useWishlist } from '@/context/WishlistContext';
 import { toast } from 'sonner';
@@ -135,7 +136,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
             id: 'estilizado', 
             label: 'Sem Pintura', 
             icon: Paintbrush, 
-            description: 'Apenas Impresso & Limpo', 
+            description: 'Impresso, Limpo & com Primer', 
             color: 'text-zinc-400', 
             bg: 'bg-zinc-400/10', 
             border: 'border-zinc-400/20', 
@@ -447,6 +448,12 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                     <Sparkles size={12} className="fill-white" /> COMBO {figure.precos?.desconto_bundle_pct || figure.desconto_bundle_pct || 20}% OFF
                                 </span>
                             )}
+                            {figure.pronta_entrega && (
+                                <span className="text-[10px] bg-amber-500/20 text-amber-300 font-black px-3 py-1 rounded-full border border-amber-500/40 shadow-lg shadow-amber-500/20 uppercase tracking-[0.2em] flex items-center gap-1.5 animate-pulse">
+                                    <Zap size={12} className="fill-amber-400 text-amber-400" />
+                                    Pronta Entrega {figure.estoque_pronta_entrega && figure.estoque_pronta_entrega > 0 ? `(${figure.estoque_pronta_entrega} un)` : ''}
+                                </span>
+                            )}
                         </div>
                         <h2 className="text-xl md:text-3xl font-black text-white tracking-tighter leading-[0.95]">{figure.nome}</h2>
 
@@ -461,6 +468,25 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                 <span className="text-zinc-600">D</span> {figure.profundidade_cm || '-'}<small className="text-[8px] ml-0.5 opacity-50">cm</small>
                             </div>
                         </div>
+
+                        {figure.pronta_entrega && (
+                            <div className="mt-4 flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 text-amber-300">
+                                <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400 shadow-sm">
+                                    <Zap size={18} className="fill-amber-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-[11px] font-black uppercase tracking-wider flex items-center gap-2 flex-wrap text-white">
+                                        <span>Envio Imediato em até 24h</span>
+                                        {figure.estoque_pronta_entrega && figure.estoque_pronta_entrega > 0 && (
+                                            <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">
+                                                {figure.estoque_pronta_entrega} {figure.estoque_pronta_entrega === 1 ? 'unidade restante' : 'unidades restantes'}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-[10px] text-zinc-400 font-medium mt-0.5">Item pronto em estoque! Despachamos em até 24h úteis para todo o Brasil.</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Finish Selector - Square Cards Layout */}
@@ -499,7 +525,19 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                             <div className="w-1 h-auto bg-zinc-500 rounded-full shrink-0" />
                                             <div>
                                                 <p className="text-[9px] font-black text-zinc-400 uppercase tracking-wider mb-0.5">Sem Pintura</p>
-                                                <p className="text-[10px] text-zinc-400 leading-relaxed font-medium">Apenas impresso e limpo. A peça vai montada ou desmontada (conforme complexidade), no tom cinza fosco natural da resina, pronta para você pintar ou colecionar.</p>
+                                                <p className="text-[10px] text-zinc-400 leading-relaxed font-medium">
+                                                    A peça é impressa na resina{' '}
+                                                    <a
+                                                        href="https://3dcure.com.br/produto/resina-3d-cure-acqua-art"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-orange-400 hover:underline font-bold inline-flex items-center gap-0.5"
+                                                    >
+                                                        Acqua Art da 3dCure
+                                                        <ExternalLink size={10} className="inline ml-0.5" />
+                                                    </a>
+                                                    , passa por limpeza ultra-sônica, cura UV interna e externa e aplicação de primer. É enviada montada ou em partes de encaixe, pronta para pintura.
+                                                </p>
                                             </div>
                                         </div>
                                         <div className="flex gap-3">
@@ -649,6 +687,15 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                         >
                             <Heart size={24} className={clsx("transition-transform duration-300", inWishlist && "fill-orange-500 scale-110")} />
                         </button>
+                    </div>
+
+                    {/* FAQ & Guia de Cuidados Micro-Link */}
+                    <div className="flex items-center justify-center gap-1.5 pt-2 text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                        <HelpCircle size={12} className="text-amber-500" />
+                        <span>Dúvidas sobre prazo, pintura ou limpeza?</span>
+                        <Link href="/faq" target="_blank" className="text-amber-400 hover:text-amber-300 underline underline-offset-2">
+                            Ver Guia & FAQ
+                        </Link>
                     </div>
 
                     {/* Cross-Sell Section */}

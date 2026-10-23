@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Truck, Flame, Settings, Instagram, LibraryBig, Palette, Compass } from 'lucide-react';
+import { Truck, Flame, Settings, Instagram, LibraryBig, Palette, Compass, HelpCircle } from 'lucide-react';
 import ThemeToggle from '@/components/common/ThemeToggle';
 import { CartIndicator } from '@/components/Cart/CartIndicator';
 import { WishlistIndicator } from '@/components/Wishlist/WishlistIndicator';
@@ -101,6 +101,29 @@ export default function Header() {
             />
             <span className="hidden lg:inline">Universo 3D</span>
           </Link>
+
+          <div className="h-4 w-px bg-zinc-800/30 hidden md:block" />
+
+          <Link
+            href="/faq"
+            className={clsx(
+              "text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 group whitespace-nowrap",
+              pathname === '/faq'
+                ? "text-amber-400"
+                : "text-zinc-400 hover:text-amber-400"
+            )}
+            title="Dúvidas Frequentes & Guia de Cuidados"
+          >
+            <HelpCircle
+              size={16}
+              className={clsx(
+                pathname === '/faq'
+                  ? "text-amber-400"
+                  : "group-hover:text-amber-400"
+              )}
+            />
+            <span className="hidden lg:inline">FAQ & Cuidados</span>
+          </Link>
         </div>
 
         {/* Right Menu / Utilities */}
@@ -126,6 +149,7 @@ export default function Header() {
             />
             <Link
               href="/admin"
+              prefetch={false}
               className="p-2 text-zinc-500 hover:text-orange-500 transition-colors"
               title="Acessar Admin"
             >
@@ -149,6 +173,9 @@ export default function Header() {
           <Link href="/universo" className="p-1 text-amber-500" title="Universo 3D">
             <Compass size={20} />
           </Link>
+          <Link href="/faq" className="p-1 text-amber-400" title="Central de Ajuda & FAQ">
+            <HelpCircle size={20} />
+          </Link>
         </div>
         <Link href="/" className="flex-shrink-0 flex justify-center">
           <img
@@ -162,7 +189,7 @@ export default function Header() {
             <Instagram size={18} />
           </a>
           <ThemeToggle />
-          <Link href="/admin" className="p-1 text-[var(--text-muted)] hover:text-orange-500">
+          <Link href="/admin" prefetch={false} className="p-1 text-[var(--text-muted)] hover:text-orange-500">
             <Settings size={18} />
           </Link>
         </div>

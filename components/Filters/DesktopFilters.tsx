@@ -81,6 +81,7 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
 
         if (debouncedQ === localSearch && debouncedQ !== currentQ) {
             if (isUserInteraction.current) {
+                isUserInteraction.current = false;
                 onChange({ ...filters, q: debouncedQ || undefined });
             }
         }
@@ -103,7 +104,8 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
         onChange({
             q: filters.q,
             categoria: filters.categoria,
-            sort: filters.sort || 'newest'
+            sort: filters.sort || 'newest',
+            prontaEntrega: undefined
         });
     };
 
@@ -215,6 +217,25 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
                         </button>
                     );
                 })}
+
+                <div className="w-px h-6 bg-white/10 mx-1 shrink-0" />
+
+                <button
+                    onClick={() => onChange({ ...filters, prontaEntrega: filters.prontaEntrega === 'true' ? undefined : 'true' })}
+                    className={clsx(
+                        "flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative border shrink-0 cursor-pointer",
+                        filters.prontaEntrega === 'true'
+                            ? "bg-amber-500 text-black border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.35)] scale-105"
+                            : "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20 hover:border-amber-500/40"
+                    )}
+                    title="Exibir apenas peças em estoque com envio em até 24h"
+                >
+                    <Zap size={14} className={filters.prontaEntrega === 'true' ? "fill-black text-black" : "fill-amber-400 text-amber-400"} />
+                    <span>Pronta Entrega</span>
+                    {filters.prontaEntrega === 'true' && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
+                    )}
+                </button>
             </div>
 
             {showAdvanced && (
@@ -244,7 +265,20 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
                         </div>
                     </div>
 
-                    <div className="mb-6">
+                    <div className="mb-6 flex flex-wrap gap-6">
+                        <label className="flex items-center gap-2.5 select-none cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="accent-amber-500 w-4 h-4 rounded-md border-white/10"
+                                checked={filters.prontaEntrega === 'true'}
+                                onChange={(e) => onChange({ ...filters, prontaEntrega: e.target.checked ? 'true' : undefined })}
+                            />
+                            <span className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                                <Zap size={13} className="fill-amber-400" />
+                                Apenas Pronta Entrega (Envio 24h)
+                            </span>
+                        </label>
+
                         <label className="flex items-center gap-2.5 select-none cursor-pointer">
                             <input
                                 type="checkbox"

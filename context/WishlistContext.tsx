@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 
 export interface WishlistItem {
@@ -43,6 +43,12 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     const [items, setItems] = useState<WishlistItem[]>([]);
     const [isInitialized, setIsInitialized] = useState(false);
     const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+
+    // Refs para evitar loops de render e concorrência na sincronização
+    const wishlistIdsRef = useRef<number[]>([]);
+    wishlistIdsRef.current = wishlistIds;
+    const isSyncingRef = useRef(false);
+    const lastSyncedSignatureRef = useRef<string>('');
 
     // 1. Carrega do LocalStorage na montagem
     useEffect(() => {
@@ -93,43 +99,66 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         }
     }, [wishlistIds, items, isInitialized]);
 
-    // 3. Sincronização automática com banco se o cliente já tiver telefone salvo
+    // 3. Sincronização automática com banco (estável, sem loop de dependência)
     const syncWithPhone = useCallback(async (phone: string) => {
         if (!phone) return;
         const cleanPhone = phone.replace(/\D/g, '');
         if (cleanPhone.length < 8) return;
 
+        // Evita chamadas simultâneas
+        if (isSyncingRef.current) return;
+
+        const currentIds = wishlistIdsRef.current;
+        const signature = `${cleanPhone}:${[...currentIds].sort((a, b) => a - b).join(',')}`;
+
+        // Se já sincronizou exatamente este telefone com este conjunto de IDs, não dispara requisição
+        if (lastSyncedSignatureRef.current === signature) {
+            return;
+        }
+
+        isSyncingRef.current = true;
         try {
-            // Envia os IDs atuais para o Supabase (merge)
             const res = await fetch('/api/public/wishlist', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone: cleanPhone, wishlistIds })
+                body: JSON.stringify({ phone: cleanPhone, wishlistIds: currentIds })
             });
 
             if (res.ok) {
                 const data = await res.json();
                 if (data.wishlist && Array.isArray(data.wishlist)) {
-                    // Atualiza com a lista mesclada do banco
-                    setWishlistIds(prev => Array.from(new Set([...prev, ...data.wishlist])));
+                    lastSyncedSignatureRef.current = `${cleanPhone}:${[...data.wishlist].sort((a, b) => a - b).join(',')}`;
+                    
+                    setWishlistIds(prev => {
+                        const merged = Array.from(new Set([...prev, ...data.wishlist]));
+                        // Crucial: se os IDs forem exatamente os mesmos, retorna prev (mantém a mesma referência e não dispara re-render)
+                        if (merged.length === prev.length && merged.every(id => prev.includes(id))) {
+                            return prev;
+                        }
+                        return merged;
+                    });
+                } else {
+                    lastSyncedSignatureRef.current = signature;
                 }
             }
         } catch (err) {
             console.error('Erro na sincronização de wishlist com telefone:', err);
+        } finally {
+            isSyncingRef.current = false;
         }
-    }, [wishlistIds]);
+    }, []);
 
-    // Auto-sync se houver telefone salvo do rastreio
+    // Auto-sync debounce se houver telefone salvo do rastreio
     useEffect(() => {
         if (!isInitialized) return;
-        const savedPhone = localStorage.getItem('frangatoys_tracking_phone');
+        const savedPhone = typeof window !== 'undefined' ? localStorage.getItem('frangatoys_tracking_phone') : null;
         if (savedPhone && wishlistIds.length > 0) {
             const timer = setTimeout(() => {
                 syncWithPhone(savedPhone);
-            }, 1500);
+            }, 1000);
             return () => clearTimeout(timer);
         }
-    }, [isInitialized, wishlistIds.length, syncWithPhone]);
+    }, [isInitialized, wishlistIds, syncWithPhone]);
 
     const isInWishlist = useCallback((id: number) => {
         return wishlistIds.includes(id);

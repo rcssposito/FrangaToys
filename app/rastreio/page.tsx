@@ -250,6 +250,9 @@ export default function TrackingPage() {
                     <p className="text-[10px] text-zinc-700 max-w-[260px] leading-relaxed">
                         Acesso protegido direto pelo seu WhatsApp cadastrado.
                     </p>
+                    <Link href="/faq" className="text-[10px] text-zinc-500 hover:text-amber-400 transition-colors flex items-center gap-1 font-bold uppercase tracking-wider">
+                        Dúvidas sobre envio ou prazos? Acesse o FAQ
+                    </Link>
                 </div>
             </div>
         </div>

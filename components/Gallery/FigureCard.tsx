@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { FiguraDTO } from '@/lib/dto';
 import Image from 'next/image';
 import { clsx } from 'clsx';
-import { Sparkles, Paintbrush, Palette, ChevronRight, Instagram, ArrowLeft, ArrowUpDown, ArrowLeftRight, Box, ShoppingCart, Check, Heart } from 'lucide-react';
+import { Sparkles, Paintbrush, Palette, ChevronRight, Instagram, ArrowLeft, ArrowUpDown, ArrowLeftRight, Box, ShoppingCart, Check, Heart, Zap } from 'lucide-react';
 import Link from 'next/link';
 import imageKitLoader from '@/lib/image-loader';
 import { getOptimizedImageUrl } from '@/lib/image-utils';
@@ -174,6 +174,15 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
 
                     {/* Status Badges Overlay (Top Left) */}
                     <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 flex flex-col gap-1.5 sm:gap-2 pointer-events-none">
+                        {figure.pronta_entrega && (
+                            <div className="bg-amber-500/25 backdrop-blur-md text-amber-300 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-amber-500/40 animate-pulse">
+                                <Zap size={10} className="fill-amber-400 text-amber-400" />
+                                <span>Envio 24h</span>
+                                {figure.estoque_pronta_entrega && figure.estoque_pronta_entrega > 1 ? (
+                                    <span className="text-[7px] opacity-80">({figure.estoque_pronta_entrega}un)</span>
+                                ) : null}
+                            </div>
+                        )}
                         {figure.disponivel && (
                             <div className="bg-emerald-950/40 backdrop-blur-md text-emerald-400 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider border border-emerald-500/20 shadow-md">
                                 Disponível
@@ -356,7 +365,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                                                 </div>
                                                 <div className="min-w-0">
                                                     <div className="text-[10px] sm:text-[11px] font-black text-white uppercase tracking-tight">Sem Pintura</div>
-                                                    <div className="text-[8px] text-zinc-400 uppercase tracking-wider leading-none truncate mt-0.5">Apenas Impresso & Limpo</div>
+                                                    <div className="text-[8px] text-zinc-400 uppercase tracking-wider leading-none truncate mt-0.5">Impresso, Limpo & Com Primer</div>
                                                 </div>
                                             </div>
                                             <div className="text-right">

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, Suspense, useEffect } from 'react';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useState, useMemo, Suspense, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DesktopFilters } from '@/components/Filters/DesktopFilters';
 import { MobileFilters } from '@/components/Filters/MobileFilters';
 import { GalleryGrid } from '@/components/Gallery/GalleryGrid';
@@ -23,29 +23,27 @@ const CATEGORIES = ['Anime', 'Games', 'Marvel', 'DC', 'Random', 'Outros'];
 
 function HomeContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
 
-  const qParam = searchParams.get('q');
-  const categoriaParam = searchParams.get('categoria');
-  const studioParam = searchParams.get('studioIds');
-  const showAllParam = searchParams.get('incluirNaoVendaveis');
-  const sortParam = searchParams.get('sort');
-  const priceRangeParam = searchParams.get('priceRange');
-  const sizeRangeParam = searchParams.get('sizeRange');
+  const [filters, setFilters] = useState<FilterState>(() => ({
+    q: searchParams.get('q') || undefined,
+    categoria: searchParams.get('categoria') || undefined,
+    studioIds: searchParams.get('studioIds') || undefined,
+    incluirNaoVendaveis: searchParams.get('incluirNaoVendaveis') || undefined,
+    sort: searchParams.get('sort') || 'newest',
+    priceRange: searchParams.get('priceRange') || undefined,
+    sizeRange: searchParams.get('sizeRange') || undefined,
+    prontaEntrega: searchParams.get('prontaEntrega') || undefined
+  }));
 
-  const [filters, setFilters] = useState<FilterState>({
-    q: qParam || undefined,
-    categoria: categoriaParam || undefined,
-    studioIds: studioParam || undefined,
-    incluirNaoVendaveis: showAllParam || undefined,
-    sort: sortParam || 'newest',
-    priceRange: priceRangeParam || undefined,
-    sizeRange: sizeRangeParam || undefined
-  });
+  const isInitialMount = useRef(true);
 
-  // Sync state changes to URL query parameters
+  // Sync state changes to browser URL via replaceState (0 network roundtrips, no Next.js router loop)
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
     const params = new URLSearchParams();
     if (filters.q) params.set('q', filters.q);
     if (filters.categoria) params.set('categoria', filters.categoria);
@@ -54,37 +52,35 @@ function HomeContent() {
     if (filters.sort && filters.sort !== 'newest') params.set('sort', filters.sort);
     if (filters.priceRange) params.set('priceRange', filters.priceRange);
     if (filters.sizeRange) params.set('sizeRange', filters.sizeRange);
+    if (filters.prontaEntrega) params.set('prontaEntrega', filters.prontaEntrega);
 
     const queryString = params.toString();
-    const target = queryString ? `${pathname}?${queryString}` : pathname;
-    router.replace(target, { scroll: false });
-  }, [filters, pathname, router]);
+    const currentQuery = typeof window !== 'undefined' ? window.location.search.replace(/^\?/, '') : '';
+    if (queryString !== currentQuery) {
+      const target = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname;
+      window.history.replaceState(null, '', target);
+    }
+  }, [filters]);
 
-  // Sync URL changes back to state (e.g. back/forward navigation)
+  // Sync browser Back/Forward (popstate) navigation back to filter state
   useEffect(() => {
-    const q = searchParams.get('q') || undefined;
-    const categoria = searchParams.get('categoria') || undefined;
-    const studioIds = searchParams.get('studioIds') || undefined;
-    const incluirNaoVendaveis = searchParams.get('incluirNaoVendaveis') || undefined;
-    const sort = searchParams.get('sort') || 'newest';
-    const priceRange = searchParams.get('priceRange') || undefined;
-    const sizeRange = searchParams.get('sizeRange') || undefined;
+    const handlePopState = () => {
+      const sp = new URLSearchParams(window.location.search);
+      setFilters({
+        q: sp.get('q') || undefined,
+        categoria: sp.get('categoria') || undefined,
+        studioIds: sp.get('studioIds') || undefined,
+        incluirNaoVendaveis: sp.get('incluirNaoVendaveis') || undefined,
+        sort: sp.get('sort') || 'newest',
+        priceRange: sp.get('priceRange') || undefined,
+        sizeRange: sp.get('sizeRange') || undefined,
+        prontaEntrega: sp.get('prontaEntrega') || undefined,
+      });
+    };
 
-    setFilters(prev => {
-      if (
-        prev.q === q &&
-        prev.categoria === categoria &&
-        prev.studioIds === studioIds &&
-        prev.incluirNaoVendaveis === incluirNaoVendaveis &&
-        prev.sort === sort &&
-        prev.priceRange === priceRange &&
-        prev.sizeRange === sizeRange
-      ) {
-        return prev;
-      }
-      return { q, categoria, studioIds, incluirNaoVendaveis, sort, priceRange, sizeRange };
-    });
-  }, [searchParams]);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const { setIsCartOpen } = useCart();
 
@@ -138,7 +134,7 @@ function HomeContent() {
             isFetchingNextPage={isFetchingNextPage}
             hasNextPage={hasNextPage}
             fetchNextPage={fetchNextPage}
-            onClearFilters={() => setFilters({ ...filters, q: undefined, categoria: undefined, studioIds: undefined, sort: 'newest', priceRange: undefined, sizeRange: undefined })}
+            onClearFilters={() => setFilters({ ...filters, q: undefined, categoria: undefined, studioIds: undefined, sort: 'newest', priceRange: undefined, sizeRange: undefined, prontaEntrega: undefined })}
           />
         </div>
 

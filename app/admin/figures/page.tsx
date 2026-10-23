@@ -42,6 +42,8 @@ interface Figure {
     badge_desempenho?: 'Estrela' | 'Lento' | 'Encalhado';
     studio_id?: number | string | null;
     studios?: { nome: string } | null;
+    pronta_entrega?: boolean;
+    estoque_pronta_entrega?: number | string;
 }
 
 interface PricingSettings {
@@ -113,6 +115,11 @@ const FigureCard = ({
 
                 {/* Desempenho de Vendas */}
                 <div className="flex flex-col items-end gap-1 shrink-0">
+                    {f.pronta_entrega && (
+                        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center gap-1 shadow-sm">
+                            ⚡ 24h ({f.estoque_pronta_entrega || 0} un)
+                        </span>
+                    )}
                     {f.badge_desempenho === 'Estrela' && (
                         <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center gap-1 shadow-[0_0_12px_rgba(245,158,11,0.2)] animate-pulse">
                             ★ Estrela ({f.vendas_count} pçs)
@@ -338,6 +345,37 @@ const FigureCard = ({
                             onChange={e => handleChange(f.id, 'sinonimos', e.target.value)}
                             className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-sm px-2 py-1.5 text-left text-xs font-medium text-[var(--foreground)] outline-none focus:border-orange-500/50 disabled:opacity-50"
                         />
+                    </div>
+
+                    {/* Pronta Entrega Box */}
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                        <label className="flex items-center gap-2 cursor-pointer flex-1">
+                            <input
+                                type="checkbox"
+                                checked={!!f.pronta_entrega}
+                                disabled={!canEdit}
+                                onChange={e => handleChange(f.id, 'pronta_entrega', e.target.checked)}
+                                className="w-4 h-4 rounded border-[var(--input-border)] text-amber-500 bg-[var(--input-bg)] focus:ring-0 accent-amber-500"
+                            />
+                            <div className="flex flex-col">
+                                <span className="text-xs font-bold text-amber-400 flex items-center gap-1">
+                                    ⚡ Pronta Entrega (Envio em 24h)
+                                </span>
+                                <span className="text-[9px] text-zinc-500">Item disponível no estoque físico para despacho imediato</span>
+                            </div>
+                        </label>
+
+                        <div className="flex items-center gap-1.5 shrink-0 pl-2">
+                            <label className="text-[10px] font-bold text-zinc-400 uppercase">Qtd:</label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={f.estoque_pronta_entrega ?? 0}
+                                disabled={!canEdit || !f.pronta_entrega}
+                                onChange={e => handleChange(f.id, 'estoque_pronta_entrega', parseInt(e.target.value) || 0)}
+                                className="w-14 bg-[var(--input-bg)] border border-[var(--input-border)] rounded px-1.5 py-1 text-center text-xs font-black text-amber-400 outline-none disabled:opacity-40"
+                            />
+                        </div>
                     </div>
 
                     <div className="flex items-center justify-between mt-2 py-2 border-t border-[var(--card-border)]">
@@ -1131,6 +1169,8 @@ function DataGridContent() {
                 params.append('sem_preco', 'true');
             } else if (catId === 'tem_extras') {
                 params.append('tem_extras', 'true');
+            } else if (catId === 'pronta_entrega') {
+                params.append('pronta_entrega', 'true');
             } else if (catId !== null && catId !== undefined && catId !== '') {
                 params.append('categoria_id', catId.toString());
             }
@@ -1553,6 +1593,7 @@ function DataGridContent() {
     if (loading && figures.length === 0) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" /></div>;
 
     const CATEGORY_FILTERS = [
+        { id: 'pronta_entrega', label: '⚡ Pronta Entrega' },
         { id: 'sem_preco', label: 'Falta Preço' },
         { id: 'tem_extras', label: 'Tem Extra' },
         { id: 1, label: 'Anime' },

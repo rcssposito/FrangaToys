@@ -13,7 +13,8 @@ import {
   MoveUp, 
   MoveDown, 
   Tag,
-  Ruler
+  Ruler,
+  Zap
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useState, useEffect, useRef } from 'react';
@@ -93,6 +94,7 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
         // Critical: Only update parent if local debounce is settled
         if (debouncedQ === localSearch && debouncedQ !== currentQ) {
             if (isUserInteraction.current) {
+                isUserInteraction.current = false;
                 onChange({ ...filters, q: debouncedQ || undefined });
             }
         }
@@ -135,6 +137,7 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
         let count = 0;
         if (filters.studioIds) count += filters.studioIds.split(',').filter(Boolean).length;
         if (filters.incluirNaoVendaveis === 'true') count++;
+        if (filters.prontaEntrega === 'true') count++;
         if (filters.priceRange) count++;
         if (filters.sizeRange) count++;
         if (filters.sort && filters.sort !== 'newest') count++;
@@ -182,7 +185,7 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                 {/* Left Gradient Hint */}
                 <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[var(--background)] to-transparent z-10 pointer-events-none opacity-100" />
                 
-                <div className="w-full overflow-x-auto no-scrollbar px-6 flex gap-2 py-1">
+                <div className="w-full overflow-x-auto no-scrollbar px-6 flex gap-2 py-1 items-center">
                     <button
                         onClick={() => onChange({ ...filters, categoria: undefined })}
                         className={clsx(
@@ -193,6 +196,18 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                         )}
                     >
                         Todos
+                    </button>
+                    <button
+                        onClick={() => onChange({ ...filters, prontaEntrega: filters.prontaEntrega === 'true' ? undefined : 'true' })}
+                        className={clsx(
+                            "whitespace-nowrap px-4 py-2 rounded-full text-xs font-black border transition-all active:scale-95 shadow-sm flex items-center gap-1.5 shrink-0",
+                            filters.prontaEntrega === 'true'
+                                ? "bg-amber-500 text-black border-amber-400 shadow-md shadow-amber-500/30"
+                                : "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                        )}
+                    >
+                        <Zap size={13} className={filters.prontaEntrega === 'true' ? "fill-black text-black" : "fill-amber-400 text-amber-400"} />
+                        <span>Pronta Entrega</span>
                     </button>
                     {categories.map(cat => (
                         <button
@@ -247,8 +262,21 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                                 <div className="flex-1 overflow-y-auto p-4 space-y-6">
 
                                     {/* Toggles */}
-                                    <div className="space-y-4">
-                                        <label className="flex items-center justify-between p-3 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] shadow-sm">
+                                    <div className="space-y-3">
+                                        <label className="flex items-center justify-between p-3 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] shadow-sm cursor-pointer">
+                                            <span className="font-bold text-sm text-amber-400 flex items-center gap-2">
+                                                <Zap size={16} className="fill-amber-400" />
+                                                Apenas Pronta Entrega (Envio 24h)
+                                            </span>
+                                            <input
+                                                type="checkbox"
+                                                className="accent-amber-500 w-5 h-5"
+                                                checked={filters.prontaEntrega === 'true'}
+                                                onChange={(e) => onChange({ ...filters, prontaEntrega: e.target.checked ? 'true' : undefined })}
+                                            />
+                                        </label>
+
+                                        <label className="flex items-center justify-between p-3 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] shadow-sm cursor-pointer">
                                             <span className="font-bold text-sm text-[var(--foreground)]">Exibir Indisponíveis</span>
                                             <input
                                                 type="checkbox"
