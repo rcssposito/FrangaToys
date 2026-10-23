@@ -26,7 +26,8 @@ import {
     Flame,
     Tag,
     FolderGit2,
-    Cpu
+    Cpu,
+    Disc
 } from 'lucide-react';
 import ThemeToggle from '@/components/common/ThemeToggle';
 
@@ -81,7 +82,7 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             name: 'Automações & IA',
             href: '/admin/automation',
             icon: Cpu,
-            roles: ['admin']
+            roles: ['admin', 'production', 'painter', 'pricing', 'orcamento']
         },
         {
             name: 'Configurações',
@@ -158,6 +159,7 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
                             <Link
                                 key={item.href}
                                 href={item.href}
+                                prefetch={false}
                                 onClick={() => setIsOpen(false)}
                                 title={isCollapsed ? item.name : undefined}
                                 className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3.5 rounded-2xl transition-all relative group overflow-hidden ${isActive

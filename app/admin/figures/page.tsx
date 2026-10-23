@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { toast } from 'sonner';
 import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, Upload, ZoomIn, ZoomOut, RotateCcw, Maximize2, Boxes, Package, Box } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { usePermission } from '@/hooks/usePermission';
 import ThemeToggle from '@/components/common/ThemeToggle';
 import Tooltip from '@/components/ui/Tooltip';
@@ -426,8 +427,6 @@ const FigureCard = ({
         </div>
     );
 };
-
-import { useSearchParams, useRouter } from 'next/navigation';
 
 interface ImageInspectorModalProps {
     imageUrl: string;

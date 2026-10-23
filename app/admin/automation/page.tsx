@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 import { 
     ArrowLeft,
     Sparkles, 
@@ -26,10 +28,28 @@ import {
     FileSpreadsheet,
     Brain,
     Rocket,
-    Pencil
+    Pencil,
+    Disc,
+    Cpu,
+    Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ArchivePreviewModal from '@/components/Admin/ArchivePreviewModal';
+
+const BaseArtGenerator = dynamic(
+    () => import('@/components/Admin/BaseArtGenerator/BaseArtGenerator'),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
+                <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+                <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">
+                    Carregando Gerador de Arte para Base...
+                </p>
+            </div>
+        )
+    }
+);
 
 interface ScannedFile {
     name: string;
@@ -48,7 +68,21 @@ interface AnalyzedItem {
     selected: boolean;
 }
 
-export default function AutomationPage() {
+function AutomationPageContent() {
+    const searchParams = useSearchParams();
+    const [currentTab, setCurrentTab] = useState<'automation' | 'base'>(() => {
+        return searchParams?.get('tab') === 'base' ? 'base' : 'automation';
+    });
+
+    useEffect(() => {
+        const tab = searchParams?.get('tab');
+        if (tab === 'base') {
+            setCurrentTab('base');
+        } else if (tab === 'automation') {
+            setCurrentTab('automation');
+        }
+    }, [searchParams]);
+
     const [baseFolder, setBaseFolder] = useState('D:\\rcssp\\Downloads\\3d\\3 - Com suporte');
     const [loadingScan, setLoadingScan] = useState(false);
     const [loadingAnalyze, setLoadingAnalyze] = useState(false);
@@ -305,7 +339,7 @@ export default function AutomationPage() {
                 />
             )}
 
-            {/* Cabeçalho no padrão oficial do Admin (igual a Estúdios e Catálogo) */}
+            {/* Cabeçalho no padrão oficial do Admin */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                 <div className="flex items-center gap-5 flex-wrap">
                     <Link 
@@ -316,21 +350,53 @@ export default function AutomationPage() {
                     </Link>
                     <div>
                         <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-white">
-                            Automação de <span className="text-orange-500">Catálogo</span>
+                            {currentTab === 'base' ? (
+                                <>Gerador de <span className="text-orange-500">Base</span></>
+                            ) : (
+                                <>Automação de <span className="text-orange-500">Catálogo</span></>
+                            )}
                         </h1>
                         <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-1 opacity-80">
-                            Triagem local, prévia de compactados e sincronização.
+                            {currentTab === 'base'
+                                ? 'Recorte milimétrico de arte e silhueta STL para adesivo de base 1:1.'
+                                : 'Triagem local, prévia de compactados e sincronização do acervo.'}
                         </p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 p-1.5 bg-zinc-950/80 border border-zinc-900 rounded-2xl w-fit">
-                    <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-300">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span>3 - Com suporte</span>
-                    </div>
+                {/* Abas Superiores */}
+                <div className="flex items-center gap-1.5 p-1.5 bg-zinc-950/80 border border-zinc-800 rounded-2xl w-fit">
+                    <button
+                        onClick={() => setCurrentTab('automation')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                            currentTab === 'automation'
+                                ? 'bg-orange-500 text-black shadow-lg shadow-orange-500/20'
+                                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                        }`}
+                    >
+                        <Cpu size={15} />
+                        <span>Automação & IA</span>
+                    </button>
+                    <button
+                        onClick={() => setCurrentTab('base')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                            currentTab === 'base'
+                                ? 'bg-orange-500 text-black shadow-lg shadow-orange-500/20'
+                                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                        }`}
+                    >
+                        <Disc size={15} />
+                        <span>Gerador de Base</span>
+                    </button>
                 </div>
             </div>
+
+            {currentTab === 'base' ? (
+                <div className="relative z-10 pt-2 animate-in fade-in duration-200">
+                    <BaseArtGenerator />
+                </div>
+            ) : (
+                <>
 
             {/* SEÇÃO 1: TRIAGEM DE ARQUIVOS BRUTOS */}
             <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 shadow-sm space-y-4 relative z-10">
@@ -877,6 +943,23 @@ export default function AutomationPage() {
                     )}
                 </div>
             </div>
+            </>
+            )}
         </div>
+    );
+}
+
+export default function AutomationPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+                <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+                <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">
+                    Carregando Automação...
+                </p>
+            </div>
+        }>
+            <AutomationPageContent />
+        </Suspense>
     );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Flame, Palette, Compass, HelpCircle, Instagram } from 'lucide-react';
+import { Flame, Palette, Compass, HelpCircle, Instagram, Settings } from 'lucide-react';
 import { CartIndicator } from '@/components/Cart/CartIndicator';
 import { WishlistIndicator } from '@/components/Wishlist/WishlistIndicator';
 import UserSessionBadge from '@/components/common/UserSessionBadge';
@@ -131,6 +131,15 @@ export default function Header() {
             >
               <Instagram size={18} />
             </a>
+            <Link
+              href="/admin"
+              prefetch={false}
+              className="p-2 text-zinc-400 hover:text-orange-500 hover:bg-zinc-800/50 rounded-lg transition-colors flex items-center justify-center"
+              title="Painel Admin"
+              aria-label="Acessar Painel Admin"
+            >
+              <Settings size={18} />
+            </Link>
           </div>
 
           <div className="h-4 w-px bg-zinc-800/40" />
@@ -162,6 +171,15 @@ export default function Header() {
           >
             <Instagram size={18} />
           </a>
+          <Link
+            href="/admin"
+            prefetch={false}
+            className="p-1.5 text-zinc-400 hover:text-orange-500 rounded-lg transition-colors flex items-center justify-center"
+            title="Painel Admin"
+            aria-label="Acessar Painel Admin"
+          >
+            <Settings size={18} />
+          </Link>
           <UserSessionBadge className="text-[11px]" />
         </div>
       </div>

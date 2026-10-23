@@ -26,7 +26,8 @@ const routeRoles: Record<string, string[]> = {
     '/admin/marketing': ['admin', 'sales', 'pricing', 'finance', 'orcamento'],
     '/admin/abandoned-carts': ['admin', 'sales', 'finance'],
     '/admin/dre': ['admin', 'finance', 'sales'],
-    '/admin/automation': ['admin'],
+    '/admin/gerador-base': ['admin', 'sales', 'pricing', 'production', 'painter', 'orcamento'],
+    '/admin/automation': ['admin', 'sales', 'pricing', 'production', 'painter', 'orcamento'],
     '/admin/settings': ['admin']
 };
 
