@@ -62,23 +62,52 @@ export async function PUT(req: Request) {
             return NextResponse.json({ error: 'Margens devem ser maiores que 1.0' }, { status: 400 });
         }
 
+        const updatePayload: Record<string, any> = {
+            custo_h_impressao: body.custo_h_impressao,
+            custo_h_pintura: body.custo_h_pintura,
+            custo_resina_kg: body.custo_resina_kg,
+            estoque_resina_kg: body.estoque_resina_kg,
+            margem_basica: body.margem_basica,
+            margem_premium: body.margem_premium,
+            margem_pobre: body.margem_pobre,
+            taxa_cartao: body.taxa_cartao
+        };
+
+        if (body.desconto_primeira_compra !== undefined) {
+            updatePayload.desconto_primeira_compra = Number(body.desconto_primeira_compra);
+        }
+        if (body.desconto_captacao !== undefined) {
+            updatePayload.desconto_captacao = Number(body.desconto_captacao);
+        }
+        if (body.modal_intervalo_dias !== undefined) {
+            updatePayload.modal_intervalo_dias = parseInt(body.modal_intervalo_dias, 10);
+        }
+        if (body.modal_tempo_inatividade_segundos !== undefined) {
+            updatePayload.modal_tempo_inatividade_segundos = parseInt(body.modal_tempo_inatividade_segundos, 10);
+        }
+
         const { data, error } = await supabase
             .from('pricing_params')
-            .update({
-                custo_h_impressao: body.custo_h_impressao,
-                custo_h_pintura: body.custo_h_pintura,
-                custo_resina_kg: body.custo_resina_kg,
-                estoque_resina_kg: body.estoque_resina_kg,
-                margem_basica: body.margem_basica,
-                margem_premium: body.margem_premium,
-                margem_pobre: body.margem_pobre,
-                taxa_cartao: body.taxa_cartao
-            })
+            .update(updatePayload)
             .eq('id', 1)
             .select()
             .single();
 
         if (error) throw error;
+
+        // Sincroniza com cupons padrão no banco
+        if (body.desconto_captacao !== undefined) {
+            await supabase
+                .from('cupoms_desconto')
+                .update({ valor: Number(body.desconto_captacao) })
+                .eq('codigo', 'RESGATE5');
+        }
+        if (body.desconto_primeira_compra !== undefined) {
+            await supabase
+                .from('cupoms_desconto')
+                .update({ valor: Number(body.desconto_primeira_compra) })
+                .eq('codigo', 'PRIMEIRACOMPRA');
+        }
 
         return NextResponse.json(data);
     } catch (error: any) {

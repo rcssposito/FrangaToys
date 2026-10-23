@@ -17,7 +17,12 @@ import {
     Check,
     ArrowRight,
     Users,
-    ShieldCheck
+    ShieldCheck,
+    Sparkles,
+    Clock,
+    Tag,
+    Gift,
+    Eye
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -43,10 +48,12 @@ function SettingsContent() {
         ? 'usuarios' 
         : searchParams.get('tab') === 'sync' 
         ? 'sync' 
+        : searchParams.get('tab') === 'marketing'
+        ? 'marketing'
         : 'custos';
-    const [activeTab, setActiveTab] = useState<'custos' | 'usuarios' | 'sync'>(initialTab);
+    const [activeTab, setActiveTab] = useState<'custos' | 'marketing' | 'usuarios' | 'sync'>(initialTab);
 
-    const changeTab = (tab: 'custos' | 'usuarios' | 'sync') => {
+    const changeTab = (tab: 'custos' | 'marketing' | 'usuarios' | 'sync') => {
         setActiveTab(tab);
         const params = new URLSearchParams(window.location.search);
         params.set('tab', tab);
@@ -64,7 +71,11 @@ function SettingsContent() {
         margem_basica: 0,
         margem_premium: 0,
         margem_pobre: 0,
-        taxa_cartao: 1.15
+        taxa_cartao: 1.15,
+        desconto_primeira_compra: 10,
+        desconto_captacao: 5,
+        modal_intervalo_dias: 30,
+        modal_tempo_inatividade_segundos: 45
     });
 
     // Estados da ferramenta de Sincronização de Imagens
@@ -91,7 +102,20 @@ function SettingsContent() {
             const res = await fetch('/api/admin/settings');
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
-            setFormData(data);
+            setFormData({
+                custo_h_impressao: data.custo_h_impressao || 0,
+                custo_h_pintura: data.custo_h_pintura || 0,
+                custo_resina_kg: data.custo_resina_kg || 0,
+                estoque_resina_kg: data.estoque_resina_kg || 0,
+                margem_basica: data.margem_basica || 0,
+                margem_premium: data.margem_premium || 0,
+                margem_pobre: data.margem_pobre || 0,
+                taxa_cartao: data.taxa_cartao || 1.15,
+                desconto_primeira_compra: data.desconto_primeira_compra !== undefined ? Number(data.desconto_primeira_compra) : 10,
+                desconto_captacao: data.desconto_captacao !== undefined ? Number(data.desconto_captacao) : 5,
+                modal_intervalo_dias: data.modal_intervalo_dias !== undefined ? Number(data.modal_intervalo_dias) : 30,
+                modal_tempo_inatividade_segundos: data.modal_tempo_inatividade_segundos !== undefined ? Number(data.modal_tempo_inatividade_segundos) : 45
+            });
         } catch (err) {
             toast.error('Erro ao carregar configurações');
         } finally {
@@ -225,7 +249,7 @@ function SettingsContent() {
                     </div>
 
                     {/* Tab Switcher */}
-                    <div className="flex items-center gap-1.5 p-1 bg-zinc-950/80 border border-zinc-900 rounded-2xl w-fit">
+                    <div className="flex items-center gap-1.5 p-1 bg-zinc-950/80 border border-zinc-900 rounded-2xl w-fit flex-wrap">
                         <button
                             type="button"
                             onClick={() => changeTab('custos')}
@@ -237,6 +261,19 @@ function SettingsContent() {
                         >
                             <DollarSign size={14} />
                             Custos & Precificação
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => changeTab('marketing')}
+                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                                activeTab === 'marketing'
+                                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                                    : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                        >
+                            <Sparkles size={14} />
+                            Marketing & Conversão
                         </button>
 
                         <button
@@ -268,6 +305,217 @@ function SettingsContent() {
                 </div>
 
                 {activeTab === 'usuarios' && <UsersManager />}
+
+                {activeTab === 'marketing' && (
+                    <form onSubmit={handleSave} className="space-y-8 w-full animate-in fade-in duration-300">
+                        {/* Header explicativo */}
+                        <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border border-orange-500/20 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-500 shrink-0">
+                                    <Sparkles size={24} />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-black text-white">Marketing, Descontos & Modal de Conversão</h2>
+                                    <p className="text-xs text-zinc-400 mt-0.5">
+                                        Configure incentivos de primeira compra, cupom de captação e o comportamento do modal anti-abandono.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-bold">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    Automações Ativas
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* Card 1: Cupons & Descontos Comerciais */}
+                            <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl p-8 shadow-[var(--shadow-md)] space-y-6">
+                                <div className="flex items-center gap-3">
+                                    <Tag className="text-orange-500" size={24} />
+                                    <div>
+                                        <h3 className="text-lg font-black tracking-tight text-white">Cupons & Descontos</h3>
+                                        <p className="text-xs text-[var(--text-muted)]">Percentuais aplicados automaticamente nas jornadas de compra.</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-5">
+                                    {/* % Desconto Primeira Compra */}
+                                    <div className="space-y-2 p-4 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-black uppercase tracking-widest text-white flex items-center gap-1.5">
+                                                <Gift size={14} className="text-orange-500" />
+                                                % Desconto Primeira Compra
+                                            </label>
+                                            <span className="text-[10px] font-mono font-bold bg-orange-500/15 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded-md">
+                                                CUPOM: PRIMEIRACOMPRA
+                                            </span>
+                                        </div>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                step="1"
+                                                value={formData.desconto_primeira_compra}
+                                                onChange={e => handleChange('desconto_primeira_compra', e.target.value)}
+                                                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 pr-10 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)] text-base"
+                                            />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 font-black text-sm">%</span>
+                                        </div>
+                                        <p className="text-[11px] text-[var(--text-muted)] font-medium">
+                                            Válido apenas para clientes que ainda não possuem pedidos anteriores registrados no WhatsApp informado no checkout.
+                                        </p>
+                                    </div>
+
+                                    {/* % Desconto de Captação */}
+                                    <div className="space-y-2 p-4 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-black uppercase tracking-widest text-white flex items-center gap-1.5">
+                                                <Percent size={14} className="text-orange-500" />
+                                                % Desconto de Captação
+                                            </label>
+                                            <span className="text-[10px] font-mono font-bold bg-orange-500/15 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded-md">
+                                                CUPOM: RESGATE5
+                                            </span>
+                                        </div>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                step="1"
+                                                value={formData.desconto_captacao}
+                                                onChange={e => handleChange('desconto_captacao', e.target.value)}
+                                                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 pr-10 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)] text-base"
+                                            />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 font-black text-sm">%</span>
+                                        </div>
+                                        <p className="text-[11px] text-[var(--text-muted)] font-medium">
+                                            Percentual exibido e aplicado automaticamente quando o visitante aceita o modal anti-abandono ("Eu Mereço").
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 2: Modal Anti-Abandono ("Eu Mereço") */}
+                            <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl p-8 shadow-[var(--shadow-md)] space-y-6">
+                                <div className="flex items-center gap-3">
+                                    <Clock className="text-orange-500" size={24} />
+                                    <div>
+                                        <h3 className="text-lg font-black tracking-tight text-white">Comportamento do Modal</h3>
+                                        <p className="text-xs text-[var(--text-muted)]">Frequência e temporizadores do modal "Eu Mereço".</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-5">
+                                    {/* Frequência de Surgimento (dias) */}
+                                    <div className="space-y-2 p-4 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-black uppercase tracking-widest text-white">
+                                                Intervalo de Frequência (Dias)
+                                            </label>
+                                            <div className="flex gap-1.5">
+                                                {[7, 15, 30].map(days => (
+                                                    <button
+                                                        key={days}
+                                                        type="button"
+                                                        onClick={() => setFormData(prev => ({ ...prev, modal_intervalo_dias: days }))}
+                                                        className={`text-[10px] font-bold px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                                                            formData.modal_intervalo_dias === days
+                                                                ? 'bg-orange-500 text-black font-black'
+                                                                : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        {days}d
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="365"
+                                                step="1"
+                                                value={formData.modal_intervalo_dias}
+                                                onChange={e => handleChange('modal_intervalo_dias', e.target.value)}
+                                                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 pr-14 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)] text-base"
+                                            />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 font-black text-xs uppercase">dias</span>
+                                        </div>
+                                        <p className="text-[11px] text-[var(--text-muted)] font-medium">
+                                            Trava anti-exploit: Uma vez visualizado pelo visitante, o modal não será reexibido para ele pelo período de dias definido.
+                                        </p>
+                                    </div>
+
+                                    {/* Tempo de Inatividade na Página */}
+                                    <div className="space-y-2 p-4 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-black uppercase tracking-widest text-white">
+                                                Tempo de Inatividade (Segundos)
+                                            </label>
+                                            <div className="flex gap-1.5">
+                                                {[30, 45, 60].map(sec => (
+                                                    <button
+                                                        key={sec}
+                                                        type="button"
+                                                        onClick={() => setFormData(prev => ({ ...prev, modal_tempo_inatividade_segundos: sec }))}
+                                                        className={`text-[10px] font-bold px-2 py-0.5 rounded transition-colors cursor-pointer ${
+                                                            formData.modal_tempo_inatividade_segundos === sec
+                                                                ? 'bg-orange-500 text-black font-black'
+                                                                : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        {sec}s
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                min="5"
+                                                max="600"
+                                                step="5"
+                                                value={formData.modal_tempo_inatividade_segundos}
+                                                onChange={e => handleChange('modal_tempo_inatividade_segundos', e.target.value)}
+                                                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-xl p-3.5 pr-14 outline-none focus:border-orange-500 font-bold transition-all shadow-sm text-[var(--foreground)] text-base"
+                                            />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 font-black text-xs uppercase">seg</span>
+                                        </div>
+                                        <p className="text-[11px] text-[var(--text-muted)] font-medium">
+                                            Segundos de inatividade na página da figura antes de acionar a oferta. Também dispara imediatamente caso o visitante mova o mouse para fora da janela (Exit-Intent).
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Card Resumo / Live Preview */}
+                        <div className="bg-zinc-950 border border-zinc-800/90 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-500 flex items-center justify-center shrink-0">
+                                    <Eye size={20} />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-black text-white">Resumo das Regras Vigentes</h4>
+                                    <p className="text-xs text-zinc-500">
+                                        Primeira compra: <span className="text-orange-400 font-bold">{formData.desconto_primeira_compra}% OFF</span> • Captação: <span className="text-orange-400 font-bold">{formData.desconto_captacao}% OFF</span> • Modal: a cada <span className="text-zinc-300 font-bold">{formData.modal_intervalo_dias} dias</span> (inatividade de <span className="text-zinc-300 font-bold">{formData.modal_tempo_inatividade_segundos}s</span>).
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                disabled={saving}
+                                className="w-full md:w-auto px-8 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-orange-500/20 active:scale-[0.98] flex items-center justify-center gap-3 text-sm cursor-pointer shrink-0"
+                            >
+                                {saving ? <Loader2 className="animate-spin" /> : <><Save size={18} /> SALVAR CONFIGURAÇÕES DE MARKETING</>}
+                            </button>
+                        </div>
+                    </form>
+                )}
 
                 {activeTab === 'custos' && (
                     <form onSubmit={handleSave} className="space-y-8 w-full animate-in fade-in duration-300">
@@ -365,6 +613,23 @@ function SettingsContent() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Banner de atalho para Marketing */}
+                        <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <Sparkles size={18} className="text-orange-500 shrink-0" />
+                                <span className="text-xs text-zinc-300">
+                                    Desconto de primeira compra: <strong className="text-white">{formData.desconto_primeira_compra}%</strong> • Modal de captação: <strong className="text-white">{formData.desconto_captacao}%</strong> (a cada {formData.modal_intervalo_dias}d)
+                                </span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => changeTab('marketing')}
+                                className="text-xs text-orange-400 hover:text-orange-300 font-bold flex items-center gap-1 shrink-0 cursor-pointer"
+                            >
+                                Ajustar Marketing <ArrowRight size={14} />
+                            </button>
                         </div>
 
                         <button

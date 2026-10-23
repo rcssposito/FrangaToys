@@ -29,54 +29,82 @@ const IDLE_TRIGGER_MS = 45 * 1000; // 45 segundos
 export function IdleOfferModal({ figure, currentFinish = 'colorido', onAcceptOffer }: IdleOfferModalProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [descontoCaptacao, setDescontoCaptacao] = useState(5);
+    const [intervaloDias, setIntervaloDias] = useState(30);
+    const [tempoInatividade, setTempoInatividade] = useState(45);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
-        // Trava Anti-Exploit: Verifica se já exibiu nos últimos 30 dias
-        const lastSeen = localStorage.getItem('ft_idle_offer_last_seen');
-        if (lastSeen) {
-            const timeDiff = Date.now() - parseInt(lastSeen, 10);
-            if (timeDiff < THIRTY_DAYS_MS) {
-                return; // Bloqueado pela trava anti-exploit
-            }
-        }
-
-        // Verifica se já foi dispensado na sessão atual
-        if (sessionStorage.getItem('ft_idle_offer_dismissed')) {
-            return;
-        }
-
         let isDismissed = false;
 
-        const triggerOffer = () => {
-            if (isDismissed) return;
-            setIsOpen(true);
-            localStorage.setItem('ft_idle_offer_last_seen', Date.now().toString());
-        };
+        // Busca configurações dinâmicas da loja
+        fetch('/api/public/settings')
+            .then(res => res.json())
+            .then(data => {
+                if (data.desconto_captacao) setDescontoCaptacao(data.desconto_captacao);
+                if (data.modal_intervalo_dias) setIntervaloDias(data.modal_intervalo_dias);
+                if (data.modal_tempo_inatividade_segundos) setTempoInatividade(data.modal_tempo_inatividade_segundos);
 
-        // 1. Timer de 45 segundos na página
-        const timer = setTimeout(() => {
-            triggerOffer();
-        }, IDLE_TRIGGER_MS);
+                initModalTriggers(data.modal_intervalo_dias || 30, data.modal_tempo_inatividade_segundos || 45);
+            })
+            .catch(() => {
+                initModalTriggers(30, 45);
+            });
 
-        // 2. Exit-intent (quando o cursor sai da janela pelo topo no desktop)
-        const handleMouseLeave = (e: MouseEvent) => {
-            if (e.clientY <= 0) {
-                triggerOffer();
+        function initModalTriggers(days: number, seconds: number) {
+            const intervalMs = days * 24 * 60 * 60 * 1000;
+            const idleMs = seconds * 1000;
+
+            // Trava Anti-Exploit: Verifica se já exibiu dentro do intervalo configurado
+            const lastSeen = localStorage.getItem('ft_idle_offer_last_seen');
+            if (lastSeen) {
+                const timeDiff = Date.now() - parseInt(lastSeen, 10);
+                if (timeDiff < intervalMs) {
+                    return; // Bloqueado pelo intervalo configurado
+                }
             }
-        };
 
-        // Adiciona listener de exit-intent após 15s de permanência mínima
-        const exitIntentDelay = setTimeout(() => {
-            document.addEventListener('mouseleave', handleMouseLeave);
-        }, 15000);
+            // Verifica se já foi dispensado na sessão atual
+            if (sessionStorage.getItem('ft_idle_offer_dismissed')) {
+                return;
+            }
+
+            const triggerOffer = () => {
+                if (isDismissed) return;
+                setIsOpen(true);
+                localStorage.setItem('ft_idle_offer_last_seen', Date.now().toString());
+            };
+
+            // 1. Timer de inatividade na página (configurado em segundos)
+            const timer = setTimeout(() => {
+                triggerOffer();
+            }, idleMs);
+
+            // 2. Exit-intent (quando o cursor sai da janela pelo topo no desktop)
+            const handleMouseLeave = (e: MouseEvent) => {
+                if (e.clientY <= 0) {
+                    triggerOffer();
+                }
+            };
+
+            // Adiciona listener de exit-intent após 10s de permanência mínima
+            const exitIntentDelay = setTimeout(() => {
+                document.addEventListener('mouseleave', handleMouseLeave);
+            }, 10000);
+
+            cleanup = () => {
+                clearTimeout(timer);
+                clearTimeout(exitIntentDelay);
+                document.removeEventListener('mouseleave', handleMouseLeave);
+            };
+        }
+
+        let cleanup: (() => void) | undefined;
 
         return () => {
             isDismissed = true;
-            clearTimeout(timer);
-            clearTimeout(exitIntentDelay);
-            document.removeEventListener('mouseleave', handleMouseLeave);
+            if (cleanup) cleanup();
         };
     }, []);
 
@@ -89,7 +117,7 @@ export function IdleOfferModal({ figure, currentFinish = 'colorido', onAcceptOff
         const coupon = 'RESGATE5';
         navigator.clipboard.writeText(coupon);
         setCopied(true);
-        toast.success('Cupom RESGATE5 de 5% OFF copiado e aplicado!');
+        toast.success(`Cupom RESGATE5 de ${descontoCaptacao}% OFF copiado e aplicado!`);
         setIsOpen(false);
         sessionStorage.setItem('ft_idle_offer_dismissed', 'true');
         onAcceptOffer(coupon);
@@ -158,7 +186,7 @@ export function IdleOfferModal({ figure, currentFinish = 'colorido', onAcceptOff
                                     Você merece esse colecionável!
                                 </h3>
                                 <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                                    Gostou de <strong className="text-white">{figure.nome}</strong>? Liberamos um cupom relâmpago de <strong className="text-orange-400">5% de desconto</strong> para você garantir seu colecionável hoje.
+                                    Gostou de <strong className="text-white">{figure.nome}</strong>? Liberamos um cupom relâmpago de <strong className="text-orange-400">{descontoCaptacao}% de desconto</strong> para você garantir seu colecionável hoje.
                                 </p>
                             </div>
 
@@ -202,7 +230,7 @@ export function IdleOfferModal({ figure, currentFinish = 'colorido', onAcceptOff
                             <div className="bg-gradient-to-r from-orange-500/10 to-amber-500/10 border border-orange-500/25 rounded-2xl p-4 flex items-center justify-between gap-3">
                                 <div className="space-y-0.5">
                                     <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400">
-                                        Cupom de 5% Desbloqueado
+                                        Cupom de {descontoCaptacao}% Desbloqueado
                                     </span>
                                     <div className="text-lg font-black tracking-widest text-orange-400 font-mono">
                                         RESGATE5

@@ -42,6 +42,20 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        // Validação exclusiva de primeira compra
+        if (upperCodigo === 'PRIMEIRACOMPRA' && body.phone) {
+            const cleanPhone = String(body.phone).replace(/\D/g, '');
+            if (cleanPhone.length >= 8) {
+                const { count } = await supabase
+                    .from('vendas')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('cliente_telefone', cleanPhone);
+                if (count && count > 0) {
+                    return NextResponse.json({ error: 'O cupom PRIMEIRACOMPRA é exclusivo para a sua primeira compra.' }, { status: 400 });
+                }
+            }
+        }
+
         return NextResponse.json({
             success: true,
             cupom: {

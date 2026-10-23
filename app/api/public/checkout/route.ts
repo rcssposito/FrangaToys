@@ -64,6 +64,20 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: 'Cupom inválido, expirado ou inativo' }, { status: 400 });
             }
 
+            // Validação exclusiva de primeira compra
+            if (upperCodigo === 'PRIMEIRACOMPRA' && cliente_contato) {
+                const cleanPhone = String(cliente_contato).replace(/\D/g, '');
+                if (cleanPhone.length >= 8) {
+                    const { count } = await supabase
+                        .from('vendas')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('cliente_contato', cleanPhone);
+                    if (count && count > 0) {
+                        return NextResponse.json({ error: 'O cupom PRIMEIRACOMPRA é exclusivo para a sua primeira compra.' }, { status: 400 });
+                    }
+                }
+            }
+
             // Figures restriction validation
             if (cupom_ativo.figuras_permitidas && cupom_ativo.figuras_permitidas.length > 0) {
                 const allowedIds = cupom_ativo.figuras_permitidas.map(Number);
