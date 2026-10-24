@@ -35,7 +35,6 @@ export default function Base3DPreview({
     const gridRef = useRef<THREE.GridHelper | null>(null);
 
     const [isOrientByFaceActive, setIsOrientByFaceActive] = useState(false);
-    const [hoveredFaceNormal, setHoveredFaceNormal] = useState<THREE.Vector3 | null>(null);
 
     useEffect(() => {
         if (!containerRef.current) return;
