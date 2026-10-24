@@ -18,9 +18,10 @@ export interface RenderCanvasOptions {
     textConfig: TextConfig;
     production: ProductionConfig;
     stlSilhouette?: HTMLCanvasElement | null;
-    mode: 'preview' | 'cut_guide' | 'export_print';
+    mode: 'preview' | 'cut_guide' | 'export_print' | '3d_texture';
     dpi?: number;
     showLogoSelection?: boolean;
+    showTextSelection?: boolean;
 }
 
 /**
@@ -53,7 +54,8 @@ export function renderBaseComposition({
     stlSilhouette,
     mode,
     dpi = 150,
-    showLogoSelection = false
+    showLogoSelection = false,
+    showTextSelection = false
 }: RenderCanvasOptions) {
     const ctx = targetCanvas.getContext('2d');
     if (!ctx) return;
@@ -62,8 +64,8 @@ export function renderBaseComposition({
     const baseLengthMm = dimensions.lengthMm;
     const bleedMm = production.bleedMm;
 
-    // Margem ao redor da base para visualizar a sangria e linhas guias
-    const marginMm = mode === 'preview' ? 3 : Math.max(bleedMm + 4, 8);
+    // Margem ao redor da base (no modo 3d_texture é zero para mapeamento 1:1 perfeito na malha 3D)
+    const marginMm = mode === '3d_texture' ? 0 : mode === 'preview' ? 3 : Math.max(bleedMm + 4, 8);
     const totalWidthMm = baseWidthMm + marginMm * 2;
     const totalLengthMm = baseLengthMm + marginMm * 2;
 
@@ -199,7 +201,7 @@ export function renderBaseComposition({
 
     // 5. DESENHO DO TEXTO / IDENTIFICAÇÃO DE COLECIONADOR
     if (textConfig.enabled && (textConfig.figureTitle || textConfig.subtitle)) {
-        drawText(compCtx, textConfig, centerX, centerY, baseWidthMm, baseLengthMm, dpi);
+        drawText(compCtx, textConfig, centerX, centerY, baseWidthMm, baseLengthMm, dpi, showTextSelection);
     }
 
     // Copia a composição final para o canvas principal
@@ -564,7 +566,61 @@ function drawLogo(
 }
 
 /**
- * Desenha tipografia e identificação de colecionador na base
+ * Calcula os limites e a posição em pixels da caixa de texto no Canvas
+ */
+export function getTextBounds(
+    config: TextConfig,
+    cx: number,
+    cy: number,
+    baseWidthMm: number,
+    baseLengthMm: number,
+    dpi: number
+) {
+    if (!config.enabled || (!config.figureTitle && !config.subtitle)) return null;
+
+    let posX = cx;
+    let posY = cy;
+
+    if (config.position === 'custom' && config.customXMm !== undefined && config.customYMm !== undefined) {
+        posX = cx + mmToPixels(config.customXMm, dpi);
+        posY = cy + mmToPixels(config.customYMm, dpi);
+    } else if (config.position === 'top') {
+        posX = cx;
+        posY = cy - mmToPixels(baseLengthMm * 0.32, dpi);
+    } else {
+        // 'bottom' ou padrão
+        posX = cx;
+        posY = cy + mmToPixels(baseLengthMm * 0.36, dpi);
+    }
+
+    const titleFontSize = Math.round(mmToPixels((config.fontSizePt || 14) * 0.3527, dpi));
+    const subFontSize = Math.max(9, Math.round(titleFontSize * 0.65));
+
+    const titleLen = config.figureTitle ? config.figureTitle.length : 0;
+    const subText = [config.subtitle, config.showEdition ? config.editionText : ''].filter(Boolean).join(' • ');
+    const subLen = subText ? subText.length : 0;
+
+    const approxTitleWidth = titleLen * (titleFontSize * 0.62);
+    const approxSubWidth = subLen * (subFontSize * 0.55);
+    const boxWidth = Math.max(approxTitleWidth, approxSubWidth, mmToPixels(28, dpi));
+
+    const hasSub = Boolean(subText);
+    const boxHeight = hasSub ? (titleFontSize + subFontSize * 1.5) : titleFontSize * 1.2;
+
+    return {
+        x: posX,
+        y: posY,
+        width: boxWidth,
+        height: boxHeight,
+        left: posX - boxWidth / 2 - 6,
+        right: posX + boxWidth / 2 + 6,
+        top: posY - titleFontSize - 4,
+        bottom: posY + (hasSub ? subFontSize * 1.6 : 4)
+    };
+}
+
+/**
+ * Desenha tipografia e identificação de colecionador na base com suporte a arrastar
  */
 function drawText(
     ctx: CanvasRenderingContext2D,
@@ -573,8 +629,15 @@ function drawText(
     cy: number,
     baseWidthMm: number,
     baseLengthMm: number,
-    dpi: number
+    dpi: number,
+    showSelection = false
 ) {
+    const bounds = getTextBounds(config, cx, cy, baseWidthMm, baseLengthMm, dpi);
+    if (!bounds) return;
+
+    const posX = bounds.x;
+    const posY = bounds.y;
+
     ctx.save();
     ctx.textAlign = 'center';
     ctx.fillStyle = config.textColor || '#ffffff';
@@ -582,15 +645,11 @@ function drawText(
     ctx.shadowBlur = mmToPixels(1, dpi);
     ctx.shadowOffsetY = mmToPixels(0.5, dpi);
 
-    const posY = config.position === 'top'
-        ? cy - mmToPixels(baseLengthMm * 0.32, dpi)
-        : cy + mmToPixels(baseLengthMm * 0.36, dpi);
-
-    const titleFontSize = Math.round(mmToPixels(config.fontSizePt * 0.3527, dpi));
+    const titleFontSize = Math.round(mmToPixels((config.fontSizePt || 14) * 0.3527, dpi));
     ctx.font = `900 ${titleFontSize}px Inter, sans-serif`;
 
     if (config.figureTitle) {
-        ctx.fillText(config.figureTitle.toUpperCase(), cx, posY);
+        ctx.fillText(config.figureTitle.toUpperCase(), posX, posY);
     }
 
     if (config.subtitle || (config.showEdition && config.editionText)) {
@@ -600,7 +659,27 @@ function drawText(
         const textToDisplay = [config.subtitle, config.showEdition ? config.editionText : '']
             .filter(Boolean)
             .join(' • ');
-        ctx.fillText(textToDisplay, cx, posY + subFontSize * 1.3);
+        ctx.fillText(textToDisplay, posX, posY + subFontSize * 1.3);
+    }
+
+    // Desenha caixa de seleção pontilhada se o mouse estiver sobre o texto ou arrastando
+    if (showSelection) {
+        ctx.save();
+        ctx.strokeStyle = '#38bdf8'; // Ciano para diferenciar da logo laranja
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        const w = bounds.right - bounds.left;
+        const h = bounds.bottom - bounds.top;
+        ctx.strokeRect(bounds.left, bounds.top, w, h);
+
+        // Pontos de ancoragem nos 4 cantos
+        ctx.fillStyle = '#38bdf8';
+        const s = 4;
+        ctx.fillRect(bounds.left - s / 2, bounds.top - s / 2, s, s);
+        ctx.fillRect(bounds.right - s / 2, bounds.top - s / 2, s, s);
+        ctx.fillRect(bounds.left - s / 2, bounds.bottom - s / 2, s, s);
+        ctx.fillRect(bounds.right - s / 2, bounds.bottom - s / 2, s, s);
+        ctx.restore();
     }
 
     ctx.restore();

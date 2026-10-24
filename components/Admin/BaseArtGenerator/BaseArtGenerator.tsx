@@ -6,7 +6,7 @@ import {
     Upload, Disc, Layers, ZoomIn, ZoomOut, RotateCw, Move, 
     Download, FileText, Image as ImageIcon, Sparkles, Scissors, 
     Eye, Shield, RefreshCw, Check, ArrowRight, CornerDownRight,
-    Maximize2, Sliders, Type, Grid, Undo2
+    Maximize2, Sliders, Type, Grid, Undo2, ArrowUpDown, MousePointerClick
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -18,9 +18,9 @@ import {
     ProductionConfig,
     STLMetadata 
 } from './types';
-import { processSTLFile, ProcessedSTL } from './stlProcessor';
-import { renderBaseComposition, getLogoBounds, pixelsToMm } from './canvasRenderer';
-import { exportToA4PDF } from './pdfExporter';
+import { processSTLFile, orientSTLByNormal, ProcessedSTL } from './stlProcessor';
+import { renderBaseComposition, getLogoBounds, getTextBounds, pixelsToMm } from './canvasRenderer';
+import { exportToSVG } from './svgExporter';
 import Base3DPreview from './Base3DPreview';
 import FigureCatalogPickerModal from './FigureCatalogPickerModal';
 import * as THREE from 'three';
@@ -101,8 +101,9 @@ export default function BaseArtGenerator() {
     const [zoomLevel, setZoomLevel] = useState<number>(1);
     const [isProcessingStl, setIsProcessingStl] = useState(false);
     const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
-    const [dragTarget, setDragTarget] = useState<'art' | 'logo' | null>(null);
+    const [dragTarget, setDragTarget] = useState<'art' | 'logo' | 'text' | null>(null);
     const [isHoveringLogo, setIsHoveringLogo] = useState(false);
+    const [isHoveringText, setIsHoveringText] = useState(false);
     const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
 
     // Referências aos Canvas e Workspace
@@ -239,11 +240,12 @@ export default function BaseArtGenerator() {
             stlSilhouette,
             mode: viewMode === 'preview' ? 'preview' : 'cut_guide',
             dpi: 140,
-            showLogoSelection: isHoveringLogo || dragTarget === 'logo'
+            showLogoSelection: isHoveringLogo || dragTarget === 'logo',
+            showTextSelection: isHoveringText || dragTarget === 'text'
         });
-    }, [shape, dimensions, artImage, artTransform, logoImage, logoConfig, textConfig, production, stlSilhouette, viewMode, isHoveringLogo, dragTarget]);
+    }, [shape, dimensions, artImage, artTransform, logoImage, logoConfig, textConfig, production, stlSilhouette, viewMode, isHoveringLogo, isHoveringText, dragTarget]);
 
-    // Gera versão em alta resolução (300 DPI) sob demanda APENAS na exportação (evita vazamento de memória)
+    // Gera versão em ultra alta resolução (600 DPI) sob demanda APENAS na exportação (evita vazamento de memória)
     const getHighResCanvas = useCallback((): HTMLCanvasElement => {
         const canvas = document.createElement('canvas');
         renderBaseComposition({
@@ -258,22 +260,52 @@ export default function BaseArtGenerator() {
             production,
             stlSilhouette,
             mode: 'export_print',
-            dpi: 300
+            dpi: 600
         });
         return canvas;
     }, [shape, dimensions, artImage, artTransform, logoImage, logoConfig, textConfig, production, stlSilhouette]);
+
+    // Gera textura 3D dedicada: 100% limpa, sem margens externas e sem linhas de corte na malha
+    const get3DTextureCanvas = useCallback((): HTMLCanvasElement | null => {
+        const canvas = document.createElement('canvas');
+        renderBaseComposition({
+            targetCanvas: canvas,
+            shape,
+            dimensions,
+            artImage,
+            artTransform,
+            logoImage,
+            logoConfig,
+            textConfig,
+            production: { ...production, bleedMm: 0, showCutLine: false, showBleedLine: false },
+            stlSilhouette,
+            mode: '3d_texture',
+            dpi: 140
+        });
+        return canvas;
+    }, [shape, dimensions, artImage, artTransform, logoImage, logoConfig, textConfig, production, stlSilhouette]);
+
+    const [texture3DCanvas, setTexture3DCanvas] = useState<HTMLCanvasElement | null>(null);
+
+    useEffect(() => {
+        if (viewMode === '3d') {
+            const tex = get3DTextureCanvas();
+            setTexture3DCanvas(tex);
+        }
+    }, [viewMode, get3DTextureCanvas]);
 
     useEffect(() => {
         triggerRender();
     }, [triggerRender]);
 
-    // Manipulador de Upload de STL
+    // Manipulador de Upload de STL com Nivelamento Automático (Snap to Grid)
     const handleSTLUpload = async (file: File) => {
         setIsProcessingStl(true);
         try {
             const buffer = await file.arrayBuffer();
             setRawStlBuffer(buffer);
-            const processed = await processSTLFile(buffer, file.name);
+            // Processa com detecção automática de face e assentamento na mesa
+            const processed = await processSTLFile(buffer, file.name, undefined, true);
 
             setStlGeometry(processed.geometry);
             setStlDimensions(processed.dimensions);
@@ -281,7 +313,7 @@ export default function BaseArtGenerator() {
             setStlSilhouette(processed.silhouetteCanvas);
             setShape('stl');
 
-            toast.success(`STL "${file.name}" importado com sucesso! Medidas: ${processed.dimensions.widthMm}mm × ${processed.dimensions.lengthMm}mm`);
+            toast.success(`STL "${file.name}" assentado na mesa! (${processed.dimensions.widthMm}mm × ${processed.dimensions.lengthMm}mm)`);
         } catch (err: any) {
             console.error('Erro ao processar STL:', err);
             toast.error('Falha ao ler arquivo STL. Certifique-se de que é um STL válido.');
@@ -299,7 +331,66 @@ export default function BaseArtGenerator() {
         }));
     };
 
-    // Rotação de Correção do STL nos eixos X/Y/Z em 90 graus
+    // Nivelar Automaticamente na Mesa (Snap to Grid / Orient by Face automático)
+    const handleAutoSnapToGrid = async () => {
+        if (!rawStlBuffer || !stlMetadata) return;
+        setIsProcessingStl(true);
+        try {
+            const processed = await processSTLFile(rawStlBuffer, stlMetadata.fileName, undefined, true);
+            setStlGeometry(processed.geometry);
+            setStlDimensions(processed.dimensions);
+            setStlMetadata(processed.metadata);
+            setStlSilhouette(processed.silhouetteCanvas);
+            toast.success(`Snap to Grid: base nivelada automaticamente na mesa! (${processed.dimensions.widthMm}mm × ${processed.dimensions.lengthMm}mm)`);
+        } catch (err) {
+            toast.error('Erro ao nivelar STL automaticamente');
+        } finally {
+            setIsProcessingStl(false);
+        }
+    };
+
+    // Assentar na mesa pela face clicada no 3D (Orient by Face via Raycast)
+    const handleOrientByFace = (normal: THREE.Vector3) => {
+        if (!rawStlBuffer || !stlMetadata) return;
+        setIsProcessingStl(true);
+        try {
+            const processed = orientSTLByNormal(rawStlBuffer, stlMetadata.fileName, normal);
+            setStlGeometry(processed.geometry);
+            setStlDimensions(processed.dimensions);
+            setStlMetadata(processed.metadata);
+            setStlSilhouette(processed.silhouetteCanvas);
+            toast.success(`Orient by Face: face selecionada assentada na mesa! (${processed.dimensions.widthMm}mm × ${processed.dimensions.lengthMm}mm)`);
+        } catch (err) {
+            toast.error('Erro ao assentar pela face selecionada');
+        } finally {
+            setIsProcessingStl(false);
+        }
+    };
+
+    // Inverter Base 180 graus (Topo / Fundo)
+    const handleInvertSTL = async () => {
+        if (!rawStlBuffer || !stlMetadata) return;
+        setIsProcessingStl(true);
+        try {
+            const currentAngles = stlMetadata.rotationAxis || { x: 0, y: 0, z: 0 };
+            const newAngles = {
+                ...currentAngles,
+                x: (currentAngles.x + 180) % 360
+            };
+            const processed = await processSTLFile(rawStlBuffer, stlMetadata.fileName, newAngles, false);
+            setStlGeometry(processed.geometry);
+            setStlDimensions(processed.dimensions);
+            setStlMetadata(processed.metadata);
+            setStlSilhouette(processed.silhouetteCanvas);
+            toast.info('Base invertida 180° (Topo / Fundo)');
+        } catch (err) {
+            toast.error('Erro ao inverter STL');
+        } finally {
+            setIsProcessingStl(false);
+        }
+    };
+
+    // Rotação Manual de Correção do STL nos eixos X/Y/Z em 90 graus
     const handleRotateSTL = async (axis: 'x' | 'y' | 'z') => {
         if (!rawStlBuffer || !stlMetadata) return;
         setIsProcessingStl(true);
@@ -307,7 +398,7 @@ export default function BaseArtGenerator() {
             const newAngles = { ...stlMetadata.rotationAxis };
             newAngles[axis] = (newAngles[axis] + 90) % 360;
 
-            const processed = await processSTLFile(rawStlBuffer, stlMetadata.fileName, newAngles);
+            const processed = await processSTLFile(rawStlBuffer, stlMetadata.fileName, newAngles, false);
             setStlGeometry(processed.geometry);
             setStlDimensions(processed.dimensions);
             setStlMetadata(processed.metadata);
@@ -366,14 +457,42 @@ export default function BaseArtGenerator() {
         );
     }, [logoConfig, logoImage, dimensions.widthMm, dimensions.lengthMm]);
 
-    // Interatividade: Arrastar arte ou logo com o mouse diretamente no Canvas
+    // Hit test para verificar se o cursor está em cima da Caixa de Texto no Canvas
+    const checkTextHit = useCallback((clientX: number, clientY: number): boolean => {
+        if (!canvasRef.current || !textConfig.enabled || (!textConfig.figureTitle && !textConfig.subtitle)) return false;
+        const rect = canvasRef.current.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return false;
+
+        const scaleX = canvasRef.current.width / rect.width;
+        const scaleY = canvasRef.current.height / rect.height;
+        const canvasX = (clientX - rect.left) * scaleX;
+        const canvasY = (clientY - rect.top) * scaleY;
+
+        const dpi = 140;
+        const cx = canvasRef.current.width / 2;
+        const cy = canvasRef.current.height / 2;
+
+        const bounds = getTextBounds(textConfig, cx, cy, dimensions.widthMm, dimensions.lengthMm, dpi);
+        if (!bounds) return false;
+
+        const pad = 8;
+        return (
+            canvasX >= bounds.left - pad &&
+            canvasX <= bounds.right + pad &&
+            canvasY >= bounds.top - pad &&
+            canvasY <= bounds.bottom + pad
+        );
+    }, [textConfig, dimensions.widthMm, dimensions.lengthMm]);
+
+    // Interatividade: Arrastar arte, logo ou texto com o mouse diretamente no Canvas
     const handleMouseDownCanvas = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (viewMode === '3d') return;
 
         const hitLogo = checkLogoHit(e.clientX, e.clientY);
+        const hitText = checkTextHit(e.clientX, e.clientY);
+
         if (hitLogo) {
             // Se a logo estava em uma posição fixa de âncora, converte a posição visual atual para custom
-            // evitando qualquer salto repentino na posição ao iniciar o arrasto
             if (logoConfig.position !== 'custom' && canvasRef.current && logoImage) {
                 const dpi = 140;
                 const cx = canvasRef.current.width / 2;
@@ -391,6 +510,25 @@ export default function BaseArtGenerator() {
                 }
             }
             setDragTarget('logo');
+        } else if (hitText) {
+            // Se o texto estava em posição predefinida (top/bottom), converte para custom ao iniciar arrasto
+            if (textConfig.position !== 'custom' && canvasRef.current) {
+                const dpi = 140;
+                const cx = canvasRef.current.width / 2;
+                const cy = canvasRef.current.height / 2;
+                const bounds = getTextBounds(textConfig, cx, cy, dimensions.widthMm, dimensions.lengthMm, dpi);
+                if (bounds) {
+                    const currentXMm = Math.round(pixelsToMm(bounds.x - cx, dpi) * 10) / 10;
+                    const currentYMm = Math.round(pixelsToMm(bounds.y - cy, dpi) * 10) / 10;
+                    setTextConfig(prev => ({
+                        ...prev,
+                        position: 'custom',
+                        customXMm: currentXMm,
+                        customYMm: currentYMm
+                    }));
+                }
+            }
+            setDragTarget('text');
         } else {
             setDragTarget('art');
         }
@@ -401,10 +539,10 @@ export default function BaseArtGenerator() {
         if (viewMode === '3d') return;
 
         if (!dragTarget) {
-            const hit = checkLogoHit(e.clientX, e.clientY);
-            if (hit !== isHoveringLogo) {
-                setIsHoveringLogo(hit);
-            }
+            const hitLogo = checkLogoHit(e.clientX, e.clientY);
+            const hitText = checkTextHit(e.clientX, e.clientY);
+            if (hitLogo !== isHoveringLogo) setIsHoveringLogo(hitLogo);
+            if (hitText !== isHoveringText) setIsHoveringText(hitText);
             return;
         }
 
@@ -426,6 +564,20 @@ export default function BaseArtGenerator() {
                 customXMm: Math.round((prev.customXMm + deltaXMm) * 10) / 10,
                 customYMm: Math.round((prev.customYMm + deltaYMm) * 10) / 10
             }));
+        } else if (dragTarget === 'text') {
+            if (!canvasRef.current) return;
+            const rect = canvasRef.current.getBoundingClientRect();
+            const screenToCanvasFactor = canvasRef.current.width / rect.width;
+            const dpi = 140;
+            const deltaXMm = pixelsToMm(deltaX * screenToCanvasFactor, dpi);
+            const deltaYMm = pixelsToMm(deltaY * screenToCanvasFactor, dpi);
+
+            setTextConfig(prev => ({
+                ...prev,
+                position: 'custom',
+                customXMm: Math.round(((prev.customXMm || 0) + deltaXMm) * 10) / 10,
+                customYMm: Math.round(((prev.customYMm || 0) + deltaYMm) * 10) / 10
+            }));
         } else if (dragTarget === 'art') {
             const sensitivity = 0.5 / zoomLevel;
             setArtTransform(prev => ({
@@ -440,38 +592,43 @@ export default function BaseArtGenerator() {
         setDragTarget(null);
     };
 
-    // Exportação em PDF A4
-    const handleExportPDF = async () => {
+    // Exportação em SVG Vetorial (Escala 1:1 Física em mm para Plotters de Recorte)
+    const handleExportSVG = async () => {
         try {
-            toast.loading('Gerando folha A4 em escala 1:1 real...');
+            toast.loading('Gerando arquivo SVG vetorial 1:1 com contornos de corte...');
             const highResCanvas = getHighResCanvas();
-            await exportToA4PDF({
+            await exportToSVG({
                 canvas: highResCanvas,
+                shape,
                 dimensions,
                 figureTitle: textConfig.figureTitle || (stlMetadata?.fileName.replace(/\.stl$/i, '') || 'Base'),
                 studioName: textConfig.subtitle || 'Franga Toys',
-                production
+                production,
+                stlSilhouette
             });
             toast.dismiss();
-            toast.success('PDF A4 gerado com sucesso! Pronto para impressão em vinil.');
+            toast.success('SVG Vetorial gerado com sucesso! Pronto para Silhouette, Cricut, Laser e Corel/Illustrator.');
         } catch (err) {
             toast.dismiss();
-            console.error('Erro na exportação de PDF:', err);
-            toast.error('Erro ao gerar PDF de impressão.');
+            console.error('Erro na exportação de SVG:', err);
+            toast.error('Erro ao gerar SVG vetorial de corte.');
         }
     };
 
-    // Exportação em PNG Alta Resolução
+    // Exportação em PNG Ultra Resolução (600 DPI)
     const handleExportPNG = () => {
         try {
+            toast.loading('Processando renderização em 600 DPI...');
             const highResCanvas = getHighResCanvas();
             const dataUrl = highResCanvas.toDataURL('image/png', 1.0);
             const link = document.createElement('a');
-            link.download = `base_${dimensions.widthMm}mm_300dpi.png`;
+            link.download = `base_${dimensions.widthMm}mm_600dpi.png`;
             link.href = dataUrl;
             link.click();
-            toast.success('PNG 300 DPI exportado com sucesso!');
+            toast.dismiss();
+            toast.success('PNG 600 DPI exportado com sucesso!');
         } catch (err: any) {
+            toast.dismiss();
             console.error('Erro ao exportar PNG:', err);
             try {
                 const highResCanvas = getHighResCanvas();
@@ -479,11 +636,11 @@ export default function BaseArtGenerator() {
                     if (!blob) throw new Error('Blob não gerado');
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement('a');
-                    link.download = `base_${dimensions.widthMm}mm_300dpi.png`;
+                    link.download = `base_${dimensions.widthMm}mm_600dpi.png`;
                     link.href = url;
                     link.click();
                     setTimeout(() => URL.revokeObjectURL(url), 1500);
-                    toast.success('PNG 300 DPI exportado com sucesso!');
+                    toast.success('PNG 600 DPI exportado com sucesso!');
                 }, 'image/png', 1.0);
             } catch (blobErr) {
                 toast.error('Erro de segurança do Canvas. Faça o upload do arquivo de imagem do computador.');
@@ -604,38 +761,64 @@ export default function BaseArtGenerator() {
 
                             {/* Informações do STL carregado */}
                             {stlMetadata && shape === 'stl' && (
-                                <div className="p-3 bg-zinc-900/80 border border-zinc-800 rounded-2xl space-y-2">
+                                <div className="p-3 bg-zinc-900/80 border border-zinc-800 rounded-2xl space-y-2.5">
                                     <div className="flex items-center justify-between text-xs font-mono">
-                                        <span className="text-zinc-400 truncate max-w-[200px]" title={stlMetadata.fileName}>
+                                        <span className="text-zinc-400 truncate max-w-[180px]" title={stlMetadata.fileName}>
                                             📄 {stlMetadata.fileName}
                                         </span>
                                         <span className="text-orange-400 font-bold">
                                             {dimensions.widthMm} × {dimensions.lengthMm} mm
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-1.5 pt-1">
-                                        <span className="text-[10px] text-zinc-500 uppercase font-black">Girar STL:</span>
+
+                                    {/* Ações Principais de Nivelamento (Snap to Grid) */}
+                                    <div className="grid grid-cols-2 gap-1.5 pt-1">
                                         <button
-                                            onClick={() => handleRotateSTL('x')}
-                                            className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-bold rounded-lg cursor-pointer"
-                                            title="Girar 90 graus no eixo X"
+                                            onClick={handleAutoSnapToGrid}
+                                            disabled={isProcessingStl}
+                                            className="px-2 py-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/30 text-[10px] font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+                                            title="Nivelar e assentar a base na mesa automaticamente (Snap to Grid)"
                                         >
-                                            X 90°
+                                            <Sparkles size={12} />
+                                            <span>Snap to Grid</span>
                                         </button>
                                         <button
-                                            onClick={() => handleRotateSTL('y')}
-                                            className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-bold rounded-lg cursor-pointer"
-                                            title="Girar 90 graus no eixo Y"
+                                            onClick={handleInvertSTL}
+                                            disabled={isProcessingStl}
+                                            className="px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 border border-zinc-700"
+                                            title="Inverter Topo e Fundo (180°)"
                                         >
-                                            Y 90°
+                                            <ArrowUpDown size={12} />
+                                            <span>Inverter (180°)</span>
                                         </button>
-                                        <button
-                                            onClick={() => handleRotateSTL('z')}
-                                            className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-bold rounded-lg cursor-pointer"
-                                            title="Girar 90 graus no eixo Z"
-                                        >
-                                            Z 90°
-                                        </button>
+                                    </div>
+
+                                    {/* Ajustes Finos de Rotação Manual 90° */}
+                                    <div className="flex items-center justify-between pt-1 border-t border-zinc-800/80">
+                                        <span className="text-[10px] text-zinc-500 uppercase font-black">Ajuste Fino:</span>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                onClick={() => handleRotateSTL('x')}
+                                                className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold rounded-lg cursor-pointer"
+                                                title="Girar 90 graus no eixo X"
+                                            >
+                                                X 90°
+                                            </button>
+                                            <button
+                                                onClick={() => handleRotateSTL('y')}
+                                                className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold rounded-lg cursor-pointer"
+                                                title="Girar 90 graus no eixo Y"
+                                            >
+                                                Y 90°
+                                            </button>
+                                            <button
+                                                onClick={() => handleRotateSTL('z')}
+                                                className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[10px] font-bold rounded-lg cursor-pointer"
+                                                title="Girar 90 graus no eixo Z"
+                                            >
+                                                Z 90°
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -1039,6 +1222,106 @@ export default function BaseArtGenerator() {
                                             className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-orange-500"
                                         />
                                     </div>
+
+                                    {/* Posição da Placa / Caixa de Texto */}
+                                    <div className="space-y-1.5 pt-1 border-t border-zinc-800/80">
+                                        <div className="flex items-center justify-between text-xs font-bold text-zinc-300">
+                                            <span>Posicionamento</span>
+                                            <span className="text-[10px] text-zinc-500">ou arraste no canvas</span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-1.5">
+                                            <button
+                                                onClick={() => setTextConfig(prev => ({ ...prev, position: 'bottom', customXMm: 0, customYMm: 0 }))}
+                                                className={`py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                                                    textConfig.position === 'bottom'
+                                                        ? 'bg-orange-500 text-black border-orange-500'
+                                                        : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-white'
+                                                }`}
+                                            >
+                                                Base
+                                            </button>
+                                            <button
+                                                onClick={() => setTextConfig(prev => ({ ...prev, position: 'top', customXMm: 0, customYMm: 0 }))}
+                                                className={`py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                                                    textConfig.position === 'top'
+                                                        ? 'bg-orange-500 text-black border-orange-500'
+                                                        : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-white'
+                                                }`}
+                                            >
+                                                Topo
+                                            </button>
+                                            <button
+                                                onClick={() => setTextConfig(prev => ({ ...prev, position: 'custom', customXMm: prev.customXMm || 0, customYMm: prev.customYMm || 0 }))}
+                                                className={`py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                                                    textConfig.position === 'custom'
+                                                        ? 'bg-orange-500 text-black border-orange-500'
+                                                        : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-white'
+                                                }`}
+                                            >
+                                                Livre ✥
+                                            </button>
+                                        </div>
+
+                                        {textConfig.position === 'custom' && (
+                                            <div className="p-2.5 bg-zinc-950/60 rounded-xl border border-zinc-800 space-y-2 mt-1">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-bold text-sky-400">Posição Livre (Arrastável)</span>
+                                                    <button
+                                                        onClick={() => setTextConfig(prev => ({ ...prev, customXMm: 0, customYMm: 0 }))}
+                                                        className="text-[10px] text-zinc-400 hover:text-white underline cursor-pointer"
+                                                    >
+                                                        Centralizar
+                                                    </button>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="flex justify-between text-[11px]">
+                                                        <span className="text-zinc-500">Offset X:</span>
+                                                        <span className="font-mono text-orange-400 font-bold">{textConfig.customXMm || 0} mm</span>
+                                                    </div>
+                                                    <input
+                                                        type="range"
+                                                        min={-Math.round(dimensions.widthMm / 2)}
+                                                        max={Math.round(dimensions.widthMm / 2)}
+                                                        step={0.5}
+                                                        value={textConfig.customXMm || 0}
+                                                        onChange={(e) => setTextConfig(prev => ({ ...prev, customXMm: Number(e.target.value) }))}
+                                                        className="w-full accent-orange-500 cursor-pointer"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="flex justify-between text-[11px]">
+                                                        <span className="text-zinc-500">Offset Y:</span>
+                                                        <span className="font-mono text-orange-400 font-bold">{textConfig.customYMm || 0} mm</span>
+                                                    </div>
+                                                    <input
+                                                        type="range"
+                                                        min={-Math.round(dimensions.lengthMm / 2)}
+                                                        max={Math.round(dimensions.lengthMm / 2)}
+                                                        step={0.5}
+                                                        value={textConfig.customYMm || 0}
+                                                        onChange={(e) => setTextConfig(prev => ({ ...prev, customYMm: Number(e.target.value) }))}
+                                                        className="w-full accent-orange-500 cursor-pointer"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Tamanho da Fonte */}
+                                    <div className="space-y-1 pt-1 border-t border-zinc-800/80">
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-zinc-400">Tamanho da Fonte</span>
+                                            <span className="font-mono text-orange-400 font-bold">{textConfig.fontSizePt || 14} pt</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min={8}
+                                            max={28}
+                                            value={textConfig.fontSizePt || 14}
+                                            onChange={(e) => setTextConfig(prev => ({ ...prev, fontSizePt: Number(e.target.value) }))}
+                                            className="w-full accent-orange-500 cursor-pointer"
+                                        />
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -1131,18 +1414,18 @@ export default function BaseArtGenerator() {
                 {/* BOTÕES DE EXPORTAÇÃO NO RODAPÉ */}
                 <div className="pt-3 border-t border-zinc-800/80 space-y-2">
                     <button
-                        onClick={handleExportPDF}
+                        onClick={handleExportSVG}
                         className="w-full py-3.5 bg-orange-500 hover:bg-orange-400 text-black font-black uppercase tracking-wider text-xs rounded-2xl transition-all shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                     >
-                        <FileText size={16} />
-                        <span>Exportar PDF A4 (Escala 1:1)</span>
+                        <Scissors size={16} />
+                        <span>Exportar SVG Vetorial (Corte 1:1)</span>
                     </button>
                     <button
                         onClick={handleExportPNG}
                         className="w-full py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white font-bold text-xs rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                         <Download size={14} />
-                        <span>Baixar Imagem PNG (300 DPI)</span>
+                        <span>Baixar Imagem PNG (600 DPI)</span>
                     </button>
                 </div>
             </div>
@@ -1232,14 +1515,17 @@ export default function BaseArtGenerator() {
                                 stlGeometry={stlGeometry}
                                 shape={shape}
                                 dimensions={dimensions}
-                                textureCanvas={canvasRef.current}
+                                textureCanvas={texture3DCanvas}
+                                onAutoSnapToGrid={handleAutoSnapToGrid}
+                                onOrientByFace={handleOrientByFace}
+                                onInvert={handleInvertSTL}
                             />
                         </div>
                     ) : (
                         <div className="relative flex flex-col items-center justify-center">
                             {/* Dica de Interatividade */}
                             <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-zinc-900/90 border border-zinc-800 rounded-full text-[10px] text-zinc-400 font-medium pointer-events-none z-10 shadow-lg whitespace-nowrap">
-                                💡 Arraste a arte ou a logo para reposicionar • Use a roda do mouse para zoom
+                                💡 Arraste a arte, a logo ou o texto para reposicionar • Use a roda do mouse para zoom
                             </div>
 
                             {/* Canvas Principal */}
@@ -1256,7 +1542,7 @@ export default function BaseArtGenerator() {
                                     className={`touch-none ${
                                         dragTarget
                                             ? 'cursor-grabbing'
-                                            : isHoveringLogo
+                                            : (isHoveringLogo || isHoveringText)
                                             ? 'cursor-move'
                                             : 'cursor-grab'
                                     }`}

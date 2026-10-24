@@ -44,7 +44,9 @@ export interface TextConfig {
     showEdition: boolean;
     fontSizePt: number;
     textColor: string;
-    position: 'bottom' | 'top' | 'sub_logo';
+    position: 'bottom' | 'top' | 'sub_logo' | 'custom';
+    customXMm?: number;
+    customYMm?: number;
 }
 
 export interface ProductionConfig {

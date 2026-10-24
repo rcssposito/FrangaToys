@@ -1,28 +1,41 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { BaseShapeType, BaseDimensions } from './types';
+import { Compass, RotateCcw, Eye, Layers, Sparkles, MousePointerClick, ArrowUpDown } from 'lucide-react';
 
 interface Base3DPreviewProps {
     stlGeometry?: THREE.BufferGeometry | null;
     shape: BaseShapeType;
     dimensions: BaseDimensions;
     textureCanvas: HTMLCanvasElement | null;
+    onAutoSnapToGrid?: () => void;
+    onOrientByFace?: (faceNormal: THREE.Vector3) => void;
+    onInvert?: () => void;
 }
 
 export default function Base3DPreview({
     stlGeometry,
     shape,
     dimensions,
-    textureCanvas
+    textureCanvas,
+    onAutoSnapToGrid,
+    onOrientByFace,
+    onInvert
 }: Base3DPreviewProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
     const sceneRef = useRef<THREE.Scene | null>(null);
     const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+    const controlsRef = useRef<OrbitControls | null>(null);
     const meshRef = useRef<THREE.Mesh | null>(null);
     const textureRef = useRef<THREE.CanvasTexture | null>(null);
+    const gridRef = useRef<THREE.GridHelper | null>(null);
+
+    const [isOrientByFaceActive, setIsOrientByFaceActive] = useState(false);
+    const [hoveredFaceNormal, setHoveredFaceNormal] = useState<THREE.Vector3 | null>(null);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -35,12 +48,12 @@ export default function Base3DPreview({
         scene.background = new THREE.Color(0x09090b); // Fundo escuro zinc-950
         sceneRef.current = scene;
 
-        const camera = new THREE.PerspectiveCamera(45, width / height, 1, 2000);
-        camera.position.set(0, -180, 160);
+        const camera = new THREE.PerspectiveCamera(40, width / height, 1, 3000);
+        camera.position.set(0, -180, 140);
         cameraRef.current = camera;
 
-        // 2. Renderizador
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        // 2. Renderizador WebGL
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
         renderer.setSize(width, height);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
@@ -49,79 +62,50 @@ export default function Base3DPreview({
         containerRef.current.innerHTML = '';
         containerRef.current.appendChild(renderer.domElement);
 
-        // 3. Iluminação
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+        // 3. Controles de Órbita Suaves (OrbitControls)
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.06;
+        controls.maxPolarAngle = Math.PI / 2 + 0.05; // Impede que a câmera passe abaixo da mesa/chão
+        controls.minDistance = 40;
+        controls.maxDistance = 600;
+        controls.target.set(0, 0, (dimensions.heightMm || 12) / 2);
+        controlsRef.current = controls;
+
+        // 4. Iluminação Realista de Produto
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
         scene.add(ambientLight);
 
-        const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
-        keyLight.position.set(100, 150, 200);
+        const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
+        keyLight.position.set(120, 160, 220);
         keyLight.castShadow = true;
         scene.add(keyLight);
 
-        const fillLight = new THREE.DirectionalLight(0xf97316, 0.8); // Luz de preenchimento âmbar/laranja
-        fillLight.position.set(-100, -100, 100);
+        const fillLight = new THREE.DirectionalLight(0xf97316, 0.9); // Luz suave âmbar Franga Toys
+        fillLight.position.set(-120, -120, 120);
         scene.add(fillLight);
 
-        // Grade de chão suave
-        const grid = new THREE.GridHelper(300, 30, 0x27272a, 0x18181b);
+        const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.4); // Rim light ciano suave nas bordas
+        rimLight.position.set(0, 180, 40);
+        scene.add(rimLight);
+
+        // 5. Grade de Mesa de Impressão / Grid Perfeitamente Nivelado em Z = 0
+        const grid = new THREE.GridHelper(300, 30, 0xf97316, 0x27272a);
         grid.rotation.x = Math.PI / 2;
-        grid.position.z = -10;
+        grid.position.set(0, 0, 0); // Exato plano zero da mesa
         scene.add(grid);
+        gridRef.current = grid;
 
-        // 4. Controles de Órbita simples via Mouse Drag
-        let isDragging = false;
-        let prevMouse = { x: 0, y: 0 };
-        let rotation = { x: -Math.PI / 6, z: 0 };
-
-        const handleMouseDown = (e: MouseEvent) => {
-            isDragging = true;
-            prevMouse = { x: e.clientX, y: e.clientY };
-        };
-
-        const handleMouseMove = (e: MouseEvent) => {
-            if (!isDragging) return;
-            const deltaX = e.clientX - prevMouse.x;
-            const deltaY = e.clientY - prevMouse.y;
-            prevMouse = { x: e.clientX, y: e.clientY };
-
-            rotation.z += deltaX * 0.01;
-            rotation.x += deltaY * 0.01;
-            rotation.x = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, rotation.x));
-        };
-
-        const handleMouseUp = () => {
-            isDragging = false;
-        };
-
-        const handleWheel = (e: WheelEvent) => {
-            e.preventDefault();
-            const currentDist = camera.position.length();
-            const newDist = Math.max(80, Math.min(600, currentDist + e.deltaY * 0.5));
-            camera.position.setLength(newDist);
-        };
-
-        const dom = renderer.domElement;
-        dom.addEventListener('mousedown', handleMouseDown);
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
-        dom.addEventListener('wheel', handleWheel, { passive: false });
-
-        // Loop de Renderização
+        // Loop de Renderização Contínuo
         let animationFrameId: number;
         const animate = () => {
             animationFrameId = requestAnimationFrame(animate);
-
-            if (meshRef.current) {
-                meshRef.current.rotation.x = rotation.x;
-                meshRef.current.rotation.z = rotation.z;
-            }
-
-            camera.lookAt(0, 0, 0);
+            controls.update();
             renderer.render(scene, camera);
         };
         animate();
 
-        // Resize
+        // Redimensionamento de Janela
         const handleResize = () => {
             if (!containerRef.current || !rendererRef.current || !cameraRef.current) return;
             const newW = containerRef.current.clientWidth;
@@ -134,11 +118,8 @@ export default function Base3DPreview({
 
         return () => {
             cancelAnimationFrame(animationFrameId);
-            dom.removeEventListener('mousedown', handleMouseDown);
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleMouseUp);
-            dom.removeEventListener('wheel', handleWheel);
             window.removeEventListener('resize', handleResize);
+            controls.dispose();
             renderer.dispose();
         };
     }, []);
@@ -148,7 +129,7 @@ export default function Base3DPreview({
         if (!sceneRef.current) return;
         const scene = sceneRef.current;
 
-        // Remove malha anterior
+        // Remove malha anterior para liberar memória
         if (meshRef.current) {
             scene.remove(meshRef.current);
             meshRef.current.geometry.dispose();
@@ -160,7 +141,7 @@ export default function Base3DPreview({
             meshRef.current = null;
         }
 
-        // Prepara textura a partir do Canvas de Arte
+        // Prepara textura a partir do Canvas de Arte 2D
         let texture: THREE.CanvasTexture | null = null;
         if (textureCanvas) {
             texture = new THREE.CanvasTexture(textureCanvas);
@@ -169,19 +150,35 @@ export default function Base3DPreview({
         }
 
         let geom: THREE.BufferGeometry;
+        const height = dimensions.heightMm || 12;
+        const w = dimensions.widthMm;
+        const l = dimensions.lengthMm;
+
+        const baseMat = new THREE.MeshStandardMaterial({
+            color: 0x18181b,
+            roughness: 0.6,
+            metalness: 0.2
+        });
+
+        const topMat = new THREE.MeshStandardMaterial({
+            ...(texture ? { map: texture } : {}),
+            color: texture ? 0xffffff : 0x27272a,
+            roughness: 0.25,
+            metalness: 0.05
+        });
 
         if (shape === 'stl' && stlGeometry) {
             geom = stlGeometry.clone();
-            geom.center();
+            geom.center(); // Centraliza nos eixos X e Y
             geom.computeVertexNormals();
 
-            // Mapeia coordenadas UV planares (Top-Down) para a arte projetar no topo do STL
+            // Mapeia coordenadas UV planares (Top-Down) para a arte projetar perfeitamente no topo
             const pos = geom.attributes.position;
             const uvs = new Float32Array((pos.count) * 2);
             geom.computeBoundingBox();
             const bbox = geom.boundingBox!;
-            const sizeX = bbox.max.x - bbox.min.x;
-            const sizeY = bbox.max.y - bbox.min.y;
+            const sizeX = Math.max(0.1, bbox.max.x - bbox.min.x);
+            const sizeY = Math.max(0.1, bbox.max.y - bbox.min.y);
 
             for (let i = 0; i < pos.count; i++) {
                 const x = pos.getX(i);
@@ -191,8 +188,13 @@ export default function Base3DPreview({
             }
             geom.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
 
+            // NIVELA A BASE COM A MESA (Z = 0):
+            // Desloca toda a geometria verticalmente para que a face inferior encoste exatamente no plano Z = 0
+            const zMin = bbox.min.z;
+            geom.translate(0, 0, -zMin);
+
             const material = new THREE.MeshStandardMaterial({
-                map: texture || undefined,
+                ...(texture ? { map: texture } : {}),
                 color: texture ? 0xffffff : 0x27272a,
                 roughness: 0.35,
                 metalness: 0.1
@@ -201,62 +203,189 @@ export default function Base3DPreview({
             const mesh = new THREE.Mesh(geom, material);
             scene.add(mesh);
             meshRef.current = mesh;
+        } else if (shape === 'rectangle') {
+            geom = new THREE.BoxGeometry(w, l, height);
+            // Nivelamento perfeito com a mesa em Z = 0
+            geom.translate(0, 0, height / 2);
+
+            const materials = [baseMat, baseMat, baseMat, baseMat, topMat, baseMat];
+            const mesh = new THREE.Mesh(geom, materials);
+            scene.add(mesh);
+            meshRef.current = mesh;
+        } else if (shape === 'hexagon') {
+            const radius = Math.min(w, l) / 2;
+            geom = new THREE.CylinderGeometry(radius, radius, height, 6);
+            geom.rotateX(Math.PI / 2);
+            // Nivelamento com a mesa em Z = 0
+            geom.translate(0, 0, height / 2);
+
+            const materials = [baseMat, topMat, baseMat];
+            const mesh = new THREE.Mesh(geom, materials);
+            scene.add(mesh);
+            meshRef.current = mesh;
         } else {
-            // Geometria Paramétrica (Cilindro ou Caixa com altura de base 3D realista)
-            const height = dimensions.heightMm || 12;
-            const w = dimensions.widthMm;
-            const l = dimensions.lengthMm;
+            // Cilindro / Círculo padrão
+            const radius = Math.min(w, l) / 2;
+            geom = new THREE.CylinderGeometry(radius, radius * 1.01, height, 64);
+            geom.rotateX(Math.PI / 2);
+            // Nivelamento com a mesa em Z = 0
+            geom.translate(0, 0, height / 2);
 
-            const baseMat = new THREE.MeshStandardMaterial({
-                color: 0x18181b,
-                roughness: 0.6,
-                metalness: 0.2
-            });
+            const materials = [baseMat, topMat, baseMat];
+            const mesh = new THREE.Mesh(geom, materials);
+            scene.add(mesh);
+            meshRef.current = mesh;
+        }
 
-            const topMat = new THREE.MeshStandardMaterial({
-                map: texture || undefined,
-                color: texture ? 0xffffff : 0x27272a,
-                roughness: 0.25,
-                metalness: 0.05
-            });
-
-            if (shape === 'rectangle') {
-                geom = new THREE.BoxGeometry(w, l, height);
-                // BoxGeometry: faces [px, nx, py, ny, pz, nz]
-                const materials = [baseMat, baseMat, baseMat, baseMat, topMat, baseMat];
-                const mesh = new THREE.Mesh(geom, materials);
-                scene.add(mesh);
-                meshRef.current = mesh;
-            } else {
-                // Cilindro / Círculo padrão
-                const radius = Math.min(w, l) / 2;
-                geom = new THREE.CylinderGeometry(radius, radius * 1.02, height, 48);
-                geom.rotateX(Math.PI / 2); // Deita o cilindro no plano Z
-                // Cylinder faces: [lado, topo, fundo]
-                const materials = [baseMat, topMat, baseMat];
-                const mesh = new THREE.Mesh(geom, materials);
-                scene.add(mesh);
-                meshRef.current = mesh;
-            }
+        // Ajusta o ponto focal da câmera no centro da base nivelada
+        if (controlsRef.current) {
+            controlsRef.current.target.set(0, 0, height / 2);
         }
     }, [stlGeometry, shape, dimensions, textureCanvas]);
 
+    // Manipulador de clique para Orient by Face (Lay on face / Snap to grid)
+    const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!isOrientByFaceActive || !containerRef.current || !cameraRef.current || !meshRef.current || !onOrientByFace) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(x, y), cameraRef.current);
+        const intersects = raycaster.intersectObject(meshRef.current, false);
+
+        if (intersects.length > 0 && intersects[0].face) {
+            const worldNormal = intersects[0].face.normal.clone();
+            worldNormal.transformDirection(meshRef.current.matrixWorld);
+            onOrientByFace(worldNormal);
+            setIsOrientByFaceActive(false);
+        }
+    };
+
+    // Ações Rápidas de Câmera / Nivelamento
+    const setCameraView = (type: 'iso' | 'top' | 'front') => {
+        if (!cameraRef.current || !controlsRef.current) return;
+        const height = dimensions.heightMm || 12;
+
+        if (type === 'iso') {
+            cameraRef.current.position.set(0, -180, 140);
+            controlsRef.current.target.set(0, 0, height / 2);
+        } else if (type === 'top') {
+            cameraRef.current.position.set(0, 0, 220);
+            controlsRef.current.target.set(0, 0, 0);
+        } else if (type === 'front') {
+            cameraRef.current.position.set(0, -220, height / 2);
+            controlsRef.current.target.set(0, 0, height / 2);
+        }
+        controlsRef.current.update();
+    };
+
+    const pxW = Math.round((dimensions.widthMm / 25.4) * 600);
+    const pxH = Math.round((dimensions.lengthMm / 25.4) * 600);
+
     return (
         <div className="relative w-full h-full min-h-[380px] rounded-2xl overflow-hidden bg-zinc-950 border border-zinc-800">
-            <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+            <div
+                ref={containerRef}
+                onClick={handleContainerClick}
+                className={`w-full h-full ${isOrientByFaceActive ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
+            />
+
+            {/* Aviso de Modo Orient by Face Ativo */}
+            {isOrientByFaceActive && (
+                <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1.5 rounded-full bg-orange-500 text-black font-bold text-xs shadow-2xl flex items-center gap-2 animate-pulse border border-orange-300 pointer-events-none">
+                    <MousePointerClick size={14} />
+                    <span>Clique em qualquer face da base 3D para assentá-la na mesa</span>
+                </div>
+            )}
             
-            <div className="absolute top-3 left-3 pointer-events-none flex items-center gap-2">
-                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-zinc-900/90 text-orange-400 border border-orange-500/30 backdrop-blur-md shadow-lg">
-                    Preview 3D Interativo
+            {/* Header com Status de Nivelamento & Ações de Snap to Grid */}
+            <div className="absolute top-3 left-3 flex items-center gap-2 z-10 flex-wrap max-w-[65%]">
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-zinc-900/90 text-orange-400 border border-orange-500/30 backdrop-blur-md shadow-lg flex items-center gap-1.5">
+                    <Layers size={13} />
+                    <span>Base Nivelada na Mesa (Z = 0.0 mm)</span>
                 </span>
-                <span className="text-[10px] text-zinc-500 font-medium">
-                    Arraste para girar • Scroll para zoom
-                </span>
+
+                {shape === 'stl' && (
+                    <div className="flex items-center gap-1 bg-zinc-900/90 border border-zinc-800 p-0.5 rounded-xl backdrop-blur-md shadow-lg">
+                        {onAutoSnapToGrid && (
+                            <button
+                                onClick={onAutoSnapToGrid}
+                                className="px-2 py-1 text-[10px] font-bold text-orange-400 hover:text-white hover:bg-orange-500/20 rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                                title="Nivelar automaticamente e assentar na grade da mesa (Snap to Grid)"
+                            >
+                                <Sparkles size={11} />
+                                <span>Snap to Grid</span>
+                            </button>
+                        )}
+                        {onOrientByFace && (
+                            <button
+                                onClick={() => setIsOrientByFaceActive(prev => !prev)}
+                                className={`px-2 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                                    isOrientByFaceActive
+                                        ? 'bg-orange-500 text-black shadow-md'
+                                        : 'text-zinc-300 hover:text-white hover:bg-zinc-800'
+                                }`}
+                                title="Ativar modo Orient by Face: clique em qualquer face da base para ela assentar na mesa"
+                            >
+                                <MousePointerClick size={11} />
+                                <span>Orient by Face</span>
+                            </button>
+                        )}
+                        {onInvert && (
+                            <button
+                                onClick={onInvert}
+                                className="px-2 py-1 text-[10px] font-bold text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                                title="Inverter Topo e Fundo (180°)"
+                            >
+                                <ArrowUpDown size={11} />
+                                <span>Inverter</span>
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
 
-            <div className="absolute bottom-3 right-3 pointer-events-none">
-                <span className="text-[11px] font-mono text-zinc-400 bg-zinc-900/80 px-2 py-1 rounded-md border border-zinc-800">
-                    {dimensions.widthMm}mm × {dimensions.lengthMm}mm
+            {/* Controles Rápidos de Câmera */}
+            <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-zinc-900/90 border border-zinc-800 p-1 rounded-xl shadow-xl z-10 backdrop-blur-md">
+                <button
+                    onClick={() => setCameraView('top')}
+                    className="px-2 py-1 text-[10px] font-bold text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                    title="Vista Superior (Planta da Base)"
+                >
+                    <Eye size={12} />
+                    <span>Topo</span>
+                </button>
+                <button
+                    onClick={() => setCameraView('iso')}
+                    className="px-2 py-1 text-[10px] font-bold text-orange-400 hover:text-orange-300 hover:bg-zinc-800 rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                    title="Vista Isométrica 3D"
+                >
+                    <Compass size={12} />
+                    <span>3D</span>
+                </button>
+                <button
+                    onClick={() => setCameraView('front')}
+                    className="px-2 py-1 text-[10px] font-bold text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                    title="Vista Lateral / Nivelamento da Mesa"
+                >
+                    <RotateCcw size={12} />
+                    <span>Mesa</span>
+                </button>
+            </div>
+
+            {/* Painel Inferior de Dimensões e Resolução de Exportação (como no fatiador/Instagram) */}
+            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none flex-wrap gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-mono font-bold text-zinc-300 bg-zinc-900/90 px-2.5 py-1 rounded-lg border border-zinc-800 backdrop-blur-md shadow-lg">
+                        INÍCIO: <span className="text-orange-400">{dimensions.widthMm} × {dimensions.lengthMm} mm</span> (Alt: {dimensions.heightMm || 12}mm)
+                    </span>
+                    <span className="text-[10px] font-mono font-bold text-zinc-300 bg-zinc-900/90 px-2.5 py-1 rounded-lg border border-zinc-800 backdrop-blur-md shadow-lg">
+                        EXPORTAÇÃO: <span className="text-emerald-400">{pxW} × {pxH} px</span> (600 DPI)
+                    </span>
+                </div>
+                <span className="hidden sm:inline text-[10px] text-zinc-500 font-medium bg-zinc-900/80 px-2 py-1 rounded-md border border-zinc-800">
+                    Arraste para orbitar • Roda para zoom
                 </span>
             </div>
         </div>
