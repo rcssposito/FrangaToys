@@ -664,10 +664,12 @@ export const CartDrawer = () => {
                                                 <div className="flex gap-2">
                                                     <input
                                                         type="text"
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
                                                         value={cep}
                                                         onChange={(e) => setCep(e.target.value.replace(/\D/g, '').substring(0, 8))}
                                                         placeholder="CEP de Destino"
-                                                        className="flex-1 bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-sm"
+                                                        className="flex-1 bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-base sm:text-sm"
                                                     />
                                                     <button
                                                         onClick={handleFetchShipping}
@@ -761,7 +763,7 @@ export const CartDrawer = () => {
                                                     value={nome}
                                                     onChange={(e) => setNome(e.target.value)}
                                                     placeholder="Como gosta de ser chamado"
-                                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-sm"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-base sm:text-sm"
                                                 />
                                             </div>
 
@@ -770,11 +772,12 @@ export const CartDrawer = () => {
                                                     <Phone size={12} /> WhatsApp (com DDD)
                                                 </label>
                                                 <input
-                                                    type="text"
+                                                    type="tel"
+                                                    inputMode="tel"
                                                     value={contato}
                                                     onChange={(e) => setContato(e.target.value.replace(/\D/g, ''))}
                                                     placeholder="11999999999"
-                                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-sm"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-base sm:text-sm"
                                                 />
                                             </div>
 
@@ -785,10 +788,11 @@ export const CartDrawer = () => {
                                                 </label>
                                                 <input
                                                     type="text"
+                                                    inputMode="numeric"
                                                     value={cpf}
                                                     onChange={handleCpfChange}
                                                     placeholder="000.000.000-00"
-                                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-sm"
+                                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-base sm:text-sm"
                                                 />
                                             </div>
 
@@ -800,10 +804,12 @@ export const CartDrawer = () => {
                                                     <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600 ml-1">CEP</label>
                                                     <input
                                                         type="text"
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
                                                         value={cep}
                                                         onChange={(e) => setCep(e.target.value.replace(/\D/g, '').substring(0, 8))}
                                                         placeholder="00000-000"
-                                                        className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-xs"
+                                                        className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-base sm:text-xs"
                                                     />
                                                 </div>
 
@@ -814,7 +820,7 @@ export const CartDrawer = () => {
                                                         value={logradouro}
                                                         onChange={(e) => setLogradouro(e.target.value)}
                                                         placeholder="Nome da rua..."
-                                                        className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-xs"
+                                                        className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-base sm:text-xs"
                                                     />
                                                 </div>
 
@@ -823,10 +829,11 @@ export const CartDrawer = () => {
                                                         <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600 ml-1">Número</label>
                                                         <input
                                                             type="text"
+                                                            inputMode="numeric"
                                                             value={numero}
                                                             onChange={(e) => setNumero(e.target.value)}
                                                             placeholder="123"
-                                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-xs"
+                                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-base sm:text-xs"
                                                         />
                                                     </div>
                                                     <div className="col-span-2 space-y-2">
@@ -836,7 +843,7 @@ export const CartDrawer = () => {
                                                             value={bairro}
                                                             onChange={(e) => setBairro(e.target.value)}
                                                             placeholder="Bairro..."
-                                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-xs"
+                                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-base sm:text-xs"
                                                         />
                                                     </div>
                                                 </div>
@@ -849,7 +856,7 @@ export const CartDrawer = () => {
                                                             value={cidade}
                                                             onChange={(e) => setCidade(e.target.value)}
                                                             placeholder="Cidade..."
-                                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-xs"
+                                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-base sm:text-xs"
                                                         />
                                                     </div>
                                                     <div className="col-span-1 space-y-2">
@@ -859,7 +866,7 @@ export const CartDrawer = () => {
                                                             value={uf}
                                                             onChange={(e) => setUf(e.target.value.toUpperCase().substring(0, 2))}
                                                             placeholder="SP"
-                                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-xs text-center"
+                                                            className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-base sm:text-xs text-center"
                                                         />
                                                     </div>
                                                 </div>

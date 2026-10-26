@@ -81,18 +81,17 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                 <div className="flip-card-front relative bg-[#09090b] border border-zinc-800/40 hover:border-orange-500/30 hover:shadow-[0_0_30px_rgba(249,115,22,0.08)] transition-all duration-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl group/front [transform:translateZ(0)]">
                     <Link 
                         href={`/figura/${figure.slug || figure.id}?ref=vitrine`} 
-                        scroll={false} 
                         className="absolute inset-0 z-10"
                         onClick={() => trackClick()}
                     />
  
                     {/* Top Right Action Controls (IHC: Prominent, non-overlapping, high-contrast, min 44px ergonomics) */}
-                    <div className="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 z-30 flex items-center gap-1.5 sm:gap-2">
-                        {/* Navigation Hint (Flip to see details) */}
+                    <div className="absolute top-2 right-2 sm:top-3.5 sm:right-3.5 z-30 flex items-center gap-1.5 sm:gap-2">
+                        {/* Navigation Hint (Flip to see details - Desktop only to keep mobile uncluttered) */}
                         <button
                             type="button"
                             onClick={handleFlip}
-                            className="bg-black/75 backdrop-blur-xl border border-white/15 text-white/90 text-[8px] sm:text-[9px] px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-xl active:scale-95 touch-manipulation cursor-pointer"
+                            className="hidden sm:inline-block bg-black/75 backdrop-blur-xl border border-white/15 text-white/90 text-[8px] sm:text-[9px] px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-xl active:scale-95 touch-manipulation cursor-pointer"
                             title="Girar para ver dimensões e opções"
                         >
                             Detalhes
@@ -118,7 +117,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                                 });
                             }}
                             className={clsx(
-                                "w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center backdrop-blur-xl border transition-all duration-300 shadow-xl active:scale-90 cursor-pointer touch-manipulation",
+                                "w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center backdrop-blur-xl border transition-all duration-300 shadow-xl active:scale-90 cursor-pointer touch-manipulation",
                                 inWishlist
                                     ? "bg-orange-500/25 border-orange-500 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.35)] scale-105"
                                     : "bg-black/75 border-white/20 text-white/80 hover:text-orange-400 hover:border-orange-500/50 hover:bg-black/95 hover:scale-105"
@@ -127,7 +126,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                             aria-label={inWishlist ? "Remover dos Favoritos" : "Adicionar aos Favoritos"}
                         >
                             <Heart 
-                                size={15} 
+                                size={14} 
                                 className={clsx(
                                     "transition-all duration-300", 
                                     inWishlist ? "fill-orange-500 text-orange-500 scale-110" : "hover:scale-110"
@@ -138,9 +137,9 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
 
                     {/* Mini Indicador de Galeria (Estilo Stories / Luxury - sutil no topo) */}
                     {secondaryImageUrl && (
-                        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 pointer-events-none opacity-40 group-hover/front:opacity-100 transition-all duration-300">
-                            <span className="h-0.5 w-3 rounded-full bg-white transition-all duration-300 group-hover/front:bg-white/40 shadow-sm" />
-                            <span className="h-0.5 w-3 rounded-full bg-white/40 transition-all duration-300 group-hover/front:bg-orange-500 shadow-sm" />
+                        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 pointer-events-none opacity-40 group-hover/front:opacity-100 transition-all duration-300">
+                            <span className="h-0.5 w-2.5 sm:w-3 rounded-full bg-white transition-all duration-300 group-hover/front:bg-white/40 shadow-sm" />
+                            <span className="h-0.5 w-2.5 sm:w-3 rounded-full bg-white/40 transition-all duration-300 group-hover/front:bg-orange-500 shadow-sm" />
                         </div>
                     )}
 
@@ -172,60 +171,59 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                         />
                     )}
 
-                    {/* Status Badges Overlay (Top Left) */}
-                    <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 flex flex-col gap-1.5 sm:gap-2 pointer-events-none">
+                    {/* Status Badges Overlay (Top Left - Curated for Mobile) */}
+                    <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex flex-col gap-1 sm:gap-2 pointer-events-none max-w-[65%]">
                         {figure.pronta_entrega && (
-                            <div className="bg-amber-500/25 backdrop-blur-md text-amber-300 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-amber-500/40 animate-pulse">
-                                <Zap size={10} className="fill-amber-400 text-amber-400" />
-                                <span>Envio 24h</span>
+                            <div className="bg-amber-500/30 backdrop-blur-md text-amber-300 text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-amber-500/40 animate-pulse">
+                                <Zap size={10} className="fill-amber-400 text-amber-400 shrink-0" />
+                                <span className="truncate">Envio 24h</span>
                                 {figure.estoque_pronta_entrega && figure.estoque_pronta_entrega > 1 ? (
-                                    <span className="text-[7px] opacity-80">({figure.estoque_pronta_entrega}un)</span>
+                                    <span className="text-[7px] opacity-80 hidden sm:inline">({figure.estoque_pronta_entrega}un)</span>
                                 ) : null}
                             </div>
                         )}
-                        {figure.disponivel && (
-                            <div className="bg-emerald-950/40 backdrop-blur-md text-emerald-400 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider border border-emerald-500/20 shadow-md">
+                        {/* Oferta Badge */}
+                        {!!(figure.is_campanha_active || (figure.preco_fixo_campanha && figure.preco_fixo_campanha > 0)) && (
+                            <div className="bg-purple-950/60 backdrop-blur-md text-purple-300 text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-purple-500/30 animate-pulse">
+                                <Sparkles size={10} className="fill-purple-400 shrink-0" /> Oferta
+                            </div>
+                        )}
+                        {/* Combo / Bundle Badge */}
+                        {!!(figure.is_bundle || figure.precos?.desconto_bundle_pct) && (
+                            <div className="bg-gradient-to-r from-purple-950/90 to-indigo-950/90 backdrop-blur-md text-purple-300 text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-purple-500/40">
+                                <Sparkles size={10} className="fill-purple-400 shrink-0" /> Combo -{figure.precos?.desconto_bundle_pct || figure.desconto_bundle_pct || 20}%
+                            </div>
+                        )}
+                        {figure.disponivel && !figure.pronta_entrega && (
+                            <div className="hidden sm:inline-block bg-emerald-950/40 backdrop-blur-md text-emerald-400 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider border border-emerald-500/20 shadow-md">
                                 Disponível
                             </div>
                         )}
                         {tierStyle && (
                             <div className={clsx(
-                                "text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider border shadow-md",
+                                "hidden sm:inline-block text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider border shadow-md",
                                 tierStyle.bg, tierStyle.text, tierStyle.border
                             )}>
                                 {tierStyle.label}
                             </div>
                         )}
                         {figure.tem_pintura_real && (
-                           <div className="bg-blue-950/40 backdrop-blur-md text-blue-400 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-blue-500/20">
+                            <div className="hidden sm:flex bg-blue-950/40 backdrop-blur-md text-blue-400 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider items-center gap-1 shadow-md border border-blue-500/20">
                                 <Instagram size={10} /> Ver Fotos
-                           </div>
+                            </div>
                         )}
                         {figure.tem_extras && (
-                           <div className="bg-amber-950/40 backdrop-blur-md text-amber-400 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-amber-500/20">
+                            <div className="hidden sm:flex bg-amber-950/40 backdrop-blur-md text-amber-400 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider items-center gap-1 shadow-md border border-amber-500/20">
                                 <Sparkles size={10} /> Extras
-                           </div>
-                        )}
-                        {/* Oferta Badge */}
-                        {!!(figure.is_campanha_active || (figure.preco_fixo_campanha && figure.preco_fixo_campanha > 0)) && (
-                           <div className="bg-purple-950/40 backdrop-blur-md text-purple-400 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-purple-500/20 animate-pulse">
-                                <Sparkles size={10} className="fill-purple-400" /> Oferta
-                           </div>
-                        )}
-                        {/* Combo / Bundle Badge */}
-                        {!!(figure.is_bundle || figure.precos?.desconto_bundle_pct) && (
-                           <div className="bg-gradient-to-r from-purple-950/90 to-indigo-950/90 backdrop-blur-md text-purple-300 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-purple-500/40">
-                                <Sparkles size={10} className="fill-purple-400" /> Combo -{figure.precos?.desconto_bundle_pct || figure.desconto_bundle_pct || 20}%
-                           </div>
+                            </div>
                         )}
                     </div>
 
- 
                     {/* Footer Info (Glassmorphism Overlay for Contrast) */}
-                    <div className="absolute bottom-0 inset-x-0 p-3 sm:p-5 pt-12 pb-4 sm:pb-6 bg-gradient-to-t from-black via-black/80 to-transparent z-20 pointer-events-none">
+                    <div className="absolute bottom-0 inset-x-0 p-2.5 sm:p-5 pt-8 sm:pt-12 pb-3 sm:pb-6 bg-gradient-to-t from-black via-black/85 to-transparent z-20 pointer-events-none">
                         <div className="flex flex-col gap-0.5 sm:gap-1 items-center">
-                            <div className="backdrop-blur-md bg-black/40 px-2 py-0.5 rounded-full border border-white/10 mb-1 shadow-2xl">
-                                <h3 className="text-[7px] sm:text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em] drop-shadow-md">
+                            <div className="backdrop-blur-md bg-black/50 px-2 py-0.5 rounded-full border border-white/10 mb-0.5 sm:mb-1 shadow-2xl">
+                                <h3 className="text-[7px] sm:text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em] drop-shadow-md truncate max-w-[140px] sm:max-w-none">
                                     {figure.studio || 'Studio Indiferente'}
                                 </h3>
                             </div>
@@ -234,16 +232,16 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                                 {figure.nome}
                             </h2>
                             
-                            {/* Starting Price Badge (High Visibility) */}
-                            {figure.precos && (
-                                <div className="mt-2 sm:mt-3 bg-zinc-950/80 backdrop-blur-xl border border-orange-500/20 px-3.5 py-1.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-tighter shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-center gap-1.5">
-                                    <span className="text-[7px] sm:text-[8px] text-zinc-500 uppercase font-black mr-0.5 tracking-widest">A partir de</span>
-                                    {figure.precos.original_pix_colorido && figurePrice < figure.precos.original_pix_colorido && (
+                            {/* Starting Price Badge (High Visibility & Always Shows Price) */}
+                            {(figure.precos || figure.preco) && (
+                                <div className="mt-1 sm:mt-3 bg-zinc-950/85 backdrop-blur-xl border border-orange-500/25 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-tighter shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-center gap-1 sm:gap-1.5">
+                                    <span className="text-[7px] sm:text-[8px] text-zinc-400 uppercase font-black mr-0.5 tracking-widest hidden sm:inline">A partir de</span>
+                                    {figure.precos?.original_pix_colorido && figurePrice < figure.precos.original_pix_colorido && (
                                         <span className="text-[8px] sm:text-[9px] text-zinc-500 line-through font-mono">
                                             {formatPrice(figure.precos.original_pix_colorido)}
                                         </span>
                                     )}
-                                    <span className="text-orange-400 font-extrabold">{formatPrice(figurePrice)}</span>
+                                    <span className="text-orange-400 font-extrabold">{formatPrice(figurePrice || figure.preco || 0)}</span>
                                 </div>
                             )}
                         </div>
@@ -266,7 +264,6 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
  
                     <Link 
                         href={`/figura/${figure.slug || figure.id}?ref=vitrine`}
-                        scroll={false}
                         className="relative z-10 flex flex-col h-full cursor-pointer"
                         onClick={() => trackClick()}
                     >

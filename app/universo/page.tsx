@@ -1521,8 +1521,28 @@ export default function ThematicUniversePage() {
 
     return (
         <div className="relative w-screen h-screen overflow-hidden bg-zinc-950 text-white select-none touch-none">
+            {/* Aviso Mobile: Universo exclusivo para Desktop */}
+            <div className="md:hidden fixed inset-0 z-50 flex flex-col items-center justify-center p-6 bg-zinc-950 text-center">
+                <div className="w-16 h-16 rounded-3xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400 mb-6 shadow-xl">
+                    <Compass size={32} />
+                </div>
+                <h2 className="text-xl font-black uppercase tracking-tight text-white mb-2">
+                    Universo 3D no Desktop
+                </h2>
+                <p className="text-sm text-zinc-400 leading-relaxed max-w-xs mb-8">
+                    A visualização do grafo com física em tempo real é exclusiva para computadores e telas maiores. No celular, use nosso catálogo com filtros rápidos!
+                </p>
+                <Link
+                    href="/"
+                    className="w-full max-w-xs py-4 px-6 rounded-2xl bg-orange-600 hover:bg-orange-500 text-white font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-orange-600/20 active:scale-95 flex items-center justify-center gap-2"
+                >
+                    <ArrowLeft size={16} />
+                    Explorar Catálogo Mobile
+                </Link>
+            </div>
+
             {/* Header Flutuante / HUD Superior */}
-            <div className="absolute top-4 left-4 right-4 z-30 flex flex-col md:flex-row items-center justify-between gap-3 pointer-events-none">
+            <div className="hidden md:flex absolute top-4 left-4 right-4 z-30 flex-col md:flex-row items-center justify-between gap-3 pointer-events-none">
                 {/* Brand & Voltar */}
                 <div className="flex items-center gap-3 bg-zinc-900/90 backdrop-blur-xl border border-zinc-800/80 px-4 py-2.5 rounded-2xl shadow-2xl pointer-events-auto">
                     <Link 

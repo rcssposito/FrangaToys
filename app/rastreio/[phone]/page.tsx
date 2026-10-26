@@ -237,12 +237,12 @@ function NfeWidget({ order }: { order: any }) {
 }
 
 function ArtistTipWidget({ order }: { order: any }) {
-    const [tipAmount, setTipAmount] = useState<number>(10);
+    const [tipAmount, setTipAmount] = useState<number | null>(null);
     const [customAmount, setCustomAmount] = useState<string>('');
     const [isCustom, setIsCustom] = useState(false);
     const [copied, setCopied] = useState(false);
 
-    const activeAmount = isCustom ? (parseFloat(customAmount.replace(',', '.')) || 0) : tipAmount;
+    const activeAmount = isCustom ? (parseFloat(customAmount.replace(',', '.')) || 0) : (tipAmount || 0);
     const checkoutId = order.checkout_id || order.id;
 
     const tipPayload = useMemo(() => {
@@ -260,85 +260,97 @@ function ArtistTipWidget({ order }: { order: any }) {
         if (!tipPayload) return;
         navigator.clipboard.writeText(tipPayload);
         setCopied(true);
-        toast.success(`Chave Pix de R$ ${activeAmount.toFixed(2)} copiada! A equipe agradece imensamente o carinho! ❤️`);
+        toast.success(`Chave Pix de R$ ${activeAmount.toFixed(2)} copiada! A equipe agradece o carinho! ❤️`);
         setTimeout(() => setCopied(false), 3000);
     };
 
     const PRESETS = [
         { label: 'R$ 5', val: 5, emoji: '☕', desc: 'Cafezinho' },
         { label: 'R$ 10', val: 10, emoji: '🎨', desc: 'Incentivo' },
-        { label: 'R$ 20', val: 20, emoji: '🍕', desc: 'Lanche pro Artista' },
-        { label: 'R$ 50', val: 50, emoji: '⭐', desc: 'Apoio Lendário' },
+        { label: 'R$ 20', val: 20, emoji: '🍕', desc: 'Lanche' },
+        { label: 'R$ 50', val: 50, emoji: '⭐', desc: 'Apoio' },
     ];
 
     return (
-        <div className="mt-4 p-5 rounded-3xl bg-gradient-to-br from-amber-950/20 via-zinc-950/70 to-zinc-950/90 border border-amber-500/30 shadow-xl relative overflow-hidden group">
+        <div className="mt-4 p-3.5 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-950/20 via-zinc-950/70 to-zinc-950/90 border border-amber-500/25 shadow-xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/10 transition-all" />
             
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-800/80">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-zinc-800/80">
                 <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
-                        <Heart size={16} className="text-amber-400 fill-amber-400/20" />
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+                        <Heart size={15} className="text-amber-400 fill-amber-400/20" />
                     </div>
                     <div>
-                        <h4 className="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-2">
-                            Gorjeta para os Artistas do Ateliê
-                            <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold">
+                        <h4 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-2">
+                            Gorjeta para os Artistas
+                            <span className="text-[8px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.2 rounded-full font-bold">
                                 Voluntário
                             </span>
                         </h4>
-                        <p className="text-[10px] text-zinc-400 font-medium">
-                            Gostou do colecionável? Envie um café ou incentivo extra para quem modelou e pintou sua peça{order.pintor_display ? ` (${order.pintor_display})` : ''}!
+                        <p className="text-[9.5px] sm:text-[10px] text-zinc-400 font-medium">
+                            Envie um incentivo extra para quem modelou e pintou sua peça{order.pintor_display ? ` (${order.pintor_display})` : ''}
                         </p>
                     </div>
                 </div>
             </div>
 
-            <div className="pt-4 space-y-4">
-                {/* Presets */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <div className="pt-3 space-y-3">
+                {/* Presets em 1 linha única e limpa */}
+                <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                     {PRESETS.map(p => (
                         <button
                             key={p.val}
                             type="button"
                             onClick={() => {
                                 setIsCustom(false);
-                                setTipAmount(p.val);
+                                setTipAmount(tipAmount === p.val ? null : p.val);
                             }}
-                            className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer ${
+                            className={clsx(
+                                "p-2 sm:p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center",
                                 !isCustom && tipAmount === p.val
-                                    ? 'bg-amber-500/20 border-amber-500 text-white shadow-md shadow-amber-500/10 scale-[1.02]'
-                                    : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white'
-                            }`}
+                                    ? "bg-amber-500/20 border-amber-500 text-white shadow-md shadow-amber-500/10 scale-[1.02]"
+                                    : "bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                            )}
                         >
-                            <div className="text-sm">{p.emoji}</div>
-                            <div className="text-xs font-black">{p.label}</div>
-                            <div className="text-[9px] text-zinc-500 truncate">{p.desc}</div>
+                            <span className="text-xs sm:text-sm leading-none mb-1">{p.emoji}</span>
+                            <span className="text-[9px] sm:text-xs font-black">{p.label}</span>
+                            <span className="text-[7.5px] text-zinc-500 truncate w-full hidden sm:block">{p.desc}</span>
                         </button>
                     ))}
 
                     {/* Botão Outro Valor */}
                     <button
                         type="button"
-                        onClick={() => setIsCustom(true)}
-                        className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer col-span-2 sm:col-span-1 ${
+                        onClick={() => {
+                            if (isCustom) {
+                                setIsCustom(false);
+                                setTipAmount(null);
+                            } else {
+                                setIsCustom(true);
+                                setTipAmount(null);
+                                if (!customAmount) setCustomAmount('15');
+                            }
+                        }}
+                        className={clsx(
+                            "p-2 sm:p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center",
                             isCustom
-                                ? 'bg-amber-500/20 border-amber-500 text-white shadow-md shadow-amber-500/10 scale-[1.02]'
-                                : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white'
-                        }`}
+                                ? "bg-amber-500/20 border-amber-500 text-white shadow-md shadow-amber-500/10 scale-[1.02]"
+                                : "bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                        )}
                     >
-                        <div className="text-sm">✨</div>
-                        <div className="text-xs font-black">Outro</div>
-                        <div className="text-[9px] text-zinc-500">Personalizado</div>
+                        <span className="text-xs sm:text-sm leading-none mb-1">✨</span>
+                        <span className="text-[9px] sm:text-xs font-black">Outro</span>
+                        <span className="text-[7.5px] text-zinc-500 truncate w-full hidden sm:block">Livre</span>
                     </button>
                 </div>
 
                 {/* Input personalizado se ativo */}
                 {isCustom && (
-                    <div className="flex items-center gap-2 bg-zinc-900/80 border border-amber-500/40 rounded-2xl p-2 px-3">
+                    <div className="flex items-center gap-2 bg-zinc-900/80 border border-amber-500/40 rounded-xl p-2 px-3">
                         <span className="text-xs font-bold text-amber-400">R$</span>
                         <input
                             type="number"
+                            inputMode="numeric"
                             min="1"
                             step="1"
                             value={customAmount}
@@ -352,28 +364,24 @@ function ArtistTipWidget({ order }: { order: any }) {
 
                 {/* Área de Pagamento da Gorjeta */}
                 {activeAmount > 0 && tipPayload && (
-                    <div className="bg-zinc-950/80 border border-zinc-800/90 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
-                        <div className="bg-white p-2.5 rounded-xl shrink-0 shadow-md">
+                    <div className="bg-zinc-950/90 border border-zinc-800/90 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-center gap-3.5">
+                        <div className="bg-white p-2 rounded-xl shrink-0 shadow-md">
                             <img 
                                 src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(tipPayload)}`} 
                                 alt="PIX Gorjeta QR Code" 
-                                className="w-24 h-24"
+                                className="w-20 h-20 sm:w-24 sm:h-24"
                             />
                         </div>
 
-                        <div className="space-y-2.5 w-full min-w-0">
+                        <div className="space-y-2 w-full min-w-0 text-center sm:text-left">
                             <div className="flex items-center justify-between text-[11px] font-bold text-zinc-300">
                                 <span className="flex items-center gap-1.5 text-amber-400">
                                     <Sparkles size={13} />
                                     Gorjeta de R$ {activeAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
-                                <span className="text-[9px] text-zinc-500 uppercase font-mono">
+                                <span className="text-[8px] text-zinc-500 uppercase font-mono">
                                     PIX Direto Ateliê
                                 </span>
-                            </div>
-
-                            <div className="w-full bg-zinc-900 border border-zinc-850 p-2.5 rounded-xl overflow-hidden text-ellipsis whitespace-nowrap text-[9px] font-mono text-zinc-500">
-                                {tipPayload}
                             </div>
 
                             <button 
@@ -1104,7 +1112,7 @@ export default function CustomerDashboard() {
                                             key={order.id} 
                                             className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl transition-all hover:bg-zinc-900/60"
                                         >
-                                            <div className="p-6 md:p-8 space-y-8">
+                                            <div className="p-3.5 sm:p-6 md:p-8 space-y-6 sm:space-y-8">
                                                 {/* Order Info Row */}
                                                 <div className="flex flex-col md:flex-row gap-6 md:items-center justify-between">
                                                     <div className="flex gap-4 items-center">
@@ -1287,7 +1295,7 @@ export default function CustomerDashboard() {
 
                                                 {/* Expanded Body */}
                                                 {isExpanded && (
-                                                    <div className="p-6 border-t border-zinc-800/80 bg-zinc-900/30 space-y-6">
+                                                    <div className="p-3.5 sm:p-6 border-t border-zinc-800/80 bg-zinc-900/30 space-y-6">
                                                         <div className="pt-2">
                                                             <OrderTracker 
                                                                 status={order.status} 

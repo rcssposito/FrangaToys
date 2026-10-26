@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import './globals.css';
@@ -7,8 +7,16 @@ import { Toaster } from 'sonner';
 import Footer from '@/components/common/Footer';
 import CookieConsent from '@/components/common/CookieConsent';
 import AccessBeacon from '@/components/AccessBeacon';
+import MobileBottomNav from '@/components/common/MobileBottomNav';
 
 const inter = Inter({ subsets: ['latin'] });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: '#09090b',
+};
 
 export const metadata: Metadata = {
   title: {
@@ -47,6 +55,7 @@ export default function RootLayout({
           {children}
           {modal}
           <Footer />
+          <MobileBottomNav />
           <CookieConsent />
           <Toaster position="top-center" richColors />
         </Providers>

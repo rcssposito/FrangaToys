@@ -167,13 +167,15 @@ export default async function FiguraPage({ params }: Props) {
         desconto_campanha: metaData?.desconto_campanha,
         preco_fixo_campanha: metaData?.preco_fixo_campanha,
         tem_pintura_real: figure.tem_pintura_real,
+        pronta_entrega: figure.pronta_entrega || false,
+        estoque_pronta_entrega: Number(figure.estoque_pronta_entrega) || 0,
         imagem_secundaria: figure.imagem_secundaria || null,
         fotos_extras: Array.isArray(figure.fotos_extras) ? figure.fotos_extras : [],
         is_merchant: studioData?.merchant ?? false
     };
 
     return (
-        <div className="min-h-screen bg-black text-white p-4 sm:p-8">
+        <div className="min-h-screen bg-black text-white p-4 pb-28 sm:p-8">
             <div className="max-w-5xl mx-auto">
                 {/* Back Link */}
                 <Link

@@ -87,15 +87,15 @@ export function OrderTracker({ status, checklist, pintorNome }: OrderTrackerProp
     const showChecklistSection = activeIdx >= 2 || completedCount > 0 || (checklist && checklist.length > 0);
 
     return (
-        <div className="w-full py-6">
+        <div className="w-full py-4 sm:py-6">
             {/* Macro Timeline */}
             <div className="relative flex justify-between items-start">
                 {/* Linha de Conexão (Fundo) */}
-                <div className="absolute top-5 left-0 w-full h-0.5 bg-zinc-800 -z-0" />
+                <div className="absolute top-3.5 sm:top-5 left-0 w-full h-0.5 bg-zinc-800 -z-0" />
 
                 {/* Linha de Conexão (Progresso Ativo com Gradiente) */}
                 <div
-                    className="absolute top-5 left-0 h-0.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 transition-all duration-700 shadow-[0_0_12px_rgba(249,115,22,0.6)] -z-0"
+                    className="absolute top-3.5 sm:top-5 left-0 h-0.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 transition-all duration-700 shadow-[0_0_12px_rgba(249,115,22,0.6)] -z-0"
                     style={{ width: `${calculatedProgressWidth}%` }}
                 />
 
@@ -115,39 +115,40 @@ export function OrderTracker({ status, checklist, pintorNome }: OrderTrackerProp
                     }
 
                     return (
-                        <div key={stage.id} className="relative z-10 flex flex-col items-center gap-2.5">
+                        <div key={stage.id} className="relative z-10 flex flex-col items-center gap-1.5 sm:gap-2.5 flex-1 max-w-[52px] sm:max-w-none">
                             {/* Círculo do Stage */}
                             <div className={clsx(
-                                "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 border-2 relative",
+                                "w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-500 border-2 relative shrink-0",
                                 isPassed ? "bg-orange-500 border-orange-500 text-black shadow-[0_0_18px_rgba(249,115,22,0.55)] scale-100" :
                                     isActive ? "bg-black border-orange-500 text-orange-500 animate-pulse shadow-[0_0_22px_rgba(249,115,22,0.45)] scale-105" :
                                         "bg-zinc-950 border-zinc-800 text-zinc-600"
                             )}>
-                                {isPassed ? <Check size={20} strokeWidth={3} /> : <Icon size={18} />}
+                                {isPassed ? <Check size={14} className="sm:hidden" strokeWidth={3} /> : <Icon size={13} className="sm:hidden" />}
+                                {isPassed ? <Check size={20} className="hidden sm:block" strokeWidth={3} /> : <Icon size={18} className="hidden sm:block" />}
 
                                 {/* Micro indicador se tiver checklist associado e estiver ativo */}
                                 {stage.hasChecklist && (isActive || isPassed) && (
-                                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-black flex items-center justify-center text-[8px] text-black font-black">
+                                    <span className="absolute -top-1 -right-1 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-emerald-500 border-2 border-black flex items-center justify-center text-[7px] sm:text-[8px] text-black font-black">
                                         ✓
                                     </span>
                                 )}
                             </div>
 
                             {/* Label */}
-                            <div className="flex flex-col items-center">
+                            <div className="flex flex-col items-center w-full px-0.5">
                                 <span className={clsx(
-                                    "text-[9px] font-black uppercase tracking-widest text-center",
-                                    isPassed || isActive ? "text-white" : "text-zinc-700"
+                                    "text-[7px] sm:text-[9px] font-black uppercase text-center leading-tight truncate sm:whitespace-normal w-full",
+                                    isPassed || isActive ? "text-white" : "text-zinc-600"
                                 )}>
                                     {stage.label}
                                 </span>
                                 
                                 {isActive ? (
-                                    <span className="text-[7.5px] font-black text-orange-500 uppercase animate-bounce mt-1 tracking-tighter">
-                                        Fase Atual
+                                    <span className="text-[6.5px] sm:text-[7.5px] font-black text-orange-500 uppercase animate-bounce mt-0.5 tracking-tighter text-center">
+                                        Atual
                                     </span>
                                 ) : (stageSubInfo && (isPassed || activeIdx >= idx)) ? (
-                                    <span className="text-[7.5px] font-bold text-zinc-500 uppercase mt-0.5 tracking-tight">
+                                    <span className="text-[6px] sm:text-[7.5px] font-bold text-zinc-500 uppercase mt-0.5 tracking-tight text-center leading-none">
                                         {stageSubInfo}
                                     </span>
                                 ) : null}
@@ -198,7 +199,7 @@ export function OrderTracker({ status, checklist, pintorNome }: OrderTrackerProp
                     </div>
 
                     {/* Stepper dos 6 itens de check */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5">
                         {mergedChecklist.map((step, idx) => {
                             // Encontrar o primeiro que não está pronto como 'atual' caso esteja em produção
                             const isFirstPending = !step.done && (idx === 0 || mergedChecklist[idx - 1].done);
@@ -208,7 +209,7 @@ export function OrderTracker({ status, checklist, pintorNome }: OrderTrackerProp
                                 <div 
                                     key={step.id}
                                     className={clsx(
-                                        "flex sm:flex-col items-center sm:items-start gap-2.5 p-3 rounded-xl border transition-all",
+                                        "flex flex-col justify-between gap-2 p-2.5 sm:p-3 rounded-xl border transition-all",
                                         step.done 
                                             ? "bg-emerald-500/5 border-emerald-500/25 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.06)]"
                                             : isCurrent
@@ -216,20 +217,20 @@ export function OrderTracker({ status, checklist, pintorNome }: OrderTrackerProp
                                                 : "bg-zinc-900/40 border-zinc-850/80 text-zinc-600"
                                     )}
                                 >
-                                    <div className="flex items-center gap-2 sm:w-full justify-between">
+                                    <div className="flex items-center justify-between w-full">
                                         <div className={clsx(
-                                            "w-6 h-6 rounded-full flex items-center justify-center text-[10.5px] font-bold shrink-0 transition-all",
+                                            "w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[9px] sm:text-[10.5px] font-bold shrink-0 transition-all",
                                             step.done 
                                                 ? "bg-emerald-500 text-black font-black shadow-[0_0_10px_rgba(16,185,129,0.5)]"
                                                 : isCurrent
                                                     ? "bg-orange-500 text-black font-black animate-pulse shadow-[0_0_12px_rgba(249,115,22,0.6)]"
                                                     : "bg-zinc-800 text-zinc-500"
                                         )}>
-                                            {step.done ? <Check size={13} strokeWidth={3.5} /> : idx + 1}
+                                            {step.done ? <Check size={11} strokeWidth={3.5} /> : idx + 1}
                                         </div>
 
                                         <span className={clsx(
-                                            "text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border",
+                                            "text-[7px] sm:text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border",
                                             step.done 
                                                 ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
                                                 : isCurrent
@@ -242,8 +243,8 @@ export function OrderTracker({ status, checklist, pintorNome }: OrderTrackerProp
 
                                     <div className="flex flex-col min-w-0">
                                         <span className={clsx(
-                                            "text-[11.5px] font-bold leading-tight",
-                                            step.done ? "text-zinc-200" : isCurrent ? "text-white font-black" : "text-zinc-500"
+                                            "text-xs sm:text-[12px] font-black leading-tight truncate",
+                                            step.done ? "text-zinc-200" : isCurrent ? "text-white" : "text-zinc-500"
                                         )}>
                                             {step.label}
                                         </span>

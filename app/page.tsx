@@ -102,7 +102,7 @@ function HomeContent() {
   };
 
   return (
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] px-0 sm:px-4 py-4 sm:py-8 transition-colors duration-500">
+    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)] px-0 sm:px-4 pt-4 pb-24 sm:py-8 transition-colors duration-500">
       <div className="w-full sm:max-w-[95%] mx-auto">
         <Header />
 

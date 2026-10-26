@@ -179,6 +179,10 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
     const tier = figure.precos?.colorido ? getFigureTier(figure.precos.colorido) : null;
     const tierStyle = tier ? getTierBadgeStyle(tier) : null;
 
+    const activeFinishOption = finishOptions.find(f => f.id === selectedFinish) || finishOptions[1];
+    const activePrice = activeFinishOption?.price || figurePrice || figure.preco || 0;
+    const activePixPrice = activeFinishOption?.pixPrice;
+
     return (
         <div className="relative flex flex-col items-center justify-center min-h-full w-full max-w-6xl mx-auto p-4 md:p-4">
 
@@ -269,62 +273,88 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                 )}
             </AnimatePresence>
 
-            {/* Mobile Main Image (Interactive Area) */}
-            <div className="lg:hidden absolute inset-x-0 top-0 h-[60vh] overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10 pointer-events-none" />
-                <Image
-                    key={currentImage}
-                    loader={imageKitLoader}
-                    src={currentOptimizedUrl}
-                    alt={figure.nome}
-                    fill
-                    className="object-contain p-6 -z-10 transition-all duration-300"
-                    sizes="100vw"
-                    priority
-                />
+            <div className="flex flex-col lg:grid lg:grid-cols-2 w-full gap-5 lg:gap-8 items-start relative z-20">
 
-                {/* Mobile Gallery Selector (Bolinhas táteis no rodapé da foto) */}
-                {galleryImages.length > 1 && (
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 p-1.5 bg-black/70 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl">
-                        {galleryImages.map((_, idx) => (
-                            <button
-                                key={idx}
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveImageIndex(idx);
-                                }}
-                                className={clsx(
-                                    "transition-all duration-200 rounded-full",
-                                    idx === activeImageIndex 
-                                        ? "bg-orange-500 w-5 h-2" 
-                                        : "bg-white/40 hover:bg-white w-2 h-2"
-                                )}
-                            />
-                        ))}
+                {/* Title & Metadata Header (Top on Mobile, Right Column Row 1 on Desktop) */}
+                <div className="w-full order-1 lg:col-start-2 lg:row-start-1 flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center gap-3 mb-2">
+                        <h3 className="text-sm font-black text-blue-500 uppercase tracking-[0.3em]">{figure.studio || 'Studio Indiferente'}</h3>
+                        {figure.codigo && (
+                            <span className="text-[10px] bg-zinc-800 text-zinc-500 font-black px-2 py-0.5 rounded border border-white/5 uppercase tracking-widest">
+                                #{figure.codigo}
+                            </span>
+                        )}
+                        {tierStyle && (
+                            <span className={clsx(
+                                "text-[10px] font-black px-2 py-0.5 rounded border shadow-md uppercase tracking-widest",
+                                tierStyle.bg, tierStyle.text, tierStyle.border
+                            )}>
+                                {tierStyle.label}
+                            </span>
+                        )}
+                        {isCampanha && (
+                            <span className="text-[10px] bg-purple-600 text-white font-black px-3 py-1 rounded-full border border-purple-400 shadow-lg shadow-purple-600/20 uppercase tracking-[0.2em] flex items-center gap-1 animate-pulse">
+                                <Sparkles size={12} className="fill-white" /> Oferta
+                            </span>
+                        )}
+                        {figure.tem_pintura_real && (
+                            <span className="text-[10px] bg-blue-600 text-white font-black px-2 py-0.5 rounded-full border border-blue-400 shadow-lg shadow-blue-600/20 uppercase tracking-[0.2em] flex items-center gap-1">
+                                <Instagram size={10} className="fill-white" /> Ver Fotos
+                            </span>
+                        )}
+                        {(figure.is_bundle || !!figure.precos?.desconto_bundle_pct) && (
+                            <span className="text-[10px] bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black px-3 py-1 rounded-full border border-purple-400/40 shadow-lg shadow-purple-600/30 uppercase tracking-[0.2em] flex items-center gap-1">
+                                <Sparkles size={12} className="fill-white" /> COMBO {figure.precos?.desconto_bundle_pct || figure.desconto_bundle_pct || 20}% OFF
+                            </span>
+                        )}
+                        {figure.pronta_entrega && (
+                            <span className="text-[10px] bg-amber-500/20 text-amber-300 font-black px-3 py-1 rounded-full border border-amber-500/40 shadow-lg shadow-amber-500/20 uppercase tracking-[0.2em] flex items-center gap-1.5 animate-pulse">
+                                <Zap size={12} className="fill-amber-400 text-amber-400" />
+                                Pronta Entrega {figure.estoque_pronta_entrega && figure.estoque_pronta_entrega > 0 ? `(${figure.estoque_pronta_entrega} un)` : ''}
+                            </span>
+                        )}
                     </div>
-                )}
+                    <h2 className="text-xl md:text-3xl font-black text-white tracking-tighter leading-[0.95]">{figure.nome}</h2>
 
-                {/* Clickable Area for Zen Mode */}
-                <div
-                    className="absolute inset-0 z-30 cursor-zoom-in active:bg-white/5 transition-colors"
-                    onClick={() => setIsZenMode(true)}
-                >
-                    <div className="absolute top-10 right-10 bg-black/60 backdrop-blur-xl p-3 rounded-full border border-white/20 shadow-2xl">
-                        <Maximize2 size={24} className="text-white" />
+                    <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                        <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2 py-1 rounded-full border border-white/5">
+                            <span className="text-zinc-600">H</span> {figure.altura_cm || '-'}<small className="text-[8px] ml-0.5 opacity-50">cm</small>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2 py-1 rounded-full border border-white/5">
+                            <span className="text-zinc-600">W</span> {figure.largura_cm || '-'}<small className="text-[8px] ml-0.5 opacity-50">cm</small>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2 py-1 rounded-full border border-white/5">
+                            <span className="text-zinc-600">D</span> {figure.profundidade_cm || '-'}<small className="text-[8px] ml-0.5 opacity-50">cm</small>
+                        </div>
                     </div>
+
+                    {figure.pronta_entrega && (
+                        <div className="mt-4 flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 text-amber-300">
+                            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400 shadow-sm">
+                                <Zap size={18} className="fill-amber-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="text-[11px] font-black uppercase tracking-wider flex items-center gap-2 flex-wrap text-white">
+                                    <span>Envio Imediato em até 24h</span>
+                                    {figure.estoque_pronta_entrega && figure.estoque_pronta_entrega > 0 && (
+                                        <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">
+                                            {figure.estoque_pronta_entrega} {figure.estoque_pronta_entrega === 1 ? 'unidade restante' : 'unidades restantes'}
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="text-[10px] text-zinc-400 font-medium mt-0.5">Item pronto em estoque! Despachamos em até 24h úteis para todo o Brasil.</p>
+                            </div>
+                        </div>
+                    )}
                 </div>
-            </div>
 
-            <div className="flex flex-col lg:flex-row w-full gap-8 items-start lg:items-center relative z-20">
-
-                {/* Main Image Container & Gallery (Desktop Only) */}
-                <div className="hidden lg:flex flex-col gap-3.5 w-full lg:w-1/2 order-1">
+                {/* Main Image Container & Gallery (Middle on Mobile, Left Column Row 1-2 on Desktop) */}
+                <div className="flex flex-col gap-3.5 w-full order-2 lg:col-start-1 lg:row-start-1 lg:row-span-2">
                     <div
-                        className="relative w-full aspect-square flex items-center justify-center p-4 bg-zinc-900/20 rounded-3xl overflow-hidden shadow-inner transition-all duration-500 hover:bg-zinc-900/40 group cursor-zoom-in border border-zinc-800/40"
+                        className="relative w-full aspect-square flex items-center justify-center p-3 sm:p-4 bg-zinc-900/30 rounded-3xl overflow-hidden shadow-inner transition-all duration-500 hover:bg-zinc-900/50 group cursor-zoom-in border border-zinc-800/50"
                         onClick={() => setIsZenMode(true)}
                     >
-                        {/* Desktop: Pro Magnifier */}
+                        {/* Pro Magnifier / Image */}
                         <ImageMagnifier
                             key={currentImage}
                             src={currentImage}
@@ -332,7 +362,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                         />
 
                         {/* Zoom Hint */}
-                        <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md p-2 rounded-xl border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute top-3.5 right-3.5 bg-black/70 backdrop-blur-md p-2 rounded-xl border border-white/10 opacity-70 group-hover:opacity-100 transition-opacity">
                             <Maximize2 size={16} className="text-zinc-300" />
                         </div>
 
@@ -345,7 +375,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                         e.stopPropagation();
                                         setActiveImageIndex(prev => (prev > 0 ? prev - 1 : galleryImages.length - 1));
                                     }}
-                                    className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/70 backdrop-blur border border-white/10 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-orange-500 hover:border-orange-500 shadow-xl cursor-pointer"
+                                    className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/75 backdrop-blur border border-white/10 text-white flex items-center justify-center opacity-70 group-hover:opacity-100 hover:opacity-100 transition-all hover:bg-orange-500 hover:border-orange-500 shadow-xl cursor-pointer"
                                     title="Foto anterior"
                                 >
                                     <ChevronLeft size={18} />
@@ -356,23 +386,23 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                         e.stopPropagation();
                                         setActiveImageIndex(prev => (prev < galleryImages.length - 1 ? prev + 1 : 0));
                                     }}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/70 backdrop-blur border border-white/10 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-orange-500 hover:border-orange-500 shadow-xl cursor-pointer"
+                                    className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/75 backdrop-blur border border-white/10 text-white flex items-center justify-center opacity-70 group-hover:opacity-100 hover:opacity-100 transition-all hover:bg-orange-500 hover:border-orange-500 shadow-xl cursor-pointer"
                                     title="Próxima foto"
                                 >
                                     <ChevronRight size={18} />
                                 </button>
 
                                 {/* Badge de Fotos (ex: 1 / 3) */}
-                                <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur px-2.5 py-1 rounded-full border border-white/10 text-[10px] font-black tracking-widest text-zinc-300 pointer-events-none">
+                                <div className="absolute bottom-3 right-3 bg-black/75 backdrop-blur px-2.5 py-1 rounded-full border border-white/10 text-[10px] font-black tracking-widest text-zinc-300 pointer-events-none">
                                     {activeImageIndex + 1} / {galleryImages.length}
                                 </div>
                             </>
                         )}
                     </div>
 
-                    {/* Fileira de Miniaturas (Thumbnails) para Desktop */}
+                    {/* Fileira de Miniaturas (Thumbnails) para Mobile e Desktop */}
                     {galleryImages.length > 1 && (
-                        <div className="flex items-center gap-2.5 overflow-x-auto p-1 scrollbar-none">
+                        <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto p-1 scrollbar-none">
                             {galleryImages.map((img, idx) => {
                                 const isActive = idx === activeImageIndex;
                                 const thumbUrl = getOptimizedImageUrl(img);
@@ -383,7 +413,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                         type="button"
                                         onClick={() => setActiveImageIndex(idx)}
                                         className={clsx(
-                                            "relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 transition-all duration-200 cursor-pointer p-1 bg-zinc-950/80 border",
+                                            "relative w-14 h-14 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 transition-all duration-200 cursor-pointer p-1 bg-zinc-950/80 border",
                                             isActive 
                                                 ? "border-orange-500 ring-2 ring-orange-500/50 shadow-lg shadow-orange-500/20 scale-105" 
                                                 : "border-zinc-800/80 opacity-60 hover:opacity-100 hover:border-zinc-600"
@@ -415,80 +445,8 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                     )}
                 </div>
 
-                {/* Info & Pricing Panel */}
-                <div className="w-full lg:w-1/2 flex flex-col gap-5 order-2 pt-[35vh] sm:pt-[45vh] lg:pt-0">
-                    <div>
-                        <div className="flex flex-wrap items-center gap-3 mb-2">
-                            <h3 className="text-sm font-black text-blue-500 uppercase tracking-[0.3em]">{figure.studio || 'Studio Indiferente'}</h3>
-                            {figure.codigo && (
-                                <span className="text-[10px] bg-zinc-800 text-zinc-500 font-black px-2 py-0.5 rounded border border-white/5 uppercase tracking-widest">
-                                    #{figure.codigo}
-                                </span>
-                            )}
-                            {tierStyle && (
-                                <span className={clsx(
-                                    "text-[10px] font-black px-2 py-0.5 rounded border shadow-md uppercase tracking-widest",
-                                    tierStyle.bg, tierStyle.text, tierStyle.border
-                                )}>
-                                    {tierStyle.label}
-                                </span>
-                            )}
-                            {isCampanha && (
-                                <span className="text-[10px] bg-purple-600 text-white font-black px-3 py-1 rounded-full border border-purple-400 shadow-lg shadow-purple-600/20 uppercase tracking-[0.2em] flex items-center gap-1 animate-pulse">
-                                    <Sparkles size={12} className="fill-white" /> Oferta
-                                </span>
-                            )}
-                            {figure.tem_pintura_real && (
-                                <span className="text-[10px] bg-blue-600 text-white font-black px-2 py-0.5 rounded-full border border-blue-400 shadow-lg shadow-blue-600/20 uppercase tracking-[0.2em] flex items-center gap-1">
-                                    <Instagram size={10} className="fill-white" /> Ver Fotos
-                                </span>
-                            )}
-                            {(figure.is_bundle || !!figure.precos?.desconto_bundle_pct) && (
-                                <span className="text-[10px] bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black px-3 py-1 rounded-full border border-purple-400/40 shadow-lg shadow-purple-600/30 uppercase tracking-[0.2em] flex items-center gap-1">
-                                    <Sparkles size={12} className="fill-white" /> COMBO {figure.precos?.desconto_bundle_pct || figure.desconto_bundle_pct || 20}% OFF
-                                </span>
-                            )}
-                            {figure.pronta_entrega && (
-                                <span className="text-[10px] bg-amber-500/20 text-amber-300 font-black px-3 py-1 rounded-full border border-amber-500/40 shadow-lg shadow-amber-500/20 uppercase tracking-[0.2em] flex items-center gap-1.5 animate-pulse">
-                                    <Zap size={12} className="fill-amber-400 text-amber-400" />
-                                    Pronta Entrega {figure.estoque_pronta_entrega && figure.estoque_pronta_entrega > 0 ? `(${figure.estoque_pronta_entrega} un)` : ''}
-                                </span>
-                            )}
-                        </div>
-                        <h2 className="text-xl md:text-3xl font-black text-white tracking-tighter leading-[0.95]">{figure.nome}</h2>
-
-                        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                            <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2 py-1 rounded-full border border-white/5">
-                                <span className="text-zinc-600">H</span> {figure.altura_cm || '-'}<small className="text-[8px] ml-0.5 opacity-50">cm</small>
-                            </div>
-                            <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2 py-1 rounded-full border border-white/5">
-                                <span className="text-zinc-600">W</span> {figure.largura_cm || '-'}<small className="text-[8px] ml-0.5 opacity-50">cm</small>
-                            </div>
-                            <div className="flex items-center gap-1.5 bg-zinc-900/50 px-2 py-1 rounded-full border border-white/5">
-                                <span className="text-zinc-600">D</span> {figure.profundidade_cm || '-'}<small className="text-[8px] ml-0.5 opacity-50">cm</small>
-                            </div>
-                        </div>
-
-                        {figure.pronta_entrega && (
-                            <div className="mt-4 flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 text-amber-300">
-                                <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400 shadow-sm">
-                                    <Zap size={18} className="fill-amber-400" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-[11px] font-black uppercase tracking-wider flex items-center gap-2 flex-wrap text-white">
-                                        <span>Envio Imediato em até 24h</span>
-                                        {figure.estoque_pronta_entrega && figure.estoque_pronta_entrega > 0 && (
-                                            <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">
-                                                {figure.estoque_pronta_entrega} {figure.estoque_pronta_entrega === 1 ? 'unidade restante' : 'unidades restantes'}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-[10px] text-zinc-400 font-medium mt-0.5">Item pronto em estoque! Despachamos em até 24h úteis para todo o Brasil.</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
+                {/* Info & Pricing Panel (Bottom on Mobile, Right Column Row 2 on Desktop) */}
+                <div className="w-full order-3 lg:col-start-2 lg:row-start-2 flex flex-col gap-5 pt-0">
                     {/* Finish Selector - Square Cards Layout */}
                     <div className="space-y-2 relative">
                         <div className="flex items-center justify-between ml-1 mb-2">
@@ -611,11 +569,11 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex flex-col sm:flex-row items-center gap-4 mt-4 relative">
+                    <div className="flex items-center gap-2.5 mt-4 relative w-full">
                         {(figure.is_merchant || isCampanha) ? (
                             <button
                                 className={clsx(
-                                    "flex-1 flex items-center justify-center gap-3 w-full px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-500 shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-[0.98] relative z-10",
+                                    "flex-1 flex items-center justify-center gap-2 px-4 sm:px-8 py-4 sm:py-5 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] transition-all duration-300 shadow-xl active:scale-[0.98] relative z-10",
                                     isInCart(figure.id)
                                         ? "bg-emerald-500 text-black hover:bg-emerald-400"
                                         : "bg-white text-black hover:bg-blue-500 hover:text-white"
@@ -624,8 +582,8 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                             >
                                 {isInCart(figure.id) ? "No Carrinho ✓" : (
                                     <>
-                                        <ShoppingCart size={18} />
-                                        Adicionar ao Carrinho
+                                        <ShoppingCart size={17} />
+                                        <span>Adicionar ao Carrinho</span>
                                     </>
                                 )}
                             </button>
@@ -634,10 +592,10 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                 href={`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ''}&text=${encodeURIComponent(`Olá! Tenho interesse na figura ${figure.nome} (${selectedFinish}). Poderia me passar mais informações?`)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex-1 flex items-center justify-center gap-3 w-full px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-500 shadow-[0_20px_50px_rgba(0,0,0,0.3)] active:scale-[0.98] relative z-10 bg-emerald-600 text-white hover:bg-emerald-500"
+                                className="flex-1 flex items-center justify-center gap-2 px-4 sm:px-8 py-4 sm:py-5 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] transition-all duration-300 shadow-xl active:scale-[0.98] relative z-10 bg-emerald-600 text-white hover:bg-emerald-500"
                             >
-                                <MessageCircle size={18} />
-                                Falar com o Ateliê
+                                <MessageCircle size={17} />
+                                <span>Falar com o Ateliê</span>
                             </a>
                         )}
 
@@ -646,20 +604,19 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                 href="https://www.instagram.com/frangatoys/"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="p-5 bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 text-white rounded-2xl shadow-lg hover:opacity-90 transition-opacity active:scale-[0.98]"
+                                className="p-4 sm:p-5 bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 text-white rounded-2xl shadow-lg hover:opacity-90 transition-opacity active:scale-[0.98] shrink-0"
                                 title="Ver Fotos no Instagram"
                             >
-                                <Instagram size={24} />
+                                <Instagram size={20} />
                             </a>
                         )}
 
-
                         <button
                             onClick={handleShare}
-                            className="p-5 bg-zinc-900 border border-white/5 hover:border-white/20 text-zinc-400 hover:text-white rounded-2xl transition-all duration-300 group relative z-10"
+                            className="p-4 sm:p-5 bg-zinc-900 border border-white/5 hover:border-white/20 text-zinc-400 hover:text-white rounded-2xl transition-all duration-300 group relative z-10 shrink-0"
                             title="Compartilhar no WhatsApp"
                         >
-                            <Share2 size={24} className="group-hover:rotate-12 transition-transform" />
+                            <Share2 size={20} className="group-hover:rotate-12 transition-transform" />
                         </button>
 
                         <button
@@ -677,7 +634,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                 is_campanha: !!isCampanha
                             })}
                             className={clsx(
-                                "p-5 rounded-2xl border transition-all duration-300 relative z-10 cursor-pointer active:scale-[0.95]",
+                                "p-4 sm:p-5 rounded-2xl border transition-all duration-300 relative z-10 cursor-pointer active:scale-[0.95] shrink-0",
                                 inWishlist
                                     ? "bg-orange-500/20 border-orange-500/50 text-orange-500 hover:bg-orange-500/30 shadow-lg shadow-orange-500/10"
                                     : "bg-zinc-900 border-white/5 hover:border-white/20 text-zinc-400 hover:text-white"
@@ -685,7 +642,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                             title={inWishlist ? "Remover dos Favoritos" : "Adicionar aos Favoritos"}
                             aria-label={inWishlist ? "Remover dos Favoritos" : "Salvar nos Favoritos"}
                         >
-                            <Heart size={24} className={clsx("transition-transform duration-300", inWishlist && "fill-orange-500 scale-110")} />
+                            <Heart size={20} className={clsx("transition-transform duration-300", inWishlist && "fill-orange-500 scale-110")} />
                         </button>
                     </div>
 
@@ -734,6 +691,57 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                 </div>
                             </div>
                         </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Sticky Mobile Purchase Bar (Always within thumb reach) */}
+            <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-zinc-950/95 backdrop-blur-xl border-t border-zinc-800/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_35px_rgba(0,0,0,0.8)] flex items-center justify-between gap-3">
+                <div className="flex flex-col min-w-0">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 truncate">
+                        {selectedFinish === 'estilizado' ? 'Sem Pintura' : 'Colorido'}
+                    </span>
+                    <div className="flex items-baseline gap-1.5">
+                        {activePixPrice ? (
+                            <>
+                                <span className="text-base font-black text-emerald-400 tracking-tight">
+                                    {formatPrice(activePixPrice)}
+                                </span>
+                                <span className="text-[9px] font-bold text-emerald-500/80 uppercase">no PIX</span>
+                            </>
+                        ) : (
+                            <span className="text-base font-black text-white tracking-tight">
+                                {formatPrice(activePrice)}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    {(figure.is_merchant || isCampanha) ? (
+                        <button
+                            type="button"
+                            onClick={() => isInCart(figure.id) ? setIsCartOpen(true) : addToCart(figure, selectedFinish)}
+                            className={clsx(
+                                "px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center gap-2 cursor-pointer",
+                                isInCart(figure.id)
+                                    ? "bg-emerald-500 text-black shadow-emerald-500/20"
+                                    : "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-orange-500/25"
+                            )}
+                        >
+                            <ShoppingCart size={16} />
+                            <span>{isInCart(figure.id) ? "No Carrinho ✓" : "Adicionar"}</span>
+                        </button>
+                    ) : (
+                        <a
+                            href={`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ''}&text=${encodeURIComponent(`Olá! Tenho interesse na figura ${figure.nome} (${selectedFinish}). Poderia me passar mais informações?`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/25 active:scale-95 transition-all flex items-center gap-2"
+                        >
+                            <MessageCircle size={16} />
+                            <span>Falar Ateliê</span>
+                        </a>
                     )}
                 </div>
             </div>

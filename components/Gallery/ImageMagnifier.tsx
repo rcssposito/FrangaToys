@@ -31,7 +31,7 @@ export const ImageMagnifier = ({
 
     return (
         <div
-            className="relative w-full h-full cursor-crosshair group lg:block hidden"
+            className="relative w-full h-full cursor-pointer lg:cursor-crosshair group block"
             onMouseEnter={(e) => {
                 if (!src) return;
                 const elem = e.currentTarget;
@@ -63,7 +63,7 @@ export const ImageMagnifier = ({
 
             {showMagnifier && (
                 <div
-                    className="pointer-events-none absolute z-50 overflow-hidden rounded-full border border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.8),inset_0_0_30px_rgba(0,0,0,0.5)] backdrop-blur-sm"
+                    className="pointer-events-none absolute z-50 overflow-hidden rounded-full border border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.8),inset_0_0_30px_rgba(0,0,0,0.5)] backdrop-blur-sm hidden lg:block"
                     style={{
                         height: `${magnifierHeight}px`,
                         width: `${magnifierWidth}px`,

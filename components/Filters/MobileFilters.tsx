@@ -164,9 +164,7 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
     const activeCount = countActiveFilters();
 
     return (
-        <div className="w-full flex flex-col mb-4 sticky top-0 z-30 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--card-border)] pb-2 pt-2 transition-all">
-
-
+        <div className="w-full flex flex-col mb-4 sticky top-14 z-20 bg-[var(--background)]/90 backdrop-blur-md border-b border-[var(--card-border)] pb-2 pt-2 transition-all">
 
             {/* 1. Search Row */}
             <div className="flex gap-3 px-4 mb-3">
@@ -178,7 +176,7 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
                         onFocus={() => isFocused.current = true}
                         onBlur={() => isFocused.current = false}
                         placeholder="Buscar..."
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-all placeholder:text-[var(--text-muted)] shadow-[var(--shadow-sm)]"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] text-base sm:text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-all placeholder:text-[var(--text-muted)] shadow-[var(--shadow-sm)]"
                     />
                 </div>
                 <button
