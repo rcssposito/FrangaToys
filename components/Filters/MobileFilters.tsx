@@ -4,11 +4,8 @@ import { useEstudios } from '@/hooks/useEstudios';
 import { FiltersSchema } from '@/lib/dto';
 import { 
   SlidersHorizontal, 
-  ArrowLeft, 
   X, 
   Search, 
-  Settings, 
-  Truck, 
   Sparkles, 
   MoveUp, 
   MoveDown, 
@@ -21,11 +18,8 @@ import { useState, useEffect, useRef } from 'react';
 import { z } from 'zod';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
 
 type FilterState = z.infer<typeof FiltersSchema>;
-
-import { usePathname } from 'next/navigation';
 
 const PRICE_RANGES = [
   { label: 'Até R$ 350', value: '0-350', activeClass: 'bg-orange-500 text-white border-orange-500 font-bold' },
@@ -49,7 +43,7 @@ interface MobileFiltersProps {
     onOpenCart: () => void;
 }
 
-export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: MobileFiltersProps) => {
+export const MobileFilters = ({ filters, onChange, categories }: MobileFiltersProps) => {
     const { data: estudios } = useEstudios(true);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [localSearch, setLocalSearch] = useState(filters.q || '');
@@ -63,20 +57,15 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
     }, []);
 
     // 1. Sync local state FROM props (External updates)
-    // 1. Sync local state FROM props (External updates)
     useEffect(() => {
         const remoteQ = filters.q || '';
         if (remoteQ !== localSearch) {
-            // If user is focused on input, DO NOT overwrite with external prop (which acts as an "echo")
-            // unless the user interaction flag is explicitly false (meaning we just loaded or cleared).
             if (isFocused.current) return;
-
-            // If we are not focused, it's safe to sync (e.g. "Clear All" clicked, or URL navigation)
             setLocalSearch(remoteQ);
-            setDebouncedSearch(remoteQ); // Keep debounce in sync to avoid accidental revert
+            setDebouncedSearch(remoteQ);
             isUserInteraction.current = false;
         }
-    }, [filters.q]); // Removed localSearch from dependency array to prevent infinite loop
+    }, [filters.q]);
 
     // 2. Debounce localSearch
     useEffect(() => {
@@ -91,7 +80,6 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
         const currentQ = filters.q || '';
         const debouncedQ = debouncedSearch || '';
 
-        // Critical: Only update parent if local debounce is settled
         if (debouncedQ === localSearch && debouncedQ !== currentQ) {
             if (isUserInteraction.current) {
                 isUserInteraction.current = false;
@@ -105,8 +93,6 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
         setLocalSearch(e.target.value);
         isUserInteraction.current = true;
     };
-
-    // Close sheet when resizing to desktop? Not strictly necessary if CSS hides it.
 
     const toggleStudio = (id: number) => {
         const current = filters.studioIds ? filters.studioIds.split(',').filter(Boolean) : [];
@@ -154,7 +140,6 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
         let count = 0;
         if (filters.studioIds) count += filters.studioIds.split(',').filter(Boolean).length;
         if (filters.incluirNaoVendaveis === 'true') count++;
-        if (filters.prontaEntrega === 'true') count++;
         if (filters.priceRange) count++;
         if (filters.sizeRange) count++;
         if (filters.sort && filters.sort !== 'newest') count++;
@@ -282,19 +267,6 @@ export const MobileFilters = ({ filters, onChange, categories, onOpenCart }: Mob
 
                                     {/* Toggles */}
                                     <div className="space-y-3">
-                                        <label className="flex items-center justify-between p-3 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] shadow-sm cursor-pointer">
-                                            <span className="font-bold text-sm text-amber-400 flex items-center gap-2">
-                                                <Zap size={16} className="fill-amber-400" />
-                                                Apenas Pronta Entrega (Envio 24h)
-                                            </span>
-                                            <input
-                                                type="checkbox"
-                                                className="accent-amber-500 w-5 h-5"
-                                                checked={filters.prontaEntrega === 'true'}
-                                                onChange={(e) => onChange({ ...filters, prontaEntrega: e.target.checked ? 'true' : undefined })}
-                                            />
-                                        </label>
-
                                         <label className="flex items-center justify-between p-3 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] shadow-sm cursor-pointer">
                                             <span className="font-bold text-sm text-[var(--foreground)]">Exibir Indisponíveis</span>
                                             <input

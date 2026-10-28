@@ -11,6 +11,7 @@ export async function GET() {
         const { data, error } = await supabase
             .from('cupoms_desconto')
             .select('*, series(nome)')
+            .neq('codigo', '__CAMPANHA_TIMER__')
             .order('criado_em', { ascending: false });
 
         if (error) throw error;

@@ -185,7 +185,10 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                         {/* Oferta Badge */}
                         {!!(figure.is_campanha_active || (figure.preco_fixo_campanha && figure.preco_fixo_campanha > 0)) && (
                             <div className="bg-purple-950/60 backdrop-blur-md text-purple-300 text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-purple-500/30 animate-pulse">
-                                <Sparkles size={10} className="fill-purple-400 shrink-0" /> Oferta
+                                <Sparkles size={10} className="fill-purple-400 shrink-0" />
+                                <span>
+                                    Oferta{figure.desconto_campanha && figure.desconto_campanha > 0 ? ` -${figure.desconto_campanha}%` : ''}
+                                </span>
                             </div>
                         )}
                         {/* Combo / Bundle Badge */}

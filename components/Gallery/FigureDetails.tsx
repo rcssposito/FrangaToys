@@ -273,12 +273,12 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                 )}
             </AnimatePresence>
 
-            <div className="flex flex-col lg:grid lg:grid-cols-2 w-full gap-5 lg:gap-8 items-start relative z-20">
+            <div className="flex flex-col lg:grid lg:grid-cols-2 lg:grid-rows-[auto_1fr] w-full gap-5 lg:gap-x-8 lg:gap-y-4 items-start relative z-20">
 
                 {/* Title & Metadata Header (Top on Mobile, Right Column Row 1 on Desktop) */}
                 <div className="w-full order-1 lg:col-start-2 lg:row-start-1 flex flex-col gap-2">
-                    <div className="flex flex-wrap items-center gap-3 mb-2">
-                        <h3 className="text-sm font-black text-blue-500 uppercase tracking-[0.3em]">{figure.studio || 'Studio Indiferente'}</h3>
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h3 className="text-xs sm:text-sm font-black text-blue-500 uppercase tracking-[0.2em]">{figure.studio || 'Studio Indiferente'}</h3>
                         {figure.codigo && (
                             <span className="text-[10px] bg-zinc-800 text-zinc-500 font-black px-2 py-0.5 rounded border border-white/5 uppercase tracking-widest">
                                 #{figure.codigo}
@@ -293,8 +293,8 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                             </span>
                         )}
                         {isCampanha && (
-                            <span className="text-[10px] bg-purple-600 text-white font-black px-3 py-1 rounded-full border border-purple-400 shadow-lg shadow-purple-600/20 uppercase tracking-[0.2em] flex items-center gap-1 animate-pulse">
-                                <Sparkles size={12} className="fill-white" /> Oferta
+                            <span className="text-[10px] bg-purple-600 text-white font-black px-2.5 py-0.5 rounded-full border border-purple-400 shadow-lg shadow-purple-600/20 uppercase tracking-widest flex items-center gap-1">
+                                <Sparkles size={11} className="fill-white" /> Oferta
                             </span>
                         )}
                         {figure.tem_pintura_real && (
@@ -654,45 +654,45 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                             Ver Guia & FAQ
                         </Link>
                     </div>
+                </div>
 
-                    {/* Cross-Sell Section */}
-                    {crossSell && (
-                        <div className="mt-8 pt-6 border-t border-white/5 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            <div className="flex items-center gap-2 mb-4">
-                                <Sparkles size={16} className="text-orange-500" />
-                                <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Compre Junto</h4>
+                {/* Cross-Sell Section (Full width below both columns so it doesn't unbalance right column height) */}
+                {crossSell && (
+                    <div className="w-full order-4 lg:col-span-2 pt-4 border-t border-white/5 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Sparkles size={16} className="text-orange-500" />
+                            <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Compre Junto</h4>
+                        </div>
+                        <div
+                            onClick={() => router.push(`/figura/${crossSell.slug}?ref=cross_sell`)}
+                            className="group flex items-center gap-4 bg-zinc-900/40 hover:bg-zinc-900/80 border border-white/5 hover:border-orange-500/30 p-3 rounded-2xl cursor-pointer transition-all duration-300"
+                        >
+                            <div className="relative w-16 h-16 bg-black rounded-xl overflow-hidden shadow-inner flex-shrink-0">
+                                <Image
+                                    loader={imageKitLoader}
+                                    src={getOptimizedImageUrl(crossSell.imagem_url)}
+                                    alt={crossSell.nome}
+                                    fill
+                                    className="object-contain p-1 group-hover:scale-110 transition-transform duration-500"
+                                    sizes="64px"
+                                />
                             </div>
-                            <div
-                                onClick={() => router.push(`/figura/${crossSell.slug}?ref=cross_sell`)}
-                                className="group flex items-center gap-4 bg-zinc-900/40 hover:bg-zinc-900/80 border border-white/5 hover:border-orange-500/30 p-3 rounded-2xl cursor-pointer transition-all duration-300"
-                            >
-                                <div className="relative w-16 h-16 bg-black rounded-xl overflow-hidden shadow-inner flex-shrink-0">
-                                    <Image
-                                        loader={imageKitLoader}
-                                        src={getOptimizedImageUrl(crossSell.imagem_url)}
-                                        alt={crossSell.nome}
-                                        fill
-                                        className="object-contain p-1 group-hover:scale-110 transition-transform duration-500"
-                                        sizes="64px"
-                                    />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    {crossSell.is_campanha && (
-                                        <span className="inline-block text-[8px] bg-purple-600 text-white font-black px-1.5 py-0.5 rounded-sm uppercase tracking-widest mb-1 shadow-lg shadow-purple-600/20">
-                                            Em Oferta
-                                        </span>
-                                    )}
-                                    <h5 className="text-sm font-black text-white truncate group-hover:text-orange-500 transition-colors">
-                                        {crossSell.nome}
-                                    </h5>
-                                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-0.5">
-                                        Ver Detalhes <ChevronRight size={10} className="inline -mt-0.5" />
-                                    </p>
-                                </div>
+                            <div className="flex-1 min-w-0">
+                                {crossSell.is_campanha && (
+                                    <span className="inline-block text-[8px] bg-purple-600 text-white font-black px-1.5 py-0.5 rounded-sm uppercase tracking-widest mb-1 shadow-lg shadow-purple-600/20">
+                                        Em Oferta
+                                    </span>
+                                )}
+                                <h5 className="text-sm font-black text-white truncate group-hover:text-orange-500 transition-colors">
+                                    {crossSell.nome}
+                                </h5>
+                                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-0.5">
+                                    Ver Detalhes <ChevronRight size={10} className="inline -mt-0.5" />
+                                </p>
                             </div>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
 
             {/* Sticky Mobile Purchase Bar (Always within thumb reach) */}

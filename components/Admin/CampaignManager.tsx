@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { 
     Flame, Loader2, Search, Percent, AlertCircle, Plus, Trash2, Tag, 
-    Layers, Building2, Tv, Sparkles, Filter, CheckCircle2, RefreshCw, X
+    Layers, Building2, Tv, Sparkles, Filter, CheckCircle2, RefreshCw, X,
+    AlertTriangle, CheckSquare, Square, Zap, Power, Clock
 } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
 
@@ -41,8 +42,19 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
     const [savingId, setSavingId] = useState<number | null>(null);
     const [mounted, setMounted] = useState(false);
 
+    // Selection State for Batch Operations
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [selectedBatchDiscount, setSelectedBatchDiscount] = useState<string>('');
+
     // Bulk Discount State
     const [bulkDiscount, setBulkDiscount] = useState<string>('');
+    const [isApplyingGlobal, setIsApplyingGlobal] = useState(false);
+    const [isClearingAll, setIsClearingAll] = useState(false);
+
+    // Campaign End Timer State
+    const [timerInput, setTimerInput] = useState<string>('');
+    const [activeTimerIso, setActiveTimerIso] = useState<string | null>(null);
+    const [isSavingTimer, setIsSavingTimer] = useState(false);
 
     // Bulk Studio Campaign State
     const [studios, setStudios] = useState<{ id: number, nome: string }[]>([]);
@@ -63,7 +75,7 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
     const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
 
     // Control Tab (Left Column)
-    const [activeTab, setActiveTab] = useState<'series' | 'studio' | 'global'>('series');
+    const [activeTab, setActiveTab] = useState<'series' | 'studio' | 'global'>('global');
 
     // Fetch Studios
     const fetchStudios = useCallback(async () => {
@@ -91,6 +103,32 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
         }
     }, []);
 
+    const toDatetimeLocal = (date: Date) => {
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
+
+    const fetchCampaignTimer = useCallback(async () => {
+        try {
+            const res = await fetch('/api/admin/figures/bulk-campaign');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.campaignEndAt) {
+                    setActiveTimerIso(data.campaignEndAt);
+                    setTimerInput(toDatetimeLocal(new Date(data.campaignEndAt)));
+                } else {
+                    setActiveTimerIso(null);
+                    setTimerInput('');
+                }
+                if (data.expired) {
+                    toast.info('O timer da promoção encerrou e as ofertas foram pausadas automaticamente.');
+                }
+            }
+        } catch (e) {
+            console.error('Erro ao carregar timer da campanha:', e);
+        }
+    }, []);
+
     const fetchFigures = useCallback(async () => {
         try {
             setLoading(true);
@@ -107,10 +145,10 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
 
     useEffect(() => {
         setMounted(true);
-        fetchFigures();
+        fetchCampaignTimer().then(() => fetchFigures());
         fetchStudios();
         fetchSeries();
-    }, [fetchFigures, fetchStudios, fetchSeries]);
+    }, [fetchCampaignTimer, fetchFigures, fetchStudios, fetchSeries]);
 
     const campaignFigures = useMemo(() => {
         return allFigures.filter(f => f.is_campanha || f.is_campanha_active || f.preco_fixo_campanha > 0 || f.desconto_campanha > 0);
@@ -240,7 +278,162 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
         }
     };
 
-    // Bulk Global Discount
+    // 1. ZERAR TODOS OS DESCONTOS DA LOJA (KILL-SWITCH GERAL)
+    const handleClearAllDiscounts = async () => {
+        if (!canEdit) return;
+        const confirm = window.confirm(
+            `⚠️ ATENÇÃO - RESET GERAL DE PROMOÇÃO:\n\nDeseja ZERAR E REMOVER TODOS os descontos de campanha de TODAS as peças da loja?\n\nIsso removerá todas as peças da página de promoção e desativará os descontos. Deseja continuar?`
+        );
+        if (!confirm) return;
+
+        setIsClearingAll(true);
+        toast.loading('Removendo todos os descontos da loja...', { id: 'clear-all' });
+
+        try {
+            const res = await fetch('/api/admin/figures/bulk-campaign?clearAll=true', {
+                method: 'DELETE',
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erro ao remover descontos');
+
+            toast.success(`Sucesso! ${data.count} peças tiveram descontos zerados.`, { id: 'clear-all' });
+            setSelectedIds([]);
+            setActiveTimerIso(null);
+            setTimerInput('');
+            fetchFigures();
+        } catch (e: any) {
+            toast.error(`Erro: ${e.message}`, { id: 'clear-all' });
+        } finally {
+            setIsClearingAll(false);
+        }
+    };
+
+    // 2. MODO BLACK FRIDAY - APLICAR NA LOJA TODA
+    const handleApplyStorewideDiscount = async () => {
+        if (!canEdit) return;
+        const desc = Number(bulkDiscount);
+        if (isNaN(desc) || desc <= 0 || desc > 100) {
+            toast.error('Insira uma porcentagem válida entre 1 e 100.');
+            return;
+        }
+
+        const confirm = window.confirm(
+            `🚀 MODO BLACK FRIDAY:\n\nDeseja aplicar ${desc}% de desconto em TODAS as figuras disponíveis da loja?`
+        );
+        if (!confirm) return;
+
+        setIsApplyingGlobal(true);
+        toast.loading(`Aplicando ${desc}% em toda a loja...`, { id: 'storewide' });
+
+        try {
+            const res = await fetch('/api/admin/figures/bulk-campaign', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ applyAll: true, discount: desc }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erro ao aplicar desconto');
+
+            toast.success(`Modo Black Friday ativado! ${data.count} peças atualizadas com ${desc}% OFF.`, { id: 'storewide' });
+            setBulkDiscount('');
+            fetchFigures();
+        } catch (e: any) {
+            toast.error(`Erro: ${e.message}`, { id: 'storewide' });
+        } finally {
+            setIsApplyingGlobal(false);
+        }
+    };
+
+    // 3. PAUSAR / REATIVAR TODAS AS PROMOÇÕES
+    const handleToggleAllCampaignStatus = async (action: 'pause-all' | 'resume-all') => {
+        if (!canEdit) return;
+        const isPause = action === 'pause-all';
+        const confirm = window.confirm(
+            isPause
+                ? 'Deseja pausar todas as peças em promoção? (Os descontos continuarão salvos, mas não aparecerão com preço promocional na vitrine)'
+                : 'Deseja reativar todas as peças em promoção na vitrine?'
+        );
+        if (!confirm) return;
+
+        toast.loading(isPause ? 'Pausando promoções...' : 'Reativando promoções...', { id: 'toggle-status' });
+
+        try {
+            const res = await fetch('/api/admin/figures/bulk-campaign', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erro ao alterar status');
+
+            toast.success(data.message || 'Status atualizado com sucesso!', { id: 'toggle-status' });
+            if (isPause) {
+                setActiveTimerIso(null);
+                setTimerInput('');
+            }
+            fetchFigures();
+        } catch (e: any) {
+            toast.error(`Erro: ${e.message}`, { id: 'toggle-status' });
+        }
+    };
+
+    // 3.5. SALVAR / REMOVER TIMER DE FIM DE PROMOÇÃO
+    const handleSaveTimer = async (customIso?: string | null) => {
+        if (!canEdit) return;
+        const targetIso = customIso !== undefined
+            ? customIso
+            : (timerInput ? new Date(timerInput).toISOString() : null);
+
+        if (targetIso && new Date(targetIso).getTime() <= Date.now()) {
+            toast.error('Escolha uma data e horário no futuro para o encerramento.');
+            return;
+        }
+
+        setIsSavingTimer(true);
+        try {
+            const res = await fetch('/api/admin/figures/bulk-campaign', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'set-timer', campaignEndAt: targetIso }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erro ao salvar timer');
+
+            setActiveTimerIso(data.campaignEndAt || null);
+            if (data.campaignEndAt) {
+                setTimerInput(toDatetimeLocal(new Date(data.campaignEndAt)));
+                toast.success('Timer de encerramento ativado na vitrine!');
+            } else {
+                setTimerInput('');
+                toast.info('Timer de encerramento removido.');
+            }
+        } catch (e: any) {
+            toast.error(`Erro: ${e.message}`);
+        } finally {
+            setIsSavingTimer(false);
+        }
+    };
+
+    const applyTimerPreset = (preset: '24h' | '48h' | 'sunday') => {
+        const now = new Date();
+        let target = new Date();
+        if (preset === '24h') {
+            target = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        } else if (preset === '48h') {
+            target = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+        } else if (preset === 'sunday') {
+            const day = now.getDay(); // 0 is Sunday
+            const daysUntilSunday = day === 0 ? 0 : 7 - day;
+            target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilSunday, 23, 59, 0);
+            if (target.getTime() <= now.getTime()) {
+                target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 0);
+            }
+        }
+        setTimerInput(toDatetimeLocal(target));
+        handleSaveTimer(target.toISOString());
+    };
+
+    // 4. APLICAR DESCONTO APENAS NAS ATIVAS DA CAMPANHA
     const handleApplyBulkDiscount = async () => {
         if (!canEdit) return;
         const desc = Number(bulkDiscount);
@@ -258,28 +451,96 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
         const confirm = window.confirm(`Deseja aplicar ${desc}% de desconto em TODAS as ${activeFigures.length} peças atualmente ativas na campanha?`);
         if (!confirm) return;
 
+        setIsApplyingGlobal(true);
         toast.loading(`Aplicando ${desc}% de desconto...`, { id: 'bulk-desc' });
-        let errors = 0;
 
-        for (const f of activeFigures) {
-            try {
-                await fetch('/api/admin/figures', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: f.id, desconto_campanha: desc }),
-                });
-            } catch (e) {
-                errors++;
-            }
+        try {
+            const res = await fetch('/api/admin/figures/bulk-campaign', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    figureIds: activeFigures.map(f => f.id), 
+                    discount: desc 
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+
+            toast.success(`Desconto de ${desc}% aplicado em ${data.count} peças ativas!`, { id: 'bulk-desc' });
+            setBulkDiscount('');
+            fetchFigures();
+        } catch (e: any) {
+            toast.error(`Erro: ${e.message}`, { id: 'bulk-desc' });
+        } finally {
+            setIsApplyingGlobal(false);
         }
+    };
 
-        if (errors > 0) {
-            toast.error(`Concluído com ${errors} erros.`, { id: 'bulk-desc' });
+    // 5. OPERAÇÕES EM LOTE PARA ITENS SELECIONADOS POR CHECKBOX
+    const handleToggleSelect = (id: number) => {
+        setSelectedIds(prev => 
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    };
+
+    const handleSelectAllFiltered = (filtered: CampaignFigure[]) => {
+        if (selectedIds.length === filtered.length) {
+            setSelectedIds([]);
         } else {
-            toast.success('Desconto aplicado em massa!', { id: 'bulk-desc' });
+            setSelectedIds(filtered.map(f => f.id));
+        }
+    };
+
+    const handleApplySelectedBatchDiscount = async () => {
+        if (!canEdit || selectedIds.length === 0) return;
+        const desc = Number(selectedBatchDiscount);
+        if (isNaN(desc) || desc <= 0 || desc > 100) {
+            toast.error('Insira uma porcentagem válida entre 1 e 100.');
+            return;
         }
 
-        fetchFigures();
+        toast.loading(`Aplicando ${desc}% em ${selectedIds.length} peças selecionadas...`, { id: 'selected-desc' });
+
+        try {
+            const res = await fetch('/api/admin/figures/bulk-campaign', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ figureIds: selectedIds, discount: desc }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+
+            toast.success(`Desconto de ${desc}% aplicado em ${data.count} peças!`, { id: 'selected-desc' });
+            setSelectedBatchDiscount('');
+            setSelectedIds([]);
+            fetchFigures();
+        } catch (e: any) {
+            toast.error(`Erro: ${e.message}`, { id: 'selected-desc' });
+        }
+    };
+
+    const handleRemoveSelectedFromCampaign = async () => {
+        if (!canEdit || selectedIds.length === 0) return;
+        const confirm = window.confirm(`Deseja remover as ${selectedIds.length} peças selecionadas da campanha?`);
+        if (!confirm) return;
+
+        toast.loading(`Removendo ${selectedIds.length} peças da campanha...`, { id: 'selected-remove' });
+
+        try {
+            const res = await fetch('/api/admin/figures/bulk-campaign', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ figureIds: selectedIds }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+
+            toast.success(`${data.count} peças removidas da campanha!`, { id: 'selected-remove' });
+            setSelectedIds([]);
+            fetchFigures();
+        } catch (e: any) {
+            toast.error(`Erro: ${e.message}`, { id: 'selected-remove' });
+        }
     };
 
     // Bulk Studio Discount
@@ -652,37 +913,161 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
                             </div>
                         )}
 
-                        {/* TAB 3: Desconto Global em Massa */}
+                        {/* TAB 3: Desconto Global & Controle Geral */}
                         {activeTab === 'global' && (
                             <div className="space-y-4 animate-in fade-in duration-200">
                                 <p className="text-xs text-[var(--text-muted)]">
-                                    Atualiza a porcentagem de desconto de <strong className="text-purple-400">todas as figuras atualmente marcadas como ativas</strong> no painel.
+                                    Aplique descontos em <strong className="text-purple-400">todas as peças ativas</strong> da campanha ou ative o <strong className="text-amber-400">Modo Black Friday</strong> na loja inteira.
                                 </p>
 
                                 <div>
                                     <label className="block text-[10px] uppercase font-black tracking-widest text-[var(--text-muted)] mb-1.5">
-                                        Novo Desconto Global (%)
+                                        Porcentagem de Desconto (%)
                                     </label>
                                     <div className="relative">
                                         <input
                                             type="number"
                                             value={bulkDiscount}
                                             onChange={(e) => setBulkDiscount(e.target.value)}
-                                            placeholder="Ex: 10"
+                                            placeholder="Ex: 15 (para 15% OFF)"
                                             className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] focus:border-purple-500 rounded-xl px-4 py-2.5 outline-none font-bold text-sm text-[var(--foreground)]"
                                         />
                                         <Percent size={16} className="absolute right-3.5 top-3 text-[var(--text-muted)]" />
                                     </div>
                                 </div>
 
-                                <button
-                                    onClick={handleApplyBulkDiscount}
-                                    disabled={!canEdit || !bulkDiscount || stats.activeCount === 0}
-                                    className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-600/20 active:scale-95 cursor-pointer"
-                                >
-                                    <Sparkles size={16} />
-                                    Aplicar em {stats.activeCount} Peças Ativas
-                                </button>
+                                <div className="space-y-2 pt-1">
+                                    <button
+                                        onClick={handleApplyBulkDiscount}
+                                        disabled={!canEdit || isApplyingGlobal || !bulkDiscount || stats.activeCount === 0}
+                                        className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-600/20 active:scale-95 cursor-pointer"
+                                    >
+                                        {isApplyingGlobal ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                                        Aplicar nas {stats.activeCount} Peças Ativas
+                                    </button>
+
+                                    <button
+                                        onClick={handleApplyStorewideDiscount}
+                                        disabled={!canEdit || isApplyingGlobal || !bulkDiscount}
+                                        className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:opacity-40 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-600/20 active:scale-95 cursor-pointer"
+                                    >
+                                        {isApplyingGlobal ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+                                        Loja Toda (Modo Black Friday)
+                                    </button>
+                                </div>
+
+                                {/* Timer de Fim de Promoção */}
+                                <div className="pt-4 border-t border-[var(--card-border)] space-y-2.5">
+                                    <div className="flex items-center justify-between">
+                                        <span className="flex items-center gap-1.5 text-[10px] uppercase font-black tracking-widest text-[var(--text-muted)]">
+                                            <Clock size={12} className="text-purple-400" />
+                                            Timer de Fim de Promoção
+                                        </span>
+                                        {activeTimerIso && (
+                                            <span className="px-2 py-0.5 rounded-full bg-purple-500/15 border border-purple-500/30 text-[9px] font-black uppercase text-purple-300">
+                                                Ativo
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                                        Exibe um cronômetro regressivo na página de ofertas e pausa os descontos automaticamente ao zerar.
+                                    </p>
+
+                                    {/* Atalhos Rápidos */}
+                                    <div className="grid grid-cols-3 gap-1.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => applyTimerPreset('24h')}
+                                            disabled={!canEdit || isSavingTimer}
+                                            className="py-1.5 px-2 bg-[var(--input-bg)] hover:bg-purple-500/15 border border-[var(--card-border)] hover:border-purple-500/40 rounded-lg text-[10px] font-black uppercase tracking-wider text-[var(--foreground)] transition-all cursor-pointer disabled:opacity-40"
+                                        >
+                                            +24 Horas
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => applyTimerPreset('48h')}
+                                            disabled={!canEdit || isSavingTimer}
+                                            className="py-1.5 px-2 bg-[var(--input-bg)] hover:bg-purple-500/15 border border-[var(--card-border)] hover:border-purple-500/40 rounded-lg text-[10px] font-black uppercase tracking-wider text-[var(--foreground)] transition-all cursor-pointer disabled:opacity-40"
+                                        >
+                                            +48 Horas
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => applyTimerPreset('sunday')}
+                                            disabled={!canEdit || isSavingTimer}
+                                            className="py-1.5 px-2 bg-[var(--input-bg)] hover:bg-purple-500/15 border border-[var(--card-border)] hover:border-purple-500/40 rounded-lg text-[10px] font-black uppercase tracking-wider text-[var(--foreground)] transition-all cursor-pointer disabled:opacity-40"
+                                        >
+                                            Dom 23:59
+                                        </button>
+                                    </div>
+
+                                    {/* Input Customizado */}
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="datetime-local"
+                                            value={timerInput}
+                                            onChange={(e) => setTimerInput(e.target.value)}
+                                            disabled={!canEdit || isSavingTimer}
+                                            className="flex-1 bg-[var(--input-bg)] border border-[var(--card-border)] focus:border-purple-500 rounded-xl px-3 py-2 text-xs font-bold text-[var(--foreground)] outline-none"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSaveTimer()}
+                                            disabled={!canEdit || isSavingTimer || !timerInput}
+                                            className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 cursor-pointer"
+                                        >
+                                            {isSavingTimer ? <Loader2 size={14} className="animate-spin" /> : 'Salvar'}
+                                        </button>
+                                        {activeTimerIso && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleSaveTimer(null)}
+                                                disabled={!canEdit || isSavingTimer}
+                                                title="Remover timer"
+                                                className="px-2.5 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-xl text-xs transition-all shrink-0 cursor-pointer"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Pausar / Retomar / Reset Geral */}
+                                <div className="pt-4 border-t border-[var(--card-border)] space-y-2.5">
+                                    <span className="block text-[10px] uppercase font-black tracking-widest text-[var(--text-muted)]">
+                                        Controle Geral de Vitrine
+                                    </span>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button
+                                            onClick={() => handleToggleAllCampaignStatus('pause-all')}
+                                            disabled={!canEdit || stats.activeCount === 0}
+                                            className="py-2.5 px-3 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-30 flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                                        >
+                                            <Power size={13} />
+                                            Pausar Todas
+                                        </button>
+
+                                        <button
+                                            onClick={() => handleToggleAllCampaignStatus('resume-all')}
+                                            disabled={!canEdit || stats.inactiveCount === 0}
+                                            className="py-2.5 px-3 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 text-green-400 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-30 flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                                        >
+                                            <CheckCircle2 size={13} />
+                                            Reativar Todas
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        onClick={handleClearAllDiscounts}
+                                        disabled={!canEdit || isClearingAll || stats.total === 0}
+                                        className="w-full py-2.5 px-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-30 flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+                                    >
+                                        {isClearingAll ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} />}
+                                        Zerar Todos os Descontos da Loja
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -812,8 +1197,79 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
                                     Pausados
                                 </button>
                             </div>
+
+                            {/* Select All Filtered Button */}
+                            {filteredCampaignFigures.length > 0 && (
+                                <button
+                                    onClick={() => handleSelectAllFiltered(filteredCampaignFigures)}
+                                    title="Selecionar / Desmarcar todos os itens visíveis"
+                                    className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shrink-0 transition-all cursor-pointer ${
+                                        selectedIds.length > 0 && selectedIds.length === filteredCampaignFigures.length
+                                            ? 'bg-purple-600/20 border-purple-500 text-purple-400'
+                                            : 'bg-[var(--input-bg)] border-[var(--card-border)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
+                                    }`}
+                                >
+                                    {selectedIds.length > 0 && selectedIds.length === filteredCampaignFigures.length ? (
+                                        <CheckSquare size={14} className="text-purple-400" />
+                                    ) : (
+                                        <Square size={14} />
+                                    )}
+                                    Todos ({filteredCampaignFigures.length})
+                                </button>
+                            )}
                         </div>
                     </div>
+
+                    {/* Batch Action Bar for Selected Items */}
+                    {selectedIds.length > 0 && (
+                        <div className="bg-purple-950/30 border border-purple-500/40 p-3.5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="flex items-center gap-2.5">
+                                <span className="px-2.5 py-1 bg-purple-600 text-white rounded-lg text-xs font-black">
+                                    {selectedIds.length}
+                                </span>
+                                <span className="text-xs font-bold text-purple-200">
+                                    {selectedIds.length === 1 ? 'peça selecionada' : 'peças selecionadas'}
+                                </span>
+                                <button
+                                    onClick={() => setSelectedIds([])}
+                                    className="text-[10px] font-bold text-purple-400 hover:text-purple-300 underline ml-1 cursor-pointer"
+                                >
+                                    Limpar seleção
+                                </button>
+                            </div>
+
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                <div className="relative flex-1 sm:w-32">
+                                    <input
+                                        type="number"
+                                        value={selectedBatchDiscount}
+                                        onChange={(e) => setSelectedBatchDiscount(e.target.value)}
+                                        placeholder="Desc. %"
+                                        className="w-full bg-[var(--input-bg)] border border-purple-500/30 focus:border-purple-500 rounded-xl pl-3 pr-7 py-1.5 outline-none text-xs font-bold text-[var(--foreground)]"
+                                    />
+                                    <Percent size={12} className="absolute right-2.5 top-2.5 text-[var(--text-muted)]" />
+                                </div>
+
+                                <button
+                                    onClick={handleApplySelectedBatchDiscount}
+                                    disabled={!canEdit || !selectedBatchDiscount}
+                                    className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+                                >
+                                    <Sparkles size={12} />
+                                    Aplicar %
+                                </button>
+
+                                <button
+                                    onClick={handleRemoveSelectedFromCampaign}
+                                    disabled={!canEdit}
+                                    className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+                                >
+                                    <Trash2 size={12} />
+                                    Remover ({selectedIds.length})
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Figures Grid/List */}
                     {loading ? (
@@ -835,17 +1291,25 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[750px] overflow-y-auto pr-1">
-                            {filteredCampaignFigures.map(f => (
+                            {filteredCampaignFigures.map(f => {
+                                const isSelected = selectedIds.includes(f.id);
+                                return (
                                 <div
                                     key={f.id}
                                     className={`bg-[var(--card-bg)] border rounded-2xl p-3.5 transition-all flex gap-3 relative overflow-hidden ${
-                                        f.is_campanha_active 
-                                            ? 'border-purple-500/30 hover:border-purple-500/50 shadow-sm' 
-                                            : 'border-[var(--card-border)] opacity-60 hover:opacity-100'
+                                        isSelected
+                                            ? 'border-purple-500 ring-1 ring-purple-500/40 bg-purple-500/5'
+                                            : f.is_campanha_active 
+                                                ? 'border-purple-500/30 hover:border-purple-500/50 shadow-sm' 
+                                                : 'border-[var(--card-border)] opacity-60 hover:opacity-100'
                                     }`}
                                 >
-                                    {/* Thumbnail */}
-                                    <div className="w-16 h-16 rounded-xl bg-[var(--input-bg)] border border-[var(--card-border)] overflow-hidden shrink-0 relative">
+                                    {/* Checkbox + Thumbnail */}
+                                    <div
+                                        onClick={() => handleToggleSelect(f.id)}
+                                        className="w-16 h-16 rounded-xl bg-[var(--input-bg)] border border-[var(--card-border)] overflow-hidden shrink-0 relative cursor-pointer group"
+                                        title="Clique para selecionar em lote"
+                                    >
                                         {f.imagem_url ? (
                                             <img src={f.imagem_url} alt="" className="w-full h-full object-cover" />
                                         ) : (
@@ -856,6 +1320,13 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
                                         {f.is_campanha_active && (
                                             <div className="absolute top-1 left-1 bg-green-500 w-2.5 h-2.5 rounded-full ring-2 ring-[var(--card-bg)]" title="Ativo na Vitrine" />
                                         )}
+                                        <div className={`absolute bottom-1 right-1 p-0.5 rounded-md transition-all ${
+                                            isSelected
+                                                ? 'bg-purple-600 text-white'
+                                                : 'bg-black/60 text-white/70 opacity-0 group-hover:opacity-100'
+                                        }`}>
+                                            {isSelected ? <CheckSquare size={12} /> : <Square size={12} />}
+                                        </div>
                                     </div>
 
                                     {/* Info & Controls */}
@@ -872,6 +1343,18 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
 
                                             {/* Action icons */}
                                             <div className="flex items-center gap-1 shrink-0">
+                                                <button
+                                                    onClick={() => handleToggleSelect(f.id)}
+                                                    title={isSelected ? 'Desmarcar peça' : 'Selecionar peça em lote'}
+                                                    className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                                                        isSelected
+                                                            ? 'bg-purple-600 text-white'
+                                                            : 'bg-zinc-500/10 text-zinc-400 hover:bg-purple-500/20 hover:text-purple-400'
+                                                    }`}
+                                                >
+                                                    {isSelected ? <CheckSquare size={14} /> : <Square size={14} />}
+                                                </button>
+
                                                 <button
                                                     onClick={() => handleSave(f, { is_campanha_active: !f.is_campanha_active })}
                                                     disabled={!canEdit || savingId === f.id}
@@ -934,7 +1417,8 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>

@@ -290,19 +290,6 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
                         <label className="flex items-center gap-2.5 select-none cursor-pointer">
                             <input
                                 type="checkbox"
-                                className="accent-amber-500 w-4 h-4 rounded-md border-white/10"
-                                checked={filters.prontaEntrega === 'true'}
-                                onChange={(e) => onChange({ ...filters, prontaEntrega: e.target.checked ? 'true' : undefined })}
-                            />
-                            <span className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                                <Zap size={13} className="fill-amber-400" />
-                                Apenas Pronta Entrega (Envio 24h)
-                            </span>
-                        </label>
-
-                        <label className="flex items-center gap-2.5 select-none cursor-pointer">
-                            <input
-                                type="checkbox"
                                 className="accent-orange-500 w-4 h-4 rounded-md border-white/10"
                                 checked={filters.incluirNaoVendaveis === 'true'}
                                 onChange={(e) => onChange({ ...filters, incluirNaoVendaveis: e.target.checked ? 'true' : 'false' })}

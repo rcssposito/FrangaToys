@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { FiltersSchema, FiguraDTO } from '@/lib/dto';
 import { calculateFigurePrices } from '@/lib/pricing';
 
@@ -29,6 +29,38 @@ export async function GET(req: NextRequest) {
         const categoryJoin = shouldFilterCategory ? 'categorias:categorias!inner' : 'categorias:categorias';
         const isCampanhaActive = searchParams.get('campanha') === 'true';
         const metaJoin = (isCampanhaActive || filters.sizeRange) ? 'figuras_meta!inner' : 'figuras_meta';
+
+        let campaignEndAt: string | null = null;
+        if (isCampanhaActive) {
+            const { data: timerRow } = await supabaseAdmin
+                .from('cupoms_desconto')
+                .select('data_validade')
+                .eq('codigo', '__CAMPANHA_TIMER__')
+                .maybeSingle();
+
+            if (timerRow?.data_validade) {
+                const endTime = new Date(timerRow.data_validade).getTime();
+                if (endTime <= Date.now()) {
+                    await supabaseAdmin
+                        .from('figuras_meta')
+                        .update({ is_campanha_active: false })
+                        .eq('is_campanha_active', true);
+
+                    await supabaseAdmin
+                        .from('cupoms_desconto')
+                        .update({ data_validade: null })
+                        .eq('codigo', '__CAMPANHA_TIMER__');
+
+                    return NextResponse.json({
+                        items: [],
+                        total: 0,
+                        campaignEndAt: null
+                    });
+                } else {
+                    campaignEndAt = timerRow.data_validade;
+                }
+            }
+        }
 
         let query = supabase
             .from('figuras')
@@ -192,7 +224,9 @@ export async function GET(req: NextRequest) {
         }
 
         if (isCampanhaActive) {
-            query = query.eq('figuras_meta.is_campanha', true);
+            query = query
+                .eq('figuras_meta.is_campanha', true)
+                .eq('figuras_meta.is_campanha_active', true);
         }
 
         // --- Sorting ---
@@ -327,10 +361,11 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ 
             items: paginatedItems, 
             nextCursor: nextPage,
-            total: totalItemsCount
+            total: totalItemsCount,
+            ...(isCampanhaActive ? { campaignEndAt } : {})
         }, {
             headers: {
-                'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+                'Cache-Control': isCampanhaActive ? 'no-store' : 'public, s-maxage=60, stale-while-revalidate=120',
             },
         });
 
