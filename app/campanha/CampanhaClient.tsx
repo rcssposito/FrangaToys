@@ -1,14 +1,32 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
-import { Flame, MoveLeft, Loader2, Search, Zap, ArrowUpDown, Tag, Sparkles, X, Clock } from 'lucide-react';
+import {
+  Flame,
+  MoveLeft,
+  Loader2,
+  Search,
+  Zap,
+  ArrowUpDown,
+  X,
+  Boxes,
+  Swords,
+  Gamepad2,
+  Shield,
+  Shuffle,
+  LayoutGrid
+} from 'lucide-react';
 import Header from '@/components/common/Header';
 import { FigureCard } from '@/components/Gallery/FigureCard';
 import { FiguraDTO } from '@/lib/dto';
+import { BackToTop } from '@/components/ui/BackToTop';
 
 type SortOption = 'default' | 'price-asc' | 'price-desc' | 'discount-desc' | 'name-asc';
-type QuickFilter = 'all' | 'pronta-entrega' | 'under-250' | 'under-400';
+type QuickFilter = 'all' | 'pronta-entrega' | 'under-250' | 'under-400' | 'under-600';
+
+const CATEGORIES = ['Anime', 'Games', 'Marvel', 'DC', 'Random', 'Outros'];
+const PAGE_BATCH_SIZE = 60;
 
 export default function CampanhaClient() {
   const [items, setItems] = useState<FiguraDTO[]>([]);
@@ -16,15 +34,20 @@ export default function CampanhaClient() {
   const [campaignEndAt, setCampaignEndAt] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
 
-  // Search & Filter state
+  // Search, Category & Filter state
   const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('default');
+
+  // Progressive rendering for large campaigns (>1000 items)
+  const [visibleCount, setVisibleCount] = useState(PAGE_BATCH_SIZE);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const fetchCampaign = async () => {
       try {
-        const res = await fetch('/api/figuras?campanha=true&limit=100', {
+        const res = await fetch('/api/figuras?campanha=true&limit=10000', {
           cache: 'no-store'
         });
         if (!res.ok) throw new Error('Falha ao carregar');
@@ -86,14 +109,31 @@ export default function CampanhaClient() {
            0;
   };
 
-  // Counts for quick chips
+  // Counts per Category & Pronta Entrega
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { Todos: items.length };
+    for (const cat of CATEGORIES) {
+      counts[cat] = 0;
+    }
+    for (const item of items) {
+      const cat = item.categoria || 'Outros';
+      counts[cat] = (counts[cat] || 0) + 1;
+    }
+    return counts;
+  }, [items]);
+
   const prontaEntregaCount = useMemo(() => {
     return items.filter(i => Boolean(i.pronta_entrega)).length;
   }, [items]);
 
-  // Filter & sort pipeline
+  // Filter & sort pipeline across ALL campaign items (no 1000 limit)
   const filteredItems = useMemo(() => {
     let result = [...items];
+
+    // Category filter
+    if (selectedCategory && selectedCategory !== 'Todos') {
+      result = result.filter(item => (item.categoria || 'Outros') === selectedCategory);
+    }
 
     // Text search
     if (search.trim()) {
@@ -101,7 +141,8 @@ export default function CampanhaClient() {
       result = result.filter(item => 
         item.nome?.toLowerCase().includes(q) ||
         item.serie?.toLowerCase().includes(q) ||
-        item.studio?.toLowerCase().includes(q)
+        item.studio?.toLowerCase().includes(q) ||
+        item.categoria?.toLowerCase().includes(q)
       );
     }
 
@@ -118,6 +159,11 @@ export default function CampanhaClient() {
         const p = getItemPrice(i);
         return p > 0 && p <= 400;
       });
+    } else if (quickFilter === 'under-600') {
+      result = result.filter(i => {
+        const p = getItemPrice(i);
+        return p > 0 && p <= 600;
+      });
     }
 
     // Sorting
@@ -132,14 +178,50 @@ export default function CampanhaClient() {
     }
 
     return result;
-  }, [items, search, quickFilter, sortBy]);
+  }, [items, selectedCategory, search, quickFilter, sortBy]);
 
-  const hasActiveFilters = search.trim() !== '' || quickFilter !== 'all' || sortBy !== 'default';
+  // Reset progressive visible slice when filters change
+  useEffect(() => {
+    setVisibleCount(PAGE_BATCH_SIZE);
+  }, [selectedCategory, search, quickFilter, sortBy]);
+
+  // Infinite Scroll Observer for smooth DOM rendering
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + PAGE_BATCH_SIZE, filteredItems.length));
+        }
+      },
+      { rootMargin: '400px' }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [filteredItems.length]);
+
+  const visibleItems = useMemo(() => {
+    return filteredItems.slice(0, visibleCount);
+  }, [filteredItems, visibleCount]);
+
+  const hasActiveFilters =
+    selectedCategory !== 'Todos' ||
+    search.trim() !== '' ||
+    quickFilter !== 'all' ||
+    sortBy !== 'default';
 
   const handleClearFilters = () => {
+    setSelectedCategory('Todos');
     setSearch('');
     setQuickFilter('all');
     setSortBy('default');
+  };
+
+  const toggleCategory = (cat: string) => {
+    setSelectedCategory(prev => (prev === cat ? 'Todos' : cat));
   };
 
   return (
@@ -229,6 +311,72 @@ export default function CampanhaClient() {
           )}
         </div>
 
+        {/* Category Buttons Bar (Igual ao padrão da Galeria Principal) */}
+        <div className="mb-5 bg-zinc-950/50 backdrop-blur-md border border-zinc-800/80 rounded-2xl p-1.5 shadow-xl flex items-center gap-1 overflow-x-auto scrollbar-none">
+          <button
+            onClick={() => setSelectedCategory('Todos')}
+            className={`flex-1 min-w-[95px] flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative border cursor-pointer shrink-0 ${
+              selectedCategory === 'Todos'
+                ? 'bg-zinc-900/80 text-purple-400 border-purple-500/20 shadow-inner'
+                : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <Boxes size={14} className={selectedCategory === 'Todos' ? 'text-purple-400' : 'text-zinc-500'} />
+            <span>Todos ({categoryCounts.Todos || 0})</span>
+            {selectedCategory === 'Todos' && (
+              <span className="absolute bottom-0 left-1/4 right-1/4 h-[2px] bg-purple-500 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.8)]" />
+            )}
+          </button>
+
+          {CATEGORIES.map((cat) => {
+            const isActive = selectedCategory === cat;
+            const count = categoryCounts[cat] || 0;
+            let IconComponent = LayoutGrid;
+            if (cat === 'Anime') IconComponent = Swords;
+            else if (cat === 'Games') IconComponent = Gamepad2;
+            else if (cat === 'Marvel') IconComponent = Shield;
+            else if (cat === 'DC') IconComponent = Zap;
+            else if (cat === 'Random') IconComponent = Shuffle;
+            else if (cat === 'Outros') IconComponent = Boxes;
+
+            return (
+              <button
+                key={cat}
+                onClick={() => toggleCategory(cat)}
+                className={`flex-1 min-w-[95px] flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative border cursor-pointer shrink-0 ${
+                  isActive
+                    ? 'bg-zinc-900/80 text-purple-400 border-purple-500/20 shadow-inner'
+                    : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                <IconComponent size={14} className={isActive ? 'text-purple-400' : 'text-zinc-500'} />
+                <span>{cat} ({count})</span>
+                {isActive && (
+                  <span className="absolute bottom-0 left-1/4 right-1/4 h-[2px] bg-purple-500 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.8)]" />
+                )}
+              </button>
+            );
+          })}
+
+          {prontaEntregaCount > 0 && (
+            <>
+              <div className="w-px h-6 bg-white/10 mx-1 shrink-0" />
+              <button
+                onClick={() => setQuickFilter(quickFilter === 'pronta-entrega' ? 'all' : 'pronta-entrega')}
+                className={`flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative border shrink-0 cursor-pointer ${
+                  quickFilter === 'pronta-entrega'
+                    ? 'bg-amber-500 text-black border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.35)]'
+                    : 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20 hover:border-amber-500/40'
+                }`}
+                title="Exibir apenas peças em estoque com envio em até 24h"
+              >
+                <Zap size={14} className={quickFilter === 'pronta-entrega' ? 'fill-black text-black' : 'fill-amber-400 text-amber-400'} />
+                <span>Pronta Entrega ({prontaEntregaCount})</span>
+              </button>
+            </>
+          )}
+        </div>
+
         {/* Filter and Search Bar */}
         <div className="space-y-4 mb-8">
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-zinc-900/40 border border-zinc-800/80 p-3 sm:p-4 rounded-2xl">
@@ -274,7 +422,7 @@ export default function CampanhaClient() {
             </div>
           </div>
 
-          {/* Quick Filter Chips */}
+          {/* Quick Price Filter Chips */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             <button
               onClick={() => setQuickFilter('all')}
@@ -284,22 +432,8 @@ export default function CampanhaClient() {
                   : 'bg-zinc-900/60 hover:bg-zinc-800 text-zinc-400 border border-zinc-800'
               }`}
             >
-              Todas ({items.length})
+              Todos os Preços
             </button>
-
-            {prontaEntregaCount > 0 && (
-              <button
-                onClick={() => setQuickFilter(quickFilter === 'pronta-entrega' ? 'all' : 'pronta-entrega')}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-                  quickFilter === 'pronta-entrega'
-                    ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 font-black'
-                    : 'bg-zinc-900/60 hover:bg-zinc-800 text-amber-400 border border-amber-500/30'
-                }`}
-              >
-                <Zap size={12} className={quickFilter === 'pronta-entrega' ? 'fill-black' : 'fill-amber-400'} />
-                Pronta Entrega ({prontaEntregaCount})
-              </button>
-            )}
 
             <button
               onClick={() => setQuickFilter(quickFilter === 'under-250' ? 'all' : 'under-250')}
@@ -321,6 +455,17 @@ export default function CampanhaClient() {
               }`}
             >
               Até R$ 400
+            </button>
+
+            <button
+              onClick={() => setQuickFilter(quickFilter === 'under-600' ? 'all' : 'under-600')}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                quickFilter === 'under-600'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20'
+                  : 'bg-zinc-900/60 hover:bg-zinc-800 text-zinc-400 border border-zinc-800'
+              }`}
+            >
+              Até R$ 600
             </button>
 
             {hasActiveFilters && (
@@ -369,7 +514,10 @@ export default function CampanhaClient() {
         ) : (
           <div>
             <div className="flex items-center justify-between text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 px-1">
-              <span>Mostrando {filteredItems.length} de {items.length} peças</span>
+              <span>
+                Mostrando {filteredItems.length} de {items.length} peças
+                {selectedCategory !== 'Todos' ? ` • Categoria: ${selectedCategory}` : ''}
+              </span>
               {quickFilter === 'pronta-entrega' && (
                 <span className="text-amber-400 flex items-center gap-1">
                   <Zap size={12} className="fill-amber-400" /> Somente Pronta Entrega
@@ -378,13 +526,24 @@ export default function CampanhaClient() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-              {filteredItems.map((item, index) => (
+              {visibleItems.map((item, index) => (
                 <FigureCard key={item.id} figure={item} priority={index < 4} />
               ))}
             </div>
+
+            {visibleCount < filteredItems.length && (
+              <div ref={loadMoreRef} className="py-10 flex flex-col items-center justify-center gap-2">
+                <Loader2 className="animate-spin text-purple-500" size={24} />
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                  Exibindo {visibleCount} de {filteredItems.length} ofertas...
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      <BackToTop />
     </div>
   );
 }

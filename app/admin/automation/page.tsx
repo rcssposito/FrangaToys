@@ -31,10 +31,12 @@ import {
     Pencil,
     Disc,
     Cpu,
+    ShieldCheck,
     Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ArchivePreviewModal from '@/components/Admin/ArchivePreviewModal';
+import HealthCheckPanel from '@/components/Admin/HealthCheckPanel';
 
 const BaseArtGenerator = dynamic(
     () => import('@/components/Admin/BaseArtGenerator/BaseArtGenerator'),
@@ -70,14 +72,19 @@ interface AnalyzedItem {
 
 function AutomationPageContent() {
     const searchParams = useSearchParams();
-    const [currentTab, setCurrentTab] = useState<'automation' | 'base'>(() => {
-        return searchParams?.get('tab') === 'base' ? 'base' : 'automation';
+    const [currentTab, setCurrentTab] = useState<'automation' | 'base' | 'health'>(() => {
+        const t = searchParams?.get('tab');
+        if (t === 'base') return 'base';
+        if (t === 'health') return 'health';
+        return 'automation';
     });
 
     useEffect(() => {
         const tab = searchParams?.get('tab');
         if (tab === 'base') {
             setCurrentTab('base');
+        } else if (tab === 'health') {
+            setCurrentTab('health');
         } else if (tab === 'automation') {
             setCurrentTab('automation');
         }
@@ -183,7 +190,7 @@ function AutomationPageContent() {
             }));
 
             setAnalyzedItems(items);
-            addLog(`Análise concluída para ${items.length} itens.`);
+            addLog(`Análise concluída para ${items.length} itens (Modelo: ${data.modelUsed || 'Gemini'}).`);
             toast.success('Propostas geradas!');
         } catch (err: any) {
             addLog(`Erro na análise: ${err.message}`);
@@ -352,6 +359,8 @@ function AutomationPageContent() {
                         <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-white">
                             {currentTab === 'base' ? (
                                 <>Gerador de <span className="text-orange-500">Base</span></>
+                            ) : currentTab === 'health' ? (
+                                <>Health <span className="text-orange-500">Check</span></>
                             ) : (
                                 <>Automação de <span className="text-orange-500">Catálogo</span></>
                             )}
@@ -359,13 +368,15 @@ function AutomationPageContent() {
                         <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-1 opacity-80">
                             {currentTab === 'base'
                                 ? 'Recorte milimétrico de arte e silhueta STL para adesivo de base 1:1.'
+                                : currentTab === 'health'
+                                ? 'Radar de vulnerabilidades CVE, status ao vivo dos modelos de IA e diagnóstico da esteira.'
                                 : 'Triagem local, prévia de compactados e sincronização do acervo.'}
                         </p>
                     </div>
                 </div>
 
                 {/* Abas Superiores */}
-                <div className="flex items-center gap-1.5 p-1.5 bg-zinc-950/80 border border-zinc-800 rounded-2xl w-fit">
+                <div className="flex items-center gap-1.5 p-1.5 bg-zinc-950/80 border border-zinc-800 rounded-2xl w-fit flex-wrap">
                     <button
                         onClick={() => setCurrentTab('automation')}
                         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
@@ -388,12 +399,27 @@ function AutomationPageContent() {
                         <Disc size={15} />
                         <span>Gerador de Base</span>
                     </button>
+                    <button
+                        onClick={() => setCurrentTab('health')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                            currentTab === 'health'
+                                ? 'bg-orange-500 text-black shadow-lg shadow-orange-500/20'
+                                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                        }`}
+                    >
+                        <ShieldCheck size={15} />
+                        <span>Health Check</span>
+                    </button>
                 </div>
             </div>
 
             {currentTab === 'base' ? (
                 <div className="relative z-10 pt-2 animate-in fade-in duration-200">
                     <BaseArtGenerator />
+                </div>
+            ) : currentTab === 'health' ? (
+                <div className="relative z-10 pt-2">
+                    <HealthCheckPanel />
                 </div>
             ) : (
                 <>

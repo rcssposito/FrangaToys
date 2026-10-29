@@ -5,6 +5,132 @@ import { supabaseAdmin as supabase } from '@/lib/supabase';
 export const dynamic = 'force-dynamic';
 
 const TIMER_CODE = '__CAMPANHA_TIMER__';
+const PAGE_SIZE = 1000;
+
+/**
+ * Busca TODOS os IDs de figuras sem cair no limite de 1000 linhas do PostgREST/Supabase.
+ */
+async function fetchAllFigureIds(filters?: {
+    disponivelOnly?: boolean;
+    serieId?: number;
+    studioId?: number;
+}): Promise<number[]> {
+    let allIds: number[] = [];
+    let page = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+        let q = supabase
+            .from('figuras')
+            .select('id')
+            .order('id', { ascending: true })
+            .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+        if (filters?.disponivelOnly) {
+            q = q.eq('disponivel', true);
+        }
+        if (filters?.serieId !== undefined) {
+            q = q.eq('serie_id', filters.serieId);
+        }
+        if (filters?.studioId !== undefined) {
+            q = q.eq('studio_id', filters.studioId);
+        }
+
+        const { data, error } = await q;
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+            allIds.push(...data.map((r: any) => r.id));
+            if (data.length < PAGE_SIZE) {
+                hasMore = false;
+            } else {
+                page++;
+            }
+        } else {
+            hasMore = false;
+        }
+    }
+
+    return allIds;
+}
+
+/**
+ * Busca TODOS os figura_id de figuras_meta que satisfazem uma condição OR de campanha,
+ * paginando de 1000 em 1000 para superar o limite padrão do Supabase.
+ */
+async function fetchAllCampaignMetaIds(orFilter: string): Promise<number[]> {
+    let allIds: number[] = [];
+    let page = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+        const { data, error } = await supabase
+            .from('figuras_meta')
+            .select('figura_id')
+            .or(orFilter)
+            .order('figura_id', { ascending: true })
+            .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+            allIds.push(...data.map((r: any) => r.figura_id));
+            if (data.length < PAGE_SIZE) {
+                hasMore = false;
+            } else {
+                page++;
+            }
+        } else {
+            hasMore = false;
+        }
+    }
+
+    return allIds;
+}
+
+/**
+ * Atualiza figuras_meta em lotes seguros de 500 IDs por vez,
+ * criando o registro em figuras_meta caso alguma figura ainda não possua linha.
+ */
+async function updateMetaInBatches(
+    figureIds: number[],
+    payload: Record<string, any>,
+    ensureMissingRows = false
+): Promise<number> {
+    const batchSize = 500;
+    let updatedCount = 0;
+
+    for (let i = 0; i < figureIds.length; i += batchSize) {
+        const chunk = figureIds.slice(i, i + batchSize);
+        const { data: updatedRows, error } = await supabase
+            .from('figuras_meta')
+            .update(payload)
+            .in('figura_id', chunk)
+            .select('figura_id');
+
+        if (error) throw error;
+
+        if (ensureMissingRows) {
+            const existingSet = new Set((updatedRows || []).map((r: any) => Number(r.figura_id)));
+            const missingIds = chunk.filter((id) => !existingSet.has(Number(id)));
+
+            if (missingIds.length > 0) {
+                const rowsToInsert = missingIds.map((figura_id) => ({
+                    figura_id,
+                    ...payload,
+                }));
+                const { error: insertErr } = await supabase
+                    .from('figuras_meta')
+                    .insert(rowsToInsert);
+                if (insertErr) throw insertErr;
+            }
+        }
+
+        updatedCount += chunk.length;
+    }
+
+    return updatedCount;
+}
 
 async function getOrExpireCampaignTimer(): Promise<string | null> {
     const { data } = await supabase
@@ -97,72 +223,53 @@ export async function PUT(req: Request) {
             });
         }
 
-        // Ações de Pausar / Retomar tudo sem zerar os descontos
+        // Ações de Pausar / Retomar tudo sem zerar os descontos (sem limite de 1000 linhas)
         if (action === 'pause-all') {
-            const [{ data, error }] = await Promise.all([
-                supabase
-                    .from('figuras_meta')
-                    .update({ is_campanha_active: false })
-                    .or('is_campanha.eq.true,desconto_campanha.gt.0,preco_fixo_campanha.gt.0')
-                    .select('figura_id'),
+            const targetIds = await fetchAllCampaignMetaIds('is_campanha.eq.true,is_campanha_active.eq.true,desconto_campanha.gt.0,preco_fixo_campanha.gt.0');
+            const [updatedCount] = await Promise.all([
+                updateMetaInBatches(targetIds, { is_campanha_active: false }),
                 setCampaignTimer(null)
             ]);
 
-            if (error) throw error;
-            return NextResponse.json({ success: true, count: data?.length || 0, message: 'Todas as promoções foram pausadas.' });
+            return NextResponse.json({
+                success: true,
+                count: updatedCount,
+                message: `Todas as ${updatedCount} promoções foram pausadas.`
+            });
         }
 
         if (action === 'resume-all') {
-            const { data, error } = await supabase
-                .from('figuras_meta')
-                .update({ is_campanha_active: true, is_campanha: true })
-                .or('desconto_campanha.gt.0,preco_fixo_campanha.gt.0')
-                .select('figura_id');
+            const targetIds = await fetchAllCampaignMetaIds('is_campanha.eq.true,desconto_campanha.gt.0,preco_fixo_campanha.gt.0');
+            const updatedCount = await updateMetaInBatches(targetIds, {
+                is_campanha_active: true,
+                is_campanha: true
+            });
 
-            if (error) throw error;
-            return NextResponse.json({ success: true, count: data?.length || 0, message: 'Todas as promoções foram reativadas.' });
+            return NextResponse.json({
+                success: true,
+                count: updatedCount,
+                message: `Todas as ${updatedCount} promoções foram reativadas.`
+            });
         }
 
-        // Validação de desconto
-        if (discount === undefined) {
-            return NextResponse.json({ error: 'Parâmetro discount é obrigatório.' }, { status: 400 });
-        }
-
-        const disc = Number(discount);
-        if (isNaN(disc) || disc < 0 || disc > 100) {
+        // Validação de desconto (Modo Black Friday força 30% em tudo sem exceção)
+        const disc = applyAll ? 30 : Number(discount);
+        if (!applyAll && (discount === undefined || isNaN(disc) || disc < 0 || disc > 100)) {
             return NextResponse.json({ error: 'Porcentagem de desconto inválida (0 a 100).' }, { status: 400 });
         }
 
         let targetFigureIds: number[] = [];
 
         if (applyAll) {
-            // Aplicar na loja toda (todas as figuras disponíveis)
-            const { data: figures, error: figError } = await supabase
-                .from('figuras')
-                .select('id')
-                .eq('disponivel', true);
-
-            if (figError) throw figError;
-            targetFigureIds = (figures || []).map(f => f.id);
+            // Modo Black Friday: TODAS as figuras da loja sem exceção (ativas, inativas, qualquer estúdio)
+            targetFigureIds = await fetchAllFigureIds();
         } else if (Array.isArray(figureIds) && figureIds.length > 0) {
             // Aplicar em figuras selecionadas
             targetFigureIds = figureIds.map(Number).filter(id => !isNaN(id));
         } else if (serieId !== undefined && serieId !== '') {
-            const { data: figures, error: figError } = await supabase
-                .from('figuras')
-                .select('id')
-                .eq('serie_id', Number(serieId));
-
-            if (figError) throw figError;
-            targetFigureIds = (figures || []).map(f => f.id);
+            targetFigureIds = await fetchAllFigureIds({ serieId: Number(serieId) });
         } else if (studioId !== undefined && studioId !== '') {
-            const { data: figures, error: figError } = await supabase
-                .from('figuras')
-                .select('id')
-                .eq('studio_id', Number(studioId));
-
-            if (figError) throw figError;
-            targetFigureIds = (figures || []).map(f => f.id);
+            targetFigureIds = await fetchAllFigureIds({ studioId: Number(studioId) });
         } else {
             return NextResponse.json({ 
                 error: 'Informe studioId, serieId, figureIds ou applyAll: true.' 
@@ -173,24 +280,16 @@ export async function PUT(req: Request) {
             return NextResponse.json({ success: true, count: 0, message: 'Nenhuma figura elegível encontrada.' });
         }
 
-        // Atualizar figuras_meta em massa em batches de 500 para segurança
-        const batchSize = 500;
-        let updatedCount = 0;
-
-        for (let i = 0; i < targetFigureIds.length; i += batchSize) {
-            const chunk = targetFigureIds.slice(i, i + batchSize);
-            const { error: metaError } = await supabase
-                .from('figuras_meta')
-                .update({
-                    is_campanha: true,
-                    is_campanha_active: true,
-                    desconto_campanha: disc
-                })
-                .in('figura_id', chunk);
-
-            if (metaError) throw metaError;
-            updatedCount += chunk.length;
-        }
+        const updatedCount = await updateMetaInBatches(
+            targetFigureIds,
+            {
+                is_campanha: true,
+                is_campanha_active: true,
+                desconto_campanha: disc,
+                preco_fixo_campanha: 0
+            },
+            true
+        );
 
         return NextResponse.json({ success: true, count: updatedCount });
     } catch (error: any) {
@@ -224,45 +323,36 @@ export async function DELETE(req: Request) {
             // Sem corpo json, continua com searchParams
         }
 
-        // 1. ZERAR TUDO (KILL-SWITCH GERAL / RESET DE BLACK FRIDAY)
+        // 1. ZERAR TUDO (KILL-SWITCH GERAL / RESET DE BLACK FRIDAY - Sem limite de 1000)
         if (clearAll) {
-            const [{ data, error }] = await Promise.all([
-                supabase
-                    .from('figuras_meta')
-                    .update({
-                        is_campanha: false,
-                        is_campanha_active: false,
-                        desconto_campanha: 0,
-                        preco_fixo_campanha: 0
-                    })
-                    .or('is_campanha.eq.true,is_campanha_active.eq.true,desconto_campanha.gt.0,preco_fixo_campanha.gt.0')
-                    .select('figura_id'),
+            const targetIds = await fetchAllCampaignMetaIds('is_campanha.eq.true,is_campanha_active.eq.true,desconto_campanha.gt.0,preco_fixo_campanha.gt.0');
+            const [updatedCount] = await Promise.all([
+                updateMetaInBatches(targetIds, {
+                    is_campanha: false,
+                    is_campanha_active: false,
+                    desconto_campanha: 0,
+                    preco_fixo_campanha: 0
+                }),
                 setCampaignTimer(null)
             ]);
 
-            if (error) throw error;
             return NextResponse.json({ 
                 success: true, 
-                count: data?.length || 0,
+                count: updatedCount,
                 message: 'Todas as promoções e descontos foram removidos com sucesso!' 
             });
         }
 
         // 2. Por lista de IDs específicos
         if (figureIds && figureIds.length > 0) {
-            const { data, error } = await supabase
-                .from('figuras_meta')
-                .update({
-                    is_campanha: false,
-                    is_campanha_active: false,
-                    desconto_campanha: 0,
-                    preco_fixo_campanha: 0
-                })
-                .in('figura_id', figureIds)
-                .select('figura_id');
+            const updatedCount = await updateMetaInBatches(figureIds, {
+                is_campanha: false,
+                is_campanha_active: false,
+                desconto_campanha: 0,
+                preco_fixo_campanha: 0
+            });
 
-            if (error) throw error;
-            return NextResponse.json({ success: true, count: data?.length || 0 });
+            return NextResponse.json({ success: true, count: updatedCount });
         }
 
         // 3. Por Estúdio ou Série
@@ -272,35 +362,23 @@ export async function DELETE(req: Request) {
             }, { status: 400 });
         }
 
-        let query = supabase.from('figuras').select('id');
-        if (serieId) {
-            query = query.eq('serie_id', Number(serieId));
-        } else if (studioId) {
-            query = query.eq('studio_id', Number(studioId));
-        }
+        const ids = await fetchAllFigureIds({
+            ...(serieId ? { serieId: Number(serieId) } : {}),
+            ...(studioId ? { studioId: Number(studioId) } : {}),
+        });
 
-        const { data: figures, error: figError } = await query;
-        if (figError) throw figError;
-
-        if (!figures || figures.length === 0) {
+        if (ids.length === 0) {
             return NextResponse.json({ success: true, count: 0, message: 'Nenhuma figura encontrada.' });
         }
 
-        const ids = figures.map(f => f.id);
+        const updatedCount = await updateMetaInBatches(ids, {
+            is_campanha: false,
+            is_campanha_active: false,
+            desconto_campanha: 0,
+            preco_fixo_campanha: 0
+        });
 
-        const { error: metaError } = await supabase
-            .from('figuras_meta')
-            .update({
-                is_campanha: false,
-                is_campanha_active: false,
-                desconto_campanha: 0,
-                preco_fixo_campanha: 0
-            })
-            .in('figura_id', ids);
-
-        if (metaError) throw metaError;
-
-        return NextResponse.json({ success: true, count: ids.length });
+        return NextResponse.json({ success: true, count: updatedCount });
     } catch (error: any) {
         console.error('Error removing bulk campaign discount:', error);
         return NextResponse.json({ error: error.message || 'Erro interno do servidor' }, { status: 500 });

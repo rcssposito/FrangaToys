@@ -23,7 +23,12 @@ interface CampaignFigure {
     studios?: { nome: string };
     serie_id?: number;
     serie?: string;
+    categoria?: string;
+    categoria_id?: number;
 }
+
+const CAMPAIGN_CATEGORIES = ['Anime', 'Games', 'Marvel', 'DC', 'Random', 'Outros'];
+const PANEL_BATCH_SIZE = 100;
 
 interface CampaignManagerProps {
     hideHeader?: boolean;
@@ -70,20 +75,22 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
 
     // Filter Panel State (right side)
     const [panelSearch, setPanelSearch] = useState('');
+    const [filterCategory, setFilterCategory] = useState<string>('Todos');
     const [filterStudio, setFilterStudio] = useState('');
     const [filterSerie, setFilterSerie] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
+    const [visiblePanelCount, setVisiblePanelCount] = useState(PANEL_BATCH_SIZE);
 
     // Control Tab (Left Column)
     const [activeTab, setActiveTab] = useState<'series' | 'studio' | 'global'>('global');
 
-    // Fetch Studios
+    // Fetch Studios (Todos, sem filtrar por ativo)
     const fetchStudios = useCallback(async () => {
         try {
             const res = await fetch('/api/admin/studios');
             if (res.ok) {
                 const data = await res.json();
-                setStudios(data.filter((s: any) => s.ativo));
+                setStudios(data);
             }
         } catch (e) {
             console.error('Erro ao carregar estúdios:', e);
@@ -132,7 +139,7 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
     const fetchFigures = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await fetch(`/api/admin/figures?campanha=true&limit=1000`);
+            const res = await fetch(`/api/admin/figures?campanha=true&limit=10000`);
             if (!res.ok) throw new Error('Falha ao carregar figuras');
             const data = await res.json();
             setAllFigures(data.items);
@@ -154,9 +161,22 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
         return allFigures.filter(f => f.is_campanha || f.is_campanha_active || f.preco_fixo_campanha > 0 || f.desconto_campanha > 0);
     }, [allFigures]);
 
+    const categoryCounts = useMemo(() => {
+        const counts: Record<string, number> = { Todos: campaignFigures.length };
+        for (const cat of CAMPAIGN_CATEGORIES) counts[cat] = 0;
+        for (const f of campaignFigures) {
+            const cat = f.categoria || 'Outros';
+            counts[cat] = (counts[cat] || 0) + 1;
+        }
+        return counts;
+    }, [campaignFigures]);
+
     // Filtered Figures for Panel
     const filteredCampaignFigures = useMemo(() => {
         return campaignFigures.filter(f => {
+            if (filterCategory && filterCategory !== 'Todos') {
+                if ((f.categoria || 'Outros') !== filterCategory) return false;
+            }
             if (panelSearch) {
                 const searchLower = panelSearch.toLowerCase();
                 const matchName = f.nome.toLowerCase().includes(searchLower);
@@ -170,7 +190,15 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
             if (filterStatus === 'inactive' && f.is_campanha_active) return false;
             return true;
         });
-    }, [campaignFigures, panelSearch, filterStudio, filterSerie, filterStatus]);
+    }, [campaignFigures, filterCategory, panelSearch, filterStudio, filterSerie, filterStatus]);
+
+    useEffect(() => {
+        setVisiblePanelCount(PANEL_BATCH_SIZE);
+    }, [filterCategory, panelSearch, filterStudio, filterSerie, filterStatus]);
+
+    const visibleCampaignFigures = useMemo(() => {
+        return filteredCampaignFigures.slice(0, visiblePanelCount);
+    }, [filteredCampaignFigures, visiblePanelCount]);
 
     // Summary Stats
     const stats = useMemo(() => {
@@ -308,22 +336,18 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
         }
     };
 
-    // 2. MODO BLACK FRIDAY - APLICAR NA LOJA TODA
+    // 2. MODO BLACK FRIDAY - APLICAR 30% EM TODA A LOJA SEM EXCEÇÃO
     const handleApplyStorewideDiscount = async () => {
         if (!canEdit) return;
-        const desc = Number(bulkDiscount);
-        if (isNaN(desc) || desc <= 0 || desc > 100) {
-            toast.error('Insira uma porcentagem válida entre 1 e 100.');
-            return;
-        }
+        const desc = 30;
 
         const confirm = window.confirm(
-            `🚀 MODO BLACK FRIDAY:\n\nDeseja aplicar ${desc}% de desconto em TODAS as figuras disponíveis da loja?`
+            `🚀 MODO BLACK FRIDAY (30% OFF):\n\nDeseja aplicar 30% de desconto em TODAS as figuras da loja sem exceção?`
         );
         if (!confirm) return;
 
         setIsApplyingGlobal(true);
-        toast.loading(`Aplicando ${desc}% em toda a loja...`, { id: 'storewide' });
+        toast.loading(`Aplicando 30% em toda a loja...`, { id: 'storewide' });
 
         try {
             const res = await fetch('/api/admin/figures/bulk-campaign', {
@@ -334,7 +358,7 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Erro ao aplicar desconto');
 
-            toast.success(`Modo Black Friday ativado! ${data.count} peças atualizadas com ${desc}% OFF.`, { id: 'storewide' });
+            toast.success(`Modo Black Friday ativado! ${data.count} peças atualizadas com 30% OFF.`, { id: 'storewide' });
             setBulkDiscount('');
             fetchFigures();
         } catch (e: any) {
@@ -948,11 +972,11 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
 
                                     <button
                                         onClick={handleApplyStorewideDiscount}
-                                        disabled={!canEdit || isApplyingGlobal || !bulkDiscount}
+                                        disabled={!canEdit || isApplyingGlobal}
                                         className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:opacity-40 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-600/20 active:scale-95 cursor-pointer"
                                     >
                                         {isApplyingGlobal ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
-                                        Loja Toda (Modo Black Friday)
+                                        Loja Toda (Modo Black Friday • 30% OFF)
                                     </button>
                                 </div>
 
@@ -1132,6 +1156,37 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
                 {/* RIGHT COLUMN: Interactive Campaign Figures List */}
                 <div className="xl:col-span-8 space-y-4">
                     
+                    {/* Category Filter Buttons */}
+                    <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-1.5 rounded-2xl shadow-sm flex items-center gap-1 overflow-x-auto scrollbar-none">
+                        <button
+                            onClick={() => setFilterCategory('Todos')}
+                            className={`flex-1 min-w-[90px] py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                                filterCategory === 'Todos'
+                                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                                    : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--input-bg)]'
+                            }`}
+                        >
+                            Todos ({categoryCounts.Todos || 0})
+                        </button>
+                        {CAMPAIGN_CATEGORIES.map(cat => {
+                            const isActive = filterCategory === cat;
+                            const count = categoryCounts[cat] || 0;
+                            return (
+                                <button
+                                    key={cat}
+                                    onClick={() => setFilterCategory(prev => prev === cat ? 'Todos' : cat)}
+                                    className={`flex-1 min-w-[90px] py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                                        isActive
+                                            ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                                            : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--input-bg)]'
+                                    }`}
+                                >
+                                    {cat} ({count})
+                                </button>
+                            );
+                        })}
+                    </div>
+
                     {/* Filters Toolbar */}
                     <div className="bg-[var(--card-bg)] border border-[var(--card-border)] p-4 rounded-2xl shadow-sm flex flex-col md:flex-row items-center gap-3">
                         <div className="relative flex-1 w-full">
@@ -1290,8 +1345,18 @@ export default function CampaignManager({ hideHeader = false }: CampaignManagerP
                             </p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[750px] overflow-y-auto pr-1">
-                            {filteredCampaignFigures.map(f => {
+                        <div
+                            className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[750px] overflow-y-auto pr-1"
+                            onScroll={(e) => {
+                                const el = e.currentTarget;
+                                if (el.scrollTop + el.clientHeight >= el.scrollHeight - 250) {
+                                    if (visiblePanelCount < filteredCampaignFigures.length) {
+                                        setVisiblePanelCount(prev => Math.min(prev + PANEL_BATCH_SIZE, filteredCampaignFigures.length));
+                                    }
+                                }
+                            }}
+                        >
+                            {visibleCampaignFigures.map(f => {
                                 const isSelected = selectedIds.includes(f.id);
                                 return (
                                 <div

@@ -514,8 +514,8 @@ export default function StudiosBI() {
                                                     <Scatter 
                                                         data={categorizedStudios} 
                                                         fill="#3b82f6" 
-                                                        onClick={(e) => setActiveStudioName(e.nome)}
-                                                        onMouseEnter={(e) => setActiveStudioName(e.nome)}
+                                                        onClick={(e: any) => setActiveStudioName(e.nome)}
+                                                        onMouseEnter={(e: any) => setActiveStudioName(e.nome)}
                                                         className="cursor-pointer"
                                                     >
                                                         {categorizedStudios.map((entry, index) => {

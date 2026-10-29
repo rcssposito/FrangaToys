@@ -2,6 +2,21 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function updateSession(request: NextRequest) {
+    const pathname = request.nextUrl.pathname;
+
+    // Fast-path (0ms): Rotas de API validam sessão internamente (requireRoles) e páginas públicas da vitrine não precisam bloquear no Auth
+    if (!pathname.startsWith('/admin') && !pathname.startsWith('/auth')) {
+        return NextResponse.next();
+    }
+
+    // Se acessar /admin (exceto /admin/login) e não tiver nenhum cookie sb- do Supabase, redireciona em 0ms sem roundtrip de rede
+    const hasSupabaseCookie = request.cookies.getAll().some(c => c.name.startsWith('sb-'));
+    if (!hasSupabaseCookie && pathname.startsWith('/admin') && pathname !== '/admin/login') {
+        const url = request.nextUrl.clone();
+        url.pathname = '/admin/login';
+        return NextResponse.redirect(url);
+    }
+
     let supabaseResponse = NextResponse.next({
         request,
     });
@@ -31,8 +46,6 @@ export async function updateSession(request: NextRequest) {
     const {
         data: { user },
     } = await supabase.auth.getUser();
-
-    const pathname = request.nextUrl.pathname;
 
     // Se usuário não está autenticado e tenta acessar rota interna do admin (exceto a tela de login)
     if (

@@ -17,6 +17,108 @@ const CATEGORY_FOLDER_MAP: Record<string, string> = {
     'Random': '04 - Random'
 };
 
+const GEMINI_MODELS_TO_TRY = [
+    'gemini-2.5-flash',
+    'gemini-3.6-flash',
+    'gemini-3.5-flash',
+    'gemini-3-flash-preview',
+    'gemini-3.1-flash-lite',
+    'gemini-3.5-flash-lite',
+];
+
+const GROQ_MODELS_TO_TRY = [
+    'openai/gpt-oss-120b',
+    'qwen/qwen3.8-27b',
+    'openai/gpt-oss-20b',
+    'allam-2-7b',
+];
+
+function cleanJsonArrayResponse(raw: string): string {
+    const trimmed = raw.trim();
+    // Remove blocos markdown ```json ... ``` se presentes
+    const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenceMatch && fenceMatch[1]) {
+        return fenceMatch[1].trim();
+    }
+    const startBracket = trimmed.indexOf('[');
+    const endBracket = trimmed.lastIndexOf(']');
+    if (startBracket !== -1 && endBracket !== -1 && endBracket > startBracket) {
+        return trimmed.slice(startBracket, endBracket + 1);
+    }
+    return trimmed;
+}
+
+async function generateAnalysisWithFallback(prompt: string, geminiKey?: string, groqKey?: string): Promise<{ rawJson: string; modelUsed: string }> {
+    const errors: string[] = [];
+
+    // 1. Tenta cascata de modelos oficiais do Gemini
+    if (geminiKey) {
+        for (const modelId of GEMINI_MODELS_TO_TRY) {
+            try {
+                const geminiRes = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${geminiKey}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: { responseMimeType: 'application/json' }
+                        })
+                    }
+                );
+
+                if (!geminiRes.ok) {
+                    const errText = await geminiRes.text();
+                    errors.push(`${modelId}: ${geminiRes.status}`);
+                    continue;
+                }
+
+                const geminiData = await geminiRes.json();
+                const rawJsonText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (rawJsonText) {
+                    return { rawJson: cleanJsonArrayResponse(rawJsonText), modelUsed: modelId };
+                }
+            } catch (err: any) {
+                errors.push(`${modelId}: ${err.message}`);
+            }
+        }
+    }
+
+    // 2. Fallback automático para Groq
+    if (groqKey) {
+        for (const groqModel of GROQ_MODELS_TO_TRY) {
+            try {
+                const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${groqKey}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: groqModel,
+                        messages: [{ role: 'user', content: prompt }],
+                        temperature: 0.2,
+                    }),
+                });
+
+                if (!groqRes.ok) {
+                    errors.push(`Groq(${groqModel}): ${groqRes.status}`);
+                    continue;
+                }
+
+                const groqData = await groqRes.json();
+                const content = groqData.choices?.[0]?.message?.content;
+                if (content) {
+                    return { rawJson: cleanJsonArrayResponse(content), modelUsed: `Groq (${groqModel})` };
+                }
+            } catch (err: any) {
+                errors.push(`Groq(${groqModel}): ${err.message}`);
+            }
+        }
+    }
+
+    throw new Error(`Todos os modelos falharam (${errors.join(', ')})`);
+}
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
@@ -27,8 +129,9 @@ export async function POST(req: NextRequest) {
         }
 
         const geminiKey = process.env.GEMINI_API_KEY;
-        if (!geminiKey) {
-            return NextResponse.json({ error: 'GEMINI_API_KEY não configurada no ambiente.' }, { status: 500 });
+        const groqKey = process.env.GROQ_API_KEY;
+        if (!geminiKey && !groqKey) {
+            return NextResponse.json({ error: 'Nenhuma chave GEMINI_API_KEY ou GROQ_API_KEY configurada no ambiente.' }, { status: 500 });
         }
 
         // 1. Busca nomes de séries mais comuns para dar contexto ao modelo
@@ -68,30 +171,8 @@ Responda SOMENTE com um JSON array estruturado exatamente neste formato:
 Arquivos para analisar:
 ${JSON.stringify(files)}`;
 
-        // 3. Chamada ao Google Gemini REST API
-        const geminiRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: { responseMimeType: 'application/json' }
-                })
-            }
-        );
-
-        if (!geminiRes.ok) {
-            const errText = await geminiRes.text();
-            throw new Error(`Falha na API Gemini: ${geminiRes.status} - ${errText}`);
-        }
-
-        const geminiData = await geminiRes.json();
-        const rawJsonText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (!rawJsonText) {
-            throw new Error('Nenhuma resposta gerada pela IA.');
-        }
+        // 3. Chamada com cascata de modelos Gemini + Fallback Groq
+        const { rawJson: rawJsonText, modelUsed } = await generateAnalysisWithFallback(prompt, geminiKey, groqKey);
 
         const aiResults: Array<{
             arquivo: string;
@@ -160,6 +241,7 @@ ${JSON.stringify(files)}`;
 
         return NextResponse.json({
             success: true,
+            modelUsed,
             totalAnalyzed: finalResults.length,
             results: finalResults
         });

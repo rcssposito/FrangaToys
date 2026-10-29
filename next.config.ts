@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 const nextConfig: NextConfig = {
   images: {
@@ -8,7 +7,7 @@ const nextConfig: NextConfig = {
   },
   // @ts-ignore - Turbopack options
   turbopack: {
-    root: path.resolve(__dirname),
+    root: process.cwd(),
   },
   async rewrites() {
     return [

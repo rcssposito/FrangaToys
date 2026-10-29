@@ -40,10 +40,14 @@ export async function GET(req: NextRequest) {
         
         const isCampanhaOnly = searchParams.get('campanha') === 'true';
         const metaJoin = isCampanhaOnly ? 'figuras_meta!inner' : 'figuras_meta';
+        const isSemPreco = searchParams.get('sem_preco') === 'true';
+        const isTemExtras = searchParams.get('tem_extras') === 'true';
+        const isProntaEntrega = searchParams.get('pronta_entrega') === 'true';
 
-        let query = supabase
-            .from('figuras')
-            .select(`
+        const buildBaseQuery = () => {
+            let q = supabase
+                .from('figuras')
+                .select(`
         id, 
         nome, 
         codigo,
@@ -81,56 +85,58 @@ export async function GET(req: NextRequest) {
         )
       `);
 
-        // 1. Filter by Category ID
-        if (shouldFilterCategory) {
-            query = query.eq('series.categorias.id', categoria_id);
-        }
+            if (shouldFilterCategory) {
+                q = q.eq('series.categorias.id', categoria_id);
+            }
+            if (studio_id && studio_id !== '0') {
+                q = q.eq('studio_id', studio_id);
+            }
+            if (search) {
+                q = q.ilike('nome', `%${search}%`);
+            }
+            if (isCampanhaOnly) {
+                q = q.or('is_campanha.eq.true,is_campanha_active.eq.true,preco_fixo_campanha.gt.0,desconto_campanha.gt.0', { foreignTable: 'figuras_meta' });
+            }
+            if (isTemExtras) {
+                q = q.eq('tem_extras', true);
+            }
+            if (isProntaEntrega) {
+                q = q.eq('pronta_entrega', true);
+            }
+            if (isSemPreco) {
+                q = q.order('id', { ascending: false });
+            } else {
+                q = q.order('nome', { ascending: true });
+            }
+            return q;
+        };
 
-        // 1b. Filter by Studio ID
-        if (studio_id && studio_id !== '0') {
-            query = query.eq('studio_id', studio_id);
-        }
-
-        // 2. Filter by Search Term (Name)
-        if (search) {
-            query = query.ilike('nome', `%${search}%`);
-        }
-
-        if (isCampanhaOnly) {
-            query = query.or('is_campanha.eq.true,is_campanha_active.eq.true,preco_fixo_campanha.gt.0,desconto_campanha.gt.0', { foreignTable: 'figuras_meta' });
-        }
-
-        // 3. Sorting / Specific Filters
-        const isSemPreco = searchParams.get('sem_preco') === 'true';
-        const isTemExtras = searchParams.get('tem_extras') === 'true';
-        const isProntaEntrega = searchParams.get('pronta_entrega') === 'true';
-
-        if (isTemExtras) {
-            query = query.eq('tem_extras', true);
-        }
-
-        if (isProntaEntrega) {
-            query = query.eq('pronta_entrega', true);
-        }
-
-        if (isSemPreco) {
-            // Sort by newest first to review recent additions
-            query = query.order('id', { ascending: false });
-        } else {
-            // "No botão todos a busca é por ordem alfabética"
-            query = query.order('nome', { ascending: true });
-        }
-
-        // Se estamos buscando por 'falta preço', puxamos um lote maior para filtrar em memória,
-        // já que filtrar tabelas filhas (left join) no Supabase é problemático se a linha não existir.
-        const dbLimit = isSemPreco ? 1000 : limit;
+        // Se estamos buscando por 'falta preço' ou campanha completa (> 1000 itens),
+        // paginamos em blocos de 1000 para superar o limite max-rows=1000 do PostgREST/Supabase.
+        const dbLimit = isSemPreco ? 5000 : limit;
         const from = page * dbLimit;
-        const to = from + dbLimit - 1;
-        query = query.range(from, to);
+        let data: any[] = [];
 
-        const { data, error } = await query;
+        if (dbLimit <= 1000) {
+            const to = from + dbLimit - 1;
+            const { data: batchData, error } = await buildBaseQuery().range(from, to);
+            if (error) throw error;
+            data = batchData || [];
+        } else {
+            const chunkSize = 1000;
+            let currentOffset = from;
+            const targetEnd = from + dbLimit;
 
-        if (error) throw error;
+            while (currentOffset < targetEnd) {
+                const batchEnd = Math.min(currentOffset + chunkSize - 1, targetEnd - 1);
+                const { data: batchData, error } = await buildBaseQuery().range(currentOffset, batchEnd);
+                if (error) throw error;
+                if (!batchData || batchData.length === 0) break;
+                data.push(...batchData);
+                if (batchData.length < chunkSize) break;
+                currentOffset += chunkSize;
+            }
+        }
 
         // Helper to extract category safely
         const getCategory = (item: any) => {

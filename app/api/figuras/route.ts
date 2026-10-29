@@ -62,69 +62,8 @@ export async function GET(req: NextRequest) {
             }
         }
 
-        let query = supabase
-            .from('figuras')
-            .select(`
-            id,
-            nome,
-            codigo,
-            imagem_url,
-            imagem_secundaria,
-            fotos_extras,
-            disponivel,
-            tem_extras,
-            studio_id,
-            serie_id,
-            tem_pintura_real,
-            slug,
-            is_bundle,
-            desconto_bundle_pct,
-            preco_fixo_bundle,
-            pronta_entrega,
-            estoque_pronta_entrega,
-            ${seriesJoin} (
-                id,
-                nome,
-                ${categoryJoin} (
-                    id,
-                    nome
-                )
-             ),
-            studios: studios(
-                id,
-                nome,
-                logo_url,
-                instagram_handle,
-                social_url,
-                merchant
-            ),
-            ${metaJoin}(
-                altura_cm,
-                largura_cm,
-                profundidade_cm,
-                resina_kg,
-                horas_impressao,
-                horas_pintura,
-                is_campanha_active,
-                desconto_campanha,
-                preco_fixo_campanha
-            )
-        `, { count: 'exact' });
-
-        // --- Filters ---
-        if (filters.incluirNaoVendaveis !== 'true' && !isCampanhaActive) {
-            query = query.is('disponivel', true);
-        }
-
-        if (filters.temExtras === 'true' || searchParams.get('tem_extras') === 'true') {
-            query = query.is('tem_extras', true);
-        }
-
-        if (filters.prontaEntrega === 'true' || searchParams.get('pronta_entrega') === 'true') {
-            query = query.eq('pronta_entrega', true);
-        }
-
         // --- Price Range Filtering (Unified with storefront tiers) ---
+        let priceMatchedIds: number[] | null = null;
         if (filters.priceRange) {
             let allMeta: any[] = [];
             let page = 0;
@@ -168,38 +107,14 @@ export async function GET(req: NextRequest) {
                 if (matchedIds.length === 0) {
                     return NextResponse.json({ items: [], total: 0 });
                 }
-                query = query.in('id', matchedIds);
+                priceMatchedIds = matchedIds;
             }
         }
 
-        if (filters.studioIds) {
-            const ids = filters.studioIds.split(',').map(Number).filter(n => !isNaN(n));
-            if (ids.length > 0) {
-                query = query.in('studio_id', ids);
-            }
-        }
-
-        if (filters.sizeRange) {
-            const parts = filters.sizeRange.split('-');
-            const minH = parseFloat(parts[0]);
-            const maxH = parts[1] === '+' || parts[1] === '' ? Infinity : parseFloat(parts[1]);
-
-            if (!isNaN(minH)) {
-                query = query.gte('figuras_meta.altura_cm', minH);
-            }
-            if (maxH !== Infinity && !isNaN(maxH)) {
-                query = query.lte('figuras_meta.altura_cm', maxH);
-            }
-        }
-
-        if (shouldFilterCategory) {
-            query = query.eq('series.categorias.nome', filters.categoria);
-        }
-
+        // Pré-busca IDs de série/estúdio caso exista busca textual
+        let qOrCondition: string | null = null;
         if (filters.q) {
             const term = filters.q;
-            
-            // Search matching series and studios in parallel
             const [seriesRes, studiosRes] = await Promise.all([
                 supabase.from('series').select('id').ilike('nome', `%${term}%`),
                 supabase.from('studios').select('id').ilike('nome', `%${term}%`)
@@ -208,7 +123,7 @@ export async function GET(req: NextRequest) {
             const seriesIds = seriesRes.data?.map((s: any) => s.id) || [];
             const studioIds = studiosRes.data?.map((st: any) => st.id) || [];
 
-            let orConditions = [
+            const orConditions = [
                 `nome.ilike.%${term}%`,
                 `sinonimos.ilike.%${term}%`
             ];
@@ -219,19 +134,11 @@ export async function GET(req: NextRequest) {
             if (studioIds.length > 0) {
                 orConditions.push(`studio_id.in.(${studioIds.join(',')})`);
             }
-
-            query = query.or(orConditions.join(','));
-        }
-
-        if (isCampanhaActive) {
-            query = query
-                .eq('figuras_meta.is_campanha', true)
-                .eq('figuras_meta.is_campanha_active', true);
+            qOrCondition = orConditions.join(',');
         }
 
         // --- Sorting ---
         const sortType = filters.sort || (filters.novidades === 'true' ? 'newest' : 'name_asc');
-        
         let mappedSort = sortType;
         if (filters.priceRange) {
             if (sortType === 'name_asc') {
@@ -240,30 +147,139 @@ export async function GET(req: NextRequest) {
                 mappedSort = 'price_desc';
             }
         }
-        
         const isPriceSort = mappedSort === 'price_asc' || mappedSort === 'price_desc';
 
-        if (sortType === 'newest') {
-            query = query.order('id', { ascending: false });
-        } else if (sortType === 'name_desc') {
-            query = query.order('nome', { ascending: false });
-        } else if (!isPriceSort) {
-            query = query.order('nome', { ascending: true });
-        }
+        const buildMainQuery = () => {
+            let q = supabase
+                .from('figuras')
+                .select(`
+            id,
+            nome,
+            codigo,
+            imagem_url,
+            imagem_secundaria,
+            fotos_extras,
+            disponivel,
+            tem_extras,
+            studio_id,
+            serie_id,
+            tem_pintura_real,
+            slug,
+            is_bundle,
+            desconto_bundle_pct,
+            preco_fixo_bundle,
+            pronta_entrega,
+            estoque_pronta_entrega,
+            ${seriesJoin} (
+                id,
+                nome,
+                ${categoryJoin} (
+                    id,
+                    nome
+                )
+             ),
+            studios: studios(
+                id,
+                nome,
+                logo_url,
+                instagram_handle,
+                social_url,
+                merchant
+            ),
+            ${metaJoin}(
+                altura_cm,
+                largura_cm,
+                profundidade_cm,
+                resina_kg,
+                horas_impressao,
+                horas_pintura,
+                is_campanha,
+                is_campanha_active,
+                desconto_campanha,
+                preco_fixo_campanha
+            )
+        `, { count: 'exact' });
+
+            if (filters.incluirNaoVendaveis !== 'true' && !isCampanhaActive) {
+                q = q.is('disponivel', true);
+            }
+            if (filters.temExtras === 'true' || searchParams.get('tem_extras') === 'true') {
+                q = q.is('tem_extras', true);
+            }
+            if (filters.prontaEntrega === 'true' || searchParams.get('pronta_entrega') === 'true') {
+                q = q.eq('pronta_entrega', true);
+            }
+            if (priceMatchedIds) {
+                q = q.in('id', priceMatchedIds);
+            }
+            if (filters.studioIds) {
+                const ids = filters.studioIds.split(',').map(Number).filter(n => !isNaN(n));
+                if (ids.length > 0) {
+                    q = q.in('studio_id', ids);
+                }
+            }
+            if (filters.sizeRange) {
+                const parts = filters.sizeRange.split('-');
+                const minH = parseFloat(parts[0]);
+                const maxH = parts[1] === '+' || parts[1] === '' ? Infinity : parseFloat(parts[1]);
+
+                if (!isNaN(minH)) {
+                    q = q.gte('figuras_meta.altura_cm', minH);
+                }
+                if (maxH !== Infinity && !isNaN(maxH)) {
+                    q = q.lte('figuras_meta.altura_cm', maxH);
+                }
+            }
+            if (shouldFilterCategory) {
+                q = q.eq('series.categorias.nome', filters.categoria);
+            }
+            if (qOrCondition) {
+                q = q.or(qOrCondition);
+            }
+            if (isCampanhaActive) {
+                q = q
+                    .eq('figuras_meta.is_campanha', true)
+                    .eq('figuras_meta.is_campanha_active', true);
+            }
+            if (sortType === 'newest') {
+                q = q.order('id', { ascending: false });
+            } else if (sortType === 'name_desc') {
+                q = q.order('nome', { ascending: false });
+            } else if (!isPriceSort) {
+                q = q.order('nome', { ascending: true });
+            }
+            return q;
+        };
 
         const limit = parseInt(filters.limit || '20'); 
         const page = parseInt(queryParams.page as string || '0');
         const from = page * limit;
         const to = from + limit - 1;
 
-        if (!isPriceSort) {
-            query = query.range(from, to);
-        }
+        let data: any[] = [];
+        let count: number | null = 0;
 
-        const { data, error, count } = await query;
+        if (!isPriceSort && limit <= 1000) {
+            const res = await buildMainQuery().range(from, to);
+            if (res.error) throw res.error;
+            data = res.data || [];
+            count = res.count;
+        } else {
+            // Supera o limite max-rows=1000 do PostgREST buscando em lotes de 1000
+            const chunkSize = 1000;
+            let currentOffset = isPriceSort ? 0 : from;
+            const targetEnd = isPriceSort ? 10000 : (from + limit);
 
-        if (error) {
-            throw error;
+            while (currentOffset < targetEnd) {
+                const batchEnd = Math.min(currentOffset + chunkSize - 1, targetEnd - 1);
+                const res = await buildMainQuery().range(currentOffset, batchEnd);
+                if (res.error) throw res.error;
+                if (res.count !== null && count === 0) count = res.count;
+                if (!res.data || res.data.length === 0) break;
+                data.push(...res.data);
+                if (res.data.length < chunkSize) break;
+                currentOffset += chunkSize;
+            }
         }
 
         // Transform to DTO
