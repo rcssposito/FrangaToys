@@ -23,7 +23,7 @@ import { FiguraDTO } from '@/lib/dto';
 import { BackToTop } from '@/components/ui/BackToTop';
 
 type SortOption = 'default' | 'price-asc' | 'price-desc' | 'discount-desc' | 'name-asc';
-type QuickFilter = 'all' | 'pronta-entrega' | 'under-250' | 'under-400' | 'under-600';
+type QuickFilter = 'all' | 'pronta-entrega' | 'under-150' | 'under-250' | 'under-400' | 'under-600';
 
 const CATEGORIES = ['Anime', 'Games', 'Marvel', 'DC', 'Random', 'Outros'];
 const PAGE_BATCH_SIZE = 60;
@@ -34,11 +34,62 @@ export default function CampanhaClient() {
   const [campaignEndAt, setCampaignEndAt] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
 
-  // Search, Category & Filter state
+  // Search, Category & Filter state (initialized from URL query params when present)
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('default');
+  const isUrlHydrated = useRef(false);
+
+  // Hydrate initial filters from URL on mount & listen to Back/Forward navigation
+  useEffect(() => {
+    const syncFromUrl = () => {
+      const sp = new URLSearchParams(window.location.search);
+      const urlCat = sp.get('categoria');
+      const urlQ = sp.get('q');
+      const urlFiltro = sp.get('filtro') as QuickFilter | null;
+      const urlSort = sp.get('sort') as SortOption | null;
+
+      if (urlCat && (urlCat === 'Todos' || CATEGORIES.includes(urlCat))) {
+        setSelectedCategory(urlCat);
+      } else {
+        setSelectedCategory('Todos');
+      }
+      setSearch(urlQ || '');
+      if (urlFiltro && ['all', 'pronta-entrega', 'under-150', 'under-250', 'under-400', 'under-600'].includes(urlFiltro)) {
+        setQuickFilter(urlFiltro);
+      } else {
+        setQuickFilter('all');
+      }
+      if (urlSort && ['default', 'price-asc', 'price-desc', 'discount-desc', 'name-asc'].includes(urlSort)) {
+        setSortBy(urlSort);
+      } else {
+        setSortBy('default');
+      }
+      isUrlHydrated.current = true;
+    };
+
+    syncFromUrl();
+    window.addEventListener('popstate', syncFromUrl);
+    return () => window.removeEventListener('popstate', syncFromUrl);
+  }, []);
+
+  // Sync state changes to browser URL via replaceState (shareable links with 0 roundtrips)
+  useEffect(() => {
+    if (!isUrlHydrated.current || typeof window === 'undefined') return;
+    const params = new URLSearchParams();
+    if (selectedCategory && selectedCategory !== 'Todos') params.set('categoria', selectedCategory);
+    if (search.trim()) params.set('q', search.trim());
+    if (quickFilter && quickFilter !== 'all') params.set('filtro', quickFilter);
+    if (sortBy && sortBy !== 'default') params.set('sort', sortBy);
+
+    const qs = params.toString();
+    const currentQs = window.location.search.replace(/^\?/, '');
+    if (qs !== currentQs) {
+      const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+      window.history.replaceState(null, '', nextUrl);
+    }
+  }, [selectedCategory, search, quickFilter, sortBy]);
 
   // Progressive rendering for large campaigns (>1000 items)
   const [visibleCount, setVisibleCount] = useState(PAGE_BATCH_SIZE);
@@ -149,6 +200,11 @@ export default function CampanhaClient() {
     // Quick filter chips
     if (quickFilter === 'pronta-entrega') {
       result = result.filter(i => Boolean(i.pronta_entrega));
+    } else if (quickFilter === 'under-150') {
+      result = result.filter(i => {
+        const p = getItemPrice(i);
+        return p > 0 && p <= 150;
+      });
     } else if (quickFilter === 'under-250') {
       result = result.filter(i => {
         const p = getItemPrice(i);
@@ -433,6 +489,17 @@ export default function CampanhaClient() {
               }`}
             >
               Todos os Preços
+            </button>
+
+            <button
+              onClick={() => setQuickFilter(quickFilter === 'under-150' ? 'all' : 'under-150')}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                quickFilter === 'under-150'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20'
+                  : 'bg-zinc-900/60 hover:bg-zinc-800 text-zinc-400 border border-zinc-800'
+              }`}
+            >
+              Até R$ 150
             </button>
 
             <button

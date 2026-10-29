@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Loader2, ArrowLeft, ExternalLink, Instagram, Globe, Sparkles, Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Loader2, ArrowLeft, ExternalLink, Instagram, Globe, Sparkles, Eye, EyeOff, Search, X } from 'lucide-react';
 import Link from 'next/link';
 import { clsx } from 'clsx';
 
@@ -20,6 +20,7 @@ export default function PartnersPage() {
     const [studios, setStudios] = useState<Studio[]>([]);
     const [loading, setLoading] = useState(true);
     const [showInactive, setShowInactive] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         const fetchStudios = async () => {
@@ -39,6 +40,16 @@ export default function PartnersPage() {
         fetchStudios();
     }, [showInactive]);
 
+    const filteredStudios = useMemo(() => {
+        if (!searchQuery.trim()) return studios;
+        const q = searchQuery.toLowerCase().trim();
+        return studios.filter(
+            (s) =>
+                s.nome?.toLowerCase().includes(q) ||
+                s.instagram_handle?.toLowerCase().includes(q)
+        );
+    }, [studios, searchQuery]);
+
     if (loading && studios.length === 0) {
         return (
             <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
@@ -56,8 +67,8 @@ export default function PartnersPage() {
 
             <div className="max-w-7xl mx-auto relative z-10">
                 {/* Header Section */}
-                <div className="flex flex-col gap-6 mb-20">
-                    <div className="flex justify-between items-start">
+                <div className="flex flex-col gap-6 mb-14">
+                    <div className="flex justify-between items-start gap-4">
                         <Link href="/" className="inline-flex items-center gap-3 text-zinc-500 hover:text-white transition-all text-[11px] font-black tracking-widest group">
                             <div className="p-2 bg-zinc-900 rounded-xl border border-zinc-800 group-hover:border-blue-500/30 group-hover:bg-blue-500/10 group-hover:text-blue-400 transition-all">
                                 <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
@@ -68,7 +79,7 @@ export default function PartnersPage() {
                         <button 
                             onClick={() => setShowInactive(!showInactive)}
                             className={clsx(
-                                "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all text-[10px] font-black uppercase tracking-widest",
+                                "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all text-[10px] font-black uppercase tracking-widest cursor-pointer",
                                 showInactive 
                                     ? "bg-blue-500/10 border-blue-500/40 text-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.1)]" 
                                     : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-700"
@@ -79,108 +90,151 @@ export default function PartnersPage() {
                         </button>
                     </div>
                     
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+                    <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
                         <div className="space-y-4">
                             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-[10px] font-black tracking-widest uppercase">
                                 <Sparkles size={12} fill="currentColor" />
-                                Curadoria FrangaToys
+                                Curadoria FrangaToys • {filteredStudios.length} {filteredStudios.length === 1 ? 'Estúdio' : 'Estúdios'}
                             </div>
-                            <h1 className="text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-[0.9]">
+                            <h1 className="text-5xl md:text-8xl font-black tracking-tighter uppercase italic leading-[0.9]">
                                 Nossos <span className="text-blue-500 not-italic">Parceiros</span>
                             </h1>
+                        </div>
+
+                        {/* Barra de Busca Instantânea de Estúdios */}
+                        <div className="relative w-full lg:w-80">
+                            <Search className="w-4 h-4 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Buscar estúdio ou artista..."
+                                className="w-full bg-zinc-900/80 border border-zinc-800 focus:border-blue-500/50 rounded-2xl pl-11 pr-10 py-3 text-xs font-bold text-white placeholder:text-zinc-500 outline-none transition-all"
+                            />
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                                    title="Limpar busca"
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
 
                 {/* Grid de Parceiros */}
-                {studios.length > 0 ? (
+                {filteredStudios.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                        {studios.map((studio) => (
-                            <div key={studio.id} className={clsx(
-                                "group relative flex flex-col gap-6 transition-all duration-700",
-                                !studio.merchant && "opacity-60 saturate-50 grayscale-[0.8] hover:grayscale-0"
-                            )}>
-                                {/* The Card wrapper - links to catalog */}
-                                <Link 
-                                    href={`/?studioIds=${studio.id}&incluirNaoVendaveis=true`} 
-                                    className={clsx(
-                                        "block relative aspect-square bg-zinc-900/30 backdrop-blur-xl border rounded-[2.5rem] overflow-hidden p-10 transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,1)] group-hover:-translate-y-2",
-                                        studio.merchant ? "border-zinc-800/80 hover:border-blue-500/40" : "border-zinc-900"
-                                    )}
-                                >
-                                    {/* Inner Gradient Glow */}
-                                    {studio.merchant && (
-                                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                                    )}
-                                    
-                                    {/* Logo Container */}
-                                    <div className="relative w-full h-full flex items-center justify-center">
-                                        <img 
-                                            src={studio.logo_url} 
-                                            alt={studio.nome}
-                                            className={clsx(
-                                                "max-w-full max-h-full object-contain filter group-hover:grayscale-0 transition-all duration-700 scale-95 group-hover:scale-100",
-                                                studio.merchant ? "grayscale group-hover:opacity-100 opacity-60" : "grayscale opacity-30"
+                        {filteredStudios.map((studio) => {
+                            const studioCatalogHref = studio.merchant
+                                ? `/?studioIds=${studio.id}`
+                                : `/?studioIds=${studio.id}&incluirNaoVendaveis=true`;
+
+                            return (
+                                <div key={studio.id} className={clsx(
+                                    "group relative flex flex-col gap-6 transition-all duration-700",
+                                    !studio.merchant && "opacity-60 saturate-50 grayscale-[0.8] hover:grayscale-0"
+                                )}>
+                                    {/* The Card wrapper - links to catalog */}
+                                    <Link 
+                                        href={studioCatalogHref} 
+                                        className={clsx(
+                                            "block relative aspect-square bg-zinc-900/30 backdrop-blur-xl border rounded-[2.5rem] overflow-hidden p-10 transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,1)] group-hover:-translate-y-2",
+                                            studio.merchant ? "border-zinc-800/80 hover:border-blue-500/40" : "border-zinc-900"
+                                        )}
+                                    >
+                                        {/* Inner Gradient Glow */}
+                                        {studio.merchant && (
+                                            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                                        )}
+                                        
+                                        {/* Logo Container */}
+                                        <div className="relative w-full h-full flex items-center justify-center">
+                                            <img 
+                                                src={studio.logo_url} 
+                                                alt={studio.nome}
+                                                loading="lazy"
+                                                decoding="async"
+                                                className={clsx(
+                                                    "max-w-full max-h-full object-contain filter group-hover:grayscale-0 transition-all duration-700 scale-95 group-hover:scale-100",
+                                                    studio.merchant ? "grayscale group-hover:opacity-100 opacity-60" : "grayscale opacity-30"
+                                                )}
+                                            />
+                                        </div>
+
+                                        {/* Status Badge for inactive merchant */}
+                                        {!studio.merchant && (
+                                            <div className="absolute top-8 right-8 bg-zinc-800/80 backdrop-blur px-3 py-1 rounded-full border border-zinc-700/50">
+                                                <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Acervo / Arquivo</span>
+                                            </div>
+                                        )}
+
+                                        {/* Link Action Indicator */}
+                                        <div className="absolute inset-x-0 bottom-8 flex justify-center opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500">
+                                            <div className={clsx(
+                                                "text-black text-[9px] font-black tracking-widest uppercase px-5 py-2 rounded-full shadow-2xl flex items-center gap-2",
+                                                studio.merchant ? "bg-white" : "bg-zinc-400"
+                                            )}>
+                                                Ver Acervo <ExternalLink size={10} />
+                                            </div>
+                                        </div>
+                                    </Link>
+
+                                    {/* Footer Data & Socials */}
+                                    <div className="px-4 flex items-center justify-between">
+                                        <div className="flex flex-col gap-0.5">
+                                            <h3 className={clsx(
+                                                "text-sm font-black tracking-widest uppercase",
+                                                studio.merchant ? "text-zinc-300" : "text-zinc-500"
+                                            )}>{studio.nome}</h3>
+                                            <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-tighter">
+                                                {studio.merchant ? 'Parceiro Oficial Licenciado' : 'Artista / Acervo'}
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            {studio.instagram_handle && (
+                                                <a 
+                                                    href={`https://instagram.com/${studio.instagram_handle.replace('@', '')}`} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="p-2.5 bg-zinc-900 border border-zinc-800 hover:border-pink-500/50 hover:bg-pink-500/10 hover:text-pink-500 rounded-xl transition-all"
+                                                    title="Siga no Instagram"
+                                                >
+                                                    <Instagram size={14} />
+                                                </a>
                                             )}
-                                        />
-                                    </div>
-
-                                    {/* Status Badge for inactive merchant */}
-                                    {!studio.merchant && (
-                                        <div className="absolute top-8 right-8 bg-zinc-800/80 backdrop-blur px-3 py-1 rounded-full border border-zinc-700/50">
-                                            <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Inativo</span>
+                                            {studio.social_url && (
+                                                <a 
+                                                    href={studio.social_url} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="p-2.5 bg-zinc-900 border border-zinc-800 hover:border-blue-400/50 hover:bg-blue-400/10 hover:text-blue-400 rounded-xl transition-all"
+                                                    title="Visite o Site"
+                                                >
+                                                    <Globe size={14} />
+                                                </a>
+                                            )}
                                         </div>
-                                    )}
-
-                                    {/* Link Action Indicator */}
-                                    <div className="absolute inset-x-0 bottom-8 flex justify-center opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500">
-                                        <div className={clsx(
-                                            "text-black text-[9px] font-black tracking-widest uppercase px-5 py-2 rounded-full shadow-2xl flex items-center gap-2",
-                                            studio.merchant ? "bg-white" : "bg-zinc-400"
-                                        )}>
-                                            Ver Acervo <ExternalLink size={10} />
-                                        </div>
-                                    </div>
-                                </Link>
-
-                                {/* Footer Data & Socials */}
-                                <div className="px-4 flex items-center justify-between">
-                                    <div className="flex flex-col gap-0.5">
-                                        <h3 className={clsx(
-                                            "text-sm font-black tracking-widest uppercase",
-                                            studio.merchant ? "text-zinc-300" : "text-zinc-500"
-                                        )}>{studio.nome}</h3>
-                                        <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-tighter">Artista / Parceiro</p>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        {studio.instagram_handle && (
-                                            <a 
-                                                href={`https://instagram.com/${studio.instagram_handle.replace('@', '')}`} 
-                                                target="_blank" 
-                                                className="p-2.5 bg-zinc-900 border border-zinc-800 hover:border-pink-500/50 hover:bg-pink-500/10 hover:text-pink-500 rounded-xl transition-all"
-                                                title="Siga no Instagram"
-                                            >
-                                                <Instagram size={14} />
-                                            </a>
-                                        )}
-                                        {studio.social_url && (
-                                            <a 
-                                                href={studio.social_url} 
-                                                target="_blank" 
-                                                className="p-2.5 bg-zinc-900 border border-zinc-800 hover:border-blue-400/50 hover:bg-blue-400/10 hover:text-blue-400 rounded-xl transition-all"
-                                                title="Visite o Site"
-                                            >
-                                                <Globe size={14} />
-                                            </a>
-                                        )}
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 ) : (
                     <div className="py-40 bg-zinc-900/10 border-2 border-dashed border-zinc-900 rounded-[3rem] flex flex-col items-center justify-center gap-4">
                         <p className="text-zinc-700 font-black text-xs tracking-[0.4em] uppercase">Nenhum parceiro encontrado</p>
+                        {searchQuery && (
+                            <button
+                                type="button"
+                                onClick={() => setSearchQuery('')}
+                                className="px-4 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-bold text-blue-400 hover:bg-zinc-800 transition-colors cursor-pointer"
+                            >
+                                Limpar busca
+                            </button>
+                        )}
                     </div>
                 )}
             </div>
