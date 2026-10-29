@@ -2,8 +2,6 @@
 
 import Link from 'next/link';
 import { 
-    DollarSign, 
-    Sparkles, 
     TrendingUp, 
     ShieldCheck, 
     Target,
@@ -77,7 +75,7 @@ export default function ExecutiveAnalyticsHub({ financialData, hideValues = fals
             value: painterCost,
             displayValue: -painterCost,
             type: 'deduction',
-            color: '#818cf8',
+            color: '#a1a1aa',
             percentage: gross > 0 ? (painterCost / gross) * 100 : 0,
             desc: 'Mão de obra terceirizada'
         },
@@ -114,37 +112,36 @@ export default function ExecutiveAnalyticsHub({ financialData, hideValues = fals
     ].filter(item => item.value > 0 || item.type === 'pillar');
 
     return (
-        <div className="bg-zinc-950 border border-zinc-800 p-6 md:p-8 rounded-2xl relative shadow-xl mb-10 w-full">
+        <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800/60 p-6 md:p-8 rounded-2xl shadow-xl shadow-black/20 w-full">
             
             {/* Header com Navegação e Link para BI de Estúdios */}
-            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6 border-b border-zinc-800 pb-5">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6 border-b border-zinc-800/60 pb-5">
                 <div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-400 flex items-center gap-1.5 mb-1.5">
-                        <Sparkles size={13} className="text-amber-400" />
+                    <span className="text-xs font-mono uppercase tracking-wider text-zinc-400 block mb-1">
                         Demonstrativo de Resultado do Exercício
                     </span>
-                    <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
-                        <TrendingUp size={26} className="text-emerald-400" />
+                    <h2 className="text-xl sm:text-2xl font-black text-zinc-100 tracking-tight flex items-center gap-2.5">
+                        <TrendingUp size={22} className="text-emerald-400" />
                         Cascata DRE: Decomposição do Faturamento ao Lucro
                     </h2>
                 </div>
 
                 <div className="flex items-center gap-3 flex-wrap">
                     {/* Badge Margem */}
-                    <div className="flex items-center gap-2 text-xs font-mono text-zinc-300 bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-xl">
-                        <ShieldCheck size={16} className="text-emerald-400" />
-                        <span>Margem Líquida: <strong className="text-emerald-400 font-black">{profitMargin.toFixed(1)}%</strong></span>
+                    <div className="flex items-center gap-2 text-xs font-mono text-zinc-200 bg-zinc-950/80 border border-zinc-800 px-4 py-2 rounded-xl">
+                        <ShieldCheck size={15} className="text-emerald-400" />
+                        <span>Margem Líquida: <strong className="text-emerald-400 font-bold">{profitMargin.toFixed(1)}%</strong></span>
                     </div>
 
                     {/* Botão de Redirecionamento para a tela dedicada de BI de Estúdios */}
                     <Link
                         href="/admin/studios?tab=bi"
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 hover:text-blue-300 border border-blue-500/30 transition-all shadow-sm group"
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 hover:border-zinc-700 transition-all shadow-sm group"
                         title="Ir para o BI de Estúdios, Break-even e Matriz BCG"
                     >
-                        <Target size={14} className="text-blue-400 group-hover:scale-110 transition-transform" />
+                        <Target size={14} className="text-zinc-400 group-hover:text-zinc-200" />
                         <span>BI de Estúdios & Break-Even</span>
-                        <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+                        <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform text-zinc-500" />
                     </Link>
                 </div>
             </div>
@@ -215,46 +212,46 @@ export default function ExecutiveAnalyticsHub({ financialData, hideValues = fals
                 </div>
 
                 {/* Cards de Síntese Executiva & Taxas de Eficiência */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-zinc-800">
-                    <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl flex flex-col justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1">
-                            💰 Faturamento Bruto
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-6 border-t border-zinc-800/60">
+                    <div className="bg-zinc-950/60 backdrop-blur-md border border-zinc-800/60 p-5 rounded-xl flex flex-col justify-between space-y-2">
+                        <span className="text-xs font-mono uppercase tracking-wider text-zinc-400 block">
+                            Faturamento Bruto
                         </span>
-                        <p className="text-xl font-black text-white font-mono">{formatMoney(gross)}</p>
-                        <span className="text-[10px] text-emerald-400 font-bold mt-1">Base de 100% das Vendas</span>
+                        <p className="text-2xl font-black text-zinc-100 font-mono tracking-tight">{formatMoney(gross)}</p>
+                        <span className="text-xs text-zinc-500 font-mono">100% da receita</span>
                     </div>
 
-                    <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl flex flex-col justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1">
-                            🧪 Peso da Matéria-Prima
+                    <div className="bg-zinc-950/60 backdrop-blur-md border border-zinc-800/60 p-5 rounded-xl flex flex-col justify-between space-y-2">
+                        <span className="text-xs font-mono uppercase tracking-wider text-zinc-400 block">
+                            Insumos (Resina / FEP)
                         </span>
-                        <p className="text-xl font-black text-cyan-400 font-mono">
+                        <p className="text-2xl font-black text-zinc-200 font-mono tracking-tight">
                             {gross > 0 ? ((productionCost / gross) * 100).toFixed(1) : 0}%
                         </p>
-                        <span className="text-[10px] text-zinc-500 font-medium mt-1">
-                            {formatMoney(productionCost)} em resina e desgaste
+                        <span className="text-xs text-zinc-500 font-mono">
+                            {formatMoney(productionCost)}
                         </span>
                     </div>
 
-                    <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl flex flex-col justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1">
-                            🟢 Lucro Líquido Real
+                    <div className="bg-zinc-950/60 backdrop-blur-md border border-zinc-800/60 p-5 rounded-xl flex flex-col justify-between space-y-2">
+                        <span className="text-xs font-mono uppercase tracking-wider text-zinc-400 block">
+                            Lucro Líquido Real
                         </span>
-                        <p className="text-xl font-black text-emerald-400 font-mono">{formatMoney(netProfit)}</p>
-                        <span className="text-[10px] text-emerald-400 font-bold mt-1">
+                        <p className="text-2xl font-black text-emerald-400 font-mono tracking-tight">{formatMoney(netProfit)}</p>
+                        <span className="text-xs text-emerald-500/80 font-mono font-medium">
                             {profitMargin.toFixed(1)}% de margem no bolso
                         </span>
                     </div>
 
-                    <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl flex flex-col justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1">
-                            🎯 Eficiência p/ Real
+                    <div className="bg-zinc-950/60 backdrop-blur-md border border-zinc-800/60 p-5 rounded-xl flex flex-col justify-between space-y-2">
+                        <span className="text-xs font-mono uppercase tracking-wider text-zinc-400 block">
+                            Eficiência por Real
                         </span>
-                        <p className="text-xl font-black text-amber-400 font-mono">
+                        <p className="text-2xl font-black text-zinc-200 font-mono tracking-tight">
                             R$ {(profitMargin / 100).toFixed(2)}
                         </p>
-                        <span className="text-[10px] text-zinc-500 font-medium mt-1">
-                            Lucro limpo gerado por R$ 1,00 vendido
+                        <span className="text-xs text-zinc-500 font-mono">
+                            Lucro limpo por R$ 1,00 vendido
                         </span>
                     </div>
                 </div>
