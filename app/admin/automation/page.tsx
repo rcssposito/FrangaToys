@@ -32,8 +32,12 @@ import {
     Disc,
     Cpu,
     ShieldCheck,
-    Loader2
+    Loader2,
+    Activity,
+    Pause,
+    RotateCcw
 } from 'lucide-react';
+import { clsx } from 'clsx';
 import { toast } from 'sonner';
 import ArchivePreviewModal from '@/components/Admin/ArchivePreviewModal';
 import HealthCheckPanel from '@/components/Admin/HealthCheckPanel';
@@ -125,6 +129,7 @@ function AutomationPageContent() {
     // Terminal de logs
     const [logs, setLogs] = useState<string[]>([]);
     const [runningScript, setRunningScript] = useState<string | null>(null);
+    const [autoScroll, setAutoScroll] = useState(true);
     const terminalContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -132,14 +137,43 @@ function AutomationPageContent() {
     }, []);
 
     useEffect(() => {
-        // Rola apenas dentro da caixinha do terminal, sem rolar a janela principal do usuário
-        if (terminalContainerRef.current) {
+        // Rola apenas dentro da caixinha do terminal se autoScroll estiver ativado
+        if (autoScroll && terminalContainerRef.current) {
             terminalContainerRef.current.scrollTop = terminalContainerRef.current.scrollHeight;
         }
-    }, [logs]);
+    }, [logs, autoScroll]);
 
     const addLog = (msg: string) => {
         setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+    };
+
+    const renderLogLine = (log: string, index: number) => {
+        const timeMatch = log.match(/^(\[\d{1,2}:\d{2}:\d{2}\s?(?:AM|PM)?\])\s*(.*)/i);
+        let time = '';
+        let body = log;
+        if (timeMatch) {
+            time = timeMatch[1];
+            body = timeMatch[2];
+        }
+
+        const isOk = body.includes('[OK]') || body.includes('concluído') || body.includes('sucesso') || body.includes('prontas');
+        const isError = body.includes('[FALHA]') || body.includes('Erro:') || body.includes('Error:') || body.includes('Falha');
+        const isRunning = body.includes('Executando:') || body.includes('Iniciando') || body.includes('Analisando');
+
+        return (
+            <div key={index} className="leading-relaxed break-all flex items-start gap-2">
+                {time && <span className="text-zinc-600 select-none shrink-0 font-mono text-[10px]">{time}</span>}
+                <span className={clsx(
+                    "font-mono text-[11px]",
+                    isOk && "text-emerald-400 font-medium",
+                    isError && "text-rose-400 font-medium",
+                    isRunning && "text-orange-400 font-medium",
+                    !isOk && !isError && !isRunning && "text-zinc-300"
+                )}>
+                    {body}
+                </span>
+            </div>
+        );
     };
 
     // 1. Escanear pasta local
@@ -329,11 +363,7 @@ function AutomationPageContent() {
     });
 
     return (
-        <div className="w-full text-zinc-100 relative overflow-x-hidden space-y-6 pb-12">
-            {/* Background Effects nativos do painel Franga Toys */}
-            <div className="fixed top-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-600/5 rounded-full blur-[120px] pointer-events-none" />
-            <div className="fixed bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-amber-600/5 rounded-full blur-[120px] pointer-events-none" />
-
+        <div className="w-full text-zinc-100 relative space-y-6 pb-12">
             {/* Modal de Preview de Compactados (50ms Stream RAM) */}
             {previewArchive && (
                 <ArchivePreviewModal
@@ -346,26 +376,22 @@ function AutomationPageContent() {
                 />
             )}
 
-            {/* Cabeçalho no padrão oficial do Admin */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-                <div className="flex items-center gap-5 flex-wrap">
+            {/* Cabeçalho no padrão Dark Matte Luxury */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+                <div className="flex items-center gap-3.5 flex-wrap">
                     <Link 
                         href="/admin" 
-                        className="p-3 bg-zinc-900 border border-zinc-800 hover:border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-400 rounded-2xl transition-all shadow-lg text-zinc-500 group"
+                        className="p-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 hover:text-white rounded-xl transition-all text-zinc-400 group"
                     >
-                        <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+                        <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
                     </Link>
                     <div>
-                        <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-white">
-                            {currentTab === 'base' ? (
-                                <>Gerador de <span className="text-orange-500">Base</span></>
-                            ) : currentTab === 'health' ? (
-                                <>Health <span className="text-orange-500">Check</span></>
-                            ) : (
-                                <>Automação de <span className="text-orange-500">Catálogo</span></>
-                            )}
+                        <h1 className="text-2xl font-bold tracking-tight text-zinc-100">
+                            {currentTab === 'base' ? 'Gerador de Base 1:1' :
+                             currentTab === 'health' ? 'Health Check & Diagnóstico' :
+                             'Automação de Catálogo'}
                         </h1>
-                        <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-1 opacity-80">
+                        <p className="text-xs text-zinc-400 mt-0.5">
                             {currentTab === 'base'
                                 ? 'Recorte milimétrico de arte e silhueta STL para adesivo de base 1:1.'
                                 : currentTab === 'health'
@@ -375,43 +401,128 @@ function AutomationPageContent() {
                     </div>
                 </div>
 
-                {/* Abas Superiores */}
-                <div className="flex items-center gap-1.5 p-1.5 bg-zinc-950/80 border border-zinc-800 rounded-2xl w-fit flex-wrap">
+                {/* Segmented Control Abas Superiores */}
+                <div className="flex items-center gap-1 p-1 bg-zinc-950 border border-zinc-800/80 rounded-xl w-fit flex-wrap">
                     <button
+                        type="button"
                         onClick={() => setCurrentTab('automation')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                             currentTab === 'automation'
-                                ? 'bg-orange-500 text-black shadow-lg shadow-orange-500/20'
-                                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                                ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
                         }`}
                     >
-                        <Cpu size={15} />
+                        <Cpu size={14} />
                         <span>Automação & IA</span>
                     </button>
                     <button
+                        type="button"
                         onClick={() => setCurrentTab('base')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                             currentTab === 'base'
-                                ? 'bg-orange-500 text-black shadow-lg shadow-orange-500/20'
-                                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                                ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
                         }`}
                     >
-                        <Disc size={15} />
+                        <Disc size={14} />
                         <span>Gerador de Base</span>
                     </button>
                     <button
+                        type="button"
                         onClick={() => setCurrentTab('health')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                             currentTab === 'health'
-                                ? 'bg-orange-500 text-black shadow-lg shadow-orange-500/20'
-                                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                                ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
                         }`}
                     >
-                        <ShieldCheck size={15} />
+                        <ShieldCheck size={14} />
                         <span>Health Check</span>
                     </button>
                 </div>
             </div>
+
+            {/* 4 Cards Executivos de Status da Esteira */}
+            {currentTab === 'automation' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Card 1: Pacotes no HD */}
+                    <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 flex flex-col justify-between hover:border-zinc-700/80 transition-all">
+                        <div className="flex items-center justify-between text-zinc-400 mb-2">
+                            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Pacotes no HD Local</span>
+                            <HardDrive size={16} className="text-zinc-500" />
+                        </div>
+                        <div>
+                            <div className="text-xl font-bold font-mono tracking-tight text-zinc-100">
+                                {organizedArchives.length} <span className="text-xs font-normal text-zinc-400 font-sans">pacotes</span>
+                            </div>
+                            <div className="text-[11px] text-zinc-400 mt-1">
+                                {uniqueCategories.length} categorias estruturadas
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Card 2: Saúde das Capas */}
+                    <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 flex flex-col justify-between hover:border-zinc-700/80 transition-all">
+                        <div className="flex items-center justify-between text-zinc-400 mb-2">
+                            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Saúde das Capas WebP</span>
+                            <Eye size={16} className="text-zinc-500" />
+                        </div>
+                        <div>
+                            <div className="text-xl font-bold font-mono tracking-tight text-zinc-100">
+                                {readyCoversCount} <span className="text-xs font-normal text-zinc-500 font-mono">/ {organizedArchives.length}</span>
+                            </div>
+                            <div className="text-[11px] font-mono mt-1">
+                                {pendingCoversCount === 0 ? (
+                                    <span className="text-emerald-400 font-semibold">100% com foto WebP</span>
+                                ) : (
+                                    <span className="text-amber-400">{pendingCoversCount} pendentes de foto</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Card 3: Fila de Entrada */}
+                    <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 flex flex-col justify-between hover:border-zinc-700/80 transition-all">
+                        <div className="flex items-center justify-between text-zinc-400 mb-2">
+                            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Fila de Entrada</span>
+                            <FolderSearch size={16} className="text-zinc-500" />
+                        </div>
+                        <div>
+                            <div className="text-xl font-bold font-mono tracking-tight text-zinc-100">
+                                {scannedFiles.length} <span className="text-xs font-normal text-zinc-400 font-sans">arquivos</span>
+                            </div>
+                            <div className="text-[11px] text-zinc-400 mt-1">
+                                {analyzedItems.length > 0 
+                                    ? `${analyzedItems.filter(i => i.selected).length} propostas IA prontas` 
+                                    : 'Aguardando varredura/análise'}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Card 4: Status da Esteira */}
+                    <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 flex flex-col justify-between hover:border-zinc-700/80 transition-all">
+                        <div className="flex items-center justify-between text-zinc-400 mb-2">
+                            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Status da Esteira</span>
+                            <Activity size={16} className={runningScript ? "text-emerald-400 animate-pulse" : "text-zinc-500"} />
+                        </div>
+                        <div>
+                            <div className="text-base font-bold font-mono tracking-tight truncate text-zinc-100">
+                                {runningScript ? (
+                                    <span className="text-emerald-400 flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+                                        Rodando: {runningScript}
+                                    </span>
+                                ) : (
+                                    <span className="text-zinc-300">Ociosa / Pronta</span>
+                                )}
+                            </div>
+                            <div className="text-[11px] text-zinc-400 mt-1">
+                                {runningScript ? 'Processando script em segundo plano' : 'Pipeline de 6 passos disponível'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {currentTab === 'base' ? (
                 <div className="relative z-10 pt-2 animate-in fade-in duration-200">
@@ -425,11 +536,11 @@ function AutomationPageContent() {
                 <>
 
             {/* SEÇÃO 1: TRIAGEM DE ARQUIVOS BRUTOS */}
-            <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 shadow-sm space-y-4 relative z-10">
+            <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 shadow-sm space-y-4 relative z-10">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                        <FolderSearch className="w-4 h-4 text-orange-500" />
-                        <h3 className="text-xs font-black uppercase tracking-wider text-zinc-400">
+                        <FolderSearch className="w-4 h-4 text-zinc-400" />
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
                             1. Triagem de Downloads & Nomenclatura IA
                         </h3>
                     </div>
@@ -439,57 +550,67 @@ function AutomationPageContent() {
                             type="checkbox" 
                             checked={moveToCategory} 
                             onChange={(e) => setMoveToCategory(e.target.checked)}
-                            className="rounded text-orange-500 focus:ring-orange-500 border-zinc-700 bg-zinc-900"
+                            className="rounded text-zinc-100 focus:ring-zinc-500 border-zinc-700 bg-zinc-900"
                         />
                         <span className="font-medium">Mover para pasta de categoria</span>
                     </label>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                    <div className="flex-1 flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800 focus-within:border-orange-500 transition-all">
+                    <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 focus-within:border-zinc-600 transition-all">
                         <FolderSearch className="w-4 h-4 text-zinc-500 shrink-0" />
                         <input
                             type="text"
                             value={baseFolder}
                             onChange={(e) => setBaseFolder(e.target.value)}
-                            placeholder="Caminho da pasta..."
+                            placeholder="Caminho da pasta local..."
                             className="bg-transparent border-none text-xs font-mono w-full focus:outline-none text-zinc-200 placeholder:text-zinc-600"
                         />
+                        {baseFolder !== 'D:\\rcssp\\Downloads\\3d\\3 - Com suporte' && (
+                            <button
+                                type="button"
+                                onClick={() => setBaseFolder('D:\\rcssp\\Downloads\\3d\\3 - Com suporte')}
+                                className="p-1 rounded text-zinc-500 hover:text-zinc-300 transition-colors"
+                                title="Restaurar pasta padrão"
+                            >
+                                <RotateCcw size={13} />
+                            </button>
+                        )}
                     </div>
 
                     <button
                         onClick={handleScan}
                         disabled={loadingScan}
-                        className="py-2.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                        className="py-2 px-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
                     >
                         <RefreshCw className={`w-3.5 h-3.5 ${loadingScan ? 'animate-spin' : ''}`} />
-                        {loadingScan ? 'Escaneando...' : 'Escanear'}
+                        {loadingScan ? 'Escaneando...' : 'Escanear Pasta'}
                     </button>
 
                     <button
                         onClick={handleAnalyze}
                         disabled={loadingAnalyze || scannedFiles.length === 0}
-                        className="py-2.5 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-black uppercase tracking-wider text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-orange-500/20 disabled:opacity-50"
+                        className="py-2 px-3.5 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm disabled:opacity-40 cursor-pointer"
                     >
                         <Sparkles className={`w-3.5 h-3.5 ${loadingAnalyze ? 'animate-spin' : ''}`} />
-                        {loadingAnalyze ? 'Analisando...' : 'Analisar'}
+                        {loadingAnalyze ? 'Analisando...' : 'Analisar com IA'}
                     </button>
                 </div>
 
                 {/* Resultados da Varredura */}
                 {scannedFiles.length > 0 && analyzedItems.length === 0 && (
                     <div className="space-y-2 pt-2">
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                            {scannedFiles.length} arquivos soltos encontrados:
+                        <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                            {scannedFiles.length} arquivos soltos encontrados no diretório:
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 max-h-44 overflow-y-auto p-1 custom-scrollbar">
                             {scannedFiles.map((file, i) => (
-                                <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-zinc-900/40 border border-zinc-800/80 text-xs font-mono">
+                                <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-zinc-950 border border-zinc-850 text-xs font-mono">
                                     <div className="flex items-center gap-1.5 min-w-0">
-                                        <FileArchive className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+                                        <FileArchive className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                                         <span className="truncate text-zinc-300" title={file.name}>{file.name}</span>
                                     </div>
-                                    <span className="text-zinc-500 text-[10px] font-bold ml-2 shrink-0">{file.sizeFormatted}</span>
+                                    <span className="text-zinc-500 text-[10px] ml-2 shrink-0">{file.sizeFormatted}</span>
                                 </div>
                             ))}
                         </div>
@@ -500,13 +621,13 @@ function AutomationPageContent() {
                 {analyzedItems.length > 0 && (
                     <div className="space-y-3 pt-2">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-black uppercase tracking-wider text-orange-400">
-                                Propostas ({analyzedItems.filter(i => i.selected).length}/{analyzedItems.length}):
+                            <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                                Propostas Geradas ({analyzedItems.filter(i => i.selected).length}/{analyzedItems.length}):
                             </span>
                             <button
                                 onClick={handleExecute}
                                 disabled={loadingExecute}
-                                className="py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-wider text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/20 disabled:opacity-50"
+                                className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50 cursor-pointer"
                             >
                                 <Check className="w-3.5 h-3.5" />
                                 {loadingExecute ? 'Executando...' : 'Aplicar Renomeação'}
@@ -519,22 +640,22 @@ function AutomationPageContent() {
                                     key={idx} 
                                     className={`p-3 rounded-xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs ${
                                         item.selected 
-                                            ? 'bg-orange-500/10 border-orange-500/40 text-white' 
-                                            : 'bg-zinc-900/20 border-zinc-800/50 text-zinc-500 opacity-60'
+                                            ? 'bg-zinc-950/90 border-zinc-700/80 text-white' 
+                                            : 'bg-zinc-950/40 border-zinc-900 text-zinc-500 opacity-50'
                                     }`}
                                 >
                                     {/* Arquivo Original + Checkbox */}
                                     <div 
                                         onClick={() => toggleSelect(idx)}
                                         className="flex items-center gap-2.5 min-w-0 md:w-1/3 cursor-pointer select-none group"
-                                        title="Clique para selecionar / desmarcar"
+                                        title="Clique para alternar seleção"
                                     >
                                         <input 
                                             type="checkbox" 
                                             checked={item.selected} 
                                             onChange={() => toggleSelect(idx)}
                                             onClick={(e) => e.stopPropagation()}
-                                            className="rounded text-orange-500 focus:ring-orange-500 border-zinc-700 bg-zinc-900 shrink-0 cursor-pointer"
+                                            className="rounded text-zinc-100 focus:ring-zinc-600 border-zinc-700 bg-zinc-900 shrink-0 cursor-pointer"
                                         />
                                         <span className="text-zinc-400 font-mono text-[11px] truncate group-hover:text-zinc-200 transition-colors" title={item.originalFile}>
                                             {item.originalFile}
@@ -543,7 +664,7 @@ function AutomationPageContent() {
 
                                     {/* Seta + Nome Proposto Editável */}
                                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                                        <ArrowRight className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+                                        <ArrowRight className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                                         <div className="relative flex-1 group">
                                             <input
                                                 type="text"
@@ -551,10 +672,9 @@ function AutomationPageContent() {
                                                 onChange={(e) => updateProposedName(idx, e.target.value)}
                                                 onClick={(e) => e.stopPropagation()}
                                                 placeholder="Nome final (ex: Categoria - Franquia - Personagem.zip)"
-                                                className="w-full bg-zinc-950/90 border border-orange-500/30 hover:border-orange-500/60 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 rounded-lg pl-8 pr-3 py-1.5 font-mono text-xs text-orange-300 font-bold transition-all outline-none"
-                                                title="Edite o nome final do arquivo antes de aplicar a renomeação"
+                                                className="w-full bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 focus:border-zinc-600 rounded-lg pl-7 pr-3 py-1 font-mono text-xs text-zinc-100 font-medium transition-all outline-none"
                                             />
-                                            <Pencil className="w-3 h-3 text-orange-400/60 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none group-hover:text-orange-400 transition-colors" />
+                                            <Pencil className="w-3 h-3 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                                         </div>
                                     </div>
 
@@ -565,8 +685,7 @@ function AutomationPageContent() {
                                                 value={item.targetFolder}
                                                 onChange={(e) => updateTargetFolder(idx, e.target.value)}
                                                 onClick={(e) => e.stopPropagation()}
-                                                className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 focus:border-orange-500 text-[11px] font-mono text-zinc-300 rounded-lg px-2.5 py-1.5 outline-none transition-colors cursor-pointer"
-                                                title="Pasta de destino onde o arquivo será movido"
+                                                className="bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 focus:border-zinc-600 text-[11px] font-mono text-zinc-300 rounded-lg px-2.5 py-1 outline-none transition-colors cursor-pointer"
                                             >
                                                 {categoryFolders.map(cf => (
                                                     <option key={cf} value={cf}>➔ {cf}</option>
@@ -578,7 +697,7 @@ function AutomationPageContent() {
                                             </span>
                                         )}
 
-                                        <span className="text-[10px] font-bold text-orange-400 shrink-0 px-1.5 py-0.5 rounded bg-orange-500/10">
+                                        <span className="text-[10px] font-mono font-bold text-zinc-400 shrink-0 px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800">
                                             {Math.round(item.confidence * 100)}%
                                         </span>
                                     </div>
@@ -590,37 +709,39 @@ function AutomationPageContent() {
             </div>
 
             {/* SEÇÃO 2: PACOTES ORGANIZADOS & CAPAS */}
-            <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 shadow-sm space-y-5 relative z-10">
+            <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 shadow-sm space-y-4 relative z-10">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                        <Box className="w-4 h-4 text-orange-500" />
-                        <h3 className="text-xs font-black uppercase tracking-wider text-zinc-400">
+                    <div className="flex items-center gap-2.5">
+                        <Box className="w-4 h-4 text-zinc-400" />
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
                             2. Capas dos Pacotes (Extração RAM 50ms)
                         </h3>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 font-bold">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-950 border border-zinc-800 text-zinc-400">
                             {readyCoversCount}/{organizedArchives.length} prontas
                         </span>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {/* Tab Switcher no padrão oficial do Admin */}
-                        <div className="flex items-center gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-xl">
+                        {/* Segmented Control Sem Capa / Todas */}
+                        <div className="flex items-center gap-1 p-1 bg-zinc-950 border border-zinc-800/80 rounded-xl">
                             <button
+                                type="button"
                                 onClick={() => setShowOnlyPending(true)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+                                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                                     showOnlyPending 
-                                        ? 'bg-orange-500 text-white shadow-sm' 
-                                        : 'text-zinc-400 hover:text-white'
+                                        ? 'bg-zinc-800 text-zinc-100 shadow-sm' 
+                                        : 'text-zinc-400 hover:text-zinc-200'
                                 }`}
                             >
                                 Sem Capa ({pendingCoversCount})
                             </button>
                             <button
+                                type="button"
                                 onClick={() => setShowOnlyPending(false)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+                                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                                     !showOnlyPending 
-                                        ? 'bg-orange-500 text-white shadow-sm' 
-                                        : 'text-zinc-400 hover:text-white'
+                                        ? 'bg-zinc-800 text-zinc-100 shadow-sm' 
+                                        : 'text-zinc-400 hover:text-zinc-200'
                                 }`}
                             >
                                 Todas ({organizedArchives.length})
@@ -628,9 +749,10 @@ function AutomationPageContent() {
                         </div>
 
                         <button
+                            type="button"
                             onClick={fetchOrganizedArchives}
                             disabled={loadingOrganized}
-                            className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 transition-all"
+                            className="p-1.5 rounded-xl bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-all cursor-pointer"
                             title="Atualizar lista"
                         >
                             <RefreshCw className={`w-3.5 h-3.5 ${loadingOrganized ? 'animate-spin' : ''}`} />
@@ -638,15 +760,16 @@ function AutomationPageContent() {
                     </div>
                 </div>
 
-                {/* Filtros de Categoria & Busca no padrão do Admin */}
+                {/* Filtros de Categoria & Busca */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 custom-scrollbar">
                         <button
+                            type="button"
                             onClick={() => setSelectedCategoryFilter('all')}
-                            className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shrink-0 ${
+                            className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
                                 selectedCategoryFilter === 'all'
-                                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
-                                    : 'bg-zinc-900/60 text-zinc-400 hover:text-white border border-zinc-800'
+                                    ? 'bg-zinc-100 text-zinc-900 shadow-sm'
+                                    : 'bg-zinc-950 text-zinc-400 hover:text-zinc-200 border border-zinc-800/80'
                             }`}
                         >
                             Todas {showOnlyPending ? `(${pendingCoversCount})` : `(${organizedArchives.length})`}
@@ -655,12 +778,13 @@ function AutomationPageContent() {
                             const count = organizedArchives.filter(a => a.category === cat && (!showOnlyPending || !a.hasWebpCover)).length;
                             return (
                                 <button
+                                    type="button"
                                     key={cat}
                                     onClick={() => setSelectedCategoryFilter(cat)}
-                                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shrink-0 ${
+                                    className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
                                         selectedCategoryFilter === cat
-                                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
-                                            : 'bg-zinc-900/60 text-zinc-400 hover:text-white border border-zinc-800'
+                                            ? 'bg-zinc-100 text-zinc-900 shadow-sm'
+                                            : 'bg-zinc-950 text-zinc-400 hover:text-zinc-200 border border-zinc-800/80'
                                     }`}
                                 >
                                     {cat} ({count})
@@ -670,31 +794,31 @@ function AutomationPageContent() {
                     </div>
 
                     <div className="relative w-full sm:w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={14} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={13} />
                         <input
                             type="text"
                             value={searchFilter}
                             onChange={(e) => setSearchFilter(e.target.value)}
                             placeholder="Buscar figura..."
-                            className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-zinc-200 outline-none focus:border-orange-500 placeholder:text-zinc-600 transition-all"
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-zinc-200 outline-none focus:border-zinc-600 placeholder:text-zinc-600 transition-all font-mono"
                         />
                     </div>
                 </div>
 
                 {/* Grade de Cards das Figuras */}
                 {loadingOrganized ? (
-                    <div className="flex items-center justify-center p-12 text-zinc-500 text-xs gap-2">
-                        <RefreshCw className="w-4 h-4 animate-spin text-orange-500" />
+                    <div className="flex items-center justify-center p-12 text-zinc-500 text-xs gap-2 font-mono">
+                        <RefreshCw className="w-4 h-4 animate-spin text-zinc-400" />
                         Carregando pacotes do HD...
                     </div>
                 ) : filteredOrganized.length === 0 ? (
-                    <div className="p-8 text-center rounded-2xl bg-zinc-900/30 border border-zinc-800/80 text-xs flex flex-col items-center justify-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shadow-lg">
-                            <CheckCircle2 className="w-5 h-5" />
+                    <div className="p-8 text-center rounded-xl bg-zinc-950/60 border border-zinc-800/80 text-xs flex flex-col items-center justify-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shadow-sm">
+                            <CheckCircle2 className="w-4 h-4" />
                         </div>
                         <div>
-                            <span className="font-bold text-white text-sm">Tudo pronto!</span>
-                            <p className="text-zinc-500 mt-1">
+                            <span className="font-bold text-zinc-100 text-sm">Tudo pronto!</span>
+                            <p className="text-zinc-500 mt-0.5">
                                 {showOnlyPending 
                                     ? 'Nenhum pacote pendente de capa nesta categoria.' 
                                     : 'Nenhum pacote encontrado com os filtros atuais.'}
@@ -702,38 +826,39 @@ function AutomationPageContent() {
                         </div>
                         {showOnlyPending && organizedArchives.length > 0 && (
                             <button 
+                                type="button"
                                 onClick={() => setShowOnlyPending(false)}
-                                className="text-orange-400 hover:text-orange-300 font-bold text-xs mt-1"
+                                className="text-zinc-400 hover:text-zinc-200 font-semibold text-xs mt-1 underline cursor-pointer"
                             >
                                 Exibir todas as {organizedArchives.length} figuras já com foto ➔
                             </button>
                         )}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                         {filteredOrganized.map((arc, i) => (
                             <div 
                                 key={i}
-                                className="p-4 rounded-2xl bg-zinc-900/40 border border-zinc-800/80 hover:border-orange-500/40 transition-all flex flex-col justify-between gap-3 group"
+                                className="p-3.5 rounded-xl bg-zinc-950/60 border border-zinc-850 hover:border-zinc-700 transition-all flex flex-col justify-between gap-3 group"
                             >
-                                <div className="space-y-1.5">
+                                <div className="space-y-1">
                                     <div className="flex items-center justify-between gap-1.5">
-                                        <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider font-bold truncate">
+                                        <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider font-semibold truncate">
                                             {arc.category}
                                         </span>
                                         {arc.hasWebpCover ? (
-                                            <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1 shrink-0">
+                                            <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1 shrink-0 font-mono">
                                                 <CheckCircle2 className="w-3 h-3" />
                                                 OK
                                             </span>
                                         ) : (
-                                            <span className="text-[10px] text-amber-400 font-bold shrink-0">
+                                            <span className="text-[10px] text-amber-400 font-medium shrink-0 font-mono">
                                                 Sem Foto
                                             </span>
                                         )}
                                     </div>
 
-                                    <h4 className="text-sm font-bold text-white truncate" title={arc.figureName}>
+                                    <h4 className="text-xs font-bold text-zinc-100 truncate" title={arc.figureName}>
                                         {arc.figureName}
                                     </h4>
                                     <p className="text-[10px] text-zinc-500 truncate font-mono" title={arc.name}>
@@ -742,6 +867,7 @@ function AutomationPageContent() {
                                 </div>
 
                                 <button
+                                    type="button"
                                     onClick={() => {
                                         setPreviewArchive({
                                             path: arc.fullPath,
@@ -750,10 +876,10 @@ function AutomationPageContent() {
                                         });
                                         setPreviewModalOpen(true);
                                     }}
-                                    className="w-full py-2 px-3 rounded-xl bg-orange-500/10 hover:bg-orange-500 text-orange-400 hover:text-white border border-orange-500/20 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                                    className="w-full py-1.5 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
                                 >
-                                    <Eye className="w-3.5 h-3.5" />
-                                    Inspecionar (50ms)
+                                    <Eye className="w-3.5 h-3.5 text-zinc-400" />
+                                    <span>Inspecionar (50ms)</span>
                                 </button>
                             </div>
                         ))}
@@ -761,191 +887,277 @@ function AutomationPageContent() {
                 )}
             </div>
 
-            {/* SEÇÃO 3: SCRIPTS E SINCRONIZAÇÃO (lojinha3d.bat & .py individuais) */}
+            {/* SEÇÃO 3: PIPELINE DE SINCRONIZAÇÃO & ESTEIRA */}
             <div className="space-y-4 relative z-10">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-zinc-900">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-zinc-900">
                     <div>
-                        <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                            <Rocket className="w-4 h-4 text-orange-500" />
-                            Ações da Esteira & Nuvem (Scripts Python)
+                        <h2 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
+                            <Rocket className="w-4 h-4 text-zinc-400" />
+                            <span>Pipeline de Sincronização & Esteira</span>
                         </h2>
-                        <p className="text-xs text-zinc-500">
-                            Execute cada etapa individualmente ou rode o pipeline completo (lojinha3d.bat).
+                        <p className="text-xs text-zinc-400 mt-0.5">
+                            Execute cada etapa sequencialmente de 1 a 6 ou dispare o pipeline completo.
                         </p>
                     </div>
 
                     {/* Botão de Pipeline Completo */}
                     <button
+                        type="button"
                         onClick={() => handleRunScript('lojinha3d', 'Pipeline Completo (lojinha3d.bat)')}
                         disabled={runningScript !== null}
-                        className="py-2.5 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-black uppercase tracking-wider text-xs flex items-center gap-2 transition-all shrink-0 shadow-lg shadow-orange-500/20 disabled:opacity-50"
+                        className="py-2 px-4 rounded-xl bg-zinc-100 hover:bg-white text-zinc-950 font-bold text-xs flex items-center gap-2 transition-all shrink-0 shadow-sm disabled:opacity-50 cursor-pointer"
                     >
                         <Play className={`w-3.5 h-3.5 ${runningScript === 'lojinha3d' ? 'animate-spin' : ''}`} />
-                        {runningScript === 'lojinha3d' ? 'Executando Pipeline...' : 'Executar Todos (lojinha3d.bat)'}
+                        <span>{runningScript === 'lojinha3d' ? 'Executando Pipeline...' : 'Executar Todos (lojinha3d.bat)'}</span>
                     </button>
                 </div>
 
-                {/* Grade dos 6 passos ordenados rigorosamente de 1 a 6 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Stepper Visual Flow Bar */}
+                <div className="hidden lg:flex items-center justify-between p-2.5 rounded-xl bg-zinc-950/60 border border-zinc-850 text-[11px] font-mono text-zinc-400 overflow-x-auto">
+                    <span className="flex items-center gap-1.5"><strong className="text-zinc-200">1.</strong> Pastas Locais</span>
+                    <ArrowRight size={12} className="text-zinc-600" />
+                    <span className="flex items-center gap-1.5"><strong className="text-zinc-200">2.</strong> WebP & Ícones</span>
+                    <ArrowRight size={12} className="text-zinc-600" />
+                    <span className="flex items-center gap-1.5"><strong className="text-zinc-200">3.</strong> Cloudflare R2</span>
+                    <ArrowRight size={12} className="text-zinc-600" />
+                    <span className="flex items-center gap-1.5"><strong className="text-zinc-200">4.</strong> Ingestão Supabase</span>
+                    <ArrowRight size={12} className="text-zinc-600" />
+                    <span className="flex items-center gap-1.5"><strong className="text-zinc-200">5.</strong> Sync IDs Sheets</span>
+                    <ArrowRight size={12} className="text-zinc-600" />
+                    <span className="flex items-center gap-1.5"><strong className="text-zinc-200">6.</strong> IA Sinônimos</span>
+                </div>
+
+                {/* Grade dos 6 passos da esteira */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {/* Passo 1: Criar Pastas */}
-                    <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-900 flex items-center justify-between gap-3 hover:border-zinc-800 transition-colors">
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2 text-xs font-bold text-white">
-                                <FolderSearch className="w-4 h-4 text-amber-500" />
-                                1. Criar Pastas (Script.ps1 - Passo 1)
+                    <div className={clsx(
+                        "p-4 rounded-xl border flex flex-col justify-between gap-3 transition-all",
+                        runningScript === 'powershell_organizar' 
+                            ? "bg-zinc-900 border-emerald-500/50 shadow-sm" 
+                            : "bg-zinc-900/40 border-zinc-850 hover:border-zinc-700/80"
+                    )}>
+                        <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <div className="flex items-center gap-2 text-xs font-bold text-zinc-100">
+                                    <span className="w-5 h-5 rounded-md bg-zinc-800 text-zinc-300 font-mono text-[11px] flex items-center justify-center font-bold">1</span>
+                                    <span>Criar Pastas</span>
+                                </div>
+                                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-950 border border-zinc-800 text-zinc-400">PowerShell</span>
                             </div>
-                            <p className="text-[11px] text-zinc-500 truncate mt-0.5">
-                                Cria uma pasta para cada RAR/ZIP solto e move para dentro
+                            <p className="text-[11px] text-zinc-400">
+                                Cria pasta para cada RAR/ZIP solto e move para o destino.
                             </p>
                         </div>
                         <button
+                            type="button"
                             onClick={() => handleRunScript('powershell_organizar', '1. Criar Pastas (Script.ps1)')}
                             disabled={runningScript !== null}
-                            className="py-2 px-3 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 disabled:opacity-50"
+                            className="w-full py-1.5 px-3 rounded-lg bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 text-zinc-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
                         >
                             <Play className={`w-3 h-3 ${runningScript === 'powershell_organizar' ? 'animate-spin' : ''}`} />
-                            {runningScript === 'powershell_organizar' ? 'Rodando...' : 'Rodar'}
+                            <span>{runningScript === 'powershell_organizar' ? 'Rodando...' : 'Rodar Passo 1'}</span>
                         </button>
                     </div>
 
                     {/* Passo 2: WebP e GSheets */}
-                    <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-900 flex items-center justify-between gap-3 hover:border-zinc-800 transition-colors">
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2 text-xs font-bold text-white">
-                                <Wand2 className="w-4 h-4 text-violet-400" />
-                                2. WebP e GSheets (Script.ps1 - Passo 2)
+                    <div className={clsx(
+                        "p-4 rounded-xl border flex flex-col justify-between gap-3 transition-all",
+                        runningScript === 'powershell_imagens' 
+                            ? "bg-zinc-900 border-emerald-500/50 shadow-sm" 
+                            : "bg-zinc-900/40 border-zinc-850 hover:border-zinc-700/80"
+                    )}>
+                        <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <div className="flex items-center gap-2 text-xs font-bold text-zinc-100">
+                                    <span className="w-5 h-5 rounded-md bg-zinc-800 text-zinc-300 font-mono text-[11px] flex items-center justify-center font-bold">2</span>
+                                    <span>WebP e Planilha</span>
+                                </div>
+                                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-950 border border-zinc-800 text-zinc-400">PowerShell</span>
                             </div>
-                            <p className="text-[11px] text-zinc-500 truncate mt-0.5">
-                                Otimiza para WebP, gera ícones do Windows e atualiza a Planilha
+                            <p className="text-[11px] text-zinc-400">
+                                Converte fotos para WebP, gera ícones e preenche o Sheets.
                             </p>
                         </div>
                         <button
+                            type="button"
                             onClick={() => handleRunScript('powershell_imagens', '2. WebP e GSheets (Script.ps1)')}
                             disabled={runningScript !== null}
-                            className="py-2 px-3 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 disabled:opacity-50"
+                            className="w-full py-1.5 px-3 rounded-lg bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 text-zinc-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
                         >
                             <Play className={`w-3 h-3 ${runningScript === 'powershell_imagens' ? 'animate-spin' : ''}`} />
-                            {runningScript === 'powershell_imagens' ? 'Rodando...' : 'Rodar'}
+                            <span>{runningScript === 'powershell_imagens' ? 'Rodando...' : 'Rodar Passo 2'}</span>
                         </button>
                     </div>
 
                     {/* Passo 3: Upload de Imagens */}
-                    <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-900 flex items-center justify-between gap-3 hover:border-zinc-800 transition-colors">
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2 text-xs font-bold text-white">
-                                <UploadCloud className="w-4 h-4 text-cyan-400" />
-                                3. Upload de Imagens (upload.py)
+                    <div className={clsx(
+                        "p-4 rounded-xl border flex flex-col justify-between gap-3 transition-all",
+                        runningScript === 'upload' 
+                            ? "bg-zinc-900 border-emerald-500/50 shadow-sm" 
+                            : "bg-zinc-900/40 border-zinc-850 hover:border-zinc-700/80"
+                    )}>
+                        <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <div className="flex items-center gap-2 text-xs font-bold text-zinc-100">
+                                    <span className="w-5 h-5 rounded-md bg-zinc-800 text-zinc-300 font-mono text-[11px] flex items-center justify-center font-bold">3</span>
+                                    <span>Upload Cloudflare</span>
+                                </div>
+                                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-950 border border-zinc-800 text-zinc-400">Python / R2</span>
                             </div>
-                            <p className="text-[11px] text-zinc-500 truncate mt-0.5">
-                                Envia fotos para o Cloudflare R2 / ImageKit e preenche coluna Imagem no Sheets
+                            <p className="text-[11px] text-zinc-400">
+                                Envia fotos para Cloudflare R2 e preenche coluna Imagem.
                             </p>
                         </div>
                         <button
+                            type="button"
                             onClick={() => handleRunScript('upload', '3. Upload de Imagens (upload.py)')}
                             disabled={runningScript !== null}
-                            className="py-2 px-3 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 disabled:opacity-50"
+                            className="w-full py-1.5 px-3 rounded-lg bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 text-zinc-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
                         >
                             <Play className={`w-3 h-3 ${runningScript === 'upload' ? 'animate-spin' : ''}`} />
-                            {runningScript === 'upload' ? 'Rodando...' : 'Rodar'}
+                            <span>{runningScript === 'upload' ? 'Rodando...' : 'Rodar Passo 3'}</span>
                         </button>
                     </div>
 
                     {/* Passo 4: Planilha ➔ Supabase */}
-                    <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-900 flex items-center justify-between gap-3 hover:border-zinc-800 transition-colors">
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2 text-xs font-bold text-white">
-                                <Database className="w-4 h-4 text-emerald-400" />
-                                4. Planilha ➔ Supabase (importar.py)
+                    <div className={clsx(
+                        "p-4 rounded-xl border flex flex-col justify-between gap-3 transition-all",
+                        runningScript === 'importar' 
+                            ? "bg-zinc-900 border-emerald-500/50 shadow-sm" 
+                            : "bg-zinc-900/40 border-zinc-850 hover:border-zinc-700/80"
+                    )}>
+                        <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <div className="flex items-center gap-2 text-xs font-bold text-zinc-100">
+                                    <span className="w-5 h-5 rounded-md bg-zinc-800 text-zinc-300 font-mono text-[11px] flex items-center justify-center font-bold">4</span>
+                                    <span>Planilha ➔ Supabase</span>
+                                </div>
+                                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-950 border border-zinc-800 text-zinc-400">Python / PostgREST</span>
                             </div>
-                            <p className="text-[11px] text-zinc-500 truncate mt-0.5">
-                                Lê todas as abas da Planilha e sincroniza no banco Supabase
+                            <p className="text-[11px] text-zinc-400">
+                                Lê todas as abas da Planilha e sincroniza no Supabase.
                             </p>
                         </div>
                         <button
+                            type="button"
                             onClick={() => handleRunScript('importar', '4. Planilha ➔ Supabase (importar.py)')}
                             disabled={runningScript !== null}
-                            className="py-2 px-3 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 disabled:opacity-50"
+                            className="w-full py-1.5 px-3 rounded-lg bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 text-zinc-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
                         >
                             <Play className={`w-3 h-3 ${runningScript === 'importar' ? 'animate-spin' : ''}`} />
-                            {runningScript === 'importar' ? 'Rodando...' : 'Rodar'}
+                            <span>{runningScript === 'importar' ? 'Rodando...' : 'Rodar Passo 4'}</span>
                         </button>
                     </div>
 
                     {/* Passo 5: Supabase ➔ Planilha */}
-                    <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-900 flex items-center justify-between gap-3 hover:border-zinc-800 transition-colors">
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2 text-xs font-bold text-white">
-                                <FileSpreadsheet className="w-4 h-4 text-blue-400" />
-                                5. Supabase ➔ Planilha (atualizar.py)
+                    <div className={clsx(
+                        "p-4 rounded-xl border flex flex-col justify-between gap-3 transition-all",
+                        runningScript === 'atualizar' 
+                            ? "bg-zinc-900 border-emerald-500/50 shadow-sm" 
+                            : "bg-zinc-900/40 border-zinc-850 hover:border-zinc-700/80"
+                    )}>
+                        <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <div className="flex items-center gap-2 text-xs font-bold text-zinc-100">
+                                    <span className="w-5 h-5 rounded-md bg-zinc-800 text-zinc-300 font-mono text-[11px] flex items-center justify-center font-bold">5</span>
+                                    <span>Supabase ➔ Planilha</span>
+                                </div>
+                                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-950 border border-zinc-800 text-zinc-400">Python</span>
                             </div>
-                            <p className="text-[11px] text-zinc-500 truncate mt-0.5">
-                                Atualiza IDs do Supabase de volta na coluna ID do Google Sheets
+                            <p className="text-[11px] text-zinc-400">
+                                Grava os IDs do Supabase de volta na coluna ID do Sheets.
                             </p>
                         </div>
                         <button
+                            type="button"
                             onClick={() => handleRunScript('atualizar', '5. Supabase ➔ Planilha (atualizar.py)')}
                             disabled={runningScript !== null}
-                            className="py-2 px-3 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 disabled:opacity-50"
+                            className="w-full py-1.5 px-3 rounded-lg bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 text-zinc-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
                         >
                             <Play className={`w-3 h-3 ${runningScript === 'atualizar' ? 'animate-spin' : ''}`} />
-                            {runningScript === 'atualizar' ? 'Rodando...' : 'Rodar'}
+                            <span>{runningScript === 'atualizar' ? 'Rodando...' : 'Rodar Passo 5'}</span>
                         </button>
                     </div>
 
                     {/* Passo 6: Sinônimos IA */}
-                    <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-900 flex items-center justify-between gap-3 hover:border-zinc-800 transition-colors">
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2 text-xs font-bold text-white">
-                                <Brain className="w-4 h-4 text-purple-400" />
-                                6. Sinônimos IA (gen_sinonimos.py)
+                    <div className={clsx(
+                        "p-4 rounded-xl border flex flex-col justify-between gap-3 transition-all",
+                        runningScript === 'gen_sinonimos' 
+                            ? "bg-zinc-900 border-emerald-500/50 shadow-sm" 
+                            : "bg-zinc-900/40 border-zinc-850 hover:border-zinc-700/80"
+                    )}>
+                        <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <div className="flex items-center gap-2 text-xs font-bold text-zinc-100">
+                                    <span className="w-5 h-5 rounded-md bg-zinc-800 text-zinc-300 font-mono text-[11px] flex items-center justify-center font-bold">6</span>
+                                    <span>Sinônimos IA</span>
+                                </div>
+                                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-950 border border-zinc-800 text-zinc-400">Gemini Flash</span>
                             </div>
-                            <p className="text-[11px] text-zinc-500 truncate mt-0.5">
-                                Gera sinônimos e palavras-chave de busca com IA no Supabase
+                            <p className="text-[11px] text-zinc-400">
+                                Gera sinônimos e palavras-chave de busca com IA.
                             </p>
                         </div>
                         <button
+                            type="button"
                             onClick={() => handleRunScript('gen_sinonimos', '6. Sinônimos IA (gen_sinonimos.py)')}
                             disabled={runningScript !== null}
-                            className="py-2 px-3 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 font-bold text-xs flex items-center gap-1.5 transition-all shrink-0 disabled:opacity-50"
+                            className="w-full py-1.5 px-3 rounded-lg bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 text-zinc-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
                         >
                             <Play className={`w-3 h-3 ${runningScript === 'gen_sinonimos' ? 'animate-spin' : ''}`} />
-                            {runningScript === 'gen_sinonimos' ? 'Rodando...' : 'Rodar'}
+                            <span>{runningScript === 'gen_sinonimos' ? 'Rodando...' : 'Rodar Passo 6'}</span>
                         </button>
                     </div>
                 </div>
             </div>
 
             {/* CONSOLE TERMINAL DE LOGS */}
-            <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-5 shadow-sm space-y-3 relative z-10">
-                <div className="flex items-center justify-between pb-1">
+            <div className="bg-zinc-950 border border-zinc-850 rounded-2xl p-4 shadow-sm space-y-3 relative z-10">
+                <div className="flex items-center justify-between pb-1 border-b border-zinc-900">
                     <div className="flex items-center gap-2">
-                        <Terminal className="w-3.5 h-3.5 text-orange-400" />
-                        <span className="text-xs font-mono font-bold text-zinc-300">
-                            Terminal
+                        <Terminal className="w-3.5 h-3.5 text-zinc-400" />
+                        <span className="text-xs font-mono font-bold text-zinc-200">
+                            Terminal de Execução
                         </span>
                         {runningScript && (
-                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-mono border border-emerald-500/30">
+                            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-mono border border-emerald-500/20">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                                 {runningScript}
                             </span>
                         )}
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2">
                         <button
+                            type="button"
+                            onClick={() => setAutoScroll(!autoScroll)}
+                            className={clsx(
+                                "px-2 py-1 rounded-lg text-[10px] font-mono font-semibold transition-colors border",
+                                autoScroll 
+                                    ? "bg-zinc-900 border-zinc-800 text-zinc-300" 
+                                    : "bg-zinc-950 border-zinc-850 text-zinc-500"
+                            )}
+                            title="Alternar rolagem automática para o final"
+                        >
+                            Auto-scroll: {autoScroll ? 'ON' : 'OFF'}
+                        </button>
+
+                        <button
+                            type="button"
                             onClick={() => {
                                 navigator.clipboard.writeText(logs.join('\n'));
-                                toast.success('Copiado!');
+                                toast.success('Logs copiados para a área de transferência!');
                             }}
-                            className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs transition-colors"
-                            title="Copiar"
+                            className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-400 hover:text-white text-xs transition-colors cursor-pointer"
+                            title="Copiar logs"
                         >
                             <Copy className="w-3 h-3" />
                         </button>
                         <button
+                            type="button"
                             onClick={() => setLogs([])}
-                            className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs transition-colors"
-                            title="Limpar"
+                            className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-400 hover:text-rose-400 text-xs transition-colors cursor-pointer"
+                            title="Limpar logs"
                         >
                             <Trash2 className="w-3 h-3" />
                         </button>
@@ -954,18 +1166,14 @@ function AutomationPageContent() {
 
                 <div 
                     ref={terminalContainerRef}
-                    className="h-96 md:h-[420px] overflow-y-auto font-mono text-[11px] text-zinc-300 space-y-1 custom-scrollbar pr-1 select-text bg-black/40 rounded-xl p-4 border border-zinc-900"
+                    className="h-80 md:h-96 overflow-y-auto font-mono text-[11px] text-zinc-300 space-y-1 custom-scrollbar pr-1 select-text bg-black/60 rounded-xl p-3 border border-zinc-900"
                 >
                     {logs.length === 0 ? (
                         <div className="h-full flex items-center justify-center text-zinc-600 text-xs italic">
                             Aguardando comandos da esteira...
                         </div>
                     ) : (
-                        logs.map((log, i) => (
-                            <div key={i} className="leading-relaxed break-all">
-                                {log}
-                            </div>
-                        ))
+                        logs.map((log, i) => renderLogLine(log, i))
                     )}
                 </div>
             </div>
