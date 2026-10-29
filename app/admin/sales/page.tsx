@@ -123,6 +123,12 @@ function SalesContent() {
     const [vendedores, setVendedores] = useState<any[]>([]);
     const [isUpdating, setIsUpdating] = useState(false);
 
+    // Temporal Filter States (Pedidos & Vendas)
+    const [vendasPeriod, setVendasPeriod] = useState<'month' | '30d' | '90d' | 'year' | 'all'>('month');
+    const [vendasMonth, setVendasMonth] = useState<string>(new Date().getMonth().toString());
+    const [vendasYear, setVendasYear] = useState<string>(new Date().getFullYear().toString());
+    const [vendasSearch, setVendasSearch] = useState<string>('');
+
     const searchParams = useSearchParams();
     const router = useRouter();
     const customerFilter = searchParams.get('cliente_id');
@@ -208,6 +214,27 @@ function SalesContent() {
         { value: '10', label: 'Novembro' },
         { value: '11', label: 'Dezembro' },
     ];
+
+    const filteredSalesCount = useMemo(() => {
+        return groups.reduce((acc, g) => acc + g.sales.length, 0);
+    }, [groups]);
+
+    const totalFilteredVenda = useMemo(() => {
+        return groups.reduce((acc, g) => acc + g.totalVenda, 0);
+    }, [groups]);
+
+    const totalFilteredLucro = useMemo(() => {
+        return groups.reduce((acc, g) => acc + g.totalLucro, 0);
+    }, [groups]);
+
+    const periodSummaryLabel = useMemo(() => {
+        if (vendasPeriod === '30d') return 'Últimos 30 Dias';
+        if (vendasPeriod === '90d') return 'Últimos 90 Dias';
+        if (vendasPeriod === 'all') return 'Todo o Histórico';
+        if (vendasPeriod === 'year') return `Ano de ${vendasYear}`;
+        const mLabel = months.find(m => m.value === vendasMonth)?.label || '';
+        return `${mLabel} de ${vendasYear}`;
+    }, [vendasPeriod, vendasMonth, vendasYear]);
 
     const commissionsBySeller = useMemo(() => {
         let filtered = allSales.filter(s => {
@@ -436,13 +463,50 @@ function SalesContent() {
         }
     };
 
-    const fetchSales = async () => {
+    const fetchSales = async (override?: { 
+        period?: 'month' | '30d' | '90d' | 'year' | 'all'; 
+        month?: string; 
+        year?: string; 
+        tab?: SalesTabType;
+    }) => {
+        setLoading(true);
         try {
-            const res = await fetch('/api/admin/sales');
+            const currentTab = override?.tab ?? viewTab;
+            const params = new URLSearchParams();
+
+            if (currentTab === 'comissoes') {
+                const y = override?.year ?? comissaoYear;
+                const m = override?.month ?? comissaoMonth;
+                if (y && y !== 'all') params.set('year', y);
+                if (m && m !== 'all') params.set('month', m);
+            } else {
+                const p = override?.period ?? vendasPeriod;
+                const y = override?.year ?? vendasYear;
+                const m = override?.month ?? vendasMonth;
+
+                if (p === '30d') {
+                    const d = new Date();
+                    d.setDate(d.getDate() - 30);
+                    params.set('startDate', d.toISOString());
+                } else if (p === '90d') {
+                    const d = new Date();
+                    d.setDate(d.getDate() - 90);
+                    params.set('startDate', d.toISOString());
+                } else if (p === 'year') {
+                    if (y && y !== 'all') params.set('year', y);
+                } else if (p === 'month') {
+                    if (y && y !== 'all') params.set('year', y);
+                    if (m && m !== 'all') params.set('month', m);
+                }
+            }
+
+            const url = `/api/admin/sales${params.toString() ? `?${params.toString()}` : ''}`;
+            const res = await fetch(url);
             const data: Sale[] = await res.json();
 
             if (res.ok) {
                 setAllSales(data);
+                processGroups(data, vendasSearch);
             }
         } catch (err) {
             toast.error('Erro ao carregar vendas');
@@ -452,19 +516,28 @@ function SalesContent() {
     };
 
     useEffect(() => {
-        if (allSales.length > 0) {
-            processGroups(allSales);
-        }
-    }, [allSales, customerFilter]);
+        processGroups(allSales, vendasSearch);
+    }, [allSales, customerFilter, vendasSearch]);
 
-    const processGroups = (data: Sale[]) => {
+    const processGroups = (data: Sale[], searchFilter = '') => {
         const grouped: { [key: string]: MonthGroup } = {};
         const order: string[] = [];
 
         // Aplicar filtro de cliente se existir
-        const filtered = customerFilter 
+        let filtered = customerFilter 
             ? data.filter(s => s.cliente_id === customerFilter)
             : data;
+
+        if (searchFilter && searchFilter.trim()) {
+            const term = searchFilter.toLowerCase().trim();
+            filtered = filtered.filter(s => 
+                (s.cliente_nome && s.cliente_nome.toLowerCase().includes(term)) ||
+                (s.figuras?.nome && s.figuras.nome.toLowerCase().includes(term)) ||
+                (s.vendedor_nome && s.vendedor_nome.toLowerCase().includes(term)) ||
+                (s.vendedor && s.vendedor.toLowerCase().includes(term)) ||
+                (s.observacao && s.observacao.toLowerCase().includes(term))
+            );
+        }
 
         filtered.forEach(sale => {
             const date = new Date(sale.data_venda);
@@ -670,21 +743,24 @@ function SalesContent() {
     };
 
     return (
-        <div className="w-full text-zinc-200 relative overflow-x-hidden selection:bg-orange-500/30 selection:text-orange-200">
-            {/* Sci-fi Background Blobs - Subdued */}
-            <div className="fixed top-[0%] right-[0%] w-[40%] h-[40%] bg-cyan-900/10 rounded-full blur-[120px] pointer-events-none" />
-            <div className="fixed bottom-[0%] left-[0%] w-[40%] h-[40%] bg-emerald-900/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="w-full min-h-screen text-zinc-100 relative overflow-x-hidden selection:bg-orange-500/30 selection:text-orange-200">
+            {/* Ambient luxury subtle glow */}
+            <div className="absolute inset-x-0 top-0 h-96 bg-gradient-to-b from-orange-500/[0.03] via-transparent to-transparent pointer-events-none" />
 
             <div className="w-full relative z-10 transition-colors duration-300">
 
                 {/* Header */}
-                <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8 mt-2">
-                    <div className="flex items-center gap-4">
-                        <Link href="/admin" className="p-2.5 bg-zinc-900 border border-zinc-800 hover:border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-400 rounded-2xl transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] text-zinc-500 group">
-                            <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+                <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-8 mt-2">
+                    <div className="flex items-center gap-3.5">
+                        <Link 
+                            href="/admin" 
+                            className="p-2.5 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-xl transition-colors text-zinc-400 hover:text-zinc-100 shadow-sm group"
+                            title="Voltar ao Painel"
+                        >
+                            <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
                         </Link>
                         <div>
-                            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white flex items-center gap-3">
+                            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-100 flex items-center gap-3">
                                 {viewTab === 'kpis' ? 'KPIs de Vendas' : 
                                  viewTab === 'comissoes' ? 'Acertos & Comissões' : 
                                  viewTab === 'carrinhos' ? 'Carrinhos Abandonados' :
@@ -693,13 +769,13 @@ function SalesContent() {
                                 {customerFilter && (
                                     <button 
                                         onClick={() => router.push('/admin/sales')}
-                                        className="text-[10px] bg-orange-500/10 border border-orange-500/50 text-orange-500 px-3 py-1 rounded-full flex items-center gap-2 hover:bg-orange-500 hover:text-white transition-all"
+                                        className="text-[10px] bg-orange-500/10 border border-orange-500/40 text-orange-400 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 hover:bg-orange-500 hover:text-zinc-950 font-bold transition-all"
                                     >
                                         <X size={10} /> REMOVER FILTRO
                                     </button>
                                 )}
                             </h1>
-                            <p className="text-zinc-500 text-sm font-medium mt-1 uppercase tracking-widest text-[10px]">
+                            <p className="text-zinc-400 text-xs sm:text-sm mt-0.5">
                                 {viewTab === 'kpis' ? 'Faturamento, volume e desempenho por segmento de catálogo' : 
                                  viewTab === 'comissoes' ? 'Fechamentos mensais e repasses para vendedores e pintores' : 
                                  viewTab === 'carrinhos' ? 'Anti-abandono, recuperação via cupons dinâmicos e WhatsApp' :
@@ -709,23 +785,24 @@ function SalesContent() {
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-between xl:justify-end">
-                        {/* Tab Switcher: Vendas vs Carrinhos vs DRE vs Comissões vs KPIs */}
-                        <div className="flex flex-wrap items-center gap-1.5 bg-zinc-900/80 p-1.5 rounded-2xl border border-zinc-800">
+                    <div className="flex flex-wrap items-center gap-2.5 w-full xl:w-auto justify-between xl:justify-end">
+                        {/* Tab Switcher */}
+                        <div className="inline-flex flex-wrap items-center bg-zinc-950/80 border border-zinc-800/90 p-1.5 rounded-xl gap-1">
                             <button
                                 onClick={() => {
                                     setViewTab('vendas');
                                     const url = new URL(window.location.href);
                                     url.searchParams.delete('tab');
                                     window.history.replaceState({}, '', url.toString());
+                                    fetchSales({ tab: 'vendas' });
                                 }}
-                                className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                className={`px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
                                     viewTab === 'vendas'
-                                        ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
-                                        : 'text-zinc-400 hover:text-white'
+                                        ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                        : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60'
                                 }`}
                             >
-                                <ShoppingCart size={15} />
+                                <ShoppingCart size={14} className={viewTab === 'vendas' ? 'text-zinc-950' : 'text-zinc-500'} />
                                 Pedidos & Vendas ({allSales.length})
                             </button>
                             <button
@@ -735,13 +812,13 @@ function SalesContent() {
                                     url.searchParams.set('tab', 'carrinhos');
                                     window.history.replaceState({}, '', url.toString());
                                 }}
-                                className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                className={`px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
                                     viewTab === 'carrinhos'
-                                        ? 'bg-orange-500 text-black shadow-md shadow-orange-500/30'
-                                        : 'text-zinc-400 hover:text-white'
+                                        ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                        : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60'
                                 }`}
                             >
-                                <PackageOpen size={15} />
+                                <PackageOpen size={14} className={viewTab === 'carrinhos' ? 'text-zinc-950' : 'text-zinc-500'} />
                                 Carrinhos Abandonados
                             </button>
                             <button
@@ -751,13 +828,13 @@ function SalesContent() {
                                     url.searchParams.set('tab', 'dre');
                                     window.history.replaceState({}, '', url.toString());
                                 }}
-                                className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                className={`px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
                                     viewTab === 'dre'
-                                        ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                                        : 'text-zinc-400 hover:text-white'
+                                        ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                        : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60'
                                 }`}
                             >
-                                <TrendingUp size={15} />
+                                <TrendingUp size={14} className={viewTab === 'dre' ? 'text-zinc-950' : 'text-zinc-500'} />
                                 DRE & Fechamento
                             </button>
                             <button
@@ -766,14 +843,15 @@ function SalesContent() {
                                     const url = new URL(window.location.href);
                                     url.searchParams.set('tab', 'comissoes');
                                     window.history.replaceState({}, '', url.toString());
+                                    fetchSales({ tab: 'comissoes' });
                                 }}
-                                className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                className={`px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
                                     viewTab === 'comissoes'
-                                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                                        : 'text-zinc-400 hover:text-white'
+                                        ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                        : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60'
                                 }`}
                             >
-                                <DollarSign size={15} />
+                                <DollarSign size={14} className={viewTab === 'comissoes' ? 'text-zinc-950' : 'text-zinc-500'} />
                                 Acertos & Comissões
                             </button>
                             <button
@@ -783,20 +861,23 @@ function SalesContent() {
                                     url.searchParams.set('tab', 'kpis');
                                     window.history.replaceState({}, '', url.toString());
                                 }}
-                                className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                className={`px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
                                     viewTab === 'kpis'
-                                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-black font-black shadow-md shadow-amber-500/30'
-                                        : 'text-zinc-400 hover:text-white'
+                                        ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                        : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60'
                                 }`}
                             >
-                                <BarChart3 size={15} />
+                                <BarChart3 size={14} className={viewTab === 'kpis' ? 'text-zinc-950' : 'text-zinc-500'} />
                                 KPIs de Vendas
                             </button>
                         </div>
 
                         {viewTab === 'vendas' && (
-                            <Link href="/admin/sales/new" className="bg-cyan-600 hover:bg-cyan-500 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 transition-all shadow-sm active:scale-95 uppercase tracking-widest text-xs">
-                                <Plus size={16} strokeWidth={3} /> NOVA VENDA
+                            <Link 
+                                href="/admin/sales/new" 
+                                className="bg-orange-500 hover:bg-orange-400 text-zinc-950 px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-md shadow-orange-500/20 active:scale-95 uppercase tracking-wider text-xs"
+                            >
+                                <Plus size={15} strokeWidth={2.5} /> Nova Venda
                             </Link>
                         )}
                     </div>
@@ -804,95 +885,293 @@ function SalesContent() {
 
                 {/* ABA 1: LISTA AGRUPADA DE VENDAS */}
                 {viewTab === 'vendas' && (
-                    loading ? (
-                    <div className="p-24 flex justify-center"><Loader2 className="animate-spin text-cyan-500 w-12 h-12" /></div>
-                ) : groups.length === 0 ? (
-                    <div className="p-12 text-center text-zinc-500 bg-zinc-950/60 backdrop-blur-2xl rounded-3xl border border-zinc-800/80 shadow-2xl font-black tracking-widest uppercase text-sm">
-                        NENHUMA VENDA REGISTRADA AINDA.
-                    </div>
-                ) : (
-                    <div className="space-y-8">
+                    <div className="space-y-6">
+                        {/* Barra de Filtros Temporais & Pesquisa Rápida */}
+                        <div className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/60 rounded-2xl p-4 sm:p-5 shadow-xl shadow-black/20 space-y-4">
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                {/* Presets Rápidos */}
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mr-1">
+                                        Período:
+                                    </span>
+                                    <button
+                                        onClick={() => {
+                                            setVendasPeriod('month');
+                                            fetchSales({ period: 'month', month: vendasMonth, year: vendasYear });
+                                        }}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                            vendasPeriod === 'month'
+                                                ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                                : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 border border-zinc-800'
+                                        }`}
+                                    >
+                                        Mês
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setVendasPeriod('30d');
+                                            fetchSales({ period: '30d' });
+                                        }}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                            vendasPeriod === '30d'
+                                                ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                                : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 border border-zinc-800'
+                                        }`}
+                                    >
+                                        Últimos 30 Dias
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setVendasPeriod('90d');
+                                            fetchSales({ period: '90d' });
+                                        }}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                            vendasPeriod === '90d'
+                                                ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                                : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 border border-zinc-800'
+                                        }`}
+                                    >
+                                        Últimos 90 Dias
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setVendasPeriod('year');
+                                            fetchSales({ period: 'year', year: vendasYear });
+                                        }}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                            vendasPeriod === 'year'
+                                                ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                                : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 border border-zinc-800'
+                                        }`}
+                                    >
+                                        Ano ({vendasYear})
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setVendasPeriod('all');
+                                            fetchSales({ period: 'all' });
+                                        }}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                            vendasPeriod === 'all'
+                                                ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                                : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 border border-zinc-800'
+                                        }`}
+                                    >
+                                        Histórico Completo
+                                    </button>
+                                </div>
+
+                                {/* Seletores Específicos Mês / Ano + Busca */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {vendasPeriod === 'month' && (
+                                        <select
+                                            value={vendasMonth}
+                                            onChange={(e) => {
+                                                setVendasMonth(e.target.value);
+                                                fetchSales({ period: 'month', month: e.target.value, year: vendasYear });
+                                            }}
+                                            className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg px-3 py-1.5 outline-none focus:border-zinc-600 cursor-pointer transition-colors"
+                                        >
+                                            {months.map(m => (
+                                                <option key={m.value} value={m.value}>{m.label}</option>
+                                            ))}
+                                        </select>
+                                    )}
+
+                                    {(vendasPeriod === 'month' || vendasPeriod === 'year') && (
+                                        <select
+                                            value={vendasYear}
+                                            onChange={(e) => {
+                                                setVendasYear(e.target.value);
+                                                fetchSales({ period: vendasPeriod, month: vendasMonth, year: e.target.value });
+                                            }}
+                                            className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg px-3 py-1.5 outline-none focus:border-zinc-600 cursor-pointer transition-colors"
+                                        >
+                                            <option value="2027">2027</option>
+                                            <option value="2026">2026</option>
+                                            <option value="2025">2025</option>
+                                            <option value="2024">2024</option>
+                                        </select>
+                                    )}
+
+                                    {/* Input de Busca Rápida */}
+                                    <div className="relative min-w-[200px] flex-1 sm:flex-none">
+                                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar cliente, figura..."
+                                            value={vendasSearch}
+                                            onChange={(e) => setVendasSearch(e.target.value)}
+                                            className="w-full bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 rounded-lg pl-8 pr-7 py-1.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-zinc-600 transition-colors"
+                                        />
+                                        {vendasSearch && (
+                                            <button
+                                                onClick={() => setVendasSearch('')}
+                                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <button
+                                        onClick={() => fetchSales()}
+                                        disabled={loading}
+                                        className="p-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                                        title="Atualizar Pedidos"
+                                    >
+                                        <RotateCw size={13} className={loading ? 'animate-spin text-orange-500' : ''} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Resumo do Período Filtrado */}
+                            <div className="pt-3 border-t border-zinc-800/60 flex flex-wrap items-center justify-between gap-4 text-xs">
+                                <div className="flex items-center gap-2 text-zinc-400">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                                    <span>Exibindo: <strong className="text-zinc-200">{periodSummaryLabel}</strong></span>
+                                    <span className="text-zinc-600">•</span>
+                                    <span className="text-zinc-400 font-mono"><strong className="text-zinc-200 font-bold">{filteredSalesCount}</strong> {filteredSalesCount === 1 ? 'pedido' : 'pedidos'}</span>
+                                    {vendasSearch && (
+                                        <span className="text-zinc-500 text-[11px]">(filtrado por &ldquo;{vendasSearch}&rdquo;)</span>
+                                    )}
+                                </div>
+
+                                {canSeeValues && (
+                                    <div className="flex items-center gap-5 text-xs">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-zinc-500 uppercase text-[10px] font-bold">Faturamento:</span>
+                                            <span className="font-mono font-bold text-zinc-100">R$ {totalFilteredVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 border-l border-zinc-800/80 pl-5">
+                                            <span className="text-zinc-500 uppercase text-[10px] font-bold">Lucro Real:</span>
+                                            <span className="font-mono font-bold text-emerald-400">R$ {totalFilteredLucro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Conteúdo: Loading / Empty / Grupos de Vendas */}
+                        {loading ? (
+                            <div className="p-24 flex justify-center"><Loader2 className="animate-spin text-orange-500 w-10 h-10" /></div>
+                        ) : groups.length === 0 ? (
+                            <div className="p-12 text-center text-zinc-400 bg-zinc-900/40 backdrop-blur-xl rounded-2xl border border-zinc-800/60 shadow-xl space-y-3">
+                                <p className="font-bold tracking-wider uppercase text-xs">
+                                    {vendasSearch 
+                                        ? `Nenhum pedido encontrado para a busca "${vendasSearch}".` 
+                                        : `Nenhuma venda registrada em ${periodSummaryLabel}.`}
+                                </p>
+                                {vendasSearch ? (
+                                    <button 
+                                        onClick={() => setVendasSearch('')}
+                                        className="text-xs text-orange-400 hover:text-orange-300 font-bold underline cursor-pointer"
+                                    >
+                                        Limpar termo de busca
+                                    </button>
+                                ) : vendasPeriod !== 'all' ? (
+                                    <button 
+                                        onClick={() => {
+                                            setVendasPeriod('all');
+                                            fetchSales({ period: 'all' });
+                                        }}
+                                        className="text-xs text-orange-400 hover:text-orange-300 font-bold underline cursor-pointer"
+                                    >
+                                        Ver histórico completo
+                                    </button>
+                                ) : null}
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
                         {groups.map((group) => (
-                            <div key={group.label} className="bg-zinc-950/60 backdrop-blur-sm border border-zinc-800/80 rounded-2xl overflow-hidden shadow-lg relative">
-                                <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent"></div>
+                            <div key={group.label} className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/60 rounded-2xl overflow-hidden shadow-xl shadow-black/20 relative">
                                 {/* Group Header */}
-                                <div className="bg-zinc-900/80 px-6 py-5 flex justify-between items-center border-b border-zinc-800/80">
-                                    <h2 className="text-xl font-black text-cyan-400 flex items-center gap-3">
-                                        <Calendar size={22} className="text-cyan-500/70" />
+                                <div className="bg-zinc-950/60 px-6 py-4 flex flex-wrap justify-between items-center gap-4 border-b border-zinc-800/60">
+                                    <h2 className="text-base font-bold text-zinc-100 flex items-center gap-2.5">
+                                        <Calendar size={18} className="text-zinc-400" />
                                         {group.label}
                                     </h2>
                                     {canSeeValues && (
-                                        <div className="flex gap-8 text-sm">
+                                        <div className="flex items-center gap-6 text-sm">
                                             <div className="flex flex-col items-end">
-                                                <span className="text-zinc-500 text-[10px] uppercase font-black tracking-[0.1em]">Total Vendas</span>
-                                                <span className="font-black text-cyan-500 text-lg tracking-tighter">R$ {group.totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                <span className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider">Total Vendas</span>
+                                                <span className="font-mono font-bold text-zinc-100 text-base">R$ {group.totalVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                             </div>
-                                            <div className="flex flex-col items-end border-l border-zinc-800/80 pl-8 relative">
-                                                <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-gradient-to-b from-transparent via-emerald-500/30 to-transparent"></div>
-                                                <span className="text-zinc-500 text-[10px] uppercase font-black tracking-[0.1em]">Lucro Real</span>
-                                                <span className="font-black text-emerald-400 text-lg tracking-tighter">R$ {group.totalLucro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                            <div className="flex flex-col items-end border-l border-zinc-800/80 pl-6">
+                                                <span className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider">Lucro Real</span>
+                                                <span className="font-mono font-bold text-emerald-400 text-base">R$ {group.totalLucro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                             </div>
                                         </div>
                                     )}
                                 </div>
 
                                 {/* Grid de Vendas */}
-                                <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                                <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                                     {group.sales.map(sale => (
-                                        <div key={sale.id} className="bg-zinc-950/60 backdrop-blur-sm border border-zinc-800/80 rounded-2xl p-5 shadow-sm flex flex-col relative group transition-colors hover:border-cyan-500/30">
-                                            {/* Header do Card */}
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div className="flex flex-col">
-                                                    <div className="font-black text-zinc-200 text-lg flex items-center gap-2 tracking-tight leading-tight">
-                                                        {sale.figuras?.nome || 'Desconhecida'}
-                                                        {sale.pintura_freelancer && (
-                                                            <span title="Pintura Terceirizada" className="text-orange-400">
-                                                                <Paintbrush size={14} />
-                                                            </span>
-                                                        )}
+                                        <div key={sale.id} className="bg-zinc-950/60 backdrop-blur-md border border-zinc-800/60 rounded-xl p-5 flex flex-col justify-between relative group hover:border-zinc-700/80 hover:bg-zinc-900/40 transition-all shadow-sm">
+                                            <div>
+                                                {/* Header do Card */}
+                                                <div className="flex items-start justify-between gap-2 mb-3">
+                                                    <div className="flex flex-col min-w-0">
+                                                        <div className="font-bold text-zinc-100 text-base leading-snug truncate" title={sale.figuras?.nome || 'Desconhecida'}>
+                                                            {sale.figuras?.nome || 'Desconhecida'}
+                                                            {sale.pintura_freelancer && (
+                                                                <span title="Pintura Terceirizada" className="inline-block ml-1.5 text-orange-400 align-middle">
+                                                                    <Paintbrush size={13} />
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-[10px] text-zinc-500 uppercase font-semibold tracking-wider mt-0.5 truncate">
+                                                            {getStudioName(sale.figuras)}
+                                                        </div>
                                                     </div>
-                                                    <div className="text-[10px] text-zinc-500 uppercase font-black tracking-widest mt-1">
-                                                        {getStudioName(sale.figuras)}
-                                                    </div>
+                                                    {sale.quantidade > 1 && (
+                                                        <span className="bg-zinc-800 text-zinc-200 border border-zinc-700/80 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold shrink-0">
+                                                            {sale.quantidade}x
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                {sale.quantidade > 1 && (
-                                                    <span className="bg-cyan-950/60 text-cyan-400 px-2 py-1 rounded-md text-[10px] font-black uppercase ring-1 ring-cyan-500/30 shrink-0 shadow-sm">
-                                                        {sale.quantidade}x
-                                                    </span>
-                                                )}
-                                            </div>
 
-                                            {/* Info de Cliente e Data */}
-                                            <div className="space-y-1 mb-5 flex-1">
-                                                <div className="text-xs text-zinc-400 font-medium">
-                                                    <span className="text-zinc-600 font-bold mr-1">Cli:</span> {sale.cliente_nome}
-                                                </div>
-                                                <div className="text-xs text-zinc-400 font-medium flex justify-between">
-                                                    <span><span className="text-zinc-600 font-bold mr-1">Ven:</span> {(() => {
-                                                        const raw = sale.vendedor ? (sale.vendedor_nome || sale.vendedor.split('@')[0]) : 'Loja';
-                                                        return raw.toLowerCase().includes('rodrigo') ? '@frangatoys' : raw;
-                                                    })()}</span>
-                                                    <span className="font-mono text-[10px] bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded text-zinc-500">{new Date(sale.data_venda).toLocaleDateString('pt-BR')}</span>
+                                                {/* Info de Cliente e Data */}
+                                                <div className="space-y-1.5 mb-4">
+                                                    <div className="text-xs text-zinc-400 font-medium truncate">
+                                                        <span className="text-zinc-500 font-semibold mr-1">Cli:</span> {sale.cliente_nome}
+                                                    </div>
+                                                    <div className="text-xs text-zinc-400 font-medium flex justify-between items-center">
+                                                        <span className="truncate">
+                                                            <span className="text-zinc-500 font-semibold mr-1">Ven:</span> {(() => {
+                                                                const raw = sale.vendedor ? (sale.vendedor_nome || sale.vendedor.split('@')[0]) : 'Loja';
+                                                                return raw.toLowerCase().includes('rodrigo') ? '@frangatoys' : raw;
+                                                            })()}
+                                                        </span>
+                                                        <span className="font-mono text-[10px] bg-zinc-900/80 border border-zinc-800/80 px-2 py-0.5 rounded text-zinc-400 shrink-0">
+                                                            {new Date(sale.data_venda).toLocaleDateString('pt-BR')}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
 
                                             {/* Financeiro */}
-                                            <div className="pt-4 border-t border-zinc-900 flex justify-between items-end">
+                                            <div className="pt-3.5 border-t border-zinc-800/60 flex justify-between items-end">
                                                 <div className="flex flex-col">
-                                                    <span className="font-black text-zinc-100 text-xl tracking-tighter">
+                                                    <span className="font-mono font-bold text-zinc-100 text-lg tracking-tight">
                                                         R$ {canSeeValues ? sale.valor_venda_final.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '***'}
                                                     </span>
-                                                    <span className={`w-fit text-[9px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-wider mt-1 ${sale.link_pagamento ? 'bg-indigo-950/60 text-indigo-400 border border-indigo-500/30' : 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30'}`}>
+                                                    <span className={`w-fit text-[9px] font-mono font-semibold px-2 py-0.5 rounded uppercase tracking-wider mt-1 border ${
+                                                        sale.link_pagamento 
+                                                            ? 'bg-zinc-800/80 text-zinc-300 border-zinc-700/80' 
+                                                            : 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30'
+                                                    }`}>
                                                         {sale.link_pagamento ? 'Cartão' : 'PIX'}
                                                     </span>
                                                 </div>
                                                 
                                                 {(hasRole('admin') || hasRole('finance')) && (
                                                     <div className="text-right">
-                                                        <div className="text-[10px] text-zinc-600 line-through" title="Custo Base - Material e Impressão">
+                                                        <div className="text-[10px] text-zinc-500 line-through font-mono" title="Custo Base - Material e Impressão">
                                                             R$ {(sale.custo_producao_snapshot || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                         </div>
-                                                        <div className="text-emerald-400 font-black text-sm tracking-tight" title="Lucro Líquido Real">
+                                                        <div className="text-emerald-400 font-mono font-bold text-sm tracking-tight" title="Lucro Líquido Real">
                                                             R$ {sale.lucro_real?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                         </div>
                                                     </div>
@@ -900,23 +1179,23 @@ function SalesContent() {
                                             </div>
 
                                             {/* Ações Hover */}
-                                            <div className="absolute top-4 right-4 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0 bg-zinc-950/80 p-2 rounded-2xl backdrop-blur-md border border-zinc-800/80 shadow-xl">
+                                            <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-950/90 p-1 rounded-xl backdrop-blur-md border border-zinc-800/80 shadow-xl">
                                                 {sale.status === 'Concluída' && (
-                                                    <button onClick={() => handleSendToKanban(sale.id)} className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-cyan-400 transition-colors shadow-sm" title="Reativar no Kanban">
-                                                        <RotateCcw size={16} />
+                                                    <button onClick={() => handleSendToKanban(sale.id)} className="p-1.5 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-100 transition-colors" title="Reativar no Kanban">
+                                                        <RotateCcw size={14} />
                                                     </button>
                                                 )}
-                                                <Link href={`/api/admin/kanban/os/${sale.id}`} target="_blank" className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-indigo-400 transition-colors shadow-sm" title="Gerar OS">
-                                                    <Receipt size={16} />
+                                                <Link href={`/api/admin/kanban/os/${sale.id}`} target="_blank" className="p-1.5 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-100 transition-colors" title="Gerar OS">
+                                                    <Receipt size={14} />
                                                 </Link>
                                                 {hasRole('admin') && (
                                                     <>
                                                         <Link 
                                                             href={`/admin/sales/new?cliente_nome=${encodeURIComponent(sale.cliente_nome)}&cliente_contato=${encodeURIComponent(sale.cliente_contato || '')}&cliente_id=${encodeURIComponent(sale.cliente_id || '')}&vendedor=${encodeURIComponent(sale.vendedor || '')}&canal=${encodeURIComponent(sale.canal_venda || '')}&metodo_entrega=${encodeURIComponent(sale.metodo_entrega || '')}&data_venda=${encodeURIComponent(sale.data_venda ? sale.data_venda.split('T')[0] : '')}`}
-                                                            className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-emerald-400 transition-colors shadow-sm flex items-center justify-center" 
+                                                            className="p-1.5 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-100 transition-colors" 
                                                             title="Adicionar Novo Item (Duplicar dados do Cliente)"
                                                         >
-                                                            <Plus size={16} />
+                                                            <Plus size={14} />
                                                         </Link>
                                                         {sale.link_pagamento ? (
                                                             <button
@@ -924,10 +1203,10 @@ function SalesContent() {
                                                                     navigator.clipboard.writeText(sale.link_pagamento!);
                                                                     toast.success('Link Mercado Pago copiado!');
                                                                 }}
-                                                                className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-blue-400 transition-colors shadow-sm"
+                                                                className="p-1.5 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-100 transition-colors"
                                                                 title="Copiar Link Mercado Pago (Cartão)"
                                                             >
-                                                                <CreditCard size={16} />
+                                                                <CreditCard size={14} />
                                                             </button>
                                                         ) : (
                                                             <button
@@ -941,17 +1220,17 @@ function SalesContent() {
                                                                     navigator.clipboard.writeText(pix);
                                                                     toast.success('Código PIX copiado!');
                                                                 }}
-                                                                className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-emerald-400 transition-colors shadow-sm"
+                                                                className="p-1.5 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-zinc-400 hover:text-emerald-400 transition-colors"
                                                                 title="Copiar PIX Copia e Cola"
                                                             >
-                                                                <QrCode size={16} />
+                                                                <QrCode size={14} />
                                                             </button>
                                                         )}
-                                                        <button onClick={() => handleStartEdit(sale)} className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-amber-400 transition-colors shadow-sm" title="Editar Venda">
-                                                            <Edit3 size={16} />
+                                                        <button onClick={() => handleStartEdit(sale)} className="p-1.5 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-zinc-400 hover:text-amber-400 transition-colors" title="Editar Venda">
+                                                            <Edit3 size={14} />
                                                         </button>
-                                                        <button onClick={() => handleDelete(sale.id)} className="p-2 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-red-400 transition-colors shadow-sm" title="Excluir Venda">
-                                                            <Trash2 size={16} />
+                                                        <button onClick={() => handleDelete(sale.id)} className="p-1.5 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 rounded-lg text-zinc-400 hover:text-rose-400 transition-colors" title="Excluir Venda">
+                                                            <Trash2 size={14} />
                                                         </button>
                                                     </>
                                                 )}
@@ -961,8 +1240,9 @@ function SalesContent() {
                                 </div>
                             </div>
                         ))}
+                            </div>
+                        )}
                     </div>
-                    )
                 )}
 
                 {/* ABA: CARRINHOS ABANDONADOS */}
@@ -983,28 +1263,28 @@ function SalesContent() {
                 {viewTab === 'comissoes' && (
                     <div className="space-y-6 animate-in fade-in duration-300">
                         {/* Barra de Filtros de Comissões & Métricas Rápidas */}
-                        <div className="bg-zinc-950/80 border border-zinc-800/80 rounded-3xl p-6 space-y-6 shadow-xl">
+                        <div className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/60 rounded-2xl p-6 space-y-6 shadow-xl shadow-black/20">
                             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                                 <div>
-                                    <h2 className="text-xl font-black text-white flex items-center gap-2.5">
-                                        <DollarSign className="text-emerald-500" size={22} />
+                                    <h2 className="text-lg font-bold text-zinc-100 flex items-center gap-2.5">
+                                        <DollarSign className="text-emerald-400" size={20} />
                                         Fechamento de Comissões e Repasses
                                     </h2>
                                     <p className="text-xs text-zinc-400 mt-1">
-                                        Cálculo automático de comissões para vendedores e valores de pintura freelancer terceirizada.
+                                        Cálculo consolidado de comissões para vendedores e valores de pintura freelancer.
                                     </p>
                                 </div>
 
-                                <div className="flex flex-wrap items-center gap-3 bg-zinc-900/90 p-2 rounded-2xl border border-zinc-800">
+                                <div className="flex flex-wrap items-center gap-2 bg-zinc-950/80 p-1.5 rounded-xl border border-zinc-800/80">
                                     <div className="flex items-center gap-1.5 text-zinc-500 text-xs px-2 font-bold">
-                                        <Filter size={14} /> Filtros:
+                                        <Filter size={13} /> Filtros:
                                     </div>
 
                                     {vendedores.length > 0 && (
                                         <select
                                             value={comissaoVendedorId}
                                             onChange={(e) => setComissaoVendedorId(e.target.value)}
-                                            className="bg-zinc-950 border border-zinc-800 text-white text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-emerald-500 cursor-pointer"
+                                            className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg px-3 py-1.5 outline-none focus:border-zinc-600 cursor-pointer transition-colors"
                                         >
                                             <option value="all">Todos os Vendedores</option>
                                             {vendedores.map(v => (
@@ -1015,8 +1295,11 @@ function SalesContent() {
 
                                     <select
                                         value={comissaoMonth}
-                                        onChange={(e) => setComissaoMonth(e.target.value)}
-                                        className="bg-zinc-950 border border-zinc-800 text-white text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-emerald-500 cursor-pointer"
+                                        onChange={(e) => {
+                                            setComissaoMonth(e.target.value);
+                                            fetchSales({ tab: 'comissoes', month: e.target.value, year: comissaoYear });
+                                        }}
+                                        className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg px-3 py-1.5 outline-none focus:border-zinc-600 cursor-pointer transition-colors"
                                     >
                                         {months.map(m => (
                                             <option key={m.value} value={m.value}>{m.label}</option>
@@ -1025,8 +1308,11 @@ function SalesContent() {
 
                                     <select
                                         value={comissaoYear}
-                                        onChange={(e) => setComissaoYear(e.target.value)}
-                                        className="bg-zinc-950 border border-zinc-800 text-white text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-emerald-500 cursor-pointer"
+                                        onChange={(e) => {
+                                            setComissaoYear(e.target.value);
+                                            fetchSales({ tab: 'comissoes', month: comissaoMonth, year: e.target.value });
+                                        }}
+                                        className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg px-3 py-1.5 outline-none focus:border-zinc-600 cursor-pointer transition-colors"
                                     >
                                         <option value="2024">2024</option>
                                         <option value="2025">2025</option>
@@ -1037,28 +1323,28 @@ function SalesContent() {
                             </div>
 
                             {/* Cards de Resumo */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                                <div className="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl">
-                                    <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                                <div className="p-5 bg-zinc-950/60 border border-zinc-800/60 rounded-xl">
+                                    <span className="text-[10px] font-bold uppercase text-zinc-500 tracking-wider block mb-1">
                                         Total a Pagar no Período
                                     </span>
-                                    <span className="text-2xl font-black text-emerald-400">
+                                    <span className="text-2xl font-mono font-bold text-emerald-400">
                                         R$ {totalComissoesGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
-                                <div className="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl">
-                                    <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1">
+                                <div className="p-5 bg-zinc-950/60 border border-zinc-800/60 rounded-xl">
+                                    <span className="text-[10px] font-bold uppercase text-zinc-500 tracking-wider block mb-1">
                                         Profissionais com Repasse
                                     </span>
-                                    <span className="text-2xl font-black text-white">
+                                    <span className="text-2xl font-mono font-bold text-zinc-100">
                                         {Object.keys(commissionsBySeller).length}
                                     </span>
                                 </div>
-                                <div className="p-4 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl">
-                                    <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1">
+                                <div className="p-5 bg-zinc-950/60 border border-zinc-800/60 rounded-xl">
+                                    <span className="text-[10px] font-bold uppercase text-zinc-500 tracking-wider block mb-1">
                                         Vendas Comissionadas
                                     </span>
-                                    <span className="text-2xl font-black text-cyan-400">
+                                    <span className="text-2xl font-mono font-bold text-zinc-100">
                                         {totalVendasComissionadas}
                                     </span>
                                 </div>
@@ -1082,18 +1368,18 @@ function SalesContent() {
                                     const totalSeller = data.totalComissao + data.totalPintura;
 
                                     return (
-                                        <div key={emailKey} className="bg-zinc-950/70 border border-zinc-800/80 rounded-3xl overflow-hidden shadow-lg transition-all">
+                                        <div key={emailKey} className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/60 rounded-2xl overflow-hidden shadow-xl shadow-black/20 transition-all">
                                             {/* Header do Vendedor */}
                                             <div
                                                 onClick={() => setExpandedSeller(isExpanded ? null : emailKey)}
-                                                className="p-6 cursor-pointer hover:bg-zinc-900/40 transition-colors flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+                                                className="p-5 cursor-pointer hover:bg-zinc-900/40 transition-colors flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
                                             >
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-black text-xl border border-emerald-500/20 shadow-inner">
+                                                <div className="flex items-center gap-3.5">
+                                                    <div className="w-11 h-11 rounded-xl bg-zinc-800/80 text-zinc-200 flex items-center justify-center font-bold text-base border border-zinc-700/60">
                                                         {data.nome.charAt(0).toUpperCase()}
                                                     </div>
                                                     <div>
-                                                        <h3 className="text-lg font-black text-white flex items-center gap-2">
+                                                        <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
                                                             {data.nome}
                                                         </h3>
                                                         <p className="text-xs text-zinc-500 font-medium">
@@ -1104,36 +1390,36 @@ function SalesContent() {
 
                                                 <div className="flex flex-wrap items-center gap-6 self-stretch md:self-auto justify-between md:justify-end">
                                                     <div className="text-right">
-                                                        <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest">Comissão Venda</p>
-                                                        <p className="text-base font-bold text-emerald-400">
+                                                        <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Comissão Venda</p>
+                                                        <p className="text-sm font-mono font-bold text-emerald-400">
                                                             R$ {data.totalComissao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                         </p>
                                                     </div>
 
                                                     {data.totalPintura > 0 && (
-                                                        <div className="text-right border-l border-zinc-800 pl-6">
-                                                            <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest">Pintura Freelancer</p>
-                                                            <p className="text-base font-bold text-fuchsia-400">
+                                                        <div className="text-right border-l border-zinc-800/80 pl-6">
+                                                            <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Pintura Freelancer</p>
+                                                            <p className="text-sm font-mono font-bold text-fuchsia-400">
                                                                 R$ {data.totalPintura.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                             </p>
                                                         </div>
                                                     )}
 
-                                                    <div className="text-right border-l border-zinc-800 pl-6">
-                                                        <p className="text-[9px] text-zinc-500 uppercase font-black tracking-widest">Total a Pagar</p>
-                                                        <p className="text-xl font-black text-white">
+                                                    <div className="text-right border-l border-zinc-800/80 pl-6">
+                                                        <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Total a Pagar</p>
+                                                        <p className="text-lg font-mono font-bold text-zinc-100">
                                                             R$ {totalSeller.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                         </p>
                                                     </div>
 
-                                                    <div className="flex items-center gap-2 pl-2 border-l border-zinc-800">
+                                                    <div className="flex items-center gap-2 pl-2 border-l border-zinc-800/80">
                                                         <button
                                                             type="button"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleSendWhatsAppComissao(data);
                                                             }}
-                                                            className="p-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl transition-all cursor-pointer"
+                                                            className="p-2 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-400 border border-emerald-500/30 rounded-xl transition-all cursor-pointer"
                                                             title="Enviar Extrato no WhatsApp"
                                                         >
                                                             <MessageCircle size={16} />
@@ -1144,9 +1430,9 @@ function SalesContent() {
                                                                 e.stopPropagation();
                                                                 setExpandedSeller(isExpanded ? null : emailKey);
                                                             }}
-                                                            className="p-2.5 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                                                            className="p-2 text-zinc-500 hover:text-white transition-colors cursor-pointer"
                                                         >
-                                                            {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                                            {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1154,54 +1440,54 @@ function SalesContent() {
 
                                             {/* Tabela de Vendas do Vendedor (Accordion) */}
                                             {isExpanded && (
-                                                <div className="border-t border-zinc-800/80 bg-black/40 p-6 animate-in slide-in-from-top-2 duration-200">
+                                                <div className="border-t border-zinc-800/60 bg-zinc-950/40 p-5 animate-in slide-in-from-top-2 duration-200">
                                                     <div className="overflow-x-auto">
                                                         <table className="w-full text-left text-xs whitespace-nowrap">
-                                                            <thead className="text-[10px] uppercase font-black tracking-widest text-zinc-500 border-b border-zinc-800 pb-3">
+                                                            <thead className="bg-zinc-950/60 text-[10px] uppercase font-bold tracking-widest text-zinc-400 border-b border-zinc-800/60">
                                                                 <tr>
-                                                                    <th className="pb-3 px-4">Data</th>
-                                                                    <th className="pb-3 px-4">Cliente</th>
-                                                                    <th className="pb-3 px-4">Produto</th>
-                                                                    <th className="pb-3 px-4">Status</th>
-                                                                    <th className="pb-3 px-4 text-center">Tipo</th>
-                                                                    <th className="pb-3 px-4 text-right">Valor Venda</th>
-                                                                    <th className="pb-3 px-4 text-right">Repasse / Ganho</th>
+                                                                    <th className="py-3 px-4">Data</th>
+                                                                    <th className="py-3 px-4">Cliente</th>
+                                                                    <th className="py-3 px-4">Produto</th>
+                                                                    <th className="py-3 px-4">Status</th>
+                                                                    <th className="py-3 px-4 text-center">Tipo</th>
+                                                                    <th className="py-3 px-4 text-right">Valor Venda</th>
+                                                                    <th className="py-3 px-4 text-right">Repasse / Ganho</th>
                                                                 </tr>
                                                             </thead>
-                                                            <tbody className="divide-y divide-zinc-800/60">
+                                                            <tbody className="divide-y divide-zinc-800/40">
                                                                 {data.vendas.map((v: any) => (
-                                                                    <tr key={v.id} className="hover:bg-zinc-900/30 transition-colors">
+                                                                    <tr key={v.id} className="hover:bg-zinc-800/20 transition-colors">
                                                                         <td className="py-3 px-4 font-mono text-zinc-400">
                                                                             {new Date(v.data).toLocaleDateString('pt-BR')}
                                                                         </td>
-                                                                        <td className="py-3 px-4 font-bold text-white">
+                                                                        <td className="py-3 px-4 font-medium text-zinc-100">
                                                                             {v.cliente}
                                                                         </td>
                                                                         <td className="py-3 px-4 text-zinc-300 font-medium">
                                                                             {v.produto}
                                                                         </td>
                                                                         <td className="py-3 px-4">
-                                                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${
+                                                                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold tracking-wide uppercase ${
                                                                                 v.status === 'Concluída' || v.status === 'Pago'
-                                                                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                                                                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                                                                    ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30'
+                                                                                    : 'bg-amber-950/40 text-amber-400 border border-amber-500/30'
                                                                             }`}>
                                                                                 {v.status || 'Pendente'}
                                                                             </span>
                                                                         </td>
                                                                         <td className="py-3 px-4 text-center">
-                                                                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                                                                            <span className={`text-[10px] font-mono font-semibold uppercase px-2 py-0.5 rounded ${
                                                                                 v.tipo === 'venda'
-                                                                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                                                                    : 'bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20'
+                                                                                    ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30'
+                                                                                    : 'bg-fuchsia-950/40 text-fuchsia-400 border border-fuchsia-500/30'
                                                                             }`}>
                                                                                 {v.tipo}
                                                                             </span>
                                                                         </td>
-                                                                        <td className="py-3 px-4 text-right font-medium text-zinc-400">
+                                                                        <td className="py-3 px-4 text-right font-mono text-zinc-400">
                                                                             R$ {v.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                                         </td>
-                                                                        <td className={`py-3 px-4 text-right font-black ${
+                                                                        <td className={`py-3 px-4 text-right font-mono font-bold ${
                                                                             v.tipo === 'venda' ? 'text-emerald-400' : 'text-fuchsia-400'
                                                                         }`}>
                                                                             R$ {v.ganho.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -1225,11 +1511,11 @@ function SalesContent() {
                 {viewTab === 'kpis' && (
                     <div className="space-y-6 animate-in fade-in duration-300">
                         {/* Resumo por Período */}
-                        <div className="bg-zinc-950/80 border border-zinc-800/80 rounded-3xl p-6 space-y-6 shadow-2xl relative overflow-hidden">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-5 relative z-10">
+                        <div className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/60 rounded-2xl p-6 space-y-6 shadow-xl shadow-black/20 relative overflow-hidden">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/60 pb-5 relative z-10">
                                 <div>
-                                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                        <BarChart3 className="text-amber-400" size={22} />
+                                    <h2 className="text-lg font-bold text-zinc-100 flex items-center gap-2.5">
+                                        <BarChart3 className="text-orange-500" size={20} />
                                         Desempenho de Vendas
                                     </h2>
                                     <p className="text-xs text-zinc-400 mt-0.5">
@@ -1238,17 +1524,17 @@ function SalesContent() {
                                 </div>
 
                                 {/* Controles do Filtro de Tempo (Visão Mensal ou Visão do Ano) */}
-                                <div className="flex flex-wrap items-center gap-2.5 bg-zinc-900/90 border border-zinc-800 p-2 rounded-2xl shrink-0">
-                                    <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-xl border border-zinc-800/80">
+                                <div className="flex flex-wrap items-center gap-2 bg-zinc-950/80 border border-zinc-800/90 p-1.5 rounded-xl shrink-0">
+                                    <div className="inline-flex items-center bg-zinc-900 p-1 rounded-lg border border-zinc-800">
                                         <button
                                             onClick={() => {
                                                 setKpiTimeMode('mensal');
                                                 fetchKpis('mensal', kpiSelectedMonth, kpiSelectedYear);
                                             }}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
+                                            className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
                                                 kpiTimeMode === 'mensal'
-                                                    ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
-                                                    : 'text-zinc-400 hover:text-white'
+                                                    ? 'bg-zinc-800 text-zinc-100 border border-zinc-700/80 shadow-xs'
+                                                    : 'text-zinc-400 hover:text-zinc-200'
                                             }`}
                                         >
                                             <Calendar size={13} />
@@ -1259,10 +1545,10 @@ function SalesContent() {
                                                 setKpiTimeMode('anual');
                                                 fetchKpis('anual', undefined, kpiSelectedYear);
                                             }}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
+                                            className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
                                                 kpiTimeMode === 'anual'
-                                                    ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
-                                                    : 'text-zinc-400 hover:text-white'
+                                                    ? 'bg-zinc-800 text-zinc-100 border border-zinc-700/80 shadow-xs'
+                                                    : 'text-zinc-400 hover:text-zinc-200'
                                             }`}
                                         >
                                             <Clock size={13} />
@@ -1277,7 +1563,7 @@ function SalesContent() {
                                                 setKpiSelectedMonth(e.target.value);
                                                 fetchKpis('mensal', e.target.value, kpiSelectedYear);
                                             }}
-                                            className="bg-zinc-950 border border-zinc-800 text-white text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-amber-500 cursor-pointer"
+                                            className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg px-3 py-1.5 outline-none focus:border-zinc-600 cursor-pointer transition-colors"
                                         >
                                             {months.map(m => (
                                                 <option key={m.value} value={m.value}>{m.label}</option>
@@ -1291,7 +1577,7 @@ function SalesContent() {
                                             setKpiSelectedYear(e.target.value);
                                             fetchKpis(kpiTimeMode, kpiSelectedMonth, e.target.value);
                                         }}
-                                        className="bg-zinc-950 border border-zinc-800 text-white text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-amber-500 cursor-pointer"
+                                        className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg px-3 py-1.5 outline-none focus:border-zinc-600 cursor-pointer transition-colors"
                                     >
                                         <option value="2024">2024</option>
                                         <option value="2025">2025</option>
@@ -1302,10 +1588,10 @@ function SalesContent() {
                                     <button
                                         onClick={() => fetchKpis()}
                                         disabled={loadingKpis}
-                                        className="p-2 bg-zinc-950 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                                        className="p-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 rounded-lg transition-all cursor-pointer disabled:opacity-50"
                                         title="Atualizar Indicadores"
                                     >
-                                        <RotateCw size={14} className={loadingKpis ? 'animate-spin text-amber-400' : ''} />
+                                        <RotateCw size={13} className={loadingKpis ? 'animate-spin text-orange-500' : ''} />
                                     </button>
                                 </div>
                             </div>
@@ -1313,80 +1599,80 @@ function SalesContent() {
                             {/* KPI Cards Superiores */}
                             {loadingKpis ? (
                                 <div className="p-16 flex justify-center items-center gap-3 text-zinc-500 text-xs font-bold uppercase tracking-widest">
-                                    <Loader2 className="animate-spin text-amber-400 w-8 h-8" />
+                                    <Loader2 className="animate-spin text-orange-500 w-8 h-8" />
                                     Atualizando indicadores...
                                 </div>
                             ) : kpiData?.summary && (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
                                     {/* Card 1: Faturamento */}
-                                    <div className="p-5 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl relative overflow-hidden group hover:border-amber-500/30 transition-all">
-                                        <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1">
+                                    <div className="p-5 bg-zinc-950/60 border border-zinc-800/60 rounded-xl relative overflow-hidden group hover:border-zinc-700/80 transition-all shadow-sm">
+                                        <span className="text-[10px] font-bold uppercase text-zinc-500 tracking-wider block mb-1">
                                             Faturamento ({kpiData.summary.periodLabel || 'Período'})
                                         </span>
-                                        <div className="text-2xl font-black text-amber-400">
+                                        <div className="text-2xl font-mono font-bold text-zinc-100">
                                             R$ {(kpiData.summary.totalFaturamento || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                         </div>
-                                        <div className="text-[11px] text-zinc-400 mt-1.5 flex items-center gap-1.5 font-bold">
+                                        <div className="text-[11px] text-zinc-400 mt-1.5 flex items-center gap-1.5 font-medium">
                                             <span>Lucro:</span>
-                                            <span className="text-emerald-400 font-black">
+                                            <span className="text-emerald-400 font-mono font-bold">
                                                 R$ {(kpiData.summary.totalLucro || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             </span>
-                                            <span className="text-zinc-600 font-normal">
+                                            <span className="text-zinc-500 font-normal">
                                                 ({kpiData.summary.margemMediaPct.toFixed(1)}%)
                                             </span>
                                         </div>
                                     </div>
 
                                     {/* Card 2: Volume & Ticket */}
-                                    <div className="p-5 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl relative overflow-hidden group hover:border-cyan-500/30 transition-all">
-                                        <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1">
+                                    <div className="p-5 bg-zinc-950/60 border border-zinc-800/60 rounded-xl relative overflow-hidden group hover:border-zinc-700/80 transition-all shadow-sm">
+                                        <span className="text-[10px] font-bold uppercase text-zinc-500 tracking-wider block mb-1">
                                             Peças Vendidas & Ticket Médio
                                         </span>
-                                        <div className="text-2xl font-black text-cyan-400">
+                                        <div className="text-2xl font-mono font-bold text-zinc-100">
                                             {kpiData.summary.totalUnidades || 0} {kpiData.summary.totalUnidades === 1 ? 'peça' : 'peças'}
                                         </div>
-                                        <div className="text-[11px] text-zinc-400 mt-1.5 flex items-center gap-1.5 font-bold">
+                                        <div className="text-[11px] text-zinc-400 mt-1.5 flex items-center gap-1.5 font-medium">
                                             <span>Ticket Médio:</span>
-                                            <span className="text-white font-black">
+                                            <span className="text-zinc-200 font-mono font-bold">
                                                 R$ {(kpiData.summary.ticketMedio || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             </span>
                                         </div>
                                     </div>
 
                                     {/* Card 3: Top Drivers */}
-                                    <div className="p-5 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl relative overflow-hidden group hover:border-emerald-500/30 transition-all">
-                                        <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1 flex items-center gap-1.5">
-                                            <Award size={12} className="text-emerald-400" /> Série Líder
+                                    <div className="p-5 bg-zinc-950/60 border border-zinc-800/60 rounded-xl relative overflow-hidden group hover:border-zinc-700/80 transition-all shadow-sm">
+                                        <span className="text-[10px] font-bold uppercase text-zinc-500 tracking-wider block mb-1 flex items-center gap-1.5">
+                                            <Award size={12} className="text-orange-400" /> Série Líder
                                         </span>
-                                        <div className="text-base font-black text-white truncate" title={kpiData.summary.topSerie?.nome}>
+                                        <div className="text-base font-bold text-zinc-100 truncate" title={kpiData.summary.topSerie?.nome}>
                                             {kpiData.summary.topSerie?.nome || 'Sem vendas'}
                                         </div>
-                                        <div className="text-[11px] text-emerald-400 font-bold mt-1 truncate">
+                                        <div className="text-[11px] text-zinc-400 font-medium mt-1 truncate">
                                             {kpiData.summary.topStudio?.nome ? `Estúdio: ${kpiData.summary.topStudio.nome}` : ''}
                                         </div>
                                     </div>
 
                                     {/* Card 4: Matriz de Estúdios */}
-                                    <div className="p-5 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl relative overflow-hidden group hover:border-rose-500/30 transition-all">
-                                        <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1 flex items-center gap-1.5">
+                                    <div className="p-5 bg-zinc-950/60 border border-zinc-800/60 rounded-xl relative overflow-hidden group hover:border-zinc-700/80 transition-all shadow-sm">
+                                        <span className="text-[10px] font-bold uppercase text-zinc-500 tracking-wider block mb-1 flex items-center gap-1.5">
                                             <Building2 size={12} className="text-zinc-400" /> Estúdios Parceiros
                                         </span>
                                         <div className="flex items-center gap-3 mt-1">
                                             <div className="flex items-center gap-1.5">
-                                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
-                                                <span className="text-xs font-black text-white">
+                                                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                                                <span className="text-xs font-bold text-zinc-200">
                                                     {kpiData.summary.contadores?.studios?.manter || 0} Ativos
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
-                                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                                                <span className="text-xs font-black text-zinc-300">
+                                                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                                                <span className="text-xs font-bold text-zinc-300">
                                                     {kpiData.summary.contadores?.studios?.observar || 0} Atenção
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
-                                                <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                                                <span className="text-xs font-black text-rose-400">
+                                                <span className="w-2 h-2 rounded-full bg-rose-400" />
+                                                <span className="text-xs font-bold text-rose-400">
                                                     {kpiData.summary.contadores?.studios?.descartar || 0} Sem Vendas
                                                 </span>
                                             </div>
@@ -1400,52 +1686,52 @@ function SalesContent() {
                         </div>
 
                         {/* Barra de Sub-abas (Segmentos) + Filtros + Busca */}
-                        <div className="bg-zinc-950/80 border border-zinc-800/80 rounded-3xl p-5 space-y-4 shadow-xl">
+                        <div className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/60 rounded-2xl p-5 space-y-4 shadow-xl shadow-black/20">
                             {/* Seletor de Segmento */}
-                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/70 pb-4">
+                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/60 pb-4">
                                 <div className="flex flex-wrap items-center gap-2">
                                     <button
                                         onClick={() => setKpiSegment('series')}
-                                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                        className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
                                             kpiSegment === 'series'
-                                                ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
-                                                : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                                                ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                                : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-200 border border-zinc-800/80'
                                         }`}
                                     >
-                                        <Layers size={14} />
+                                        <Layers size={13} className={kpiSegment === 'series' ? 'text-zinc-950' : 'text-zinc-500'} />
                                         Séries ({kpiData?.series?.length || 0})
                                     </button>
                                     <button
                                         onClick={() => setKpiSegment('studios')}
-                                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                        className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
                                             kpiSegment === 'studios'
-                                                ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
-                                                : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                                                ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                                : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-200 border border-zinc-800/80'
                                         }`}
                                     >
-                                        <Building2 size={14} />
+                                        <Building2 size={13} className={kpiSegment === 'studios' ? 'text-zinc-950' : 'text-zinc-500'} />
                                         Estúdios ({kpiData?.studios?.length || 0})
                                     </button>
                                     <button
                                         onClick={() => setKpiSegment('categorias')}
-                                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                        className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
                                             kpiSegment === 'categorias'
-                                                ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
-                                                : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                                                ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                                : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-200 border border-zinc-800/80'
                                         }`}
                                     >
-                                        <Package size={14} />
+                                        <Package size={13} className={kpiSegment === 'categorias' ? 'text-zinc-950' : 'text-zinc-500'} />
                                         Categorias ({kpiData?.categorias?.length || 0})
                                     </button>
                                     <button
                                         onClick={() => setKpiSegment('figuras')}
-                                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                                        className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
                                             kpiSegment === 'figuras'
-                                                ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20'
-                                                : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+                                                ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                                : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-200 border border-zinc-800/80'
                                         }`}
                                     >
-                                        <Trophy size={14} />
+                                        <Trophy size={13} className={kpiSegment === 'figuras' ? 'text-zinc-950' : 'text-zinc-500'} />
                                         Figuras Vendidas ({kpiData?.figurasVendidas?.length || 0})
                                     </button>
                                 </div>
@@ -1456,7 +1742,7 @@ function SalesContent() {
                                     <select
                                         value={kpiSort}
                                         onChange={(e: any) => setKpiSort(e.target.value)}
-                                        className="bg-zinc-900 border border-zinc-800 text-zinc-200 text-xs font-bold rounded-xl px-3 py-1.5 outline-none focus:border-amber-500 cursor-pointer"
+                                        className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg px-3 py-1.5 outline-none focus:border-zinc-600 cursor-pointer transition-colors"
                                     >
                                         <option value="faturamento">Maior Faturamento (R$)</option>
                                         <option value="vendas">Mais Peças Vendidas</option>
@@ -1638,18 +1924,18 @@ function SalesContent() {
                             </div>
                         ) : (kpiSegment === 'series' || kpiSegment === 'studios' || kpiSegment === 'categorias') ? (
                             /* Tabela Principal para Séries, Estúdios e Categorias */
-                            <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-3xl overflow-hidden shadow-2xl">
+                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/60 rounded-2xl overflow-hidden shadow-xl shadow-black/20">
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-xs whitespace-nowrap">
-                                        <thead className="bg-zinc-900/90 text-[10px] uppercase font-black tracking-widest text-zinc-500 border-b border-zinc-800">
+                                        <thead className="bg-zinc-950/80 text-[10px] uppercase font-bold tracking-widest text-zinc-400 border-b border-zinc-800/60">
                                             <tr>
-                                                <th className="py-4 px-6">Segmento / Nome</th>
-                                                <th className="py-4 px-4 text-center">Modelos no Acervo</th>
-                                                <th className="py-4 px-4 text-center">Vendas (Qtd)</th>
-                                                <th className="py-4 px-4 text-right">Faturamento Total</th>
-                                                <th className="py-4 px-4 text-right">Lucro</th>
-                                                <th className="py-4 px-4 text-center">Share (%)</th>
-                                                <th className="py-4 px-6 text-center">Status</th>
+                                                <th className="py-3.5 px-6">Segmento / Nome</th>
+                                                <th className="py-3.5 px-4 text-center">Modelos no Acervo</th>
+                                                <th className="py-3.5 px-4 text-center">Vendas (Qtd)</th>
+                                                <th className="py-3.5 px-4 text-right">Faturamento Total</th>
+                                                <th className="py-3.5 px-4 text-right">Lucro</th>
+                                                <th className="py-3.5 px-4 text-center">Share (%)</th>
+                                                <th className="py-3.5 px-6 text-center">Status</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-zinc-800/60">
@@ -1833,13 +2119,13 @@ function SalesContent() {
                 <div className="fixed inset-0 z-50 flex justify-end">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setEditingSale(null)}></div>
                     <div className="relative w-full max-w-md bg-zinc-950 border-l border-zinc-800 h-full p-8 overflow-y-auto shadow-2xl animate-in slide-in-from-right duration-300">
-                        <div className="flex justify-between items-center mb-8 pb-5 border-b border-zinc-800/50">
-                            <h2 className="text-xl font-black flex items-center gap-3 text-cyan-400">
-                                <Edit3 size={24} className="opacity-80" />
-                                Edição Tática #{editingSale.id}
+                        <div className="flex justify-between items-center mb-6 pb-4 border-b border-zinc-800/60">
+                            <h2 className="text-lg font-bold flex items-center gap-2.5 text-zinc-100">
+                                <Edit3 size={18} className="text-orange-500" />
+                                Edição de Venda #{editingSale.id}
                             </h2>
-                            <button onClick={() => setEditingSale(null)} className="text-zinc-500 hover:text-white bg-zinc-900 p-2 rounded-xl transition-all">
-                                <X size={18} />
+                            <button onClick={() => setEditingSale(null)} className="text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 p-2 rounded-xl transition-colors">
+                                <X size={16} />
                             </button>
                         </div>
 
@@ -2217,9 +2503,9 @@ function SalesContent() {
                                 <button
                                     type="submit"
                                     disabled={isUpdating}
-                                    className="w-full bg-zinc-200 hover:bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50 uppercase text-xs"
+                                    className="w-full bg-orange-500 hover:bg-orange-400 text-zinc-950 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-orange-500/20 active:scale-[0.98] disabled:opacity-50 uppercase tracking-wider text-xs"
                                 >
-                                    {isUpdating ? <Loader2 size={18} className="animate-spin text-zinc-500" /> : <Save size={18} />}
+                                    {isUpdating ? <Loader2 size={16} className="animate-spin text-zinc-950" /> : <Save size={16} />}
                                     SALVAR ALTERAÇÕES
                                 </button>
                             </div>

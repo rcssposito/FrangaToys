@@ -4,13 +4,20 @@ import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { sendTelegramAlert } from '@/lib/telegram';
 import { isRodrigoPintor } from '@/lib/painters';
 
-// LISTAR VENDAS (Histórico)
-export async function GET() {
+// LISTAR VENDAS (Histórico com Filtro Temporal)
+export async function GET(req: Request) {
     try {
         const sessionOrResponse = await requireRoles(['admin', 'sales', 'finance']);
         if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
-        const { data: sales, error } = await supabase
+        const { searchParams } = new URL(req.url);
+        const year = searchParams.get('year');
+        const month = searchParams.get('month'); // '0' a '11' ou 'all'
+        const startDate = searchParams.get('startDate');
+        const endDate = searchParams.get('endDate');
+        const limitParam = searchParams.get('limit');
+
+        let query = supabase
             .from('vendas')
             .select(`
                 *,
@@ -21,6 +28,38 @@ export async function GET() {
                 )
             `)
             .order('data_venda', { ascending: false });
+
+        if (startDate) {
+            query = query.gte('data_venda', startDate);
+        }
+        if (endDate) {
+            query = query.lte('data_venda', endDate);
+        } else if (year && year !== 'all') {
+            const y = parseInt(year);
+            if (!isNaN(y)) {
+                if (month !== null && month !== undefined && month !== 'all' && month !== '') {
+                    const m = parseInt(month);
+                    if (!isNaN(m) && m >= 0 && m <= 11) {
+                        const start = new Date(Date.UTC(y, m, 1, 0, 0, 0)).toISOString();
+                        const end = new Date(Date.UTC(y, m + 1, 0, 23, 59, 59, 999)).toISOString();
+                        query = query.gte('data_venda', start).lte('data_venda', end);
+                    }
+                } else {
+                    const start = new Date(Date.UTC(y, 0, 1, 0, 0, 0)).toISOString();
+                    const end = new Date(Date.UTC(y, 11, 31, 23, 59, 59, 999)).toISOString();
+                    query = query.gte('data_venda', start).lte('data_venda', end);
+                }
+            }
+        }
+
+        if (limitParam) {
+            const limit = parseInt(limitParam);
+            if (!isNaN(limit) && limit > 0) {
+                query = query.limit(limit);
+            }
+        }
+
+        const { data: sales, error } = await query;
 
         if (error) throw error;
 
@@ -34,7 +73,7 @@ export async function GET() {
             return acc;
         }, {});
 
-        const formatted = sales.map(s => ({
+        const formatted = (sales || []).map(s => ({
             ...s,
             vendedor_nome: (() => {
                 const name = userMap[(s.vendedor || '').toLowerCase()] || s.vendedor || 'Ateliê';

@@ -717,24 +717,20 @@ function NewSaleContent() {
     }
 
     return (
-        <div className="min-h-screen bg-black text-white p-4 md:p-10 relative overflow-hidden">
-            {/* Background UV/Money Blobs for Scifi Theme */}
-            <div className="absolute inset-0 pointer-events-none opacity-20 z-0">
-                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-cyan-900/10 rounded-full blur-[200px]" />
-                <div className="absolute top-[40%] right-[-10%] w-[40%] h-[40%] bg-emerald-900/10 rounded-full blur-[200px]" />
-            </div>
+        <div className="min-h-screen bg-[#09090b] text-zinc-100 p-4 md:p-8 relative overflow-hidden selection:bg-orange-500/30 selection:text-orange-200">
+            {/* Subtle ambient sheen */}
+            <div className="absolute inset-x-0 top-0 h-96 bg-gradient-to-b from-orange-500/[0.03] via-transparent to-transparent pointer-events-none" />
 
             <div className="max-w-6xl mx-auto relative z-10">
-                <div className="flex items-center gap-5 mb-10">
-                    <Link href="/admin/sales" className="p-3 bg-zinc-900 border border-zinc-800 hover:border-cyan-500/50 hover:bg-zinc-800 rounded-2xl transition-all shadow-sm">
-                        <ArrowLeft size={20} className="text-cyan-500" />
+                <div className="flex items-center gap-4 mb-8">
+                    <Link href="/admin/sales" className="p-2.5 bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 rounded-xl transition-all shadow-sm">
+                        <ArrowLeft size={18} />
                     </Link>
                     <div>
-                        <h1 className="text-3xl font-black tracking-tight text-zinc-100 flex items-center gap-3">
-                            Check-Out
-                            <span className="text-[10px] font-black uppercase tracking-widest bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-3 py-1 rounded-full">Terminal A</span>
+                        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-100 flex items-center gap-3">
+                            Check-Out & Nova Venda
                         </h1>
-                        <p className="text-zinc-500 text-sm font-medium mt-1">Gere novos orçamentos, calcule cubagem de caixas e feche as vendas do Ateliê.</p>
+                        <p className="text-zinc-400 text-xs sm:text-sm mt-0.5">Gere novos orçamentos, calcule cubagem de caixas e registre pedidos do Ateliê.</p>
                     </div>
                 </div>
 
@@ -742,20 +738,19 @@ function NewSaleContent() {
 
                     {/* COLUNA 1: Seleção de Produtos */}
                     <div className="lg:col-span-1 space-y-6">
-                        <div className="bg-zinc-950/60 backdrop-blur-sm border border-zinc-800/50 rounded-3xl p-6 shadow-lg relative overflow-hidden">
-                            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent"></div>
-                            <h2 className="text-[13px] font-black uppercase tracking-widest mb-5 flex items-center gap-3 text-cyan-400">
-                                <Search size={18} /> 1. Buscar Modelos
+                        <div className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/60 rounded-2xl p-6 shadow-xl shadow-black/20 relative overflow-hidden">
+                            <h2 className="text-xs font-bold uppercase tracking-wider mb-4 flex items-center gap-2.5 text-zinc-100">
+                                <Search size={16} className="text-orange-500" /> 1. Buscar Modelos
                             </h2>
-                            <div className="relative mb-6">
+                            <div className="relative mb-4">
                                 <input
                                     type="text"
                                     placeholder="Nome da figura..."
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
-                                    className="w-full bg-zinc-900/50 backdrop-blur-md border border-zinc-800 rounded-xl p-3.5 pl-4 outline-none focus:border-cyan-500 transition-all text-sm font-medium"
+                                    className="w-full bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 rounded-xl p-3 pl-4 outline-none focus:border-zinc-600 transition-colors text-xs font-medium text-zinc-100 placeholder-zinc-500"
                                 />
-                                {loading && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-cyan-500" size={18} />}
+                                {loading && <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 animate-spin text-orange-500" size={16} />}
                             </div>
 
                             <div className="max-h-[500px] overflow-y-auto space-y-2.5 pr-1 custom-scrollbar">
@@ -804,11 +799,10 @@ function NewSaleContent() {
                         </div>
 
                         {/* Carrinho */}
-                        <div className="bg-zinc-950/60 backdrop-blur-sm border border-zinc-800/50 rounded-3xl overflow-hidden shadow-lg relative">
-                            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent"></div>
-                            <div className="p-5 border-b border-zinc-800/50 bg-zinc-950/50 flex justify-between items-center">
-                                <h3 className="font-black flex items-center gap-3 tracking-wide text-zinc-100 uppercase text-xs">
-                                    <Package size={18} className="text-cyan-500" /> Carrinho ({cart.length})
+                        <div className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/60 rounded-2xl overflow-hidden shadow-xl shadow-black/20 relative">
+                            <div className="p-5 border-b border-zinc-800/60 bg-zinc-950/60 flex justify-between items-center">
+                                <h3 className="font-bold flex items-center gap-2.5 tracking-wide text-zinc-100 uppercase text-xs">
+                                    <Package size={16} className="text-orange-500" /> Carrinho ({cart.length})
                                 </h3>
                                 {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs font-bold text-zinc-500 hover:text-red-400 transition-colors uppercase tracking-widest bg-zinc-900/50 px-3 py-1 rounded-lg">Limpar</button>}
                             </div>
@@ -984,8 +978,7 @@ function NewSaleContent() {
                         </div>
 
                         {/* Dados da Venda */}
-                        <div className="bg-zinc-950/60 backdrop-blur-sm border border-zinc-800/50 rounded-3xl p-8 space-y-5 shadow-lg relative overflow-hidden">
-                            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent"></div>
+                        <div className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/60 rounded-2xl p-6 sm:p-8 space-y-5 shadow-xl shadow-black/20 relative overflow-hidden">
                             <div className="mb-5">
                                 <label className="block text-[10px] text-zinc-500 uppercase font-black mb-3 tracking-widest">Método de Pagamento</label>
                                 <div className="grid grid-cols-2 gap-4">
