@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle, Receipt, X, Download, Check, Maximize2, Camera, Search, CheckSquare, Square, ListChecks, Trash2, Plus, Mail } from 'lucide-react';
+import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle, Receipt, X, Download, Check, Maximize2, Camera, Search, CheckSquare, Square, ListChecks, Trash2, Plus, Mail, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
@@ -68,53 +68,53 @@ interface Sale {
 }
 
 const COLUMNS = [
-    { id: 'Aguardando Pagamento', title: 'Pagamento', icon: DollarSign, color: 'border-yellow-500/40 bg-zinc-950/80', text: 'text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]' },
-    { id: 'Fila de Impressão', title: 'Fila de Impressão', icon: Layers, color: 'border-zinc-800 bg-zinc-950/80', text: 'text-zinc-400' },
-    { id: 'Imprimindo', title: 'Imprimindo', icon: Factory, color: 'border-orange-500/40 bg-zinc-950/80', text: 'text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]' },
-    { id: 'Lavagem e Cura', title: 'Pós-Processamento', icon: Clock, color: 'border-blue-500/40 bg-zinc-950/80', text: 'text-blue-500 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' },
-    { id: 'Pintura Secagem', title: 'Pintura', icon: Paintbrush, color: 'border-purple-500/40 bg-zinc-950/80', text: 'text-purple-500 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]' },
-    { id: 'Pronto p/ Entrega', title: 'Pronto p/ Entrega', icon: CheckCircle2, color: 'border-emerald-500/40 bg-zinc-950/80', text: 'text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' }
+    { id: 'Aguardando Pagamento', title: 'Pagamento', icon: DollarSign, color: 'border-zinc-800/80 bg-zinc-900/40', text: 'text-amber-400' },
+    { id: 'Fila de Impressão', title: 'Fila de Impressão', icon: Layers, color: 'border-zinc-800/80 bg-zinc-900/40', text: 'text-zinc-300' },
+    { id: 'Imprimindo', title: 'Imprimindo', icon: Factory, color: 'border-zinc-800/80 bg-zinc-900/40', text: 'text-orange-400' },
+    { id: 'Lavagem e Cura', title: 'Pós-Processamento', icon: Clock, color: 'border-zinc-800/80 bg-zinc-900/40', text: 'text-blue-400' },
+    { id: 'Pintura Secagem', title: 'Pintura', icon: Paintbrush, color: 'border-zinc-800/80 bg-zinc-900/40', text: 'text-purple-400' },
+    { id: 'Pronto p/ Entrega', title: 'Pronto p/ Entrega', icon: CheckCircle2, color: 'border-zinc-800/80 bg-zinc-900/40', text: 'text-emerald-400' }
 ];
 
 const COLUMN_ACCENTS: Record<string, { border: string; glow: string; text: string; bg: string; titleHover: string }> = {
     'Aguardando Pagamento': {
-        border: 'hover:border-yellow-500/50',
-        glow: 'hover:shadow-[0_0_35px_rgba(234,179,8,0.22)]',
-        text: 'text-yellow-400',
-        bg: 'bg-yellow-500/10',
-        titleHover: 'group-hover:text-yellow-400'
+        border: 'hover:border-amber-500/40',
+        glow: 'hover:shadow-lg hover:shadow-black/30',
+        text: 'text-amber-400',
+        bg: 'bg-amber-500/10',
+        titleHover: 'group-hover:text-amber-400'
     },
     'Fila de Impressão': {
-        border: 'hover:border-zinc-500/50',
-        glow: 'hover:shadow-[0_0_35px_rgba(161,161,170,0.18)]',
-        text: 'text-zinc-400',
-        bg: 'bg-zinc-800/10',
-        titleHover: 'group-hover:text-zinc-300'
+        border: 'hover:border-zinc-600',
+        glow: 'hover:shadow-lg hover:shadow-black/30',
+        text: 'text-zinc-300',
+        bg: 'bg-zinc-800/20',
+        titleHover: 'group-hover:text-zinc-200'
     },
     'Imprimindo': {
-        border: 'hover:border-orange-500/50',
-        glow: 'hover:shadow-[0_0_35px_rgba(249,115,22,0.22)]',
+        border: 'hover:border-orange-500/40',
+        glow: 'hover:shadow-lg hover:shadow-black/30',
         text: 'text-orange-400',
         bg: 'bg-orange-500/10',
         titleHover: 'group-hover:text-orange-400'
     },
     'Lavagem e Cura': {
-        border: 'hover:border-blue-500/50',
-        glow: 'hover:shadow-[0_0_35px_rgba(59,130,246,0.22)]',
+        border: 'hover:border-blue-500/40',
+        glow: 'hover:shadow-lg hover:shadow-black/30',
         text: 'text-blue-400',
         bg: 'bg-blue-500/10',
         titleHover: 'group-hover:text-blue-400'
     },
     'Pintura Secagem': {
-        border: 'hover:border-purple-500/50',
-        glow: 'hover:shadow-[0_0_35px_rgba(168,85,247,0.22)]',
+        border: 'hover:border-purple-500/40',
+        glow: 'hover:shadow-lg hover:shadow-black/30',
         text: 'text-purple-400',
         bg: 'bg-purple-500/10',
         titleHover: 'group-hover:text-purple-400'
     },
     'Pronto p/ Entrega': {
-        border: 'hover:border-emerald-500/50',
-        glow: 'hover:shadow-[0_0_35px_rgba(16,185,129,0.22)]',
+        border: 'hover:border-emerald-500/40',
+        glow: 'hover:shadow-lg hover:shadow-black/30',
         text: 'text-emerald-400',
         bg: 'bg-emerald-500/10',
         titleHover: 'group-hover:text-emerald-400'
@@ -159,6 +159,8 @@ export default function KanbanPage() {
     // Search and Quick Filter states
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedFilter, setSelectedFilter] = useState<'all' | 'my_paintings' | 'available_paintings' | 'urgent' | 'retirada' | 'correios'>('all');
+    const [selectedSort, setSelectedSort] = useState<'fifo' | 'urgent' | 'valor'>('fifo');
+    const [selectedPersonFilter, setSelectedPersonFilter] = useState<string>('all');
 
     // Auto notify customer by email state
     const [autoNotifyEmail, setAutoNotifyEmail] = useState<boolean>(true);
@@ -976,99 +978,170 @@ export default function KanbanPage() {
         }
     };
 
-    const myPaintings = sales.filter(s => {
-        if (!s.pintor_nome) return false;
-        const p = s.pintor_nome.toLowerCase();
-        const u = currentUserName.toLowerCase();
-        return p === u || (u && (p.includes(u) || u.includes(p)));
-    });
-    const myPaintingsCount = myPaintings.length;
-    const myPaintingsTotal = isRodrigoPintor(currentUserName) 
-        ? 0 
-        : myPaintings.reduce((sum, s) => sum + (Number(s.valor_pago_pintor) || Number(s.valor_estimado_pintor) || 0), 0);
-
-    const filteredSales = sales.filter(task => {
-        if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase().trim();
-            const clienteMatch = (task.cliente_nome || '').toLowerCase().includes(q);
-            const figuraMatch = (task.figuras?.nome || '').toLowerCase().includes(q);
-            const contatoMatch = (task.cliente_contato || '').includes(q);
-            const studioName = Array.isArray(task.figuras?.studios) 
-                ? task.figuras.studios[0]?.nome 
-                : task.figuras?.studios?.nome;
-            const studioMatch = (studioName || '').toLowerCase().includes(q);
-            const vendedorMatch = (task.vendedor_nome || task.vendedor || '').toLowerCase().includes(q);
-            const pintorMatch = (task.pintor_nome || '').toLowerCase().includes(q);
-
-            if (!clienteMatch && !figuraMatch && !contatoMatch && !studioMatch && !vendedorMatch && !pintorMatch) {
-                return false;
-            }
-        }
-
-        if (selectedFilter === 'my_paintings') {
-            if (!task.pintor_nome) return false;
-            const p = task.pintor_nome.toLowerCase();
+    const myPaintings = useMemo(() => {
+        return sales.filter(s => {
+            if (!s.pintor_nome) return false;
+            const p = s.pintor_nome.toLowerCase();
             const u = currentUserName.toLowerCase();
             return p === u || (u && (p.includes(u) || u.includes(p)));
+        });
+    }, [sales, currentUserName]);
+
+    const myPaintingsCount = myPaintings.length;
+    const myPaintingsTotal = useMemo(() => {
+        return isRodrigoPintor(currentUserName) 
+            ? 0 
+            : myPaintings.reduce((sum, s) => sum + (Number(s.valor_pago_pintor) || Number(s.valor_estimado_pintor) || 0), 0);
+    }, [myPaintings, currentUserName]);
+
+    const distinctPeople = useMemo(() => {
+        const peopleSet = new Set<string>();
+        sales.forEach(s => {
+            if (s.pintor_nome) peopleSet.add(`Pintor: ${s.pintor_nome}`);
+            const vend = s.vendedor_nome || s.vendedor;
+            if (vend) peopleSet.add(`Vendedor: ${vend.toLowerCase().includes('rodrigo') ? '@frangatoys' : vend}`);
+        });
+        return Array.from(peopleSet).sort();
+    }, [sales]);
+
+    const kanbanMetrics = useMemo(() => {
+        const totalPieces = sales.reduce((acc, s) => acc + (s.quantidade || 1), 0);
+        const totalValue = sales.reduce((acc, s) => acc + (Number(s.valor_venda_final) || 0), 0);
+        
+        const today = new Date();
+        const urgentCount = sales.filter(s => {
+            if (!s.data_venda) return false;
+            const d = new Date(s.data_venda);
+            d.setDate(d.getDate() + 45);
+            const diff = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            return diff <= 7;
+        }).length;
+
+        const paintingQueueCount = sales.filter(s => s.status === 'Pintura Secagem' || !s.pintor_nome).length;
+
+        return {
+            totalOrders: sales.length,
+            totalPieces,
+            totalValue,
+            urgentCount,
+            paintingQueueCount
+        };
+    }, [sales]);
+
+    const filteredSales = useMemo(() => {
+        let list = sales.filter(task => {
+            if (searchQuery.trim()) {
+                const q = searchQuery.toLowerCase().trim();
+                const clienteMatch = (task.cliente_nome || '').toLowerCase().includes(q);
+                const figuraMatch = (task.figuras?.nome || '').toLowerCase().includes(q);
+                const contatoMatch = (task.cliente_contato || '').includes(q);
+                const studioName = Array.isArray(task.figuras?.studios) 
+                    ? task.figuras.studios[0]?.nome 
+                    : task.figuras?.studios?.nome;
+                const studioMatch = (studioName || '').toLowerCase().includes(q);
+                const vendedorMatch = (task.vendedor_nome || task.vendedor || '').toLowerCase().includes(q);
+                const pintorMatch = (task.pintor_nome || '').toLowerCase().includes(q);
+
+                if (!clienteMatch && !figuraMatch && !contatoMatch && !studioMatch && !vendedorMatch && !pintorMatch) {
+                    return false;
+                }
+            }
+
+            if (selectedPersonFilter !== 'all') {
+                if (selectedPersonFilter.startsWith('Pintor: ')) {
+                    const target = selectedPersonFilter.replace('Pintor: ', '').toLowerCase();
+                    if (!task.pintor_nome || !task.pintor_nome.toLowerCase().includes(target)) return false;
+                } else if (selectedPersonFilter.startsWith('Vendedor: ')) {
+                    const target = selectedPersonFilter.replace('Vendedor: ', '').toLowerCase();
+                    const vName = (task.vendedor_nome || task.vendedor || '').toLowerCase();
+                    if (!vName.includes(target) && !(target.includes('franga') && vName.includes('rodrigo'))) return false;
+                }
+            }
+
+            if (selectedFilter === 'my_paintings') {
+                if (!task.pintor_nome) return false;
+                const p = task.pintor_nome.toLowerCase();
+                const u = currentUserName.toLowerCase();
+                return p === u || (u && (p.includes(u) || u.includes(p)));
+            }
+
+            if (selectedFilter === 'available_paintings') {
+                return !task.pintor_nome;
+            }
+
+            if (selectedFilter === 'urgent') {
+                if (!task.data_venda) return false;
+                const dataVenda = new Date(task.data_venda);
+                const deadlineDate = new Date(dataVenda);
+                deadlineDate.setDate(deadlineDate.getDate() + 45);
+                const today = new Date();
+                const diffDays = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                return diffDays <= 7;
+            }
+
+            if (selectedFilter === 'retirada') {
+                return task.metodo_entrega === 'retirada';
+            }
+
+            if (selectedFilter === 'correios') {
+                return task.metodo_entrega === 'envio';
+            }
+
+            return true;
+        });
+
+        if (selectedSort === 'urgent') {
+            list = [...list].sort((a, b) => {
+                const dateA = a.data_venda ? new Date(a.data_venda).getTime() : Infinity;
+                const dateB = b.data_venda ? new Date(b.data_venda).getTime() : Infinity;
+                return dateA - dateB;
+            });
+        } else if (selectedSort === 'valor') {
+            list = [...list].sort((a, b) => (Number(b.valor_venda_final) || 0) - (Number(a.valor_venda_final) || 0));
         }
 
-        if (selectedFilter === 'available_paintings') {
-            return !task.pintor_nome;
-        }
-
-        if (selectedFilter === 'urgent') {
-            if (!task.data_venda) return false;
-            const dataVenda = new Date(task.data_venda);
-            const deadlineDate = new Date(dataVenda);
-            deadlineDate.setDate(deadlineDate.getDate() + 45);
-            const today = new Date();
-            const diffDays = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-            return diffDays <= 7;
-        }
-
-        if (selectedFilter === 'retirada') {
-            return task.metodo_entrega === 'retirada';
-        }
-
-        if (selectedFilter === 'correios') {
-            return task.metodo_entrega === 'envio';
-        }
-
-        return true;
-    });
+        return list;
+    }, [sales, searchQuery, selectedFilter, selectedPersonFilter, selectedSort, currentUserName]);
 
     return (
-        <div className="min-h-screen bg-black text-white p-4 md:p-8 flex flex-col transition-colors duration-300 relative overflow-hidden">
-            {/* Background UV/Water Blobs for Scifi Theme */}
-            <div className="absolute inset-0 pointer-events-none opacity-20 z-0">
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600 rounded-full blur-[150px] mix-blend-screen" />
-                <div className="absolute top-[40%] right-[-10%] w-[30%] h-[30%] bg-indigo-500 rounded-full blur-[150px] mix-blend-screen" />
-            </div>
+        <div className="min-h-screen bg-[#09090b] text-zinc-100 p-4 md:p-8 flex flex-col transition-colors duration-300 relative overflow-hidden selection:bg-orange-500/30 selection:text-orange-200">
+            {/* Ambient subtle luxury sheen */}
+            <div className="absolute inset-x-0 top-0 h-96 bg-gradient-to-b from-orange-500/[0.03] via-transparent to-transparent pointer-events-none" />
 
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-4">
-                    <div className="p-3.5 bg-zinc-900 border border-zinc-800 text-blue-500 rounded-2xl shadow-[0_0_15px_rgba(59,130,246,0.2)]">
-                        <KanbanSquare size={32} />
-                    </div>
+            {/* Header */}
+            <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3.5">
+                    <Link
+                        href="/admin"
+                        className="p-2.5 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-xl transition-colors text-zinc-400 hover:text-zinc-100 shadow-sm group"
+                        title="Voltar ao Painel"
+                    >
+                        <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
+                    </Link>
                     <div>
-                        <h1 className="text-3xl font-black tracking-tight text-zinc-100 flex items-center gap-3">
+                        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-100 flex items-center gap-3">
                             Linha de Produção
-                            <span className="text-[10px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-400 border border-blue-500/20 px-3 py-1 rounded-full">Ativa</span>
+                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider bg-zinc-900 text-zinc-400 border border-zinc-800 px-2.5 py-0.5 rounded-md">
+                                {sales.length} {sales.length === 1 ? 'pedido ativo' : 'pedidos ativos'}
+                            </span>
                         </h1>
-                        <p className="text-zinc-500 text-sm font-medium mt-1">Gerencie a logística de impressão, pós-cura e finalização dos modelos no laboratório.</p>
+                        <p className="text-zinc-400 text-xs sm:text-sm mt-0.5">
+                            Gerencie a esteira de impressão 3D, pós-processamento, pintura e expedição do Ateliê.
+                        </p>
                     </div>
                 </div>
 
+                {/* Bloco de Pintura do Usuário (se aplicável) */}
                 {isPainter && (
-                    <div className="flex items-center gap-3.5 bg-purple-950/40 border border-purple-500/30 px-5 py-3 rounded-2xl backdrop-blur-md shadow-lg shadow-purple-950/20 self-start md:self-auto">
-                        <div className="p-2.5 bg-purple-500/20 text-purple-400 rounded-xl border border-purple-500/30">
-                            <Paintbrush size={22} />
+                    <div className="flex items-center gap-3 bg-zinc-900/60 border border-zinc-800/80 px-4 py-2.5 rounded-xl backdrop-blur-md shadow-sm self-start xl:self-auto">
+                        <div className="p-2 bg-purple-500/10 text-purple-400 rounded-lg border border-purple-500/20">
+                            <Paintbrush size={18} />
                         </div>
                         <div>
-                            <div className="text-[10px] font-black uppercase tracking-wider text-purple-300">Minhas Pinturas Ativas</div>
-                            <div className="text-sm font-black text-white flex items-center gap-2">
+                            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Minhas Pinturas Ativas</div>
+                            <div className="text-xs font-mono font-bold text-zinc-200 flex items-center gap-2">
                                 <span>{myPaintingsCount} {myPaintingsCount === 1 ? 'peça' : 'peças'}</span>
-                                <span className="text-zinc-500">•</span>
+                                <span className="text-zinc-600">•</span>
                                 <span className="text-emerald-400">R$ {myPaintingsTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} a receber</span>
                             </div>
                         </div>
@@ -1076,17 +1149,54 @@ export default function KanbanPage() {
                 )}
             </div>
 
-            {/* Search and Quick Filters Toolbar */}
-            <div className="relative z-10 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 mb-6 bg-zinc-950/80 border border-zinc-900 rounded-2xl p-3 backdrop-blur-md shadow-xl">
+            {/* Quick Metrics Bar (Stats no Topo) */}
+            <div className="relative z-10 grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                <div className="p-4 bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/60 rounded-xl">
+                    <span className="text-[10px] font-bold uppercase text-zinc-500 tracking-wider block mb-1">
+                        Peças na Linha
+                    </span>
+                    <span className="text-2xl font-mono font-bold text-zinc-100">
+                        {kanbanMetrics.totalPieces} <span className="text-xs text-zinc-500 font-sans font-normal">unidades</span>
+                    </span>
+                </div>
+                <div className="p-4 bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/60 rounded-xl">
+                    <span className="text-[10px] font-bold uppercase text-zinc-500 tracking-wider block mb-1">
+                        Valor em Produção
+                    </span>
+                    <span className="text-2xl font-mono font-bold text-zinc-100">
+                        R$ {kanbanMetrics.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                </div>
+                <div className="p-4 bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/60 rounded-xl">
+                    <span className="text-[10px] font-bold uppercase text-zinc-500 tracking-wider block mb-1 flex items-center gap-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full ${kanbanMetrics.urgentCount > 0 ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+                        Prazos Críticos (≤ 7d)
+                    </span>
+                    <span className={`text-2xl font-mono font-bold ${kanbanMetrics.urgentCount > 0 ? 'text-amber-400' : 'text-zinc-100'}`}>
+                        {kanbanMetrics.urgentCount} <span className="text-xs text-zinc-500 font-sans font-normal">{kanbanMetrics.urgentCount === 1 ? 'pedido' : 'pedidos'}</span>
+                    </span>
+                </div>
+                <div className="p-4 bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/60 rounded-xl">
+                    <span className="text-[10px] font-bold uppercase text-zinc-500 tracking-wider block mb-1">
+                        Fila de Pintura
+                    </span>
+                    <span className="text-2xl font-mono font-bold text-purple-400">
+                        {kanbanMetrics.paintingQueueCount} <span className="text-xs text-zinc-500 font-sans font-normal">peças</span>
+                    </span>
+                </div>
+            </div>
+
+            {/* Toolbar: Busca + Filtros + Ordenação + Responsável */}
+            <div className="relative z-10 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 mb-6 bg-zinc-900/40 border border-zinc-800/60 rounded-2xl p-4 backdrop-blur-xl shadow-xl shadow-black/20">
                 {/* Search Input */}
                 <div className="relative flex-1 max-w-md">
-                    <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
                     <input
                         type="text"
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
-                        placeholder="Buscar por cliente, figura, estúdio, telefone..."
-                        className="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl pl-10 pr-9 py-2 text-xs text-white placeholder-zinc-500 outline-none focus:border-blue-500/70 transition-all font-medium"
+                        placeholder="Buscar por cliente, figura, estúdio..."
+                        className="w-full bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-zinc-500 outline-none focus:border-zinc-600 transition-colors font-medium"
                     />
                     {searchQuery && (
                         <button
@@ -1094,98 +1204,127 @@ export default function KanbanPage() {
                             onClick={() => setSearchQuery('')}
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
                         >
-                            <X size={13} />
+                            <X size={12} />
                         </button>
                     )}
                 </div>
 
-                {/* Filter Chips */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 custom-scrollbar">
-                    <button
-                        type="button"
-                        onClick={() => setSelectedFilter('all')}
-                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
-                            selectedFilter === 'all'
-                                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                                : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-850'
-                        }`}
-                    >
-                        Todos ({sales.length})
-                    </button>
-
-                    {isPainter && (
+                {/* Filter Chips + Controls */}
+                <div className="flex flex-wrap items-center gap-2">
+                    {/* Filter Pills */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 xl:pb-0 custom-scrollbar">
                         <button
                             type="button"
-                            onClick={() => setSelectedFilter('my_paintings')}
-                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 ${
-                                selectedFilter === 'my_paintings'
-                                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                                    : 'bg-purple-950/40 text-purple-300 border border-purple-500/20 hover:bg-purple-900/40'
+                            onClick={() => setSelectedFilter('all')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
+                                selectedFilter === 'all'
+                                    ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                    : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 border border-zinc-800'
                             }`}
                         >
-                            <Paintbrush size={11} />
-                            Minhas Pinturas ({myPaintingsCount})
+                            Todos ({sales.length})
                         </button>
+
+                        {isPainter && (
+                            <button
+                                type="button"
+                                onClick={() => setSelectedFilter('my_paintings')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                                    selectedFilter === 'my_paintings'
+                                        ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                        : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 border border-zinc-800'
+                                }`}
+                            >
+                                <Paintbrush size={12} />
+                                Minhas Pinturas ({myPaintingsCount})
+                            </button>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={() => setSelectedFilter('available_paintings')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
+                                selectedFilter === 'available_paintings'
+                                    ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                    : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 border border-zinc-800'
+                            }`}
+                        >
+                            Pinturas Disponíveis
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setSelectedFilter('urgent')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
+                                selectedFilter === 'urgent'
+                                    ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                    : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 border border-zinc-800'
+                            }`}
+                        >
+                            Urgentes (≤7d)
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setSelectedFilter('retirada')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
+                                selectedFilter === 'retirada'
+                                    ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                    : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 border border-zinc-800'
+                            }`}
+                        >
+                            Retirada
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setSelectedFilter('correios')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
+                                selectedFilter === 'correios'
+                                    ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
+                                    : 'bg-zinc-900/80 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 border border-zinc-800'
+                            }`}
+                        >
+                            Correios
+                        </button>
+                    </div>
+
+                    {/* Ordenação */}
+                    <select
+                        value={selectedSort}
+                        onChange={(e: any) => setSelectedSort(e.target.value)}
+                        className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg px-3 py-1.5 outline-none focus:border-zinc-600 cursor-pointer transition-colors"
+                        title="Critério de ordenação nas colunas"
+                    >
+                        <option value="fifo">Ordem: Mais Antigos (FIFO)</option>
+                        <option value="urgent">Ordem: Prazo Crítico</option>
+                        <option value="valor">Ordem: Maior Valor (R$)</option>
+                    </select>
+
+                    {/* Filtro por Responsável / Equipe */}
+                    {distinctPeople.length > 0 && (
+                        <select
+                            value={selectedPersonFilter}
+                            onChange={(e) => setSelectedPersonFilter(e.target.value)}
+                            className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg px-3 py-1.5 outline-none focus:border-zinc-600 cursor-pointer transition-colors"
+                        >
+                            <option value="all">Toda a Equipe</option>
+                            {distinctPeople.map(p => (
+                                <option key={p} value={p}>{p}</option>
+                            ))}
+                        </select>
                     )}
-
-                    <button
-                        type="button"
-                        onClick={() => setSelectedFilter('available_paintings')}
-                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
-                            selectedFilter === 'available_paintings'
-                                ? 'bg-zinc-100 text-black shadow-md'
-                                : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-850'
-                        }`}
-                    >
-                        Pinturas Disponíveis
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setSelectedFilter('urgent')}
-                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
-                            selectedFilter === 'urgent'
-                                ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
-                                : 'bg-red-950/40 text-red-400 border border-red-500/20 hover:bg-red-900/40'
-                        }`}
-                    >
-                        ⚠️ Urgentes
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setSelectedFilter('retirada')}
-                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
-                            selectedFilter === 'retirada'
-                                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
-                                : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-850'
-                        }`}
-                    >
-                        Retirada
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setSelectedFilter('correios')}
-                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
-                            selectedFilter === 'correios'
-                                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                                : 'bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-850'
-                        }`}
-                    >
-                        Correios
-                    </button>
 
                     {isAdmin && cleanupStats && cleanupStats.eligiblePhotosCount > 0 && (
                         <button
                             type="button"
                             onClick={handleRunWipCleanup}
                             disabled={isCleaningWip}
-                            className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 bg-red-950/60 text-red-300 border border-red-500/40 hover:bg-red-900/60 shadow-md shadow-red-950/40"
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 bg-rose-950/40 text-rose-300 border border-rose-500/30 hover:bg-rose-900/50"
                             title="Excluir do ImageKit fotos de pedidos concluídos há mais de 15 dias"
                         >
-                            {isCleaningWip ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
-                            Limpar Fotos Expiradas ({cleanupStats.eligiblePhotosCount})
+                            {isCleaningWip ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                            Limpar Fotos ({cleanupStats.eligiblePhotosCount})
                         </button>
                     )}
 
@@ -1194,16 +1333,16 @@ export default function KanbanPage() {
                         type="button"
                         onClick={toggleAutoNotifyEmail}
                         className={clsx(
-                            "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 border",
+                            "px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 border cursor-pointer",
                             autoNotifyEmail
-                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.15)]"
+                                ? "bg-emerald-950/40 text-emerald-400 border-emerald-500/30 hover:bg-emerald-900/50"
                                 : "bg-zinc-900 text-zinc-500 border-zinc-800 hover:text-zinc-300"
                         )}
                         title={autoNotifyEmail ? "Envio automático de e-mail ao cliente ativo ao mover cards. Clique para pausar." : "Envio automático de e-mail ao cliente pausado. Clique para ativar."}
                     >
-                        <Mail size={12} className={autoNotifyEmail ? "text-emerald-400 animate-pulse" : "text-zinc-500"} />
+                        <Mail size={12} className={autoNotifyEmail ? "text-emerald-400" : "text-zinc-500"} />
                         <span className="hidden sm:inline">E-mail:</span>
-                        <span className={clsx("px-1.5 py-0.5 rounded text-[9px]", autoNotifyEmail ? "bg-emerald-500/20 text-emerald-300" : "bg-zinc-800 text-zinc-500")}>
+                        <span className={clsx("px-1.5 py-0.5 rounded text-[9px] font-mono", autoNotifyEmail ? "bg-emerald-500/20 text-emerald-300" : "bg-zinc-800 text-zinc-500")}>
                             {autoNotifyEmail ? 'Ativo' : 'Pausado'}
                         </span>
                     </button>
@@ -1212,7 +1351,7 @@ export default function KanbanPage() {
 
             {loading ? (
                 <div className="relative z-10 flex-1 flex items-center justify-center p-12">
-                    <Loader2 className="animate-spin text-blue-500 w-12 h-12 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                    <Loader2 className="animate-spin text-orange-500 w-10 h-10" />
                 </div>
             ) : (
                 <div className="relative z-10 flex-1 flex gap-5 overflow-x-auto pb-6 custom-scrollbar pr-4">
@@ -1222,26 +1361,25 @@ export default function KanbanPage() {
                         return (
                             <div
                                 key={col.id}
-                                className={`flex-shrink-0 w-[280px] lg:w-[310px] xl:w-[340px] flex flex-col rounded-3xl border backdrop-blur-2xl ${col.color} transition-all duration-300 shadow-xl overflow-hidden`}
+                                className={`flex-shrink-0 w-[280px] lg:w-[310px] xl:w-[340px] flex flex-col rounded-2xl border border-zinc-800/80 bg-zinc-900/40 backdrop-blur-xl transition-all duration-300 shadow-xl shadow-black/20 overflow-hidden`}
                                 onDragOver={handleDragOver}
                                 onDragLeave={handleDragLeave}
                                 onDrop={(e) => handleDrop(e, col.id)}
                             >
-                                <div className="p-4 border-b border-zinc-800/50 bg-zinc-950/50 flex flex-col gap-2 relative">
-                                    <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-zinc-800 to-transparent"></div>
+                                <div className="p-3.5 px-4 border-b border-zinc-800/60 bg-zinc-950/60 flex flex-col gap-1.5 relative">
                                     <div className="flex items-center justify-between">
-                                        <div className={`flex items-center gap-3 font-black uppercase text-[11px] tracking-widest ${col.text}`}>
-                                            <col.icon size={20} />
+                                        <div className={`flex items-center gap-2.5 font-bold uppercase text-[11px] tracking-wider ${col.text}`}>
+                                            <col.icon size={16} />
                                             <span>{col.title}</span>
                                         </div>
-                                        <span className="bg-zinc-900 px-3 py-1 rounded-full text-xs font-black text-zinc-400 border border-zinc-800 shadow-inner">
+                                        <span className="bg-zinc-900 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold text-zinc-300 border border-zinc-800">
                                             {columnTasks.length}
                                         </span>
                                     </div>
                                     {canSeeValues && (
-                                        <div className="flex items-center justify-between mt-1 px-1">
-                                            <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Total Fila:</span>
-                                            <span className="text-[11px] font-black text-emerald-400">
+                                        <div className="flex items-center justify-between px-0.5">
+                                            <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Total Fila:</span>
+                                            <span className="text-[11px] font-mono font-bold text-emerald-400">
                                                 R$ {columnTasks.reduce((sum, t) => sum + (Number(t.valor_venda_final) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             </span>
                                         </div>
@@ -1269,7 +1407,7 @@ export default function KanbanPage() {
                                                 draggable
                                                 onDragStart={(e) => handleDragStart(e, task.id)}
                                                 onDragEnd={handleDragEnd}
-                                                className={`bg-zinc-950/50 backdrop-blur-lg border border-zinc-900/80 rounded-2xl p-3.5 cursor-grab active:cursor-grabbing select-none transition-all duration-500 ease-out group relative shadow-xl overflow-hidden min-h-[245px] flex flex-col justify-between hover:-translate-y-1.5 ${accent.border} ${accent.glow}`}
+                                                className={`bg-zinc-950/60 backdrop-blur-md border border-zinc-800/70 hover:border-zinc-600 rounded-xl p-3.5 cursor-grab active:cursor-grabbing select-none transition-all duration-300 group relative shadow-lg overflow-hidden min-h-[240px] flex flex-col justify-between hover:bg-zinc-900/40 ${accent.border}`}
                                             >
                                                 {/* Full-bleed Product Image Background */}
                                                 {task.figuras?.imagem_url && (
