@@ -81,6 +81,7 @@ function StudiosContent() {
     const [newStudioName, setNewStudioName] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<'receita_bruta' | 'lucro_liquido' | 'break_even_progresso_pct' | 'total_figuras' | 'custo_mensal' | 'nome'>('receita_bruta');
+    const [statusFilter, setStatusFilter] = useState<'active' | 'all' | 'with_sales' | 'inactive'>('active');
     const [expandedStudioIds, setExpandedStudioIds] = useState<Record<number, boolean>>({});
     const [patreonData, setPatreonData] = useState<any>(null);
     const [openMenuId, setOpenMenuId] = useState<number | null>(null);
@@ -223,8 +224,18 @@ function StudiosContent() {
         setExpandedStudioIds(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
+    const activeCount = studios.filter(s => s.ativo).length;
+    const inactiveCount = studios.filter(s => !s.ativo).length;
+    const withSalesCount = studios.filter(s => (Number(s.total_vendas) || 0) > 0).length;
+
     const filteredAndSortedStudios = studios
-        .filter(s => s.nome.toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter(s => {
+            if (statusFilter === 'active' && !s.ativo) return false;
+            if (statusFilter === 'inactive' && s.ativo) return false;
+            if (statusFilter === 'with_sales' && (Number(s.total_vendas) || 0) === 0) return false;
+            if (!searchTerm.trim()) return true;
+            return s.nome.toLowerCase().includes(searchTerm.toLowerCase());
+        })
         .sort((a, b) => {
             if (sortBy === 'nome') {
                 return a.nome.localeCompare(b.nome);
@@ -235,77 +246,78 @@ function StudiosContent() {
         });
 
     return (
-        <div className="w-full text-zinc-100 relative overflow-x-hidden">
-            {/* Background Effects */}
-            <div className="fixed top-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/5 rounded-full blur-[120px] pointer-events-none" />
-            <div className="fixed bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/5 rounded-full blur-[120px] pointer-events-none" />
-
-            <div className="w-full relative z-10 transition-all duration-500">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                    <div className="flex items-center gap-5 flex-wrap">
-                        <Link href="/admin" className="p-3 bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 hover:bg-blue-500/10 hover:text-blue-400 rounded-2xl transition-all shadow-lg text-zinc-500 group">
-                            <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+        <div className="w-full text-zinc-100 relative">
+            <div className="w-full relative z-10 transition-all duration-300">
+                {/* Header & Main Tabs */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3.5 flex-wrap">
+                        <Link href="/admin" className="p-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 hover:text-white rounded-xl transition-all text-zinc-400 group">
+                            <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
                         </Link>
                         <div>
-                            <h1 className="text-4xl font-black tracking-tighter text-white">Estúdios <span className="text-blue-500">Parceiros</span></h1>
-                            <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-1 opacity-80">Gestão de Branding, Custos e BI.</p>
+                            <h1 className="text-2xl font-bold tracking-tight text-zinc-100">Estúdios Parceiros</h1>
+                            <p className="text-xs text-zinc-400 mt-0.5">Gestão de acervo, branding, custos operacionais e viabilidade comercial.</p>
                         </div>
                     </div>
 
-                    {/* Tab Switcher */}
-                    <div className="flex items-center gap-1.5 p-1.5 bg-zinc-950/80 border border-zinc-900 rounded-2xl w-fit">
+                    {/* Segmented Control Tab Switcher */}
+                    <div className="flex items-center gap-1 p-1 bg-zinc-950 border border-zinc-800/80 rounded-xl w-fit">
                         <button
+                            type="button"
                             onClick={() => changeTab('acervo')}
-                            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
                                 activeTab === 'acervo'
-                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-                                    : 'text-zinc-500 hover:text-zinc-300'
+                                    ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
                             }`}
                         >
                             <Box size={14} />
-                            Acervo & Licenças
-                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                                activeTab === 'acervo' ? 'bg-black/30 text-white' : 'bg-zinc-850 text-zinc-400'
+                            <span>Acervo & Licenças</span>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${
+                                activeTab === 'acervo' ? 'bg-zinc-900 text-zinc-300' : 'bg-zinc-800/60 text-zinc-400'
                             }`}>
-                                {studios.length}
+                                {activeCount}/{studios.length}
                             </span>
                         </button>
 
                         <button
+                            type="button"
                             onClick={() => changeTab('bi')}
-                            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
                                 activeTab === 'bi'
-                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-                                    : 'text-zinc-500 hover:text-zinc-300'
+                                    ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
                             }`}
                         >
                             <TrendingUp size={14} />
-                            Painel de BI & Viabilidade
+                            <span>Painel de BI</span>
                         </button>
 
                         <button
+                            type="button"
                             onClick={() => changeTab('mensalidades')}
-                            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
                                 activeTab === 'mensalidades'
-                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-                                    : 'text-zinc-500 hover:text-zinc-300'
+                                    ? 'bg-zinc-800 text-zinc-100 shadow-sm'
+                                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
                             }`}
                         >
                             <Calendar size={14} />
-                            Controle Mensal & Gastos
+                            <span>Controle Mensal</span>
                         </button>
 
                         <button
+                            type="button"
                             onClick={() => changeTab('franga-studio')}
-                            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
                                 activeTab === 'franga-studio'
-                                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/25'
-                                    : 'text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/20'
+                                    ? 'bg-purple-900/40 text-purple-300 border border-purple-800/50 shadow-sm'
+                                    : 'text-purple-400 hover:text-purple-300 hover:bg-purple-950/20'
                             }`}
                             title="Gerenciar lançamentos e repositórios do Franga Studio"
                         >
                             <FolderGit2 size={14} />
-                            Franga Studio
+                            <span>Franga Studio</span>
                         </button>
                     </div>
                 </div>
@@ -315,122 +327,205 @@ function StudiosContent() {
                 ) : activeTab === 'bi' ? (
                     <StudiosBI />
                 ) : activeTab === 'franga-studio' ? (
-                    <div className="bg-zinc-950/60 rounded-3xl p-4 border border-zinc-900 shadow-xl">
+                    <div className="bg-zinc-950/60 rounded-2xl p-4 border border-zinc-800 shadow-xl">
                         <AdminPatreonRepositoryPage />
                     </div>
                 ) : (
                     <>
-                        {/* Search & Sort Controls */}
-                        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-8">
-                            <div className="relative group flex-1 max-w-md">
-                                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-blue-500 transition-colors" />
-                                <input
-                                    type="text"
-                                    placeholder="Buscar estúdio..."
-                                    value={searchTerm}
-                                    onChange={e => setSearchTerm(e.target.value)}
-                                    className="w-full bg-zinc-950/60 border border-zinc-900 focus:border-blue-500/50 p-3.5 pl-12 rounded-2xl outline-none text-sm transition-all shadow-inner font-medium text-zinc-300"
-                                />
-                            </div>
+                        {/* Executive Financial Summary */}
+                        {!loading && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 flex flex-col justify-between hover:border-zinc-700/80 transition-all">
+                                    <div className="flex items-center justify-between text-zinc-400 mb-2">
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Custo Licenças</span>
+                                        <DollarSign size={16} className="text-zinc-500" />
+                                    </div>
+                                    <div>
+                                        <div className="text-xl font-bold font-mono tracking-tight text-zinc-100">
+                                            R$ {studios.filter(s => s.ativo).reduce((acc, s) => acc + (Number(s.custo_mensal) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            <span className="text-xs font-normal text-zinc-400 font-sans ml-1">/ mês</span>
+                                        </div>
+                                        <div className="text-[11px] text-zinc-400 font-mono mt-1">
+                                            R$ {(studios.filter(s => s.ativo).reduce((acc, s) => acc + (Number(s.custo_mensal) || 0), 0) * 12).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}/ano total
+                                        </div>
+                                    </div>
+                                </div>
 
-                            <div className="relative group min-w-[200px]">
-                                <select
-                                    value={sortBy}
-                                    onChange={e => setSortBy(e.target.value as any)}
-                                    className="w-full bg-zinc-950/60 border border-zinc-900 focus:border-blue-500/50 p-3.5 pr-10 rounded-2xl outline-none text-xs font-bold text-zinc-300 appearance-none cursor-pointer"
+                                <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 flex flex-col justify-between hover:border-zinc-700/80 transition-all">
+                                    <div className="flex items-center justify-between text-zinc-400 mb-2">
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Estúdios Parceiros</span>
+                                        <Box size={16} className="text-zinc-500" />
+                                    </div>
+                                    <div>
+                                        <div className="text-xl font-bold font-mono tracking-tight text-zinc-100">
+                                            {activeCount} <span className="text-xs font-normal text-zinc-400 font-sans">ativos</span>
+                                            <span className="text-zinc-600 font-normal text-sm font-sans mx-1">/</span>
+                                            <span className="text-sm font-normal text-zinc-400 font-mono">{studios.length} total</span>
+                                        </div>
+                                        <div className="text-[11px] text-zinc-400 mt-1">
+                                            {inactiveCount} estúdios inativos ou pausados
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 flex flex-col justify-between hover:border-zinc-700/80 transition-all">
+                                    <div className="flex items-center justify-between text-zinc-400 mb-2">
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Acervo em Catálogo</span>
+                                        <Sparkles size={16} className="text-zinc-500" />
+                                    </div>
+                                    <div>
+                                        <div className="text-xl font-bold font-mono tracking-tight text-zinc-100">
+                                            {studios.filter(s => s.merchant).reduce((acc, s) => acc + (s.total_figuras || 0), 0)}
+                                            <span className="text-xs font-normal text-zinc-400 font-sans ml-1">figuras</span>
+                                        </div>
+                                        <div className="text-[11px] text-zinc-400 mt-1">
+                                            {studios.filter(s => s.merchant && (s.total_figuras || 0) > 0).length} estúdios ativos com vitrine
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 flex flex-col justify-between hover:border-zinc-700/80 transition-all">
+                                    <div className="flex items-center justify-between text-zinc-400 mb-2">
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Licenças Patreon</span>
+                                        <ShoppingBag size={16} className="text-zinc-500" />
+                                    </div>
+                                    <div>
+                                        <div className="text-xl font-bold font-mono tracking-tight text-zinc-100">
+                                            {patreonData?.stats?.totalActive || 0}
+                                            <span className="text-xs font-normal text-zinc-400 font-sans ml-1">ativas</span>
+                                        </div>
+                                        <div className="text-[11px] text-zinc-400 font-mono mt-1">
+                                            {patreonData?.stats?.totalMonthlyUSD || '$0.00'} / mês em USD
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Status Filter Toolbar, Search & Sort */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6 bg-zinc-900/30 border border-zinc-800/80 p-3 rounded-2xl">
+                            {/* Filter Pills */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <button
+                                    type="button"
+                                    onClick={() => setStatusFilter('active')}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                        statusFilter === 'active'
+                                            ? 'bg-zinc-100 text-zinc-900 shadow-sm'
+                                            : 'bg-zinc-900/60 text-zinc-400 hover:text-zinc-200 border border-zinc-800/80'
+                                    }`}
                                 >
-                                    <option value="receita_bruta">Faturamento Bruto</option>
-                                    <option value="lucro_liquido">Lucro Líquido Real</option>
-                                    <option value="break_even_progresso_pct">Progresso Break-Even (%)</option>
-                                    <option value="total_figuras">Tamanho do Acervo</option>
-                                    <option value="custo_mensal">Custo Mensal</option>
-                                    <option value="nome">Nome do Estúdio</option>
-                                </select>
-                                <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-                            </div>
-                        </div>
+                                    <span>Apenas Ativos</span>
+                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${
+                                        statusFilter === 'active' ? 'bg-zinc-300 text-zinc-900' : 'bg-zinc-800 text-zinc-400'
+                                    }`}>
+                                        {activeCount}
+                                    </span>
+                                </button>
 
-                {/* Financial Summary */}
-                {!loading && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                        <div className="bg-zinc-900/30 border border-zinc-800/80 rounded-[2rem] p-6 flex items-center gap-6 backdrop-blur-sm relative overflow-hidden group">
-                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-                                <DollarSign size={24} />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Custo Licenças (Mês / Ano)</p>
-                                <h3 className="text-2xl font-black text-white tracking-tighter">
-                                    R$ {studios.filter(s => s.ativo).reduce((acc, s) => acc + (Number(s.custo_mensal) || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </h3>
-                                <p className="text-[9px] font-bold text-zinc-500 mt-0.5">
-                                    R$ {(studios.filter(s => s.ativo).reduce((acc, s) => acc + (Number(s.custo_mensal) || 0), 0) * 12).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}/ano total
-                                </p>
-                            </div>
-                        </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setStatusFilter('all')}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                        statusFilter === 'all'
+                                            ? 'bg-zinc-100 text-zinc-900 shadow-sm'
+                                            : 'bg-zinc-900/60 text-zinc-400 hover:text-zinc-200 border border-zinc-800/80'
+                                    }`}
+                                >
+                                    <span>Todos os Estúdios</span>
+                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${
+                                        statusFilter === 'all' ? 'bg-zinc-300 text-zinc-900' : 'bg-zinc-800 text-zinc-400'
+                                    }`}>
+                                        {studios.length}
+                                    </span>
+                                </button>
 
-                        <div className="bg-zinc-900/30 border border-zinc-800/80 rounded-[2rem] p-6 flex items-center gap-6 backdrop-blur-sm relative overflow-hidden group">
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500">
-                                <Box size={24} />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Total de Parceiros</p>
-                                <h3 className="text-2xl font-black text-white tracking-tighter">
-                                    {studios.length} <span className="text-xs font-bold text-zinc-600 ml-1">({studios.filter(s => s.ativo).length} ativos)</span>
-                                </h3>
-                            </div>
-                        </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setStatusFilter('with_sales')}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                        statusFilter === 'with_sales'
+                                            ? 'bg-zinc-100 text-zinc-900 shadow-sm'
+                                            : 'bg-zinc-900/60 text-zinc-400 hover:text-zinc-200 border border-zinc-800/80'
+                                    }`}
+                                >
+                                    <span>Com Vendas</span>
+                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${
+                                        statusFilter === 'with_sales' ? 'bg-zinc-300 text-zinc-900' : 'bg-zinc-800 text-zinc-400'
+                                    }`}>
+                                        {withSalesCount}
+                                    </span>
+                                </button>
 
-                        <div className="bg-zinc-900/30 border border-zinc-800/80 rounded-[2rem] p-6 flex items-center gap-6 backdrop-blur-sm relative overflow-hidden group">
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
-                                <Sparkles size={24} />
+                                <button
+                                    type="button"
+                                    onClick={() => setStatusFilter('inactive')}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                        statusFilter === 'inactive'
+                                            ? 'bg-zinc-100 text-zinc-900 shadow-sm'
+                                            : 'bg-zinc-900/60 text-zinc-400 hover:text-zinc-200 border border-zinc-800/80'
+                                    }`}
+                                >
+                                    <span>Inativos / Pausados</span>
+                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${
+                                        statusFilter === 'inactive' ? 'bg-zinc-300 text-zinc-900' : 'bg-zinc-800 text-zinc-400'
+                                    }`}>
+                                        {inactiveCount}
+                                    </span>
+                                </button>
                             </div>
-                            <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1">Acervo Ativo</p>
-                                <h3 className="text-2xl font-black text-white tracking-tighter">
-                                    {studios.filter(s => s.merchant).reduce((acc, s) => acc + (s.total_figuras || 0), 0)} 
-                                    <span className="text-sm font-bold text-zinc-600 ml-1">figuras</span>
-                                </h3>
-                            </div>
-                        </div>
 
-                        <div className="bg-zinc-900/30 border border-orange-500/30 rounded-[2rem] p-6 flex items-center gap-6 backdrop-blur-sm relative overflow-hidden group">
-                            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 shadow-[0_0_20px_rgba(249,115,22,0.15)]">
-                                <ShoppingBag size={24} />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-orange-400 mb-1">Licenças Patreon</p>
-                                <h3 className="text-2xl font-black text-white tracking-tighter">
-                                    {patreonData?.stats?.totalActive || 0} <span className="text-xs font-bold text-zinc-400 ml-1">ativas ({patreonData?.stats?.totalMonthlyUSD || '$0.00'})</span>
-                                </h3>
+                            {/* Search & Sort */}
+                            <div className="flex items-center gap-2 flex-1 sm:flex-initial justify-end">
+                                <div className="relative flex-1 sm:w-64">
+                                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar estúdio..."
+                                        value={searchTerm}
+                                        onChange={e => setSearchTerm(e.target.value)}
+                                        className="w-full bg-zinc-950 border border-zinc-800 focus:border-zinc-600 py-1.5 pl-9 pr-3 rounded-xl outline-none text-xs text-zinc-200 placeholder:text-zinc-500 transition-all"
+                                    />
+                                </div>
+
+                                <div className="relative min-w-[170px]">
+                                    <select
+                                        value={sortBy}
+                                        onChange={e => setSortBy(e.target.value as any)}
+                                        className="w-full bg-zinc-950 border border-zinc-800 focus:border-zinc-600 py-1.5 pl-3 pr-8 rounded-xl outline-none text-xs font-medium text-zinc-300 appearance-none cursor-pointer"
+                                    >
+                                        <option value="receita_bruta">Faturamento Bruto</option>
+                                        <option value="lucro_liquido">Lucro Líquido Real</option>
+                                        <option value="break_even_progresso_pct">Progresso Break-Even (%)</option>
+                                        <option value="total_figuras">Tamanho do Acervo</option>
+                                        <option value="custo_mensal">Custo Mensal</option>
+                                        <option value="nome">Nome do Estúdio</option>
+                                    </select>
+                                    <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
 
                 {loading ? (
-                    <div className="py-24 flex justify-center w-full"><Loader2 className="animate-spin text-blue-500 w-12 h-12" /></div>
+                    <div className="py-24 flex justify-center w-full"><Loader2 className="animate-spin text-zinc-400 w-8 h-8" /></div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 pb-20">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 pb-20">
                         {/* New Studio Card */}
                         {hasRole('admin') && (
-                            <div className="bg-zinc-950/40 border-2 border-dashed border-zinc-900 rounded-[2.5rem] p-8 flex flex-col justify-center items-center gap-6 hover:border-blue-500/30 transition-all group backdrop-blur-sm">
-                                <div className="w-16 h-16 rounded-3xl bg-zinc-900/50 border border-zinc-800 flex items-center justify-center text-zinc-600 group-hover:text-blue-500 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(59,130,246,0.2)] transition-all shadow-lg">
-                                    {isAdding ? <Loader2 className="animate-spin" /> : <Plus size={32} />}
+                            <div className="bg-zinc-950/40 border-2 border-dashed border-zinc-800/80 rounded-2xl p-5 flex flex-col justify-center items-center gap-4 hover:border-zinc-700 transition-all group min-h-[340px]">
+                                <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 group-hover:text-zinc-200 transition-all">
+                                    {isAdding ? <Loader2 className="animate-spin" size={20} /> : <Plus size={24} />}
                                 </div>
-                                <div className="text-center w-full">
+                                <div className="text-center w-full px-2">
                                     <input 
                                         type="text"
                                         value={newStudioName}
                                         onChange={e => setNewStudioName(e.target.value)}
                                         onKeyDown={(e) => { if (e.key === 'Enter') handleAddStudio(e as any); }}
                                         placeholder="Nome do Novo Parceiro"
-                                        className="bg-transparent text-center font-black text-xl outline-none text-zinc-200 placeholder:text-zinc-700 w-full mb-2"
+                                        className="bg-transparent text-center font-bold text-base outline-none text-zinc-100 placeholder:text-zinc-600 w-full mb-1"
                                     />
-                                    <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">Pressione Enter para salvar</p>
+                                    <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Enter para cadastrar</p>
                                 </div>
                             </div>
                         )}
@@ -463,49 +558,60 @@ function StudiosContent() {
                             }
 
                             return (
-                                <div key={studio.id} className="bg-zinc-900/40 backdrop-blur-xl border border-zinc-800/50 rounded-[2.5rem] p-8 shadow-2xl flex flex-col gap-6 relative group hover:border-blue-500/20 transition-all duration-500">
-                                    <div className={clsx(
-                                        "absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-t-[2.5rem]",
-                                        profit < 0 && salesCount > 0 && "via-rose-500/20"
-                                    )} />
-                                    
-                                    <div className={clsx("flex justify-between items-start transition-all duration-500", !studio.ativo && "opacity-45")}>
-                                        <div className="flex items-center gap-4">
-                                            <div className="relative w-14 h-14 rounded-2xl bg-zinc-950 border border-zinc-800 overflow-hidden flex items-center justify-center shadow-inner group-hover:border-blue-500/30 transition-all">
+                                <div key={studio.id} className={clsx(
+                                    "bg-zinc-900/40 border rounded-2xl p-4 shadow-sm flex flex-col justify-between gap-3.5 transition-all duration-200 relative group",
+                                    studio.ativo ? "border-zinc-800/80 hover:border-zinc-700/90" : "border-zinc-900/80 opacity-60 hover:opacity-90"
+                                )}>
+                                    {/* Studio Header */}
+                                    <div className="flex justify-between items-start gap-2.5">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="relative w-11 h-11 rounded-xl bg-zinc-950 border border-zinc-800 overflow-hidden flex items-center justify-center shrink-0">
                                                 {studio.logo_url ? (
                                                     <img src={studio.logo_url} alt={studio.nome} className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <div className="font-black text-xl text-zinc-700 bg-gradient-to-br from-zinc-900 to-zinc-950 w-full h-full flex items-center justify-center">
+                                                    <div className="font-bold text-sm text-zinc-500 bg-zinc-950 w-full h-full flex items-center justify-center font-mono">
                                                         {studio.nome.slice(0, 2).toUpperCase()}
                                                     </div>
                                                 )}
-                                                {!studio.ativo && <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-[8px] font-black uppercase text-white/50 tracking-widest">OFF</div>}
+                                                {!studio.ativo && (
+                                                    <div className="absolute inset-0 bg-black/75 flex items-center justify-center text-[7px] font-bold uppercase text-zinc-400 tracking-wider">OFF</div>
+                                                )}
                                             </div>
                                             
-                                            <div className="flex flex-col">
+                                            <div className="flex flex-col min-w-0">
                                                 <div 
-                                                    className={clsx(
-                                                        "font-black tracking-tight text-white leading-tight truncate max-w-[220px] sm:max-w-[250px]",
-                                                        studio.nome.length > 16 ? "text-sm" : "text-base"
-                                                    )}
+                                                    className="font-bold text-sm tracking-tight text-zinc-100 truncate"
                                                     title={studio.nome}
                                                 >
                                                     {studio.nome}
                                                 </div>
-                                                <div className="flex gap-2 mt-1.5">
+                                                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                                    <span className={clsx(
+                                                        "text-[9px] font-semibold px-1.5 py-0.2 rounded border",
+                                                        studio.ativo ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-zinc-800 text-zinc-500 border-zinc-700/40"
+                                                    )}>
+                                                        {studio.ativo ? 'Ativo' : 'Inativo'}
+                                                    </span>
+
+                                                    {studio.merchant && (
+                                                        <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                                                            Vitrine
+                                                        </span>
+                                                    )}
+
                                                     {studio.instagram_handle && (
-                                                        <a href={`https://instagram.com/${studio.instagram_handle.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="p-1 bg-zinc-950/50 rounded-lg text-zinc-500 hover:text-pink-500 transition-colors border border-zinc-800/30">
-                                                            <Instagram size={12} />
+                                                        <a href={`https://instagram.com/${studio.instagram_handle.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="p-1 bg-zinc-950 rounded text-zinc-500 hover:text-pink-400 transition-colors border border-zinc-800" title={studio.instagram_handle}>
+                                                            <Instagram size={10} />
                                                         </a>
                                                     )}
                                                     {studio.social_url && (
-                                                        <a href={studio.social_url} target="_blank" rel="noopener noreferrer" className="p-1 bg-zinc-950/50 rounded-lg text-zinc-500 hover:text-blue-400 transition-colors border border-zinc-800/30">
-                                                            <Globe size={12} />
+                                                        <a href={studio.social_url} target="_blank" rel="noopener noreferrer" className="p-1 bg-zinc-950 rounded text-zinc-500 hover:text-zinc-300 transition-colors border border-zinc-800" title="Website / Link">
+                                                            <Globe size={10} />
                                                         </a>
                                                     )}
                                                     {studio.observacao && (
-                                                        <div className="p-1 bg-zinc-950/50 rounded-lg text-zinc-500 border border-zinc-800/30 group/obs relative cursor-help" title={studio.observacao}>
-                                                            <MessageSquare size={12} />
+                                                        <div className="p-1 bg-zinc-950 rounded text-zinc-500 border border-zinc-800 group/obs relative cursor-help" title={studio.observacao}>
+                                                            <MessageSquare size={10} />
                                                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/obs:block bg-zinc-950 text-zinc-300 text-[10px] p-2 rounded-lg border border-zinc-800 w-48 shadow-2xl z-50 text-center font-medium normal-case tracking-normal">
                                                                 {studio.observacao}
                                                             </div>
@@ -515,97 +621,97 @@ function StudiosContent() {
                                             </div>
                                         </div>
 
-                                        {/* Botão dos Três Pontos */}
+                                        {/* Actions Menu */}
                                         <div className="relative shrink-0">
                                             <button
                                                 type="button"
                                                 onClick={() => setOpenMenuId(openMenuId === studio.id ? null : studio.id)}
                                                 className={clsx(
-                                                    "w-9 h-9 rounded-2xl flex items-center justify-center transition-all cursor-pointer border shadow-md",
+                                                    "w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer border text-zinc-400 hover:text-white",
                                                     openMenuId === studio.id
-                                                        ? "bg-blue-600/20 border-blue-500/50 text-blue-400"
-                                                        : "bg-zinc-950/80 border-zinc-800/80 text-zinc-400 hover:text-white hover:border-zinc-700"
+                                                        ? "bg-zinc-800 border-zinc-700 text-white"
+                                                        : "bg-zinc-950 border-zinc-800/80 hover:border-zinc-700"
                                                 )}
-                                                title="Opções do Estúdio"
+                                                title="Opções"
                                             >
-                                                <MoreVertical size={16} />
+                                                <MoreVertical size={14} />
                                             </button>
 
-                                                {openMenuId === studio.id && (
-                                                    <>
-                                                        <div 
-                                                            className="fixed inset-0 z-40" 
-                                                            onClick={() => setOpenMenuId(null)} 
-                                                        />
-                                                        <div className="absolute right-0 top-10 z-50 bg-zinc-950/95 border border-zinc-800 rounded-2xl p-2 shadow-2xl backdrop-blur-xl w-52 space-y-1 animate-[fadeIn_0.15s_ease-out]">
-                                                            {/* Vitrine Toggle */}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const newVal = !studio.merchant;
-                                                                    handleChange(studio.id, 'merchant', newVal);
-                                                                    handleUpdate({ ...studio, merchant: newVal });
-                                                                }}
-                                                                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-zinc-900 text-xs font-bold text-zinc-300 transition-colors cursor-pointer"
-                                                            >
-                                                                <div className="flex items-center gap-2">
-                                                                    <ShoppingBag size={14} className={studio.merchant ? "text-purple-400" : "text-zinc-500"} />
-                                                                    <span>Exibir na Vitrine</span>
-                                                                </div>
-                                                                <span className={clsx("text-[10px] font-black uppercase px-2 py-0.5 rounded-md", studio.merchant ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : "bg-zinc-800 text-zinc-500")}>
-                                                                    {studio.merchant ? 'Sim' : 'Não'}
-                                                                </span>
-                                                            </button>
+                                            {openMenuId === studio.id && (
+                                                <>
+                                                    <div 
+                                                        className="fixed inset-0 z-40" 
+                                                        onClick={() => setOpenMenuId(null)} 
+                                                    />
+                                                    <div className="absolute right-0 top-8 z-50 bg-zinc-950 border border-zinc-800 rounded-xl p-1.5 shadow-2xl w-48 space-y-1">
+                                                        {/* Vitrine Toggle */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const newVal = !studio.merchant;
+                                                                handleChange(studio.id, 'merchant', newVal);
+                                                                handleUpdate({ ...studio, merchant: newVal });
+                                                            }}
+                                                            className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-zinc-900 text-xs font-medium text-zinc-300 transition-colors cursor-pointer"
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <ShoppingBag size={13} className={studio.merchant ? "text-purple-400" : "text-zinc-500"} />
+                                                                <span>Exibir na Vitrine</span>
+                                                            </div>
+                                                            <span className={clsx("text-[9px] font-bold uppercase px-1.5 py-0.2 rounded", studio.merchant ? "bg-purple-500/20 text-purple-300" : "bg-zinc-800 text-zinc-500")}>
+                                                                {studio.merchant ? 'Sim' : 'Não'}
+                                                            </span>
+                                                        </button>
 
-                                                            {/* Operação Switch */}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const newVal = !studio.ativo;
-                                                                    handleChange(studio.id, 'ativo', newVal);
-                                                                    handleUpdate({ ...studio, ativo: newVal });
-                                                                }}
-                                                                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-zinc-900 text-xs font-bold text-zinc-300 transition-colors cursor-pointer"
-                                                            >
-                                                                <div className="flex items-center gap-2">
-                                                                    <Sparkles size={14} className={studio.ativo ? "text-blue-400" : "text-zinc-500"} />
-                                                                    <span>Status da Operação</span>
-                                                                </div>
-                                                                <span className={clsx("text-[10px] font-black uppercase px-2 py-0.5 rounded-md", studio.ativo ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-zinc-800 text-zinc-500")}>
-                                                                    {studio.ativo ? 'Ativo' : 'Pausado'}
-                                                                </span>
-                                                            </button>
+                                                        {/* Operação Switch */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const newVal = !studio.ativo;
+                                                                handleChange(studio.id, 'ativo', newVal);
+                                                                handleUpdate({ ...studio, ativo: newVal });
+                                                            }}
+                                                            className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-zinc-900 text-xs font-medium text-zinc-300 transition-colors cursor-pointer"
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <Sparkles size={13} className={studio.ativo ? "text-emerald-400" : "text-zinc-500"} />
+                                                                <span>Status Operação</span>
+                                                            </div>
+                                                            <span className={clsx("text-[9px] font-bold uppercase px-1.5 py-0.2 rounded", studio.ativo ? "bg-emerald-500/20 text-emerald-400" : "bg-zinc-800 text-zinc-500")}>
+                                                                {studio.ativo ? 'Ativo' : 'Pausado'}
+                                                            </span>
+                                                        </button>
 
-                                                            {/* Settings Expand */}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    toggleExpand(studio.id);
-                                                                    setOpenMenuId(null);
-                                                                }}
-                                                                className="w-full flex items-center gap-2 p-2.5 rounded-xl hover:bg-zinc-900 text-xs font-bold text-zinc-300 transition-colors cursor-pointer"
-                                                            >
-                                                                <Settings size={14} className="text-zinc-400" />
-                                                                <span>Configurações & Links</span>
-                                                            </button>
+                                                        {/* Settings Expand */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                toggleExpand(studio.id);
+                                                                setOpenMenuId(null);
+                                                            }}
+                                                            className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-zinc-900 text-xs font-medium text-zinc-300 transition-colors cursor-pointer"
+                                                        >
+                                                            <Settings size={13} className="text-zinc-400" />
+                                                            <span>Configurações & Links</span>
+                                                        </button>
 
-                                                            <div className="border-t border-zinc-900 my-1" />
+                                                        <div className="border-t border-zinc-900 my-1" />
 
-                                                            {/* Delete Button */}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    handleDelete(studio.id, studio.total_figuras || 0);
-                                                                    setOpenMenuId(null);
-                                                                }}
-                                                                className="w-full flex items-center gap-2 p-2.5 rounded-xl hover:bg-rose-500/10 text-xs font-bold text-rose-400 transition-colors cursor-pointer"
-                                                            >
-                                                                <Trash size={14} />
-                                                                <span>Excluir Estúdio</span>
-                                                            </button>
-                                                        </div>
-                                                    </>
-                                                )}
+                                                        {/* Delete Button */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                handleDelete(studio.id, studio.total_figuras || 0);
+                                                                setOpenMenuId(null);
+                                                            }}
+                                                            className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-rose-500/10 text-xs font-medium text-rose-400 transition-colors cursor-pointer"
+                                                        >
+                                                            <Trash size={13} />
+                                                            <span>Excluir Estúdio</span>
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
 
@@ -616,26 +722,26 @@ function StudiosContent() {
 
                                         return (
                                             <div className={clsx(
-                                                "rounded-2xl p-3.5 flex justify-between items-center text-xs shadow-md border transition-all",
+                                                "rounded-xl p-2.5 flex justify-between items-center text-xs border transition-all",
                                                 isActive 
-                                                    ? (isMerchant ? "bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/30" : "bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/25")
+                                                    ? (isMerchant ? "bg-amber-500/10 border-amber-500/30" : "bg-emerald-500/10 border-emerald-500/25")
                                                     : "bg-zinc-950/60 border-zinc-800/60 opacity-75"
                                             )}>
-                                                <div className="flex items-center gap-2.5">
+                                                <div className="flex items-center gap-2">
                                                     <span className={clsx(
-                                                        "w-2 h-2 rounded-full shrink-0",
+                                                        "w-1.5 h-1.5 rounded-full shrink-0",
                                                         isActive 
-                                                            ? (isMerchant ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]" : "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]") 
+                                                            ? (isMerchant ? "bg-amber-400" : "bg-emerald-400") 
                                                             : "bg-zinc-600"
                                                     )} />
                                                     <div className="flex flex-col">
-                                                        <span className="font-black text-white text-[12px] leading-tight">
+                                                        <span className="font-bold text-zinc-200 text-[11px] leading-tight">
                                                             {patreonMembership.tiers[0] || 'Tier'}
                                                         </span>
-                                                        <span className="text-[10px] text-zinc-400 font-semibold mt-0.5">
+                                                        <span className="text-[9px] text-zinc-400 font-medium">
                                                             {isActive 
-                                                                ? (isMerchant ? 'Licença Comercial Ativa no Patreon' : 'Assinatura Pessoal Ativa no Patreon')
-                                                                : 'Membro Free (Assinatura Inativa no Patreon)'}
+                                                                ? (isMerchant ? 'Licença Comercial Ativa' : 'Assinatura Pessoal Ativa')
+                                                                : 'Membro Free (Sem licença ativa)'}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -646,71 +752,67 @@ function StudiosContent() {
                                     {/* Financial Health Pill */}
                                     {salesCount > 0 && (
                                         <div className={clsx(
-                                            "w-full py-1.5 px-4 rounded-xl border text-[10px] font-black uppercase tracking-widest text-center transition-all",
+                                            "w-full py-1 px-3 rounded-lg border text-[9px] font-mono font-bold uppercase tracking-wider text-center transition-all",
                                             healthColor
                                         )}>
                                             {healthLabel}
                                         </div>
                                     )}
 
-                                    {/* Metrics Grid */}
-                                    <div className="grid grid-cols-2 gap-4">
+                                    {/* Metrics Grid (2x2) */}
+                                    <div className="grid grid-cols-2 gap-2.5">
                                         {/* Faturamento */}
-                                        <div className="bg-zinc-950/45 border border-zinc-900/60 rounded-3xl p-4 flex flex-col justify-between min-h-[90px] shadow-inner relative hover:bg-zinc-950/70 transition-colors group/metric">
-                                            <span className="text-[8px] font-black tracking-widest uppercase text-zinc-600 flex items-center gap-1.5">
-                                                <TrendingUp size={10} className="text-zinc-500" /> FATURAMENTO
+                                        <div className="bg-zinc-950/60 border border-zinc-900/80 rounded-xl p-2.5 flex flex-col justify-between">
+                                            <span className="text-[9px] font-semibold tracking-wider uppercase text-zinc-500 flex items-center gap-1">
+                                                <TrendingUp size={11} className="text-zinc-500" /> FATURAMENTO
                                             </span>
-                                            <div className="mt-2.5">
-                                                <div className="font-black text-lg tracking-tighter text-white">
+                                            <div className="mt-1.5">
+                                                <div className="font-bold font-mono text-sm tracking-tight text-zinc-100">
                                                     R$ {revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                 </div>
-                                                <div className="text-[9px] font-bold text-zinc-500 mt-0.5">
+                                                <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
                                                     {salesCount} vendas ({studio.total_itens || 0} pçs)
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Lucro Real */}
-                                        <div className="bg-zinc-950/45 border border-zinc-900/60 rounded-3xl p-4 flex flex-col justify-between min-h-[90px] shadow-inner relative hover:bg-zinc-950/70 transition-colors group/metric">
-                                            <span className="text-[8px] font-black tracking-widest uppercase text-zinc-600 flex items-center gap-1.5">
-                                                <DollarSign size={10} className="text-zinc-500" /> LUCRO REAL
+                                        <div className="bg-zinc-950/60 border border-zinc-900/80 rounded-xl p-2.5 flex flex-col justify-between">
+                                            <span className="text-[9px] font-semibold tracking-wider uppercase text-zinc-500 flex items-center gap-1">
+                                                <DollarSign size={11} className="text-zinc-500" /> LUCRO REAL
                                             </span>
-                                            <div className="mt-2.5">
+                                            <div className="mt-1.5">
                                                 <div className={clsx(
-                                                    "font-black text-lg tracking-tighter",
-                                                    profit > 0 ? "text-emerald-400" : profit < 0 ? "text-rose-500" : "text-white"
+                                                    "font-bold font-mono text-sm tracking-tight",
+                                                    profit > 0 ? "text-emerald-400" : profit < 0 ? "text-rose-500" : "text-zinc-200"
                                                 )}>
                                                     R$ {profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                 </div>
-                                                <div className="text-[9px] font-bold text-zinc-500 mt-0.5 flex items-center gap-1">
-                                                    <Percent size={8} /> {(studio.margem_lucro || 0).toFixed(1)}% margem
+                                                <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                                                    {(studio.margem_lucro || 0).toFixed(1)}% margem
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Acervo */}
-                                        <Link 
-                                            href={`/admin/figures?studio=${studio.id}`}
-                                            className="bg-zinc-950/45 border border-zinc-900/60 rounded-3xl p-4 flex flex-col justify-between min-h-[90px] shadow-inner relative hover:bg-blue-500/[0.03] hover:border-blue-500/20 transition-all group/metric"
-                                        >
-                                            <span className="text-[8px] font-black tracking-widest uppercase text-zinc-600 flex items-center justify-between">
-                                                <span className="flex items-center gap-1.5"><Box size={10} className="text-zinc-500" /> ACERVO & GIRO</span>
-                                                <ExternalLink size={10} className="opacity-0 group-hover/metric:opacity-100 text-blue-400 transition-opacity" />
+                                        {/* Acervo & Giro */}
+                                        <div className="bg-zinc-950/60 border border-zinc-900/80 rounded-xl p-2.5 flex flex-col justify-between">
+                                            <span className="text-[9px] font-semibold tracking-wider uppercase text-zinc-500 flex items-center gap-1">
+                                                <Box size={11} className="text-zinc-500" /> ACERVO
                                             </span>
-                                            <div className="mt-2.5">
-                                                <div className="font-black text-lg tracking-tighter text-zinc-200 group-hover/metric:text-blue-400 transition-colors">
-                                                    {studio.total_figuras || 0} figures
+                                            <div className="mt-1.5">
+                                                <div className="font-bold font-mono text-sm tracking-tight text-zinc-200">
+                                                    {studio.total_figuras || 0} figuras
                                                 </div>
-                                                <div className="text-[9px] font-bold text-zinc-500 mt-0.5">
+                                                <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
                                                     {(studio.conversao_acervo || 0).toFixed(1)}% giro catálogo
                                                 </div>
                                             </div>
-                                        </Link>
+                                        </div>
 
-                                        {/* Qualidade */}
-                                        <div className="bg-zinc-950/45 border border-zinc-900/60 rounded-3xl p-4 flex flex-col justify-between min-h-[90px] shadow-inner relative hover:bg-zinc-950/70 transition-colors group/metric">
-                                            <span className="text-[8px] font-black tracking-widest uppercase text-zinc-600 flex items-center justify-between">
-                                                <span className="flex items-center gap-1.5"><Star size={10} className="text-zinc-500" /> NÍVEL & TICKET</span>
+                                        {/* Qualidade & Ticket */}
+                                        <div className="bg-zinc-950/60 border border-zinc-900/80 rounded-xl p-2.5 flex flex-col justify-between">
+                                            <span className="text-[9px] font-semibold tracking-wider uppercase text-zinc-500 flex items-center gap-1">
+                                                <Star size={11} className="text-zinc-500" /> NÍVEL & TICKET
                                             </span>
                                             <div className="mt-1 flex justify-between items-end">
                                                 <div className="flex items-center gap-0.5">
@@ -718,15 +820,15 @@ function StudiosContent() {
                                                         value={studio.qualidade || 5}
                                                         onChange={(e) => handleChange(studio.id, 'qualidade', parseInt(e.target.value))}
                                                         onBlur={() => handleUpdate(studio)}
-                                                        className="bg-transparent border-none outline-none text-amber-500 font-black text-lg cursor-pointer appearance-none text-right hover:text-amber-400 transition-colors py-0"
+                                                        className="bg-transparent border-none outline-none text-amber-400 font-bold font-mono text-sm cursor-pointer appearance-none text-right hover:text-amber-300 transition-colors py-0"
                                                     >
                                                         {[1, 2, 3, 4, 5].map(n => <option key={n} value={n} className="bg-zinc-950">{n}</option>)}
                                                     </select>
-                                                    <Star size={13} className="text-amber-500 mb-1 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]" fill="currentColor" />
+                                                    <Star size={12} className="text-amber-400 mb-0.5" fill="currentColor" />
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-[9px] font-bold text-zinc-500">Avg Ticket</div>
-                                                    <div className="font-black text-xs text-zinc-300">
+                                                    <div className="text-[9px] text-zinc-500">Avg Ticket</div>
+                                                    <div className="font-bold font-mono text-xs text-zinc-300">
                                                         R$ {(studio.ticket_medio || 0).toFixed(0)}
                                                     </div>
                                                 </div>
@@ -734,7 +836,7 @@ function StudiosContent() {
                                         </div>
                                     </div>
 
-                                    {/* Break-Even Anual Card */}
+                                    {/* Break-Even Anual */}
                                     {(() => {
                                         const custoAnual = studio.custo_anual ?? ((Number(studio.custo_mensal) || 0) * 12);
                                         const profit = studio.lucro_liquido || 0;
@@ -746,24 +848,24 @@ function StudiosContent() {
                                         const isZeroCost = custoAnual === 0;
 
                                         return (
-                                            <div className="bg-zinc-950/60 border border-zinc-900/80 rounded-3xl p-4 flex flex-col gap-2.5 relative overflow-hidden shadow-inner">
+                                            <div className="bg-zinc-950/60 border border-zinc-900/80 rounded-xl p-2.5 flex flex-col gap-2">
                                                 <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-1.5">
                                                         <div className={clsx(
-                                                            "w-6 h-6 rounded-lg flex items-center justify-center text-xs",
+                                                            "w-5 h-5 rounded flex items-center justify-center text-xs",
                                                             isZeroCost ? "bg-zinc-800 text-zinc-400" :
                                                             isPaid ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25" :
                                                             remainingPieces <= 2 ? "bg-amber-500/15 text-amber-400 border border-amber-500/25" :
-                                                            "bg-blue-500/15 text-blue-400 border border-blue-500/25"
+                                                            "bg-zinc-800 text-zinc-400 border border-zinc-700/50"
                                                         )}>
-                                                            <Target size={13} />
+                                                            <Target size={11} />
                                                         </div>
                                                         <div>
-                                                            <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block leading-none">
+                                                            <span className="text-[9px] font-semibold uppercase tracking-wider text-zinc-400 block leading-none">
                                                                 Break-Even Anual
                                                             </span>
-                                                            <span className="text-[8px] text-zinc-500 font-bold block mt-0.5">
-                                                                {isZeroCost ? 'Sem custo de licença' : `Custo: R$ ${custoAnual.toLocaleString('pt-BR')}/ano`}
+                                                            <span className="text-[9px] text-zinc-500 font-mono block mt-0.5">
+                                                                {isZeroCost ? 'Sem custo de licença' : `R$ ${custoAnual.toLocaleString('pt-BR')}/ano`}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -771,25 +873,25 @@ function StudiosContent() {
                                                     {/* Badge de Status do Break-Even */}
                                                     <div>
                                                         {isZeroCost ? (
-                                                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-400 border border-zinc-700/50">
+                                                            <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50 font-mono">
                                                                 Isento
                                                             </span>
                                                         ) : isPaid ? (
-                                                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                                                            <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-mono">
                                                                 <ShieldCheck size={10} />
                                                                 Pago (+R$ {(profit - custoAnual).toLocaleString('pt-BR', { maximumFractionDigits: 0 })})
                                                             </span>
                                                         ) : remainingPieces <= 2 && items > 0 ? (
-                                                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                                                            <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1 font-mono">
                                                                 <AlertTriangle size={10} />
-                                                                Falta {remainingPieces} {remainingPieces === 1 ? 'peça' : 'peças'}
+                                                                Falta {remainingPieces} {remainingPieces === 1 ? 'pç' : 'pçs'}
                                                             </span>
                                                         ) : items === 0 ? (
-                                                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                                            <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-mono">
                                                                 Meta: {targetPieces} pçs/ano
                                                             </span>
                                                         ) : (
-                                                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                                            <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/50 font-mono">
                                                                 {pct}% coberto
                                                             </span>
                                                         )}
@@ -798,35 +900,35 @@ function StudiosContent() {
 
                                                 {/* Barra de Progresso do Break-Even */}
                                                 {!isZeroCost && (
-                                                    <div className="space-y-1.5 pt-0.5">
-                                                        <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden p-0.5 border border-zinc-800/60">
+                                                    <div className="space-y-1">
+                                                        <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden p-0.2 border border-zinc-800/80">
                                                             <div 
                                                                 className={clsx(
-                                                                    "h-full rounded-full transition-all duration-700",
-                                                                    isPaid ? "bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]" :
-                                                                    remainingPieces <= 2 ? "bg-gradient-to-r from-amber-500 to-amber-400" :
+                                                                    "h-full rounded-full transition-all duration-500",
+                                                                    isPaid ? "bg-emerald-400" :
+                                                                    remainingPieces <= 2 ? "bg-amber-400" :
                                                                     items === 0 ? "bg-zinc-800" :
-                                                                    "bg-gradient-to-r from-blue-600 to-blue-400"
+                                                                    "bg-zinc-400"
                                                                 )}
                                                                 style={{ width: `${Math.min(100, Math.max(items > 0 ? 5 : 0, pct))}%` }}
                                                             />
                                                         </div>
 
-                                                        <div className="flex justify-between items-center text-[9px] font-bold text-zinc-500">
+                                                        <div className="flex justify-between items-center text-[9px] text-zinc-500 font-mono">
                                                             <span>
                                                                 {isPaid ? (
-                                                                    <span className="text-emerald-400 font-black">Meta anual atingida! ({items} vendidas)</span>
+                                                                    <span className="text-emerald-400 font-semibold">Meta anual atingida! ({items} vendidas)</span>
                                                                 ) : (
                                                                     <span>
-                                                                        <strong className="text-zinc-300 font-black">{items}</strong> de <strong className="text-zinc-300 font-black">{targetPieces}</strong> peças vendidas
+                                                                        <strong className="text-zinc-300">{items}</strong> de <strong className="text-zinc-300">{targetPieces}</strong> peças vendidas
                                                                     </span>
                                                                 )}
                                                             </span>
                                                             <span>
                                                                 {isPaid ? (
-                                                                    <span className="text-zinc-400">{pct}% coberto</span>
+                                                                    <span className="text-zinc-400">{pct}%</span>
                                                                 ) : (
-                                                                    <span>Faltam <strong className="text-amber-400 font-black">{remainingPieces}</strong> pçs (~R$ {Math.max(0, custoAnual - profit).toLocaleString('pt-BR', { maximumFractionDigits: 0 })})</span>
+                                                                    <span>Faltam <strong className="text-amber-400">{remainingPieces}</strong> pçs</span>
                                                                 )}
                                                             </span>
                                                         </div>
@@ -836,11 +938,21 @@ function StudiosContent() {
                                         );
                                     })()}
 
+                                    {/* 1-Click Shortcut: Ver Figuras no Catálogo */}
+                                    <Link 
+                                        href={`/admin/figures?studio=${studio.id}`}
+                                        className="w-full py-2 px-3 rounded-xl bg-zinc-950 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-800/50 text-zinc-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm"
+                                    >
+                                        <Box size={13} className="text-zinc-400" />
+                                        <span>Ver Figuras no Catálogo ({studio.total_figuras || 0})</span>
+                                        <ExternalLink size={11} className="text-zinc-500" />
+                                    </Link>
+
                                     {/* Collapsible Edit Panel */}
                                     {isExpanded && (
-                                        <div className="space-y-4 pt-3 border-t border-zinc-900/85 animate-[fadeIn_0.2s_ease-out]">
+                                        <div className="space-y-3 pt-3 border-t border-zinc-900/85">
                                             <div className="flex justify-between items-center">
-                                                <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Configurações do Estúdio</h4>
+                                                <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Configurações</h4>
                                                 {patreonMembership && (
                                                     <button
                                                         type="button"
@@ -854,74 +966,74 @@ function StudiosContent() {
                                                             handleUpdate(updated);
                                                             toast.success(`Dados do ${studio.nome} sincronizados com o Patreon!`);
                                                         }}
-                                                        className="px-2.5 py-1 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-400 text-[10px] font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
+                                                        className="px-2 py-0.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-400 text-[10px] font-semibold flex items-center gap-1 transition-all cursor-pointer"
                                                     >
-                                                        <Sparkles size={11} /> Auto-preencher via Patreon
+                                                        <Sparkles size={11} /> Auto-Patreon
                                                     </button>
                                                 )}
                                             </div>
                                             
-                                            <div className="grid grid-cols-1 gap-3">
+                                            <div className="grid grid-cols-1 gap-2.5">
                                                 {/* Logo URL */}
-                                                <div className="flex items-center gap-3 bg-black/40 p-2 rounded-2xl border border-zinc-900 transition-colors focus-within:border-blue-500/30">
-                                                    <div className="p-2 bg-zinc-900 rounded-xl text-zinc-600"><ImageIcon size={14} /></div>
+                                                <div className="flex items-center gap-2.5 bg-zinc-950 p-2 rounded-xl border border-zinc-800/80">
+                                                    <div className="p-1.5 bg-zinc-900 rounded-lg text-zinc-500"><ImageIcon size={13} /></div>
                                                     <div className="flex-1 flex flex-col">
-                                                        <label className="text-[8px] font-bold text-zinc-600 uppercase">URL do Logo</label>
+                                                        <label className="text-[8px] font-semibold text-zinc-500 uppercase">URL do Logo</label>
                                                         <input
                                                             type="text"
                                                             placeholder="https://..."
                                                             value={studio.logo_url || ''}
                                                             onChange={e => handleChange(studio.id, 'logo_url', e.target.value)}
                                                             onBlur={() => handleUpdate(studio)}
-                                                            className="bg-transparent text-xs font-semibold outline-none text-zinc-300 placeholder:text-zinc-700 w-full mt-0.5"
+                                                            className="bg-transparent text-xs font-medium outline-none text-zinc-200 placeholder:text-zinc-600 w-full mt-0.5"
                                                         />
                                                     </div>
                                                 </div>
 
                                                 {/* Instagram */}
-                                                <div className="flex items-center gap-3 bg-black/40 p-2 rounded-2xl border border-zinc-900 transition-colors focus-within:border-pink-500/30">
-                                                    <div className="p-2 bg-zinc-900 rounded-xl text-zinc-600"><Instagram size={14} /></div>
+                                                <div className="flex items-center gap-2.5 bg-zinc-950 p-2 rounded-xl border border-zinc-800/80">
+                                                    <div className="p-1.5 bg-zinc-900 rounded-lg text-zinc-500"><Instagram size={13} /></div>
                                                     <div className="flex-1 flex flex-col">
-                                                        <label className="text-[8px] font-bold text-zinc-600 uppercase">Instagram</label>
+                                                        <label className="text-[8px] font-semibold text-zinc-500 uppercase">Instagram</label>
                                                         <input
                                                             type="text"
                                                             placeholder="@handle"
                                                             value={studio.instagram_handle || ''}
                                                             onChange={e => handleChange(studio.id, 'instagram_handle', e.target.value)}
                                                             onBlur={() => handleUpdate(studio)}
-                                                            className="bg-transparent text-xs font-semibold outline-none text-zinc-300 placeholder:text-zinc-700 w-full mt-0.5"
+                                                            className="bg-transparent text-xs font-medium outline-none text-zinc-200 placeholder:text-zinc-600 w-full mt-0.5"
                                                         />
                                                     </div>
                                                 </div>
 
                                                 {/* Site URL */}
-                                                <div className="flex items-center gap-3 bg-black/40 p-2 rounded-2xl border border-zinc-900 transition-colors focus-within:border-blue-500/30">
-                                                    <div className="p-2 bg-zinc-900 rounded-xl text-zinc-600"><Globe size={14} /></div>
+                                                <div className="flex items-center gap-2.5 bg-zinc-950 p-2 rounded-xl border border-zinc-800/80">
+                                                    <div className="p-1.5 bg-zinc-900 rounded-lg text-zinc-500"><Globe size={13} /></div>
                                                     <div className="flex-1 flex flex-col">
-                                                        <label className="text-[8px] font-bold text-zinc-600 uppercase">Website</label>
+                                                        <label className="text-[8px] font-semibold text-zinc-500 uppercase">Website</label>
                                                         <input
                                                             type="text"
                                                             placeholder="https://site.com"
                                                             value={studio.social_url || ''}
                                                             onChange={e => handleChange(studio.id, 'social_url', e.target.value)}
                                                             onBlur={() => handleUpdate(studio)}
-                                                            className="bg-transparent text-xs font-semibold outline-none text-zinc-300 placeholder:text-zinc-700 w-full mt-0.5"
+                                                            className="bg-transparent text-xs font-medium outline-none text-zinc-200 placeholder:text-zinc-600 w-full mt-0.5"
                                                         />
                                                     </div>
                                                 </div>
 
                                                 {/* Observações */}
-                                                <div className="flex items-start gap-3 bg-black/40 p-2.5 rounded-2xl border border-zinc-900 transition-colors focus-within:border-blue-500/30">
-                                                    <div className="p-2 bg-zinc-900 rounded-xl text-zinc-600 mt-1"><MessageSquare size={14} /></div>
+                                                <div className="flex items-start gap-2.5 bg-zinc-950 p-2 rounded-xl border border-zinc-800/80">
+                                                    <div className="p-1.5 bg-zinc-900 rounded-lg text-zinc-500 mt-0.5"><MessageSquare size={13} /></div>
                                                     <div className="flex-1 flex flex-col">
-                                                        <label className="text-[8px] font-bold text-zinc-600 uppercase">Observações / Anotações</label>
+                                                        <label className="text-[8px] font-semibold text-zinc-500 uppercase">Anotações Internas</label>
                                                         <textarea
-                                                            placeholder="Notas de licenciamento, suporte, prazos de entrega..."
+                                                            placeholder="Notas de licenciamento, suporte, prazos..."
                                                             value={studio.observacao || ''}
                                                             onChange={e => handleChange(studio.id, 'observacao', e.target.value)}
                                                             onBlur={() => handleUpdate(studio)}
                                                             rows={2}
-                                                            className="bg-transparent text-xs font-semibold outline-none text-zinc-300 placeholder:text-zinc-700 w-full mt-1.5 resize-none scrollbar-none"
+                                                            className="bg-transparent text-xs font-medium outline-none text-zinc-200 placeholder:text-zinc-600 w-full mt-1 resize-none"
                                                         />
                                                     </div>
                                                 </div>
@@ -929,20 +1041,20 @@ function StudiosContent() {
                                         </div>
                                     )}
 
-                                    {/* Custo Operacional */}
-                                    <div className="bg-zinc-950/40 p-4 rounded-3xl border border-zinc-900/60 border-dashed transition-all mt-auto flex justify-between items-center">
+                                    {/* Custo Operacional Mensal */}
+                                    <div className="bg-zinc-950/40 p-2.5 rounded-xl border border-zinc-800/80 border-dashed transition-all mt-auto flex justify-between items-center">
                                         <div>
-                                            <div className="flex items-center gap-1.5 mb-1">
-                                                <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">CUSTO OPERACIONAL MENSAL</span>
+                                            <div className="flex items-center gap-1.5 mb-0.5">
+                                                <span className="text-[8px] font-semibold text-zinc-500 uppercase tracking-wider">CUSTO MENSAL</span>
                                                 {patreonMembership && patreonMembership.patronStatus === 'active_patron' && (
-                                                    <span className="text-[9px] font-bold text-orange-400/90 bg-orange-500/10 border border-orange-500/20 px-1.5 py-0.5 rounded-md">
+                                                    <span className="text-[8px] font-semibold text-orange-400 bg-orange-500/10 border border-orange-500/20 px-1 py-0.2 rounded">
                                                         Patreon Sync
                                                     </span>
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-1">
-                                                <span className="text-zinc-500 font-extrabold text-sm">R$</span>
-                                                <span className="text-xl font-black text-emerald-400 tracking-tighter">
+                                                <span className="text-zinc-500 font-mono text-xs">R$</span>
+                                                <span className="text-base font-bold font-mono text-zinc-100 tracking-tight">
                                                     {(patreonMembership && patreonMembership.patronStatus === 'active_patron')
                                                         ? (patreonMembership.amountBRL || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
                                                         : ((studio.custo_mensal || 0) as number).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
@@ -951,14 +1063,14 @@ function StudiosContent() {
                                             </div>
                                         </div>
                                         {(!patreonMembership || patreonMembership.patronStatus !== 'active_patron') && (
-                                            <div className="flex items-center gap-1 bg-zinc-900/80 px-2.5 py-1 rounded-xl border border-zinc-800">
-                                                <span className="text-xs text-zinc-500 font-bold">R$</span>
+                                            <div className="flex items-center gap-1 bg-zinc-900 px-2 py-0.5 rounded-lg border border-zinc-800">
+                                                <span className="text-[10px] text-zinc-500 font-mono">R$</span>
                                                 <input
                                                     type="number"
                                                     value={studio.custo_mensal ?? ''}
                                                     onChange={(e) => handleChange(studio.id, 'custo_mensal', e.target.value === '' ? '' : parseFloat(e.target.value))}
                                                     onBlur={() => handleUpdate(studio)}
-                                                    className="bg-transparent text-right text-xs font-bold text-zinc-300 outline-none w-16 tracking-tighter"
+                                                    className="bg-transparent text-right text-xs font-mono font-medium text-zinc-200 outline-none w-14"
                                                     placeholder="0,00"
                                                 />
                                             </div>
