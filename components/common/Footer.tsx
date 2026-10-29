@@ -35,7 +35,15 @@ export default function Footer() {
           
           {/* Brand Column */}
           <div className="col-span-1 md:col-span-5 flex flex-col gap-4">
-            <Link href="/" className="hover:opacity-80 transition-opacity self-start">
+            <Link 
+              href="/" 
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('reset-home-filters'));
+                }
+              }}
+              className="hover:opacity-80 transition-opacity self-start"
+            >
               <img
                 src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
                 alt="Franga Toys Logo"

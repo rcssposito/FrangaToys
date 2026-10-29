@@ -132,6 +132,7 @@ export function CouponsView({ forcedTab }: { forcedTab?: 'cupons' | 'campanhas' 
     const [popularSummary, setPopularSummary] = useState<any>(null);
     const [loadingPopular, setLoadingPopular] = useState(false);
     const [demandaFilter, setDemandaFilter] = useState<'all' | 'reprimida' | 'alta_conversao'>('all');
+    const [demandaLimit, setDemandaLimit] = useState<'top30' | 'all'>('top30');
     const [demandaSearch, setDemandaSearch] = useState('');
 
     const changeTab = (tab: 'cupons' | 'campanhas' | 'demanda') => {
@@ -476,7 +477,7 @@ export function CouponsView({ forcedTab }: { forcedTab?: 'cupons' | 'campanhas' 
 
     // Filtros de Demanda
     const filteredDemandaFigures = useMemo(() => {
-        return popularFigures.filter(f => {
+        const filtered = popularFigures.filter(f => {
             const matchesSearch = f.nome.toLowerCase().includes(demandaSearch.toLowerCase()) ||
                 f.serieNome.toLowerCase().includes(demandaSearch.toLowerCase()) ||
                 f.studioNome.toLowerCase().includes(demandaSearch.toLowerCase());
@@ -486,7 +487,13 @@ export function CouponsView({ forcedTab }: { forcedTab?: 'cupons' | 'campanhas' 
             if (demandaFilter === 'alta_conversao') return f.oportunidade === 'alta_conversao';
             return true;
         });
-    }, [popularFigures, demandaSearch, demandaFilter]);
+
+        if (demandaLimit === 'top30' && !demandaSearch.trim()) {
+            return filtered.slice(0, 30);
+        }
+
+        return filtered;
+    }, [popularFigures, demandaSearch, demandaFilter, demandaLimit]);
 
     return (
         <div className="w-full space-y-6 animate-in fade-in duration-300">
@@ -1106,7 +1113,7 @@ export function CouponsView({ forcedTab }: { forcedTab?: 'cupons' | 'campanhas' 
                                         Radar de Figuras com Interesse
                                     </h3>
                                     <p className="text-[10px] text-zinc-500">
-                                        Identifique peças visualizadas que precisam de estímulo de preço para fechar venda.
+                                        Top 30 peças mais visualizadas que precisam de estímulo de preço para fechar venda.
                                     </p>
                                 </div>
                             </div>
@@ -1126,28 +1133,50 @@ export function CouponsView({ forcedTab }: { forcedTab?: 'cupons' | 'campanhas' 
 
                                 <div className="flex items-center gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-xl">
                                     <button
-                                        onClick={() => setDemandaFilter('all')}
-                                        className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
-                                            demandaFilter === 'all' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'
+                                        onClick={() => {
+                                            setDemandaLimit('top30');
+                                            setDemandaFilter('all');
+                                        }}
+                                        className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                            demandaFilter === 'all' && demandaLimit === 'top30' 
+                                                ? 'bg-zinc-800 text-white shadow-xs' 
+                                                : 'text-zinc-500 hover:text-zinc-300'
                                         }`}
                                     >
-                                        Todas ({popularFigures.length})
+                                        Top 30 ({Math.min(30, popularFigures.length)})
                                     </button>
                                     <button
                                         onClick={() => setDemandaFilter('reprimida')}
-                                        className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
-                                            demandaFilter === 'reprimida' ? 'bg-red-500/20 text-red-400' : 'text-zinc-500 hover:text-zinc-300'
+                                        className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                            demandaFilter === 'reprimida' 
+                                                ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+                                                : 'text-zinc-500 hover:text-zinc-300'
                                         }`}
                                     >
                                         Reprimida (0 vendas)
                                     </button>
                                     <button
                                         onClick={() => setDemandaFilter('alta_conversao')}
-                                        className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
-                                            demandaFilter === 'alta_conversao' ? 'bg-emerald-500/20 text-emerald-400' : 'text-zinc-500 hover:text-zinc-300'
+                                        className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                            demandaFilter === 'alta_conversao' 
+                                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                                                : 'text-zinc-500 hover:text-zinc-300'
                                         }`}
                                     >
                                         Alta Conversão
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setDemandaLimit('all');
+                                            setDemandaFilter('all');
+                                        }}
+                                        className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                            demandaFilter === 'all' && demandaLimit === 'all' 
+                                                ? 'bg-zinc-800 text-white shadow-xs' 
+                                                : 'text-zinc-500 hover:text-zinc-300'
+                                        }`}
+                                    >
+                                        Todas ({popularFigures.length})
                                     </button>
                                 </div>
                             </div>

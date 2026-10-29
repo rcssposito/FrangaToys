@@ -31,6 +31,11 @@ export default function MobileBottomNav() {
         {/* 1. Início */}
         <Link
           href="/"
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('reset-home-filters'));
+            }
+          }}
           className={clsx(
             "flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-xl transition-all active:scale-90 w-full",
             isHome ? "text-orange-500 font-black" : "text-zinc-400 hover:text-white"

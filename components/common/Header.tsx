@@ -46,6 +46,13 @@ export default function Header() {
   const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '';
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent('Olá! Gostaria de tirar dúvidas sobre as figures da Franga Toys.')}`;
 
+  const handleHomeClick = () => {
+    setIsMobileMenuOpen(false);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('reset-home-filters'));
+    }
+  };
+
   return (
     <header className="w-full">
       {/* =========================================================================
@@ -54,7 +61,7 @@ export default function Header() {
       <div className="hidden sm:flex items-center justify-between relative py-4 sm:py-5 px-4 max-w-[95%] mx-auto border-b border-white/5 mb-6">
         {/* Left: Logo */}
         <div className="flex-1 flex justify-start">
-          <Link href="/" className="hover:opacity-85 transition-opacity flex-shrink-0">
+          <Link href="/" onClick={handleHomeClick} className="hover:opacity-85 transition-opacity flex-shrink-0">
             <img
               src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
               alt="Franga Toys Logo"
@@ -210,7 +217,7 @@ export default function Header() {
             <Menu size={19} />
           </button>
 
-          <Link href="/" className="flex items-center hover:opacity-85 transition-opacity pl-1">
+          <Link href="/" onClick={handleHomeClick} className="flex items-center hover:opacity-85 transition-opacity pl-1">
             <img
               src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
               alt="Franga Toys Logo"
@@ -275,7 +282,7 @@ export default function Header() {
                 <div className="p-3 space-y-1">
                   <Link
                     href="/"
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={handleHomeClick}
                     className={clsx(
                       "flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all",
                       pathname === '/' 

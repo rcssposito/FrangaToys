@@ -41,7 +41,7 @@ interface CartStats {
     recoveryRate: number;
 }
 
-export function AbandonedCartsView() {
+export function AbandonedCartsView({ hideHeader = false }: { hideHeader?: boolean } = {}) {
     const [carts, setCarts] = useState<AbandonedCart[]>([]);
     const [stats, setStats] = useState<CartStats>({
         totalCarts: 0,
@@ -128,33 +128,35 @@ export function AbandonedCartsView() {
     return (
         <div className="space-y-8 max-w-7xl mx-auto">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="text-orange-500 text-[10px] font-black uppercase tracking-[0.2em] bg-orange-500/10 border border-orange-500/20 px-3 py-0.5 rounded-full">
-                            Anti-Abandono & Resgate
-                        </span>
+            {!hideHeader && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-orange-500 text-[10px] font-black uppercase tracking-[0.2em] bg-orange-500/10 border border-orange-500/20 px-3 py-0.5 rounded-full">
+                                Anti-Abandono & Resgate
+                            </span>
+                        </div>
+                        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2">
+                            <PackageOpen className="text-orange-500" size={28} />
+                            Carrinhos Abandonados
+                        </h1>
+                        <p className="text-zinc-400 text-xs sm:text-sm mt-0.5">
+                            Recupere vendas gerando cupons temporários de 24h e contatando clientes no WhatsApp.
+                        </p>
                     </div>
-                    <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2">
-                        <PackageOpen className="text-orange-500" size={28} />
-                        Carrinhos Abandonados
-                    </h1>
-                    <p className="text-zinc-400 text-xs sm:text-sm mt-0.5">
-                        Recupere vendas gerando cupons temporários de 24h e contatando clientes no WhatsApp.
-                    </p>
-                </div>
 
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={fetchCarts}
-                        disabled={loading}
-                        className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
-                    >
-                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                        Atualizar
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={fetchCarts}
+                            disabled={loading}
+                            className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
+                        >
+                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                            Atualizar
+                        </button>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -49,7 +49,6 @@ import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
 import { generatePixPayload } from '@/lib/pix';
 import { isRodrigoPintor } from '@/lib/painters';
-import { AbandonedCartsView } from '@/app/admin/abandoned-carts/page';
 import { DreView } from '@/app/admin/dre/page';
 
 interface Sale {
@@ -133,9 +132,8 @@ function SalesContent() {
     const router = useRouter();
     const customerFilter = searchParams.get('cliente_id');
     const tabParam = searchParams.get('tab');
-    type SalesTabType = 'vendas' | 'carrinhos' | 'dre' | 'comissoes' | 'kpis';
+    type SalesTabType = 'vendas' | 'dre' | 'comissoes' | 'kpis';
     const [viewTab, setViewTab] = useState<SalesTabType>(() => {
-        if (tabParam === 'carrinhos') return 'carrinhos';
         if (tabParam === 'dre') return 'dre';
         if (tabParam === 'comissoes') return 'comissoes';
         if (tabParam === 'kpis') return 'kpis';
@@ -144,12 +142,14 @@ function SalesContent() {
 
     useEffect(() => {
         const tab = searchParams.get('tab');
-        if (tab === 'carrinhos' || tab === 'dre' || tab === 'comissoes' || tab === 'kpis') {
+        if (tab === 'carrinhos') {
+            router.replace('/admin/marketing?tab=carrinhos');
+        } else if (tab === 'dre' || tab === 'comissoes' || tab === 'kpis') {
             setViewTab(tab);
         } else if (!tab) {
             setViewTab('vendas');
         }
-    }, [searchParams]);
+    }, [searchParams, router]);
 
     // KPIs & Matriz de Decisão States (3ª Aba)
     const [kpiData, setKpiData] = useState<any>(null);
@@ -763,8 +763,7 @@ function SalesContent() {
                             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-100 flex items-center gap-3">
                                 {viewTab === 'kpis' ? 'KPIs de Vendas' : 
                                  viewTab === 'comissoes' ? 'Acertos & Comissões' : 
-                                 viewTab === 'carrinhos' ? 'Carrinhos Abandonados' :
-                                 viewTab === 'dre' ? 'DRE & Fechamento Financeiro' :
+                                                                  viewTab === 'dre' ? 'DRE & Fechamento Financeiro' :
                                  (customerFilter ? 'Vendas do Cliente' : 'Vendas & Livro Caixa')}
                                 {customerFilter && (
                                     <button 
@@ -778,8 +777,7 @@ function SalesContent() {
                             <p className="text-zinc-400 text-xs sm:text-sm mt-0.5">
                                 {viewTab === 'kpis' ? 'Faturamento, volume e desempenho por segmento de catálogo' : 
                                  viewTab === 'comissoes' ? 'Fechamentos mensais e repasses para vendedores e pintores' : 
-                                 viewTab === 'carrinhos' ? 'Anti-abandono, recuperação via cupons dinâmicos e WhatsApp' :
-                                 viewTab === 'dre' ? 'Demonstrativo do Resultado do Exercício consolidado com resina, estúdios e lucro real' :
+                                                                  viewTab === 'dre' ? 'Demonstrativo do Resultado do Exercício consolidado com resina, estúdios e lucro real' :
                                  'Livro Caixa Tático de Receitas e Pedidos.'}
                             </p>
                         </div>
@@ -804,22 +802,6 @@ function SalesContent() {
                             >
                                 <ShoppingCart size={14} className={viewTab === 'vendas' ? 'text-zinc-950' : 'text-zinc-500'} />
                                 Pedidos & Vendas ({allSales.length})
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setViewTab('carrinhos');
-                                    const url = new URL(window.location.href);
-                                    url.searchParams.set('tab', 'carrinhos');
-                                    window.history.replaceState({}, '', url.toString());
-                                }}
-                                className={`px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
-                                    viewTab === 'carrinhos'
-                                        ? 'bg-orange-500 text-zinc-950 font-black shadow-sm shadow-orange-500/20'
-                                        : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60'
-                                }`}
-                            >
-                                <PackageOpen size={14} className={viewTab === 'carrinhos' ? 'text-zinc-950' : 'text-zinc-500'} />
-                                Carrinhos Abandonados
                             </button>
                             <button
                                 onClick={() => {
@@ -1245,12 +1227,6 @@ function SalesContent() {
                     </div>
                 )}
 
-                {/* ABA: CARRINHOS ABANDONADOS */}
-                {viewTab === 'carrinhos' && (
-                    <div className="space-y-6 animate-in fade-in duration-300">
-                        <AbandonedCartsView />
-                    </div>
-                )}
 
                 {/* ABA: DRE & FECHAMENTO */}
                 {viewTab === 'dre' && (

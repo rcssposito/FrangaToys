@@ -1017,39 +1017,39 @@ export function CustomersView({ forcedMode }: { forcedMode?: 'clientes' | 'caden
                     </p>
                 </div>
 
-                {/* Tab Switcher: Clientes vs Cadências */}
-                <div className="flex items-center gap-2 bg-zinc-900/60 p-1.5 rounded-2xl border border-zinc-800">
+                {/* Tab Switcher: Clientes vs Cadências vs Telemetria */}
+                <div className="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800/90">
                     <button
                         onClick={() => setViewMode('clientes')}
-                        className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
                             viewMode === 'clientes'
-                                ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
-                                : 'text-zinc-400 hover:text-white'
+                                ? 'bg-zinc-800 text-zinc-100 border border-zinc-700/80 shadow-xs'
+                                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60 border border-transparent'
                         }`}
                     >
-                        <Users size={16} />
+                        <Users size={14} className={viewMode === 'clientes' ? 'text-orange-500' : 'text-zinc-500'} />
                         Clientes & Tags ({totalCustomers})
                     </button>
                     <button
                         onClick={() => setViewMode('cadencias')}
-                        className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
                             viewMode === 'cadencias'
-                                ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
-                                : 'text-zinc-400 hover:text-white'
+                                ? 'bg-zinc-800 text-zinc-100 border border-zinc-700/80 shadow-xs'
+                                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60 border border-transparent'
                         }`}
                     >
-                        <Sparkles size={16} />
+                        <Sparkles size={14} className={viewMode === 'cadencias' ? 'text-orange-500' : 'text-zinc-500'} />
                         Cadências de Promoções ({cadencias.length})
                     </button>
                     <button
                         onClick={() => setViewMode('telemetria')}
-                        className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
                             viewMode === 'telemetria'
-                                ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
-                                : 'text-zinc-400 hover:text-white'
+                                ? 'bg-zinc-800 text-zinc-100 border border-zinc-700/80 shadow-xs'
+                                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60 border border-transparent'
                         }`}
                     >
-                        <Radio size={16} className={viewMode === 'telemetria' ? 'animate-pulse' : ''} />
+                        <Radio size={14} className={viewMode === 'telemetria' ? 'text-emerald-400 animate-pulse' : 'text-zinc-500'} />
                         Radar de Acessos (Beacon)
                     </button>
                 </div>

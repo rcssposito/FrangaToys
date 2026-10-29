@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { 
     Calendar, 
@@ -53,7 +53,7 @@ export default function StudiosMonthlyControl() {
     const [loading, setLoading] = useState(true);
     const [updatingKey, setUpdatingKey] = useState<string | null>(null); // "studioId-mes"
     const [search, setSearch] = useState('');
-    const [filterOnlyActive, setFilterOnlyActive] = useState(false);
+    const [statusFilter, setStatusFilter] = useState<'active' | 'all' | 'with_monthly' | 'inactive'>('active');
     
     // Modal para edição de valor personalizado e alteração de tier
     const [editingCell, setEditingCell] = useState<{
@@ -239,11 +239,20 @@ export default function StudiosMonthlyControl() {
         }
     };
 
-    const filteredStudios = (data?.studios || []).filter(st => {
-        if (filterOnlyActive && !st.ativo_atual && st.meses_ativos_count === 0) return false;
-        if (!search.trim()) return true;
-        return st.nome.toLowerCase().includes(search.toLowerCase());
-    });
+    const activeCount = useMemo(() => (data?.studios || []).filter(s => s.ativo_atual).length, [data]);
+    const withMonthlyCount = useMemo(() => (data?.studios || []).filter(s => s.meses_ativos_count > 0).length, [data]);
+    const inactiveCount = useMemo(() => (data?.studios || []).filter(s => !s.ativo_atual).length, [data]);
+    const totalCount = useMemo(() => (data?.studios || []).length, [data]);
+
+    const filteredStudios = useMemo(() => {
+        return (data?.studios || []).filter(st => {
+            if (statusFilter === 'active' && !st.ativo_atual) return false;
+            if (statusFilter === 'with_monthly' && st.meses_ativos_count === 0) return false;
+            if (statusFilter === 'inactive' && st.ativo_atual) return false;
+            if (!search.trim()) return true;
+            return st.nome.toLowerCase().includes(search.toLowerCase());
+        });
+    }, [data, statusFilter, search]);
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
@@ -264,15 +273,15 @@ export default function StudiosMonthlyControl() {
 
                     <div className="flex items-center gap-3">
                         {/* Seletor de Ano */}
-                        <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl p-1">
+                        <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded-lg p-1">
                             {[2024, 2025, 2026, 2027].map(ano => (
                                 <button
                                     key={ano}
                                     onClick={() => setSelectedYear(ano)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                                         selectedYear === ano
-                                            ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                                            : 'text-zinc-400 hover:text-white'
+                                            ? 'bg-zinc-800 text-zinc-100 border border-zinc-700/80 shadow-xs'
+                                            : 'text-zinc-400 hover:text-zinc-200 border border-transparent'
                                     }`}
                                 >
                                     {ano}
@@ -392,43 +401,121 @@ export default function StudiosMonthlyControl() {
             </div>
 
             {/* Filtros e Busca de Estúdios */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-                <div className="relative flex-1 max-w-md">
-                    <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
-                    <input
-                        type="text"
-                        placeholder="Filtrar estúdio..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        className="w-full bg-zinc-950/70 border border-zinc-850 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-blue-500/50"
-                    />
-                </div>
-
-                <div className="flex items-center gap-3">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-zinc-900/40 border border-zinc-800/80 rounded-xl p-2.5">
+                {/* Pílulas de Status */}
+                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
                     <button
-                        onClick={() => setFilterOnlyActive(!filterOnlyActive)}
-                        className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                            filterOnlyActive
-                                ? 'bg-blue-600 text-white border-blue-500'
-                                : 'bg-zinc-950/70 text-zinc-400 border-zinc-850 hover:text-white'
+                        type="button"
+                        onClick={() => setStatusFilter('active')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                            statusFilter === 'active'
+                                ? 'bg-zinc-800 text-zinc-100 border border-zinc-700 shadow-xs'
+                                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60 border border-transparent'
                         }`}
                     >
-                        {filterOnlyActive ? 'Mostrando Apenas Ativos' : 'Mostrar Todos os Estúdios'}
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        Apenas Ativos
+                        <span className={`font-mono text-[10px] px-1.5 py-0.2 rounded border ${
+                            statusFilter === 'active' 
+                                ? 'bg-zinc-900 text-emerald-400 border-zinc-700' 
+                                : 'bg-zinc-900/80 text-zinc-500 border-zinc-800'
+                        }`}>
+                            {activeCount}
+                        </span>
                     </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setStatusFilter('all')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                            statusFilter === 'all'
+                                ? 'bg-zinc-800 text-zinc-100 border border-zinc-700 shadow-xs'
+                                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60 border border-transparent'
+                        }`}
+                    >
+                        Todos os Estúdios
+                        <span className={`font-mono text-[10px] px-1.5 py-0.2 rounded border ${
+                            statusFilter === 'all' 
+                                ? 'bg-zinc-900 text-zinc-200 border-zinc-700' 
+                                : 'bg-zinc-900/80 text-zinc-500 border-zinc-800'
+                        }`}>
+                            {totalCount}
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setStatusFilter('with_monthly')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                            statusFilter === 'with_monthly'
+                                ? 'bg-zinc-800 text-zinc-100 border border-zinc-700 shadow-xs'
+                                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60 border border-transparent'
+                        }`}
+                    >
+                        Com Mensalidade ({selectedYear})
+                        <span className={`font-mono text-[10px] px-1.5 py-0.2 rounded border ${
+                            statusFilter === 'with_monthly' 
+                                ? 'bg-zinc-900 text-zinc-200 border-zinc-700' 
+                                : 'bg-zinc-900/80 text-zinc-500 border-zinc-800'
+                        }`}>
+                            {withMonthlyCount}
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setStatusFilter('inactive')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                            statusFilter === 'inactive'
+                                ? 'bg-zinc-800 text-zinc-100 border border-zinc-700 shadow-xs'
+                                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60 border border-transparent'
+                        }`}
+                    >
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-600" />
+                        Inativos
+                        <span className={`font-mono text-[10px] px-1.5 py-0.2 rounded border ${
+                            statusFilter === 'inactive' 
+                                ? 'bg-zinc-900 text-zinc-400 border-zinc-700' 
+                                : 'bg-zinc-900/80 text-zinc-500 border-zinc-800'
+                        }`}>
+                            {inactiveCount}
+                        </span>
+                    </button>
+                </div>
+
+                {/* Busca rápida */}
+                <div className="relative w-full lg:w-64">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                    <input
+                        type="text"
+                        placeholder="Buscar por nome do estúdio..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="w-full h-8 bg-zinc-950/80 border border-zinc-800 hover:border-zinc-700 rounded-lg pl-8 pr-7 text-xs text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-zinc-600 transition-colors"
+                    />
+                    {search && (
+                        <button
+                            type="button"
+                            onClick={() => setSearch('')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                        >
+                            <X size={13} />
+                        </button>
+                    )}
                 </div>
             </div>
 
             {/* Matriz Interativa de Estúdios x 12 Meses */}
             {loading ? (
                 <div className="p-24 flex justify-center items-center gap-3 text-zinc-500 text-xs font-bold uppercase tracking-widest">
-                    <Loader2 className="animate-spin text-blue-500 w-8 h-8" />
+                    <Loader2 className="animate-spin text-orange-500 w-8 h-8" />
                     Carregando matriz de mensalidades...
                 </div>
             ) : (
-                <div className="bg-zinc-950/80 border border-zinc-900 rounded-3xl overflow-hidden shadow-2xl">
+                <div className="bg-zinc-950/80 border border-zinc-900 rounded-2xl overflow-hidden shadow-2xl">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-xs whitespace-nowrap">
-                            <thead className="bg-zinc-900/90 text-[10px] uppercase font-black tracking-widest text-zinc-500 border-b border-zinc-850">
+                            <thead className="bg-zinc-900/90 text-[10px] uppercase font-black tracking-widest text-zinc-500 border-b border-zinc-800">
                                 <tr>
                                     <th className="py-4 px-5 min-w-[200px]">Estúdio</th>
                                     <th className="py-4 px-3 text-right">Custo Base</th>
@@ -442,7 +529,20 @@ export default function StudiosMonthlyControl() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-900/80">
-                                {filteredStudios.map(st => {
+                                {filteredStudios.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={16} className="py-12 text-center text-zinc-500">
+                                            <Building2 className="mx-auto mb-2 text-zinc-600" size={24} />
+                                            <p className="font-semibold text-xs text-zinc-300">Nenhum estúdio encontrado</p>
+                                            <p className="text-[11px] text-zinc-500 mt-0.5">
+                                                {statusFilter === 'active' 
+                                                    ? 'Não há estúdios ativos no acervo ou correspondentes à busca.' 
+                                                    : 'Tente alterar os filtros ou o termo de busca.'}
+                                            </p>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredStudios.map(st => {
                                     return (
                                         <tr key={st.id} className="hover:bg-zinc-900/40 transition-colors group">
                                             {/* Nome e Status */}
@@ -569,7 +669,7 @@ export default function StudiosMonthlyControl() {
                                             </td>
                                         </tr>
                                     );
-                                })}
+                                }))}
                             </tbody>
                         </table>
                     </div>
