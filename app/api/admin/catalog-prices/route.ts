@@ -1,12 +1,58 @@
 import { NextResponse } from 'next/server';
 import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { calculateFigurePrices } from '@/lib/pricing';
 
 export const dynamic = 'force-dynamic';
 
+function formatCatalogItem(item: any, settings: any) {
+    const rawMeta = item.figuras_meta;
+    const metas = Array.isArray(rawMeta) ? rawMeta : [rawMeta].filter(Boolean);
+    const meta =
+        metas.find((m: any) => m.is_campanha || m.is_campanha_active || m.preco_fixo_campanha > 0 || m.desconto_campanha > 0) ||
+        metas[0] ||
+        {};
+
+    const prices = calculateFigurePrices(
+        {
+            ...meta,
+            is_bundle: item.is_bundle,
+            desconto_bundle_pct: item.desconto_bundle_pct,
+            preco_fixo_bundle: item.preco_fixo_bundle,
+        },
+        settings
+    );
+
+    const isCampanha = Boolean(
+        meta.is_campanha_active ||
+        meta.preco_fixo_campanha > 0 ||
+        meta.desconto_campanha > 0
+    );
+
+    const studioObj = Array.isArray(item.studios) ? item.studios[0] : item.studios;
+
+    return {
+        id: item.id,
+        Figura: item.nome,
+        codigo: item.codigo,
+        studio: studioObj?.nome || 'N/A',
+        resina_kg: meta.resina_kg || 0,
+        horas_pintura: meta.horas_pintura || 0,
+        altura_cm: meta.altura_cm || 0,
+        largura_cm: meta.largura_cm || 0,
+        profundidade_cm: meta.profundidade_cm || 0,
+        custo_producao: prices.custo_producao,
+        is_campanha: isCampanha,
+        preco_fixo_campanha: meta.preco_fixo_campanha,
+        desconto_campanha: meta.desconto_campanha,
+        "Estilizado (R$)": prices.pix_estilizado,
+        "Colorido (R$)": prices.pix_colorido,
+    };
+}
+
 export async function GET(req: Request) {
     try {
-        const sessionOrResponse = await requireRoles(['admin', 'pricing', 'orcamento']);
+        const sessionOrResponse = await requireRoles(['admin', 'pricing', 'orcamento', 'sales', 'finance']);
         if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const { searchParams } = new URL(req.url);
@@ -21,172 +67,52 @@ export async function GET(req: Request) {
 
         if (settingsError) throw settingsError;
 
-        // 2. Se houver busca, filtramos na tabela 'figuras' (principais) 
-        // para fugir do limite de 1000 itens da View e incluir itens sem metadata
+        const selectColumns = `
+            id,
+            nome,
+            codigo,
+            is_bundle,
+            desconto_bundle_pct,
+            preco_fixo_bundle,
+            studios ( nome ),
+            figuras_meta (
+                resina_kg,
+                horas_impressao,
+                horas_pintura,
+                altura_cm,
+                largura_cm,
+                profundidade_cm,
+                is_campanha_active,
+                desconto_campanha,
+                preco_fixo_campanha
+            )
+        `;
+
+        // 2. Se houver busca, filtramos na tabela 'figuras'
         if (search) {
             const { data, error } = await supabase
                 .from('figuras')
-                .select(`
-                    id,
-                    nome,
-                    codigo,
-                    studios ( nome ),
-                    figuras_meta (
-                        resina_kg,
-                        horas_impressao,
-                        horas_pintura,
-                        altura_cm,
-                        largura_cm,
-                        profundidade_cm,
-                        is_campanha_active,
-                        desconto_campanha,
-                        preco_fixo_campanha
-                    )
-                `)
+                .select(selectColumns)
                 .or(`nome.ilike.%${search}%,codigo.ilike.%${search}%,sinonimos.ilike.%${search}%`)
                 .limit(50);
 
             if (error) throw error;
 
-            const formatted = data.map((item: any) => {
-                const meta = item.figuras_meta || {};
-
-                // Custo Estilizado: Pintura fixa de 20 minutos (0.33h)
-                const custoPinturaEstilizado = 0.33 * (settings.custo_h_pintura || 50);
-                const custoBaseEstilizado =
-                    ((meta.resina_kg || 0) * (settings.custo_resina_kg || 0)) +
-                    ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0)) +
-                    custoPinturaEstilizado;
-
-                const custoBase =
-                    ((meta.resina_kg || 0) * (settings.custo_resina_kg || 0)) +
-                    ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0)) +
-                    ((meta.horas_pintura || 0) * (settings.custo_h_pintura || 0));
-
-                const roundTo5 = (val: number) => Math.ceil(val / 5) * 5;
-
-                const custoProducao = Math.ceil(
-                    ((meta.resina_kg || 0) * (settings.custo_resina_kg || 0)) +
-                    ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0))
-                );
-
-                let estilizadoFinal = roundTo5(custoBaseEstilizado * (settings.margem_pobre || 1.15));
-                
-                // Aplicação de Campanha (Regra: Apenas Estilizado muda)
-                const isCampanha = meta.is_campanha_active || !!meta.preco_fixo_campanha;
-                if (isCampanha) {
-                    if (meta.preco_fixo_campanha && meta.preco_fixo_campanha > 0) {
-                        estilizadoFinal = meta.preco_fixo_campanha;
-                    } else if (meta.desconto_campanha && meta.desconto_campanha > 0) {
-                        estilizadoFinal = Math.round(estilizadoFinal * (1 - (meta.desconto_campanha / 100)));
-                    } else {
-                        estilizadoFinal = custoProducao;
-                    }
-                }
-
-                return {
-                    id: item.id,
-                    Figura: item.nome,
-                    codigo: item.codigo,
-                    studio: item.studios?.nome || 'N/A',
-                    resina_kg: meta.resina_kg || 0,
-                    horas_pintura: meta.horas_pintura || 0,
-                    altura_cm: meta.altura_cm || 0,
-                    largura_cm: meta.largura_cm || 0,
-                    profundidade_cm: meta.profundidade_cm || 0,
-                    custo_producao: custoProducao,
-                    is_campanha: isCampanha,
-                    preco_fixo_campanha: meta.preco_fixo_campanha,
-                    desconto_campanha: meta.desconto_campanha,
-                    "Estilizado (R$)": estilizadoFinal,
-                    "Colorido (R$)": roundTo5(custoBase * (settings.margem_basica || 1.30))
-                };
-            });
-
+            const formatted = (data || []).map((item: any) => formatCatalogItem(item, settings));
             return NextResponse.json(formatted);
         }
 
-        // 3. Caso sem busca: Pega os últimos adicionados ou por ordem alfabética
+        // 3. Caso sem busca: Pega por ordem alfabética
         const { data, error } = await supabase
             .from('figuras')
-            .select(`
-                id,
-                nome,
-                studios ( nome ),
-                figuras_meta (
-                    resina_kg,
-                    horas_impressao,
-                    horas_pintura,
-                    altura_cm,
-                    largura_cm,
-                    profundidade_cm,
-                    is_campanha_active,
-                    desconto_campanha,
-                    preco_fixo_campanha
-                )
-            `)
+            .select(selectColumns)
             .order('nome', { ascending: true })
             .limit(100);
 
         if (error) throw error;
 
-        const formatted = data.map((item: any) => {
-            const meta = item.figuras_meta || {};
-
-            // Custo Estilizado: Pintura fixa de 20 minutos (0.33h)
-            const custoPinturaEstilizado = 0.33 * (settings.custo_h_pintura || 50);
-            const custoBaseEstilizado =
-                ((meta.resina_kg || 0) * (settings.custo_resina_kg || 0)) +
-                ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0)) +
-                custoPinturaEstilizado;
-
-            const custoBase =
-                ((meta.resina_kg || 0) * (settings.custo_resina_kg || 0)) +
-                ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0)) +
-                ((meta.horas_pintura || 0) * (settings.custo_h_pintura || 0));
-
-            const roundTo5 = (val: number) => Math.ceil(val / 5) * 5;
-
-            const custoProducao = Math.ceil(
-                ((meta.resina_kg || 0) * (settings.custo_resina_kg || 0)) +
-                ((meta.horas_impressao || 0) * (settings.custo_h_impressao || 0))
-            );
-
-            let estilizadoFinal = roundTo5(custoBaseEstilizado * (settings.margem_pobre || 1.15));
-            
-            // Aplicação de Campanha (Regra: Apenas Estilizado muda)
-            const isCampanha = meta.is_campanha_active || !!meta.preco_fixo_campanha;
-            if (isCampanha) {
-                if (meta.preco_fixo_campanha && meta.preco_fixo_campanha > 0) {
-                    estilizadoFinal = meta.preco_fixo_campanha;
-                } else if (meta.desconto_campanha && meta.desconto_campanha > 0) {
-                    estilizadoFinal = Math.round(estilizadoFinal * (1 - (meta.desconto_campanha / 100)));
-                } else {
-                    estilizadoFinal = custoProducao;
-                }
-            }
-
-            return {
-                id: item.id,
-                Figura: item.nome,
-                codigo: item.codigo,
-                studio: item.studios?.nome || 'N/A',
-                resina_kg: meta.resina_kg || 0,
-                horas_pintura: meta.horas_pintura || 0,
-                altura_cm: meta.altura_cm || 0,
-                largura_cm: meta.largura_cm || 0,
-                profundidade_cm: meta.profundidade_cm || 0,
-                custo_producao: custoProducao,
-                is_campanha: isCampanha,
-                preco_fixo_campanha: meta.preco_fixo_campanha,
-                desconto_campanha: meta.desconto_campanha,
-                "Estilizado (R$)": estilizadoFinal,
-                "Colorido (R$)": roundTo5(custoBase * (settings.margem_basica || 1.30))
-            };
-        });
-
+        const formatted = (data || []).map((item: any) => formatCatalogItem(item, settings));
         return NextResponse.json(formatted);
-
     } catch (error: any) {
         console.error('Catalog Search Error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });

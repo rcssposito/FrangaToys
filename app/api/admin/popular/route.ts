@@ -3,6 +3,8 @@ import { requireRoles } from '@/lib/server-auth';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { calculateFigurePrices } from '@/lib/pricing';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
     try {
         const sessionOrResponse = await requireRoles(['admin', 'sales', 'pricing', 'orcamento']);
@@ -15,35 +17,54 @@ export async function GET() {
             .eq('id', 1)
             .single();
 
-        // 2. Buscar figuras com views > 0
-        const { data: allFigures, error } = await supabase
-            .from('figuras')
-            .select(`
-                id, 
-                nome, 
-                imagem_url, 
-                views, 
-                slug,
-                studio_id,
-                serie_id,
-                studios(id, nome), 
-                series(id, nome, categorias(nome)),
-                figuras_meta(resina_kg, horas_impressao, horas_pintura)
-            `)
-            .gt('views', 0)
-            .order('views', { ascending: false });
+        // 2. Buscar TODAS as figuras com views > 0 paginando em blocos de 1000
+        const allFigures: any[] = [];
+        const pageSize = 1000;
+        let page = 0;
+        let hasMore = true;
 
-        if (error) throw error;
+        while (hasMore) {
+            const { data: batch, error } = await supabase
+                .from('figuras')
+                .select(`
+                    id, 
+                    nome, 
+                    imagem_url, 
+                    views, 
+                    slug,
+                    studio_id,
+                    serie_id,
+                    studios(id, nome), 
+                    series(id, nome, categorias(nome)),
+                    figuras_meta(resina_kg, horas_impressao, horas_pintura, is_campanha_active, desconto_campanha, preco_fixo_campanha)
+                `)
+                .gt('views', 0)
+                .order('views', { ascending: false })
+                .range(page * pageSize, (page + 1) * pageSize - 1);
 
-        // 3. Buscar histórico de vendas dessas figuras
-        const figureIds = (allFigures || []).map(f => f.id);
+            if (error) throw error;
+
+            if (batch && batch.length > 0) {
+                allFigures.push(...batch);
+                if (batch.length < pageSize) {
+                    hasMore = false;
+                } else {
+                    page++;
+                }
+            } else {
+                hasMore = false;
+            }
+        }
+
+        // 3. Buscar histórico de vendas válidas diretamente (evita URL 414 Too Long com .in() gigante)
         const { data: salesData } = await supabase
             .from('vendas')
             .select('figura_id, quantidade, valor_venda_final')
-            .in('figura_id', figureIds);
+            .neq('status', 'Cancelado');
 
         const salesStats: Record<number, { units: number, revenue: number }> = {};
         (salesData || []).forEach(s => {
+            if (!s.figura_id) return;
             if (!salesStats[s.figura_id]) salesStats[s.figura_id] = { units: 0, revenue: 0 };
             salesStats[s.figura_id].units += s.quantidade || 0;
             salesStats[s.figura_id].revenue += Number(s.valor_venda_final) || 0;
@@ -56,7 +77,7 @@ export async function GET() {
         let totalViewsGeral = 0;
         let demandaReprimidaCount = 0;
 
-        const enrichedFigures = (allFigures || []).map((fig: any) => {
+        const enrichedFigures = allFigures.map((fig: any) => {
             const views = Number(fig.views) || 0;
             totalViewsGeral += views;
 
@@ -118,29 +139,32 @@ export async function GET() {
                 serieId: seriesObj?.id || null,
                 serieNome: seriesObj?.nome || 'Sem Série',
                 studioId: studioObj?.id || null,
-                studioNome: studioObj?.nome || 'Desconhecido'
+                studioNome: studioObj?.nome || 'Sem Estúdio',
+                categoriaNome: seriesObj?.categorias?.nome || 'Outros'
             };
         });
 
-        // Top Séries ordenadas por views
-        const topSeries = Object.values(seriesMap).sort((a, b) => b.totalViews - a.totalViews).slice(0, 10);
-        // Top Estúdios ordenados por views
-        const topStudios = Object.values(studioMap).sort((a, b) => b.totalViews - a.totalViews).slice(0, 10);
+        const topSeries = Object.values(seriesMap)
+            .sort((a, b) => b.totalViews - a.totalViews)
+            .slice(0, 15);
+
+        const topStudios = Object.values(studioMap)
+            .sort((a, b) => b.totalViews - a.totalViews)
+            .slice(0, 15);
 
         return NextResponse.json({
-            figures: enrichedFigures.slice(0, 40),
-            topSeries,
-            topStudios,
             summary: {
-                totalAcessos: totalViewsGeral,
-                totalFigurasComViews: enrichedFigures.length,
+                totalViews: totalViewsGeral,
+                trackedFiguresCount: enrichedFigures.length,
                 demandaReprimidaCount,
-                topSerie: topSeries[0] || null,
-                topStudio: topStudios[0] || null
-            }
+                topFigure: enrichedFigures[0] || null
+            },
+            figures: enrichedFigures,
+            topSeries,
+            topStudios
         });
-    } catch (error: any) {
-        console.error('Erro ao buscar dados de demanda e popularidade:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (err: any) {
+        console.error('Erro na API Popular:', err);
+        return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }

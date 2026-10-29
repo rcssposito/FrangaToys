@@ -1,33 +1,24 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { usePermission } from '@/hooks/usePermission';
 import {
     LayoutDashboard,
-    Users,
     Package,
     ShoppingCart,
     Settings,
     LogOut,
     Store,
     Activity,
-    DollarSign,
     Menu,
     X,
     KanbanSquare,
-    PackageOpen,
     PanelLeftClose,
     PanelLeftOpen,
-    ShieldCheck,
-    TrendingUp,
     Flame,
-    Tag,
-    FolderGit2,
     Cpu,
-    Disc
 } from 'lucide-react';
 import ThemeToggle from '@/components/common/ThemeToggle';
 
@@ -38,8 +29,30 @@ interface AdminSidebarProps {
 
 export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSidebarProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const [healthAlert, setHealthAlert] = useState<{ overdue: number; dueSoon: number } | null>(null);
     const pathname = usePathname();
     const { hasRole, logout, user } = usePermission();
+
+    // Checagem leve em segundo plano das chaves (.env) para sinalizar alertas de rotação na Sidebar
+    useEffect(() => {
+        if (!user || !hasRole('admin')) return;
+        let active = true;
+        fetch('/api/admin/automation/health-check?section=secrets', { cache: 'no-store' })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+                if (!active || !data?.secretsRotation?.counts) return;
+                const { overdue = 0, dueSoon = 0 } = data.secretsRotation.counts;
+                if (overdue > 0 || dueSoon > 0) {
+                    setHealthAlert({ overdue, dueSoon });
+                } else {
+                    setHealthAlert(null);
+                }
+            })
+            .catch(() => {});
+        return () => {
+            active = false;
+        };
+    }, [user, pathname]);
 
     const menuItems = [
         {
@@ -91,6 +104,9 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             roles: ['admin']
         }
     ];
+
+    const totalSecretAlerts = (healthAlert?.overdue || 0) + (healthAlert?.dueSoon || 0);
+    const hasOverdueSecrets = (healthAlert?.overdue || 0) > 0;
 
     return (
         <>
@@ -150,36 +166,58 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
                         const canView = item.roles.some(r => hasRole(r));
                         if (!canView) return null;
 
+                        const isAutomationItem = item.href === '/admin/automation';
+                        const showAlertBadge = isAutomationItem && totalSecretAlerts > 0;
+                        const targetHref = showAlertBadge ? '/admin/automation?tab=health' : item.href;
+
                         const isActive = pathname === item.href || 
                             (item.href === '/admin/studios' && (pathname.startsWith('/admin/patreon/repository') || pathname.startsWith('/admin/franga-studio'))) ||
                             (item.href === '/admin/sales' && (pathname === '/admin/abandoned-carts' || pathname === '/admin/dre')) ||
                             (item.href === '/admin/marketing' && (pathname === '/admin/coupons' || pathname === '/admin/customers'));
 
+                        const alertTitle = showAlertBadge
+                            ? `${item.name} • ${totalSecretAlerts} chave(s) .env ${hasOverdueSecrets ? 'vencida(s)' : 'vencendo em breve'}`
+                            : item.name;
+
                         return (
                             <Link
                                 key={item.href}
-                                href={item.href}
+                                href={targetHref}
                                 prefetch={false}
                                 onClick={() => setIsOpen(false)}
-                                title={isCollapsed ? item.name : undefined}
+                                title={isCollapsed ? alertTitle : (showAlertBadge ? alertTitle : undefined)}
                                 className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-4'} py-3.5 rounded-2xl transition-all relative group overflow-hidden ${isActive
                                     ? 'bg-orange-500 text-white font-black shadow-lg shadow-orange-500/20 active:scale-95'
                                     : 'text-[var(--text-muted)] hover:bg-[var(--input-bg)] hover:text-[var(--foreground)] font-bold'
                                     }`}
                             >
-                                <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} className={`${isActive ? 'scale-110' : 'group-hover:scale-110 group-hover:text-orange-500'} transition-all shrink-0`} />
+                                <div className="relative shrink-0">
+                                    <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} className={`${isActive ? 'scale-110' : 'group-hover:scale-110 group-hover:text-orange-500'} transition-all`} />
+                                    {isCollapsed && showAlertBadge && (
+                                        <span className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border border-black ${
+                                            hasOverdueSecrets ? 'bg-red-500 animate-pulse' : 'bg-amber-400'
+                                        }`} />
+                                    )}
+                                </div>
                                 {!isCollapsed && (
-                                    <span className="text-sm tracking-tight whitespace-nowrap animate-in fade-in duration-300">{item.name}</span>
+                                    <span className="text-sm tracking-tight whitespace-nowrap animate-in fade-in duration-300 flex-1">{item.name}</span>
                                 )}
-                                {!isCollapsed && isActive && (
+                                {!isCollapsed && showAlertBadge && (
+                                    <span className={`text-[10px] font-mono font-black px-1.5 py-0.5 rounded-md ${
+                                        hasOverdueSecrets
+                                            ? 'bg-red-500 text-white animate-pulse'
+                                            : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                                    }`}>
+                                        {totalSecretAlerts}
+                                    </span>
+                                )}
+                                {!isCollapsed && isActive && !showAlertBadge && (
                                     <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-white/40" />
                                 )}
                             </Link>
                         );
                     })}
                 </nav>
-
-                {/* Navigation ends, no collapse button here anymore */}
 
                 {/* User & Logout */}
                 <div className={`p-4 border-t border-[var(--card-border)] bg-[var(--background)]/20 backdrop-blur-sm flex flex-col gap-3 ${isCollapsed ? 'items-center px-2' : ''}`}>

@@ -1166,6 +1166,10 @@ function DataGridContent() {
             const params = new URLSearchParams();
             if (catId === 'sem_preco') {
                 params.append('sem_preco', 'true');
+            } else if (catId === 'sem_foto') {
+                params.append('sem_foto', 'true');
+            } else if (catId === 'campanha') {
+                params.append('campanha', 'true');
             } else if (catId === 'tem_extras') {
                 params.append('tem_extras', 'true');
             } else if (catId === 'pronta_entrega') {
@@ -1593,7 +1597,9 @@ function DataGridContent() {
 
     const CATEGORY_FILTERS = [
         { id: 'pronta_entrega', label: '⚡ Pronta Entrega' },
-        { id: 'sem_preco', label: 'Falta Preço' },
+        { id: 'sem_preco', label: '⚠️ Falta Peso/Horas' },
+        { id: 'sem_foto', label: '📷 Sem Foto' },
+        { id: 'campanha', label: '🔥 Em Oferta' },
         { id: 'tem_extras', label: 'Tem Extra' },
         { id: 1, label: 'Anime' },
         { id: 2, label: 'Games' },

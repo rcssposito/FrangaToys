@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
         const isCampanhaOnly = searchParams.get('campanha') === 'true';
         const metaJoin = isCampanhaOnly ? 'figuras_meta!inner' : 'figuras_meta';
         const isSemPreco = searchParams.get('sem_preco') === 'true';
+        const isSemFoto = searchParams.get('sem_foto') === 'true';
         const isTemExtras = searchParams.get('tem_extras') === 'true';
         const isProntaEntrega = searchParams.get('pronta_entrega') === 'true';
 
@@ -103,7 +104,10 @@ export async function GET(req: NextRequest) {
             if (isProntaEntrega) {
                 q = q.eq('pronta_entrega', true);
             }
-            if (isSemPreco) {
+            if (isSemFoto) {
+                q = q.or('imagem_url.is.null,imagem_url.eq.');
+            }
+            if (isSemPreco || isSemFoto) {
                 q = q.order('id', { ascending: false });
             } else {
                 q = q.order('nome', { ascending: true });
@@ -113,7 +117,7 @@ export async function GET(req: NextRequest) {
 
         // Se estamos buscando por 'falta preço' ou campanha completa (> 1000 itens),
         // paginamos em blocos de 1000 para superar o limite max-rows=1000 do PostgREST/Supabase.
-        const dbLimit = isSemPreco ? 5000 : limit;
+        const dbLimit = (isSemPreco || isSemFoto) ? 5000 : limit;
         const from = page * dbLimit;
         let data: any[] = [];
 
@@ -198,10 +202,15 @@ export async function GET(req: NextRequest) {
         });
 
         if (isSemPreco) {
-            // Filtra as figuras que não têm peso de resina ou cujo peso é 0
-            formatted = formatted.filter((f: any) => !f.resina_kg || f.resina_kg === 0);
+            // Filtra as figuras que não têm peso de resina ou horas de impressão preenchidas
+            formatted = formatted.filter(
+                (f: any) => !f.resina_kg || Number(f.resina_kg) === 0 || !f.horas_impressao || Number(f.horas_impressao) === 0
+            );
             // Cap to 'limit' so the UI doesn't break if we fetched 1000 and 500 were missing price
             formatted = formatted.slice(0, limit);
+        }
+        if (isSemFoto) {
+            formatted = formatted.filter((f: any) => !f.imagem_url || String(f.imagem_url).trim() === '').slice(0, limit);
         }
         // Aggregate sales for the current year to calculate popularity and gross faturamento
         try {
