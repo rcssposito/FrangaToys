@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { toast } from 'sonner';
-import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, Minus, Plus, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, Upload, ZoomIn, ZoomOut, RotateCcw, Maximize2, Boxes, Package, Box } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, ImageOff, Minus, Plus, ChevronDown, ChevronUp, AlertTriangle, AlertCircle, CheckCircle2, Upload, ZoomIn, ZoomOut, RotateCcw, Maximize2, Boxes, Package, Box, Zap, Tag, Layers } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePermission } from '@/hooks/usePermission';
@@ -1595,18 +1595,22 @@ function DataGridContent() {
 
     if (loading && figures.length === 0) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" /></div>;
 
-    const CATEGORY_FILTERS = [
-        { id: 'pronta_entrega', label: '⚡ Pronta Entrega' },
-        { id: 'sem_preco', label: '⚠️ Falta Peso/Horas' },
-        { id: 'sem_foto', label: '📷 Sem Foto' },
-        { id: 'campanha', label: '🔥 Em Oferta' },
-        { id: 'tem_extras', label: 'Tem Extra' },
+    const GENRE_FILTERS: { id: number | null; label: string }[] = [
+        { id: null, label: 'Todas' },
         { id: 1, label: 'Anime' },
         { id: 2, label: 'Games' },
         { id: 3, label: 'Marvel' },
         { id: 4, label: 'DC' },
         { id: 5, label: 'Random' },
         { id: 0, label: 'Outros' },
+    ];
+
+    const STATUS_FILTERS: { id: string; label: string; icon: typeof Zap }[] = [
+        { id: 'pronta_entrega', label: 'Pronta Entrega', icon: Zap },
+        { id: 'sem_preco', label: 'Falta Peso/Horas', icon: AlertCircle },
+        { id: 'sem_foto', label: 'Sem Foto', icon: ImageOff },
+        { id: 'campanha', label: 'Em Oferta', icon: Tag },
+        { id: 'tem_extras', label: 'Com Extra', icon: Layers },
     ];
 
     // Check for duplicate keys in figures (Accessing state)
@@ -1616,111 +1620,159 @@ function DataGridContent() {
     return (
         <div className="w-full text-[var(--foreground)] relative transition-colors duration-300">
             <div className="w-full mx-auto">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                    <div className="flex items-center gap-4">
-                        <Link href="/admin" className="p-2 hover:bg-[var(--input-bg)] bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg transition-all shadow-sm text-[var(--text-muted)] hover:text-orange-500">
-                            <ArrowLeft size={20} />
+                {/* Top Command Bar: Title + View Switcher + Studio & Search */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4 pb-3 border-b border-zinc-800/80">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <Link
+                            href="/admin"
+                            className="p-2 hover:bg-zinc-800/80 bg-zinc-900/80 border border-zinc-800 rounded-lg transition-colors text-zinc-400 hover:text-zinc-100"
+                            title="Voltar ao Painel"
+                        >
+                            <ArrowLeft size={16} />
                         </Link>
-                        <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Catálogo & Precificação</h1>
-                            <p className="text-[var(--text-muted)] text-sm font-medium">Clique no nome para ver a foto. Edite custos abaixo.</p>
+                        <div className="mr-1">
+                            <h1 className="text-lg font-bold tracking-tight text-zinc-100 leading-none">Catálogo & Precificação</h1>
+                            <p className="text-zinc-500 text-[11px] mt-1">Gestão de custos operacionais, metadados 3D e combos</p>
                         </div>
-                    </div>
-                    {/* Seletor de Estúdio & Search Bar */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-                        <div className="relative min-w-[200px]">
-                            <select
-                                value={studioParam || ''}
-                                onChange={e => {
-                                    const val = e.target.value;
-                                    if (val) {
-                                        router.push(`/admin/figures?studio=${val}`);
-                                    } else {
-                                        router.push('/admin/figures');
-                                    }
-                                }}
-                                className="w-full bg-[var(--card-bg)] border border-[var(--input-border)] text-xs font-bold text-[var(--foreground)] rounded-xl px-3 py-3 outline-none focus:border-orange-500 cursor-pointer shadow-sm appearance-none pr-8"
+
+                        {/* Segmented View Switcher */}
+                        <div className="inline-flex items-center bg-zinc-950 border border-zinc-800/90 p-1 rounded-lg">
+                            <button
+                                onClick={() => setMainTab('figures')}
+                                className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                                    mainTab === 'figures'
+                                        ? 'bg-zinc-800 text-zinc-100 border border-zinc-700/80 shadow-xs'
+                                        : 'text-zinc-400 hover:text-zinc-200 border border-transparent'
+                                }`}
                             >
-                                <option value="">Todos os Estúdios ({studiosList.length})</option>
-                                {studiosList.map(s => (
-                                    <option key={s.id} value={s.id}>{s.nome}</option>
-                                ))}
-                            </select>
-                            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-                        </div>
-
-                        <div className="relative w-full md:w-80">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Buscar figura..."
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                className="w-full bg-[var(--card-bg)] border border-[var(--input-border)] rounded-xl pl-10 pr-4 py-3 outline-none focus:border-orange-500 transition-all shadow-[var(--shadow-sm)] text-[var(--foreground)] placeholder:text-[var(--text-muted)] text-sm"
-                            />
+                                <Package size={13} className={mainTab === 'figures' ? 'text-orange-500' : 'text-zinc-500'} />
+                                Figuras Individuais
+                            </button>
+                            <button
+                                onClick={() => setMainTab('bundles')}
+                                className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                                    mainTab === 'bundles'
+                                        ? 'bg-zinc-800 text-zinc-100 border border-zinc-700/80 shadow-xs'
+                                        : 'text-zinc-400 hover:text-zinc-200 border border-transparent'
+                                }`}
+                            >
+                                <Boxes size={13} className={mainTab === 'bundles' ? 'text-orange-500' : 'text-zinc-500'} />
+                                Bundles & Kits
+                            </button>
                         </div>
                     </div>
-                </div>
 
-                {/* Seletor de Visão Principal: Figuras Avulsas vs Bundles & Kits */}
-                <div className="flex items-center gap-2 mb-6 border-b border-zinc-800 pb-3">
-                    <button
-                        onClick={() => setMainTab('figures')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
-                            mainTab === 'figures'
-                                ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
-                                : 'bg-zinc-900/60 text-zinc-400 hover:text-white border border-zinc-800'
-                        }`}
-                    >
-                        <Package size={16} />
-                        Catálogo de Figuras Individuais
-                    </button>
-                    <button
-                        onClick={() => setMainTab('bundles')}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
-                            mainTab === 'bundles'
-                                ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20'
-                                : 'bg-zinc-900/60 text-zinc-400 hover:text-white border border-zinc-800'
-                        }`}
-                    >
-                        <Boxes size={16} />
-                        Bundles & Kits de Figuras
-                    </button>
+                    {/* Seletor de Estúdio & Search Bar (apenas na aba de figuras) */}
+                    {mainTab === 'figures' && (
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
+                            <div className="relative min-w-[185px]">
+                                <select
+                                    value={studioParam || ''}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        if (val) {
+                                            router.push(`/admin/figures?studio=${val}`);
+                                        } else {
+                                            router.push('/admin/figures');
+                                        }
+                                    }}
+                                    className="w-full h-9 bg-zinc-900/90 border border-zinc-800 hover:border-zinc-700 text-xs font-medium text-zinc-200 rounded-lg px-3 pr-8 outline-none focus:border-zinc-600 cursor-pointer appearance-none transition-colors"
+                                >
+                                    <option value="">Todos os Estúdios ({studiosList.length})</option>
+                                    {studiosList.map(s => (
+                                        <option key={s.id} value={s.id}>{s.nome}</option>
+                                    ))}
+                                </select>
+                                <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+                            </div>
+
+                            <div className="relative w-full sm:w-64">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={14} />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar por nome, série ou SKU..."
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    className="w-full h-9 bg-zinc-900/90 border border-zinc-800 hover:border-zinc-700 rounded-lg pl-8 pr-7 outline-none focus:border-zinc-600 transition-colors text-zinc-100 placeholder:text-zinc-500 text-xs"
+                                />
+                                {search && (
+                                    <button
+                                        onClick={() => setSearch('')}
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                                    >
+                                        <X size={13} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {mainTab === 'bundles' ? (
                     <BundleManagerTab />
                 ) : (
                     <>
-                        <div className="flex gap-4 items-center mb-6">
-                            <div className="flex-1 flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[var(--card-border)]">
-                        {studioParam && (
-                            <button
-                                onClick={() => router.push('/admin/figures')}
-                                className="px-4 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-all bg-blue-600 text-white shadow-lg shadow-blue-500/20 flex items-center gap-2 group"
-                            >
-                                <X size={14} className="group-hover:scale-120 transition-transform" />
-                                Filtrando Estúdio: #{studioParam}
-                            </button>
-                        )}
-                        <button
-                            onClick={() => setSelectedCategoryId(null)}
-                            className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${selectedCategoryId === null ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] hover:bg-[var(--input-bg)] hover:text-[var(--foreground)]'}`}
-                        >
-                            Todas
-                        </button>
-                        {CATEGORY_FILTERS.map(cat => (
-                            <button
-                                key={cat.id}
-                                onClick={() => setSelectedCategoryId(cat.id)}
-                                className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${selectedCategoryId === cat.id ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-[var(--card-bg)] border border-[var(--card-border)] text-[var(--text-muted)] hover:bg-[var(--input-bg)] hover:text-[var(--foreground)]'}`}
-                            >
-                                {cat.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                        {/* Structured Filter Bar: Categorias vs Auditoria Operacional */}
+                        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5 bg-zinc-900/40 border border-zinc-800/80 rounded-xl p-2 mb-5">
+                            {/* Grupo 1: Categorias */}
+                            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+                                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 px-2 shrink-0">
+                                    Categoria
+                                </span>
+                                {GENRE_FILTERS.map(cat => {
+                                    const isActive = selectedCategoryId === cat.id;
+                                    return (
+                                        <button
+                                            key={String(cat.id)}
+                                            onClick={() => setSelectedCategoryId(cat.id)}
+                                            className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                                                isActive
+                                                    ? 'bg-zinc-800 text-zinc-100 border border-zinc-700'
+                                                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60 border border-transparent'
+                                            }`}
+                                        >
+                                            {cat.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="hidden xl:block h-4 w-px bg-zinc-800 shrink-0" />
+
+                            {/* Grupo 2: Filtros Operacionais / Status */}
+                            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+                                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 px-2 shrink-0">
+                                    Auditoria
+                                </span>
+                                {studioParam && (
+                                    <button
+                                        onClick={() => router.push('/admin/figures')}
+                                        className="px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors bg-orange-500/10 text-orange-400 border border-orange-500/30 flex items-center gap-1.5 cursor-pointer hover:bg-orange-500/15"
+                                    >
+                                        <span>Estúdio #{studioParam}</span>
+                                        <X size={12} />
+                                    </button>
+                                )}
+                                {STATUS_FILTERS.map(filter => {
+                                    const Icon = filter.icon;
+                                    const isActive = selectedCategoryId === filter.id;
+                                    return (
+                                        <button
+                                            key={filter.id}
+                                            onClick={() => setSelectedCategoryId(isActive ? null : filter.id)}
+                                            className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer ${
+                                                isActive
+                                                    ? 'bg-orange-500/15 text-orange-400 border border-orange-500/30'
+                                                    : 'bg-zinc-950/60 text-zinc-400 hover:text-zinc-200 border border-zinc-800/80 hover:border-zinc-700'
+                                            }`}
+                                        >
+                                            <Icon size={12} className={isActive ? 'text-orange-400' : 'text-zinc-500'} />
+                                            {filter.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
 
                 {/* Container Principal */}
                 <div className="w-full">

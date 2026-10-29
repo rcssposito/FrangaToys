@@ -7,7 +7,6 @@ import {
     Search,
     Trash2,
     Edit3,
-    Sparkles,
     Clock,
     Layers,
     DollarSign,
@@ -22,7 +21,6 @@ import {
     Columns,
     CheckCircle2,
     ChevronDown,
-    ChevronUp,
     ChevronsUpDown
 } from 'lucide-react';
 import Image from 'next/image';
@@ -498,87 +496,96 @@ export default function BundleManagerTab() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             {/* Top Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-900/60 border border-zinc-800 p-5 rounded-2xl">
-                <div>
-                    <h2 className="text-xl font-black text-white flex items-center gap-2">
-                        <Boxes className="text-purple-400" size={24} />
-                        Bundles & Kits de Figuras
-                    </h2>
-                    <p className="text-xs text-zinc-400 mt-1">
-                        Crie combos de produtos (SKUs compostos). Os tempos de pintura e insumos são somados automaticamente, e o desconto é aplicado em tempo real.
-                    </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-900/40 border border-zinc-800/80 p-3.5 rounded-xl">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-orange-500 shrink-0">
+                        <Boxes size={16} />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-sm font-bold text-zinc-100">
+                                SKUs Compostos (Bundles & Kits)
+                            </h2>
+                            <span className="px-1.5 py-0.5 rounded bg-zinc-800/80 border border-zinc-700/60 text-[10px] font-mono text-zinc-400">
+                                {bundles.length} {bundles.length === 1 ? 'registro' : 'registros'}
+                            </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-500 mt-0.5">
+                            Tempos de pintura e consumo de resina somados automaticamente a partir das peças filhas.
+                        </p>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                     {bundles.length > 0 && (
                         <button
                             type="button"
                             onClick={toggleExpandAll}
-                            className="px-3.5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white font-bold text-xs rounded-xl transition-all border border-zinc-700/60 flex items-center gap-2 cursor-pointer active:scale-95 shrink-0"
+                            className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 font-medium text-xs rounded-lg transition-colors border border-zinc-800 hover:border-zinc-700 flex items-center gap-1.5 cursor-pointer shrink-0"
                             title={isAllExpanded ? "Recolher todos os cards" : "Expandir todos os cards"}
                         >
-                            <ChevronsUpDown size={15} />
-                            <span>{isAllExpanded ? 'Colapsar Todos' : 'Expandir Todos'}</span>
+                            <ChevronsUpDown size={13} className="text-zinc-400" />
+                            <span>{isAllExpanded ? 'Recolher Todos' : 'Expandir Todos'}</span>
                         </button>
                     )}
                     <button
                         onClick={handleOpenCreate}
-                        className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-purple-600/20 active:scale-95 flex items-center gap-2 shrink-0 cursor-pointer"
+                        className="px-3.5 py-1.5 bg-orange-500 hover:bg-orange-400 text-zinc-950 font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
                     >
-                        <Plus size={16} />
-                        Criar Novo Bundle
+                        <Plus size={14} strokeWidth={2.5} />
+                        Novo Bundle
                     </button>
                 </div>
             </div>
 
             {/* Listagem de Bundles */}
             {loading ? (
-                <div className="py-20 flex flex-col items-center justify-center gap-3 text-zinc-500">
-                    <Loader2 className="animate-spin text-purple-500" size={32} />
-                    <span className="text-xs font-bold uppercase tracking-wider">Carregando bundles...</span>
+                <div className="py-16 flex flex-col items-center justify-center gap-2.5 text-zinc-500">
+                    <Loader2 className="animate-spin text-orange-500" size={24} />
+                    <span className="text-xs font-mono uppercase tracking-wider">Carregando bundles...</span>
                 </div>
             ) : bundles.length === 0 ? (
-                <div className="py-20 text-center border-2 border-dashed border-zinc-800 rounded-3xl p-8 space-y-4">
-                    <div className="w-16 h-16 rounded-full bg-purple-950/40 border border-purple-800/40 text-purple-400 flex items-center justify-center mx-auto">
-                        <Boxes size={32} />
+                <div className="py-16 text-center border border-dashed border-zinc-800 bg-zinc-900/20 rounded-xl p-8 space-y-3">
+                    <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 flex items-center justify-center mx-auto">
+                        <Boxes size={22} />
                     </div>
                     <div className="space-y-1">
-                        <h3 className="text-base font-black text-white">Nenhum bundle cadastrado</h3>
-                        <p className="text-xs text-zinc-400 max-w-md mx-auto">
-                            Crie seu primeiro combo de figuras (ex: &quot;Diorama Zuko vs Azula&quot; ou &quot;Trio Titãs&quot;) para alavancar o ticket médio da loja!
+                        <h3 className="text-sm font-bold text-zinc-200">Nenhum bundle cadastrado</h3>
+                        <p className="text-xs text-zinc-500 max-w-md mx-auto">
+                            Agrupe figuras individuais em um único SKU composto com cálculo automático de insumos e desconto percentual.
                         </p>
                     </div>
                     <button
                         onClick={handleOpenCreate}
-                        className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-purple-600/20 inline-flex items-center gap-2 cursor-pointer"
+                        className="px-3.5 py-1.5 bg-orange-500 hover:bg-orange-400 text-zinc-950 font-bold text-xs rounded-lg transition-colors inline-flex items-center gap-1.5 cursor-pointer"
                     >
-                        <Plus size={16} />
+                        <Plus size={14} strokeWidth={2.5} />
                         Criar Primeiro Bundle
                     </button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                     {bundles.map(bundle => {
                         const isExpanded = !!expandedBundleIds[bundle.id];
 
                         return (
                             <div
                                 key={bundle.id}
-                                className={`bg-zinc-900/80 border rounded-2xl transition-all shadow-xl overflow-hidden ${
-                                    isExpanded 
-                                        ? 'border-purple-500/40 p-5 space-y-4 shadow-purple-500/5' 
-                                        : 'border-zinc-800 hover:border-zinc-700 p-3.5 sm:p-4'
+                                className={`bg-zinc-900/50 border rounded-xl transition-colors overflow-hidden ${
+                                    isExpanded
+                                        ? 'border-zinc-700 bg-zinc-900/80 p-4 space-y-3.5'
+                                        : 'border-zinc-800/90 hover:border-zinc-700/80 p-3.5'
                                 }`}
                             >
                                 {/* Header do Card (clicável para expandir/colapsar) */}
                                 <div className="flex items-center justify-between gap-3">
-                                    <div 
+                                    <div
                                         onClick={() => toggleBundleExpand(bundle.id)}
                                         className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer select-none group"
-                                        title={isExpanded ? 'Clique para colapsar' : 'Clique para expandir'}
+                                        title={isExpanded ? 'Clique para recolher' : 'Clique para expandir'}
                                     >
-                                        <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-black border border-zinc-800 shrink-0 group-hover:border-purple-500/50 transition-colors">
+                                        <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-zinc-950 border border-zinc-800 shrink-0 group-hover:border-zinc-700 transition-colors">
                                             {bundle.imagem_url ? (
                                                 <Image
                                                     src={bundle.imagem_url}
@@ -588,48 +595,49 @@ export default function BundleManagerTab() {
                                                 />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-zinc-600">
-                                                    <Boxes size={22} />
+                                                    <Boxes size={18} />
                                                 </div>
                                             )}
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <div className="flex flex-wrap items-center gap-1.5">
-                                                <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono text-zinc-400 bg-zinc-950 border border-zinc-800">
                                                     #{bundle.id}
                                                 </span>
                                                 {bundle.codigo && (
-                                                    <span className="text-[9px] font-mono text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded">
+                                                    <span className="text-[10px] font-mono text-zinc-300 bg-zinc-800/80 border border-zinc-700/60 px-1.5 py-0.5 rounded">
                                                         {bundle.codigo}
                                                     </span>
                                                 )}
                                                 {bundle.todas_pecas_disponiveis === false ? (
-                                                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-950/50 text-red-400 border border-red-500/30 flex items-center gap-1">
-                                                        ⚠️ Indisponível
+                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-950/40 text-red-400 border border-red-500/20 flex items-center gap-1">
+                                                        <AlertCircle size={10} />
+                                                        Peça Inativa
                                                     </span>
                                                 ) : (
-                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border flex items-center gap-1 ${
+                                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium border flex items-center gap-1 ${
                                                         bundle.disponivel
-                                                            ? 'bg-emerald-950/50 text-emerald-400 border-emerald-500/30'
-                                                            : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                                                            ? 'bg-emerald-950/30 text-emerald-400 border-emerald-500/25'
+                                                            : 'bg-zinc-900 text-zinc-500 border-zinc-800'
                                                     }`}>
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${bundle.disponivel ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${bundle.disponivel ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
                                                         {bundle.disponivel ? 'Ativo' : 'Pausado'}
                                                     </span>
                                                 )}
                                             </div>
-                                            <h3 className="text-sm sm:text-base font-black text-white mt-1 leading-tight truncate group-hover:text-purple-400 transition-colors">
+                                            <h3 className="text-sm font-bold text-zinc-100 mt-1 leading-tight truncate group-hover:text-white transition-colors">
                                                 {bundle.nome}
                                             </h3>
-                                            <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-400 flex-wrap">
-                                                <span className="font-semibold text-zinc-300">
+                                            <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-500 flex-wrap font-mono">
+                                                <span className="text-zinc-400">
                                                     {bundle.componentes.length} {bundle.componentes.length === 1 ? 'peça' : 'peças'}
                                                 </span>
-                                                <span>•</span>
-                                                <span className="text-emerald-400 font-bold font-mono">
+                                                <span>·</span>
+                                                <span className="text-emerald-400 font-semibold">
                                                     R$ {bundle.summary.preco_bundle_colorido}
                                                 </span>
                                                 {bundle.summary.desconto_pct > 0 && (
-                                                    <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-black px-1.5 py-0.2 rounded">
+                                                    <span className="text-[10px] bg-zinc-800 text-zinc-300 border border-zinc-700/70 px-1.5 py-0.2 rounded">
                                                         -{bundle.summary.desconto_pct}%
                                                     </span>
                                                 )}
@@ -638,21 +646,21 @@ export default function BundleManagerTab() {
                                     </div>
 
                                     {/* Ações e Botão Chevron */}
-                                    <div className="flex items-center gap-1.5 shrink-0">
+                                    <div className="flex items-center gap-1 shrink-0">
                                         <button
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 handleToggleDisponivel(bundle);
                                             }}
-                                            className={`p-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                                                bundle.disponivel 
-                                                    ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30 hover:bg-emerald-900/40' 
-                                                    : 'bg-zinc-800 text-zinc-400 border-zinc-750 hover:bg-zinc-750'
+                                            className={`p-2 rounded-lg text-xs transition-colors border cursor-pointer ${
+                                                bundle.disponivel
+                                                    ? 'bg-zinc-900 text-emerald-400 border-zinc-800 hover:border-zinc-700'
+                                                    : 'bg-zinc-950 text-zinc-500 border-zinc-800/80 hover:border-zinc-700'
                                             }`}
                                             title={bundle.disponivel ? 'Pausar da vitrine' : 'Ativar na vitrine'}
                                         >
-                                            <span className={`block w-2.5 h-2.5 rounded-full ${bundle.disponivel ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`} />
+                                            <span className={`block w-2 h-2 rounded-full ${bundle.disponivel ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
                                         </button>
                                         <button
                                             type="button"
@@ -660,10 +668,10 @@ export default function BundleManagerTab() {
                                                 e.stopPropagation();
                                                 handleOpenEdit(bundle);
                                             }}
-                                            className="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-all cursor-pointer"
+                                            className="p-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 border border-zinc-800 transition-colors cursor-pointer"
                                             title="Editar Bundle"
                                         >
-                                            <Edit3 size={14} />
+                                            <Edit3 size={13} />
                                         </button>
                                         <button
                                             type="button"
@@ -671,49 +679,57 @@ export default function BundleManagerTab() {
                                                 e.stopPropagation();
                                                 handleDeleteBundle(bundle);
                                             }}
-                                            className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 transition-all cursor-pointer"
+                                            className="p-2 rounded-lg bg-zinc-900 hover:bg-red-950/40 text-zinc-500 hover:text-red-400 border border-zinc-800 hover:border-red-500/30 transition-colors cursor-pointer"
                                             title="Excluir Bundle"
                                         >
-                                            <Trash2 size={14} />
+                                            <Trash2 size={13} />
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => toggleBundleExpand(bundle.id)}
-                                            className={`p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-all cursor-pointer ${isExpanded ? 'bg-purple-900/40 text-purple-300 border border-purple-500/30' : ''}`}
+                                            className={`p-2 rounded-lg border transition-colors cursor-pointer ${
+                                                isExpanded
+                                                    ? 'bg-zinc-800 text-zinc-100 border-zinc-700'
+                                                    : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-800'
+                                            }`}
                                             title={isExpanded ? 'Recolher detalhes' : 'Expandir detalhes'}
                                         >
-                                            <ChevronDown size={15} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180 text-purple-400' : ''}`} />
+                                            <ChevronDown size={14} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180 text-orange-400' : ''}`} />
                                         </button>
                                     </div>
                                 </div>
 
                                 {/* Conteúdo Expandido (Componentes do Kit + Métricas) */}
                                 {isExpanded && (
-                                    <div className="pt-3 border-t border-zinc-800/80 space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <div className="pt-3 border-t border-zinc-800/80 space-y-3 animate-in fade-in slide-in-from-top-1 duration-150">
                                         {/* Componentes do Kit */}
-                                        <div className="bg-black/50 border border-zinc-850 rounded-xl p-3 space-y-2">
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
-                                                Peças Inclusas no Kit:
+                                        <div className="bg-zinc-950/70 border border-zinc-800/80 rounded-lg p-2.5 space-y-1.5">
+                                            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 block">
+                                                Composição ({bundle.componentes.length} {bundle.componentes.length === 1 ? 'item' : 'itens'})
                                             </span>
-                                            <div className="space-y-1.5">
+                                            <div className="divide-y divide-zinc-800/60">
                                                 {bundle.componentes.map(comp => (
-                                                    <div key={comp.id} className="flex items-center justify-between text-xs py-1 px-2 rounded-lg bg-zinc-900/50 border border-zinc-800/40">
-                                                        <div className="flex items-center gap-2 truncate">
-                                                            <span className="w-5 h-5 rounded bg-purple-950/60 text-purple-400 font-bold text-[10px] flex items-center justify-center shrink-0">
+                                                    <div key={comp.id} className="flex items-center justify-between text-xs py-1.5 first:pt-0.5 last:pb-0.5">
+                                                        <div className="flex items-center gap-2 truncate pr-2">
+                                                            <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 font-mono text-[10px] shrink-0">
                                                                 {comp.quantidade}x
                                                             </span>
-                                                            <span className="font-semibold text-zinc-200 truncate">{comp.nome}</span>
+                                                            <span className="font-medium text-zinc-200 truncate">{comp.nome}</span>
                                                             {comp.disponivel === false && (
-                                                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-red-950/60 text-red-400 border border-red-500/30 shrink-0">
-                                                                    ⚠️ Inativa
+                                                                <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-red-950/50 text-red-400 border border-red-500/30 shrink-0">
+                                                                    Inativa
                                                                 </span>
                                                             )}
                                                         </div>
                                                         <div className="flex items-center gap-3 text-[11px] text-zinc-400 shrink-0 font-mono">
-                                                            <span>🎨 {comp.horas_pintura}h</span>
-                                                            <span>🧪 {(comp.resina_kg || 0) * 1000}g</span>
+                                                            <span className="flex items-center gap-1 text-zinc-500">
+                                                                <Clock size={10} /> {comp.horas_pintura}h
+                                                            </span>
+                                                            <span className="flex items-center gap-1 text-zinc-500">
+                                                                <Layers size={10} /> {(comp.resina_kg || 0) * 1000}g
+                                                            </span>
                                                             {comp.preco_colorido ? (
-                                                                <span className="text-emerald-400 font-bold">R$ {comp.preco_colorido}</span>
+                                                                <span className="text-zinc-300">R$ {comp.preco_colorido}</span>
                                                             ) : null}
                                                         </div>
                                                     </div>
@@ -722,43 +738,38 @@ export default function BundleManagerTab() {
                                         </div>
 
                                         {/* Métricas e Precificação Dinâmica */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                                            <div className="bg-zinc-950/60 border border-zinc-800/60 rounded-xl p-2.5">
-                                                <div className="text-[10px] uppercase font-bold text-zinc-400 flex items-center justify-center gap-1">
-                                                    <Clock size={11} className="text-orange-400" /> Pintura Total
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                            <div className="bg-zinc-950/70 border border-zinc-800/80 rounded-lg p-2.5">
+                                                <div className="text-[10px] font-mono uppercase text-zinc-500 flex items-center gap-1">
+                                                    <Clock size={10} className="text-zinc-400" /> Pintura
                                                 </div>
-                                                <div className="text-sm font-black text-orange-400 mt-1 font-mono">
+                                                <div className="text-xs font-bold text-zinc-200 mt-1 font-mono">
                                                     {bundle.summary.horas_pintura_total} h
                                                 </div>
                                             </div>
-                                            <div className="bg-zinc-950/60 border border-zinc-800/60 rounded-xl p-2.5">
-                                                <div className="text-[10px] uppercase font-bold text-zinc-400 flex items-center justify-center gap-1">
-                                                    <Layers size={11} className="text-blue-400" /> Resina Total
+                                            <div className="bg-zinc-950/70 border border-zinc-800/80 rounded-lg p-2.5">
+                                                <div className="text-[10px] font-mono uppercase text-zinc-500 flex items-center gap-1">
+                                                    <Layers size={10} className="text-zinc-400" /> Resina
                                                 </div>
-                                                <div className="text-sm font-black text-blue-400 mt-1 font-mono">
+                                                <div className="text-xs font-bold text-zinc-200 mt-1 font-mono">
                                                     {(bundle.summary.resina_kg_total * 1000).toFixed(0)} g
                                                 </div>
                                             </div>
-                                            <div className="bg-zinc-950/60 border border-zinc-800/60 rounded-xl p-2.5">
-                                                <div className="text-[10px] uppercase font-bold text-zinc-400 flex items-center justify-center gap-1">
-                                                    <DollarSign size={11} className="text-zinc-400" /> Soma Avulsa
+                                            <div className="bg-zinc-950/70 border border-zinc-800/80 rounded-lg p-2.5">
+                                                <div className="text-[10px] font-mono uppercase text-zinc-500 flex items-center gap-1">
+                                                    <DollarSign size={10} className="text-zinc-400" /> Soma Avulsa
                                                 </div>
-                                                <div className="text-sm font-black text-zinc-400 line-through mt-1 font-mono">
+                                                <div className="text-xs font-bold text-zinc-500 line-through mt-1 font-mono">
                                                     R$ {bundle.summary.preco_cheio_colorido}
                                                 </div>
-                                                <div className="text-[9px] text-zinc-500 font-bold">
-                                                    Pintadas
-                                                </div>
                                             </div>
-                                            <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-2.5">
-                                                <div className="text-[10px] uppercase font-bold text-emerald-400 flex items-center justify-center gap-1">
-                                                    <Percent size={11} /> Kit Pintado
+                                            <div className="bg-zinc-950 border border-emerald-500/30 rounded-lg p-2.5">
+                                                <div className="text-[10px] font-mono uppercase text-emerald-500/80 flex items-center justify-between">
+                                                    <span>Preço Kit</span>
+                                                    <span>-{bundle.summary.desconto_pct}%</span>
                                                 </div>
-                                                <div className="text-base font-black text-emerald-400 mt-0.5 font-mono">
+                                                <div className="text-xs font-bold text-emerald-400 mt-1 font-mono">
                                                     R$ {bundle.summary.preco_bundle_colorido}
-                                                </div>
-                                                <div className="text-[9px] text-emerald-300 font-bold">
-                                                    -{bundle.summary.desconto_pct}% OFF
                                                 </div>
                                             </div>
                                         </div>
@@ -772,92 +783,96 @@ export default function BundleManagerTab() {
 
             {/* Modal de Criação / Edição de Bundle */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-150">
+                    <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
                         {/* Modal Header */}
-                        <div className="p-6 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-900/40">
-                            <div>
-                                <h3 className="text-lg font-black text-white flex items-center gap-2">
-                                    <Sparkles className="text-purple-400" size={20} />
-                                    {editingBundle ? 'Editar Bundle de Figuras' : 'Criar Novo Bundle (Combo)'}
-                                </h3>
-                                <p className="text-xs text-zinc-400 mt-0.5">
-                                    Selecione as figuras componentes. Os tempos e custos serão somados automaticamente.
-                                </p>
+                        <div className="px-5 py-4 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-900/40">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-orange-500">
+                                    <Boxes size={15} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-zinc-100">
+                                        {editingBundle ? 'Editar Bundle de Figuras' : 'Novo Bundle (SKU Composto)'}
+                                    </h3>
+                                    <p className="text-[11px] text-zinc-500">
+                                        Selecione as figuras componentes. Os tempos e custos são somados automaticamente.
+                                    </p>
+                                </div>
                             </div>
                             <button
                                 onClick={() => setIsModalOpen(false)}
-                                className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
                             >
-                                <X size={20} />
+                                <X size={18} />
                             </button>
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+                        <div className="p-5 overflow-y-auto space-y-5 flex-1">
                             {/* Dados Básicos */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-zinc-300">Nome do Bundle *</label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-medium text-zinc-400">Nome do Bundle *</label>
                                     <input
                                         type="text"
                                         placeholder="Ex: Attack on Titan - Titans v1"
                                         value={nome}
                                         onChange={e => setNome(e.target.value)}
-                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-purple-500 transition-colors"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 outline-none focus:border-zinc-600 transition-colors"
                                     />
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-zinc-300">SKU / Código (Opcional)</label>
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-medium text-zinc-400">SKU / Código (Opcional)</label>
                                     <input
                                         type="text"
                                         placeholder="Ex: BND-001"
                                         value={codigo}
                                         onChange={e => setCodigo(e.target.value)}
-                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-purple-500 transition-colors"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 outline-none focus:border-zinc-600 transition-colors font-mono"
                                     />
                                 </div>
                             </div>
 
                             {/* Seleção de Componentes (Adicionar Peças ao Combo) */}
-                            <div className="space-y-3">
-                                <label className="text-xs font-bold text-zinc-300 block">Adicionar Peças ao Combo</label>
+                            <div className="space-y-2.5">
+                                <label className="text-[11px] font-medium text-zinc-400 block">Peças Componentes</label>
                                 <div className="relative">
-                                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={14} />
                                     <input
                                         type="text"
-                                        placeholder="Digite o nome da figura (ex: Attack on Titan, Berserk, etc)..."
+                                        placeholder="Buscar figura por nome ou série para adicionar ao kit..."
                                         value={searchQuery}
                                         onChange={e => setSearchQuery(e.target.value)}
-                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-purple-500 transition-colors"
+                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-4 py-2 text-xs text-zinc-100 placeholder-zinc-500 outline-none focus:border-zinc-600 transition-colors"
                                     />
                                     {isSearching && (
-                                        <Loader2 size={16} className="animate-spin text-purple-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+                                        <Loader2 size={14} className="animate-spin text-orange-500 absolute right-3 top-1/2 -translate-y-1/2" />
                                     )}
 
                                     {/* Resultados da Busca */}
                                     {searchResults.length > 0 && (
-                                        <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-900 border border-zinc-800 rounded-2xl p-2 z-20 shadow-2xl max-h-60 overflow-y-auto space-y-1">
+                                        <div className="absolute top-full left-0 right-0 mt-1.5 bg-zinc-900 border border-zinc-800 rounded-xl p-1.5 z-20 shadow-2xl max-h-60 overflow-y-auto space-y-0.5">
                                             {searchResults.map(fig => (
                                                 <button
                                                     key={fig.id}
                                                     type="button"
                                                     onClick={() => handleAddComponent(fig)}
-                                                    className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-zinc-800/80 transition-colors text-left cursor-pointer group"
+                                                    className="w-full flex items-center justify-between p-1.5 rounded-lg hover:bg-zinc-800 transition-colors text-left cursor-pointer group"
                                                 >
                                                     <div className="flex items-center gap-2.5 truncate">
-                                                        <div className="w-8 h-8 rounded-lg overflow-hidden bg-black shrink-0 relative">
+                                                        <div className="w-7 h-7 rounded overflow-hidden bg-zinc-950 border border-zinc-800 shrink-0 relative">
                                                             {fig.imagem_url ? (
                                                                 <Image src={fig.imagem_url} alt="" fill className="object-cover" />
                                                             ) : (
-                                                                <Package size={14} className="text-zinc-600 m-auto" />
+                                                                <Package size={12} className="text-zinc-600 m-auto" />
                                                             )}
                                                         </div>
-                                                        <span className="text-xs font-bold text-zinc-200 group-hover:text-white truncate">
+                                                        <span className="text-xs font-medium text-zinc-200 group-hover:text-white truncate">
                                                             {fig.nome}
                                                         </span>
                                                     </div>
-                                                    <span className="text-[11px] font-bold text-purple-400 shrink-0">
+                                                    <span className="text-[11px] font-mono text-orange-400 shrink-0 px-2">
                                                         + Adicionar
                                                     </span>
                                                 </button>
@@ -868,54 +883,54 @@ export default function BundleManagerTab() {
 
                                 {/* Lista de Componentes Selecionados */}
                                 {selectedComponents.length === 0 ? (
-                                    <div className="py-6 text-center text-xs text-zinc-500 border border-dashed border-zinc-800 rounded-2xl">
-                                        Nenhuma figura adicionada ao kit ainda. Use a busca acima para adicionar.
+                                    <div className="py-5 text-center text-xs text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
+                                        Nenhuma figura adicionada ao kit. Use a busca acima para compor o bundle.
                                     </div>
                                 ) : (
-                                    <div className="space-y-2">
+                                    <div className="space-y-1.5">
                                         {selectedComponents.map(comp => (
                                             <div
                                                 key={comp.id}
-                                                className="flex items-center justify-between p-3 rounded-xl bg-zinc-900/60 border border-zinc-800 gap-3"
+                                                className="flex items-center justify-between p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800/90 gap-3"
                                             >
-                                                <div className="flex items-center gap-3 truncate">
-                                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-black shrink-0 relative">
+                                                <div className="flex items-center gap-2.5 truncate">
+                                                    <div className="w-9 h-9 rounded overflow-hidden bg-zinc-950 border border-zinc-800 shrink-0 relative">
                                                         {comp.imagem_url && (
                                                             <Image src={comp.imagem_url} alt="" fill className="object-cover" />
                                                         )}
                                                     </div>
                                                     <div className="truncate">
-                                                        <div className="text-xs font-bold text-white truncate">{comp.nome}</div>
-                                                        <div className="text-[10px] text-zinc-400 flex items-center gap-2 mt-0.5 font-mono">
+                                                        <div className="text-xs font-semibold text-zinc-100 truncate">{comp.nome}</div>
+                                                        <div className="text-[10px] text-zinc-500 flex items-center gap-2 mt-0.5 font-mono">
                                                             <span>Pintura: {comp.horas_pintura}h</span>
-                                                            <span>•</span>
+                                                            <span>·</span>
                                                             <span>Resina: {(comp.resina_kg || 0) * 1000}g</span>
                                                             {comp.preco_colorido ? (
                                                                 <>
-                                                                    <span>•</span>
-                                                                    <span className="text-emerald-400 font-bold">Pintada: R$ {comp.preco_colorido}</span>
+                                                                    <span>·</span>
+                                                                    <span className="text-emerald-400">R$ {comp.preco_colorido}</span>
                                                                 </>
                                                             ) : null}
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-3 shrink-0">
-                                                    <div className="flex items-center gap-1.5 bg-black border border-zinc-800 rounded-lg p-1">
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-800 rounded-md p-0.5">
                                                         <button
                                                             type="button"
                                                             onClick={() => handleUpdateQuantity(comp.id, -1)}
-                                                            className="w-5 h-5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white font-bold flex items-center justify-center text-xs cursor-pointer"
+                                                            className="w-5 h-5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white font-mono flex items-center justify-center text-xs cursor-pointer"
                                                         >
                                                             -
                                                         </button>
-                                                        <span className="w-6 text-center text-xs font-bold text-white font-mono">
+                                                        <span className="w-5 text-center text-xs font-semibold text-zinc-200 font-mono">
                                                             {comp.quantidade}
                                                         </span>
                                                         <button
                                                             type="button"
                                                             onClick={() => handleUpdateQuantity(comp.id, 1)}
-                                                            className="w-5 h-5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white font-bold flex items-center justify-center text-xs cursor-pointer"
+                                                            className="w-5 h-5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white font-mono flex items-center justify-center text-xs cursor-pointer"
                                                         >
                                                             +
                                                         </button>
@@ -924,9 +939,9 @@ export default function BundleManagerTab() {
                                                     <button
                                                         type="button"
                                                         onClick={() => handleRemoveComponent(comp.id)}
-                                                        className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                                                        className="p-1.5 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-950/30 transition-colors cursor-pointer"
                                                     >
-                                                        <Trash2 size={15} />
+                                                        <Trash2 size={14} />
                                                     </button>
                                                 </div>
                                             </div>
@@ -935,23 +950,22 @@ export default function BundleManagerTab() {
                                 )}
                             </div>
 
-                            {/* Gerenciamento Visual da Capa do Bundle (Crop / Colagem / Escolha) */}
-                            <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
-                                        <ImageIcon size={15} className="text-purple-400" />
-                                        Imagem de Capa do Bundle
+                            {/* Gerenciamento Visual da Capa do Bundle */}
+                            <div className="bg-zinc-900/40 border border-zinc-800/90 rounded-xl p-3.5 space-y-3">
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                                        <ImageIcon size={13} className="text-zinc-500" />
+                                        Imagem de Capa
                                     </label>
                                     <div className="flex items-center gap-2">
-                                        {/* Botão de Upload Customizado */}
                                         <button
                                             type="button"
                                             onClick={() => fileInputRef.current?.click()}
                                             disabled={isUploadingPhoto}
-                                            className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                                            className="px-2.5 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white text-[11px] font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
                                         >
-                                            <Upload size={13} />
-                                            {isUploadingPhoto ? 'Enviando...' : 'Subir Foto do PC'}
+                                            <Upload size={12} />
+                                            {isUploadingPhoto ? 'Enviando...' : 'Upload Foto'}
                                         </button>
                                         <input
                                             ref={fileInputRef}
@@ -961,58 +975,57 @@ export default function BundleManagerTab() {
                                             className="hidden"
                                         />
 
-                                        {/* Botão de Colagem / Crop Automático */}
                                         {selectedComponents.length >= 2 && (
                                             <button
                                                 type="button"
                                                 onClick={handleGenerateCollage}
                                                 disabled={isGeneratingCollage}
-                                                className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-black flex items-center gap-1.5 transition-colors shadow-md shadow-purple-600/20 cursor-pointer disabled:opacity-50"
+                                                className="px-2.5 py-1 rounded-md bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 text-[11px] font-medium flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
                                             >
-                                                {isGeneratingCollage ? <Loader2 size={13} className="animate-spin" /> : <Columns size={13} />}
-                                                {isGeneratingCollage ? 'Gerando...' : 'Gerar Colagem das Peças'}
+                                                {isGeneratingCollage ? <Loader2 size={12} className="animate-spin" /> : <Columns size={12} className="text-orange-400" />}
+                                                {isGeneratingCollage ? 'Gerando...' : 'Gerar Colagem Automática'}
                                             </button>
                                         )}
                                     </div>
                                 </div>
 
                                 {/* Preview da Capa Selecionada */}
-                                <div className="flex items-center gap-4 bg-black/40 border border-zinc-850 p-3 rounded-xl">
-                                    <div className="w-20 h-20 rounded-xl overflow-hidden bg-black border border-zinc-800 shrink-0 relative">
+                                <div className="flex items-center gap-3 bg-zinc-950/70 border border-zinc-800/80 p-2.5 rounded-lg">
+                                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-zinc-950 border border-zinc-800 shrink-0 relative">
                                         {capaUrl ? (
                                             <Image src={capaUrl} alt="Capa Bundle" fill className="object-cover" />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-zinc-600">
-                                                <ImageIcon size={24} />
+                                            <div className="w-full h-full flex items-center justify-center text-zinc-700">
+                                                <ImageIcon size={20} />
                                             </div>
                                         )}
                                     </div>
-                                    <div className="flex-1 space-y-1">
+                                    <div className="flex-1 space-y-1 min-w-0">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[11px] font-bold text-zinc-400">
-                                                Capa do Bundle {capaUrl ? '' : '(Opcional - pode colocar depois)'}
+                                            <span className="text-[11px] text-zinc-400">
+                                                URL da Capa {capaUrl ? '' : '(Opcional)'}
                                             </span>
                                             {capaUrl && (
                                                 <button
                                                     type="button"
                                                     onClick={() => setCapaUrl('')}
-                                                    className="text-[10px] text-red-400 hover:text-red-300 font-bold cursor-pointer"
+                                                    className="text-[10px] text-zinc-500 hover:text-red-400 font-medium cursor-pointer"
                                                 >
-                                                    ✕ Deixar sem foto
+                                                    Remover capa
                                                 </button>
                                             )}
                                         </div>
                                         <input
                                             type="text"
-                                            placeholder="Deixe vazio para subir sem foto e adicionar depois"
+                                            placeholder="Deixe vazio para definir depois"
                                             value={capaUrl}
                                             onChange={e => setCapaUrl(e.target.value)}
-                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 outline-none focus:border-purple-500 font-mono truncate"
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-2.5 py-1.5 text-xs text-zinc-200 outline-none focus:border-zinc-600 font-mono truncate"
                                         />
                                     </div>
                                 </div>
 
-                                {/* Opções de Imagens Disponíveis das Peças Componentes (Principal, Hover e Extras) */}
+                                {/* Opções de Imagens Disponíveis das Peças Componentes */}
                                 {selectedComponents.length > 0 && (() => {
                                     const allPhotos: { url: string; compName: string; label: string }[] = [];
                                     selectedComponents.forEach(comp => {
@@ -1020,7 +1033,7 @@ export default function BundleManagerTab() {
                                             allPhotos.push({ url: comp.imagem_url, compName: comp.nome, label: 'Principal' });
                                         }
                                         if (comp.imagem_secundaria) {
-                                            allPhotos.push({ url: comp.imagem_secundaria, compName: comp.nome, label: 'Hover/Secundária' });
+                                            allPhotos.push({ url: comp.imagem_secundaria, compName: comp.nome, label: 'Secundária' });
                                         }
                                         if (Array.isArray(comp.fotos_extras)) {
                                             comp.fotos_extras.forEach((extraUrl, idx) => {
@@ -1036,14 +1049,14 @@ export default function BundleManagerTab() {
                                     return (
                                         <div className="space-y-2 pt-2 border-t border-zinc-800/60">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-[11px] font-bold text-zinc-400">
-                                                    Fotos disponíveis das peças inclusas ({allPhotos.length} fotos encontradas):
+                                                <span className="text-[11px] text-zinc-400">
+                                                    Fotos das peças componentes ({allPhotos.length})
                                                 </span>
                                                 <span className="text-[10px] text-zinc-500">
-                                                    Clique em qualquer foto para definir como Capa
+                                                    Clique para usar como capa
                                                 </span>
                                             </div>
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                                            <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-2">
                                                 {allPhotos.map((photo, pIdx) => {
                                                     const isSelected = capaUrl === photo.url;
                                                     return (
@@ -1051,24 +1064,24 @@ export default function BundleManagerTab() {
                                                             key={`${photo.url}-${pIdx}`}
                                                             type="button"
                                                             onClick={() => setCapaUrl(photo.url)}
-                                                            className={`relative rounded-xl overflow-hidden border p-1 text-left transition-all cursor-pointer group ${
+                                                            className={`relative rounded-lg overflow-hidden border p-1 text-left transition-all cursor-pointer group ${
                                                                 isSelected
-                                                                    ? 'border-purple-500 bg-purple-950/30 ring-2 ring-purple-500/50'
-                                                                    : 'border-zinc-800 bg-black/40 hover:border-zinc-700'
+                                                                    ? 'border-orange-500 bg-zinc-900 ring-1 ring-orange-500/40'
+                                                                    : 'border-zinc-800 bg-zinc-950/60 hover:border-zinc-700'
                                                             }`}
                                                         >
-                                                            <div className="aspect-square rounded-lg overflow-hidden relative bg-black">
+                                                            <div className="aspect-square rounded overflow-hidden relative bg-zinc-950">
                                                                 <Image src={photo.url} alt="" fill className="object-cover" />
                                                                 {isSelected && (
-                                                                    <div className="absolute top-1 right-1 bg-purple-600 text-white rounded-full p-0.5 shadow">
-                                                                        <CheckCircle2 size={14} />
+                                                                    <div className="absolute top-1 right-1 bg-orange-500 text-zinc-950 rounded-full p-0.5 shadow">
+                                                                        <CheckCircle2 size={12} />
                                                                     </div>
                                                                 )}
-                                                                <span className="absolute bottom-1 left-1 bg-black/80 backdrop-blur-xs text-[9px] font-bold text-zinc-300 px-1.5 py-0.5 rounded">
+                                                                <span className="absolute bottom-1 left-1 bg-black/80 text-[9px] font-mono text-zinc-300 px-1 py-0.5 rounded">
                                                                     {photo.label}
                                                                 </span>
                                                             </div>
-                                                            <div className="p-1 mt-0.5 truncate text-[10px] font-bold text-zinc-300 group-hover:text-white">
+                                                            <div className="px-0.5 mt-1 truncate text-[10px] text-zinc-400 group-hover:text-zinc-200">
                                                                 {photo.compName}
                                                             </div>
                                                         </button>
@@ -1080,37 +1093,37 @@ export default function BundleManagerTab() {
                                 })()}
                             </div>
 
-                            {/* Inteligência de Precificação & Desconto */}
-                            <div className="bg-purple-950/20 border border-purple-500/20 rounded-2xl p-4 space-y-4">
-                                <div className="flex items-center gap-2 text-purple-400 text-xs font-black uppercase tracking-wider">
-                                    <Sparkles size={16} /> Inteligência de Custos e Desconto do Kit
+                            {/* Precificação & Desconto */}
+                            <div className="bg-zinc-900/40 border border-zinc-800/90 rounded-xl p-3.5 space-y-3.5">
+                                <div className="flex items-center gap-1.5 text-zinc-400 text-[11px] font-mono uppercase tracking-wider">
+                                    <Percent size={13} className="text-orange-500" /> Cálculo de Custos e Precificação do Kit
                                 </div>
 
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                                    <div className="bg-black/40 rounded-xl p-2.5 border border-purple-900/40">
-                                        <div className="text-[10px] text-zinc-400 uppercase font-bold">Pintura Somada</div>
-                                        <div className="text-sm font-black text-white mt-1 font-mono">{totalHorasPintura.toFixed(2)} h</div>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                                    <div className="bg-zinc-950/80 rounded-lg p-2.5 border border-zinc-800/80">
+                                        <div className="text-[10px] text-zinc-500 uppercase font-mono">Pintura Somada</div>
+                                        <div className="text-xs font-bold text-zinc-200 mt-1 font-mono">{totalHorasPintura.toFixed(2)} h</div>
                                     </div>
-                                    <div className="bg-black/40 rounded-xl p-2.5 border border-purple-900/40">
-                                        <div className="text-[10px] text-zinc-400 uppercase font-bold">Resina Somada</div>
-                                        <div className="text-sm font-black text-white mt-1 font-mono">{(totalResina * 1000).toFixed(0)} g</div>
+                                    <div className="bg-zinc-950/80 rounded-lg p-2.5 border border-zinc-800/80">
+                                        <div className="text-[10px] text-zinc-500 uppercase font-mono">Resina Somada</div>
+                                        <div className="text-xs font-bold text-zinc-200 mt-1 font-mono">{(totalResina * 1000).toFixed(0)} g</div>
                                     </div>
-                                    <div className="bg-black/40 rounded-xl p-2.5 border border-purple-900/40">
-                                        <div className="text-[10px] text-zinc-400 uppercase font-bold">Soma Avulsa (Pintadas)</div>
-                                        <div className="text-sm font-black text-zinc-400 line-through mt-1 font-mono">R$ {precoCheioSoma}</div>
+                                    <div className="bg-zinc-950/80 rounded-lg p-2.5 border border-zinc-800/80">
+                                        <div className="text-[10px] text-zinc-500 uppercase font-mono">Soma Avulsa</div>
+                                        <div className="text-xs font-bold text-zinc-500 line-through mt-1 font-mono">R$ {precoCheioSoma}</div>
                                     </div>
-                                    <div className="bg-purple-900/40 rounded-xl p-2.5 border border-purple-500/40">
-                                        <div className="text-[10px] text-purple-300 uppercase font-bold">Kit Pintado</div>
-                                        <div className="text-base font-black text-purple-300 mt-0.5 font-mono">R$ {precoBundleCalculado}</div>
+                                    <div className="bg-zinc-950 rounded-lg p-2.5 border border-emerald-500/30">
+                                        <div className="text-[10px] text-emerald-500/80 uppercase font-mono">Valor Final Kit</div>
+                                        <div className="text-sm font-bold text-emerald-400 mt-0.5 font-mono">R$ {precoBundleCalculado}</div>
                                     </div>
                                 </div>
 
                                 {/* Controles de Desconto */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                                     <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-zinc-300 flex items-center justify-between">
+                                        <label className="text-xs font-medium text-zinc-300 flex items-center justify-between">
                                             <span>Desconto do Combo (%)</span>
-                                            <span className="text-purple-400 font-mono font-bold">{safeDesconto}% OFF</span>
+                                            <span className="text-orange-400 font-mono font-bold">{safeDesconto}% OFF</span>
                                         </label>
                                         <input
                                             type="range"
@@ -1119,43 +1132,43 @@ export default function BundleManagerTab() {
                                             step="5"
                                             value={descontoPct}
                                             onChange={e => setDescontoPct(Number(e.target.value))}
-                                            className="w-full accent-purple-500 cursor-pointer"
+                                            className="w-full accent-orange-500 cursor-pointer"
                                         />
                                         <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
                                             <span>0%</span>
-                                            <span>15% (Sugerido)</span>
+                                            <span>15%</span>
                                             <span>30%</span>
                                             <span>50%</span>
                                         </div>
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-zinc-300">Ou Preço Fixo Promocional (R$)</label>
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-medium text-zinc-400">Ou Preço Fixo Promocional (R$)</label>
                                         <input
                                             type="number"
                                             placeholder="Sobrescrever com valor fixo..."
                                             value={precoFixo}
                                             onChange={e => setPrecoFixo(e.target.value)}
-                                            className="w-full bg-black/60 border border-zinc-800 rounded-xl px-3.5 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-purple-500 font-mono"
+                                            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-100 placeholder-zinc-500 outline-none focus:border-zinc-600 font-mono"
                                         />
                                     </div>
                                 </div>
 
                                 {economiaCalculada > 0 && (
-                                    <div className="text-xs text-emerald-400 font-bold flex items-center gap-1.5 bg-emerald-950/30 border border-emerald-500/20 rounded-xl p-2.5">
-                                        <Check size={14} />
-                                        O cliente economiza R$ {economiaCalculada.toFixed(2)} ao comprar este bundle!
+                                    <div className="text-xs text-emerald-400 font-mono flex items-center gap-1.5 bg-emerald-950/20 border border-emerald-500/20 rounded-lg px-3 py-2">
+                                        <Check size={13} />
+                                        Economia direta para o cliente: R$ {economiaCalculada.toFixed(2)}
                                     </div>
                                 )}
                             </div>
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-6 border-t border-zinc-800 bg-zinc-900/40 flex items-center justify-end gap-3">
+                        <div className="px-5 py-3.5 border-t border-zinc-800 bg-zinc-900/40 flex items-center justify-end gap-2.5">
                             <button
                                 type="button"
                                 onClick={() => setIsModalOpen(false)}
-                                className="px-5 py-2.5 text-xs font-bold text-zinc-400 hover:text-white rounded-xl transition-colors cursor-pointer"
+                                className="px-4 py-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-100 rounded-lg transition-colors cursor-pointer"
                             >
                                 Cancelar
                             </button>
@@ -1163,10 +1176,10 @@ export default function BundleManagerTab() {
                                 type="button"
                                 onClick={handleSaveBundle}
                                 disabled={isSaving}
-                                className="px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-purple-600/20 active:scale-95 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                                className="px-4 py-1.5 bg-orange-500 hover:bg-orange-400 text-zinc-950 font-bold text-xs rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                             >
-                                {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                                {isSaving ? 'Salvando Bundle...' : 'Salvar Bundle'}
+                                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} strokeWidth={2.5} />}
+                                {isSaving ? 'Salvando...' : 'Salvar Bundle'}
                             </button>
                         </div>
                     </div>
