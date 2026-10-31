@@ -184,6 +184,7 @@ export async function GET(req: NextRequest) {
                 logo_url,
                 instagram_handle,
                 social_url,
+                ativo,
                 merchant
             ),
             ${metaJoin}(
@@ -346,7 +347,7 @@ export async function GET(req: NextRequest) {
                 is_campanha_active: meta?.is_campanha_active || false,
                 desconto_campanha: meta?.desconto_campanha || 0,
                 preco_fixo_campanha: meta?.preco_fixo_campanha || 0,
-                is_merchant: studioData?.merchant ?? false,
+                is_merchant: Boolean(studioData?.merchant && studioData?.ativo !== false),
                 is_bundle: item.is_bundle || false,
                 desconto_bundle_pct: item.desconto_bundle_pct || null,
                 preco_fixo_bundle: item.preco_fixo_bundle || null,

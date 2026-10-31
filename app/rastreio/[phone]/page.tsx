@@ -8,7 +8,7 @@ import {
     ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw, 
     ShoppingBag, Copy, QrCode, Check, Camera, X, Eye, FileText, CheckCircle2, 
     AlertCircle, Edit3, MapPin, ShieldCheck, Heart, Coffee, Sparkles, Paintbrush,
-    ChevronDown, ChevronUp, Trash2, Share2, ArrowRight, Clock
+    ChevronDown, ChevronUp, Trash2, Share2, ArrowRight, Clock, MessageCircle
 } from 'lucide-react';
 import { OrderTracker } from '@/components/OrderTracker';
 import Image from 'next/image';
@@ -1448,29 +1448,41 @@ export default function CustomerDashboard() {
                                                 </div>
 
                                                 <div className="flex items-center gap-2 pt-2 border-t border-zinc-800/60">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            addToCart(
-                                                                {
-                                                                    id: item.id,
-                                                                    nome: item.nome,
-                                                                    imagem_url: item.imagem_url,
-                                                                    codigo: item.codigo,
-                                                                    precos: item.precos,
-                                                                    serie: item.serie,
-                                                                    studio: item.studio,
-                                                                    slug: item.slug
-                                                                } as any,
-                                                                'colorido'
-                                                            );
-                                                            setIsCartOpen(true);
-                                                        }}
-                                                        className="flex-1 bg-orange-500 hover:bg-orange-400 text-black text-[10px] font-black uppercase tracking-wider py-2.5 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
-                                                    >
-                                                        <ShoppingBag size={13} />
-                                                        Mover p/ Carrinho
-                                                    </button>
+                                                    {item.is_merchant !== false ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                addToCart(
+                                                                    {
+                                                                        id: item.id,
+                                                                        nome: item.nome,
+                                                                        imagem_url: item.imagem_url,
+                                                                        codigo: item.codigo,
+                                                                        precos: item.precos,
+                                                                        serie: item.serie,
+                                                                        studio: item.studio,
+                                                                        slug: item.slug
+                                                                    } as any,
+                                                                    'colorido'
+                                                                );
+                                                                setIsCartOpen(true);
+                                                            }}
+                                                            className="flex-1 bg-orange-500 hover:bg-orange-400 text-black text-[10px] font-black uppercase tracking-wider py-2.5 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                                                        >
+                                                            <ShoppingBag size={13} />
+                                                            Mover p/ Carrinho
+                                                        </button>
+                                                    ) : (
+                                                        <a
+                                                            href={`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ''}&text=${encodeURIComponent(`Olá! Tenho interesse na figura ${item.nome} que está salva na minha lista. Poderia me passar mais informações?`)}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider py-2.5 rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                                                        >
+                                                            <MessageCircle size={13} />
+                                                            Falar Ateliê
+                                                        </a>
+                                                    )}
                                                     <Link
                                                         href={`/figura/${item.slug || item.id}?ref=wishlist`}
                                                         className="px-3 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider border border-zinc-700 transition-colors"

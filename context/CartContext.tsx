@@ -51,6 +51,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, [items, isInitialized]);
 
     const addToCart = (figure: FiguraDTO, finish: 'estilizado' | 'colorido' | 'premium' = 'colorido') => {
+        if (figure.is_merchant === false) {
+            toast.error('Este item está disponível apenas sob consulta com o ateliê.');
+            return;
+        }
         if (items.some(i => i.id === figure.id)) {
             toast.error('Figura já está no carrinho!');
             setIsCartOpen(true);

@@ -27,7 +27,7 @@ const getFigureWithPricing = cache(async (identifier: string) => {
                 categorias ( nome )
             ),
             figuras_meta ( * ),
-            studios ( nome, merchant )
+            studios ( nome, merchant, ativo )
         `);
 
     if (isNumeric) {
@@ -179,7 +179,7 @@ export default async function FiguraPage({ params }: Props) {
         estoque_pronta_entrega: Number(figure.estoque_pronta_entrega) || 0,
         imagem_secundaria: figure.imagem_secundaria || null,
         fotos_extras: Array.isArray(figure.fotos_extras) ? figure.fotos_extras : [],
-        is_merchant: studioData?.merchant ?? false
+        is_merchant: Boolean(studioData?.merchant && studioData?.ativo !== false)
     };
 
     const jsonLdPrice = prices?.pix_colorido || prices?.pix_estilizado || prices?.colorido || 0;

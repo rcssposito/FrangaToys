@@ -19,6 +19,7 @@ export interface WishlistItem {
     studio?: string | null;
     slug?: string | null;
     is_campanha?: boolean;
+    is_merchant?: boolean;
 }
 
 interface WishlistContextType {

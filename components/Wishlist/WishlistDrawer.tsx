@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { X, Trash2, Heart, ShoppingBag, ArrowRight, Share2, Sparkles, AlertCircle, Cloud, CheckCircle2 } from 'lucide-react';
+import { X, Trash2, Heart, ShoppingBag, ArrowRight, Share2, Sparkles, AlertCircle, Cloud, CheckCircle2, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import imageKitLoader from '@/lib/image-loader';
@@ -85,6 +85,10 @@ export function WishlistDrawer() {
     }, 0);
 
     const handleMoveToCart = (item: WishlistItem) => {
+        if (item.is_merchant === false) {
+            toast.error('Este item está disponível apenas sob consulta com o ateliê.');
+            return;
+        }
         addToCart(item as any, 'colorido');
         removeFromWishlist(item.id);
         setIsWishlistOpen(false);
@@ -96,7 +100,7 @@ export function WishlistDrawer() {
         let addedCount = 0;
 
         activeList.forEach(item => {
-            if (!isInCart(item.id)) {
+            if (!isInCart(item.id) && item.is_merchant !== false) {
                 addToCart(item as any, 'colorido');
                 addedCount++;
             }
@@ -469,18 +473,30 @@ export function WishlistDrawer() {
                                                                     <span className="text-[9px] text-zinc-500 font-medium">no PIX</span>
                                                                 </div>
 
-                                                                <button
-                                                                    onClick={() => handleMoveToCart(item)}
-                                                                    disabled={inCart}
-                                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${
-                                                                        inCart
-                                                                            ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                                                                            : 'bg-orange-500 hover:bg-orange-600 text-black shadow-md shadow-orange-500/10 active:scale-95 cursor-pointer'
-                                                                    }`}
-                                                                >
-                                                                    <ShoppingBag size={11} />
-                                                                    {inCart ? 'No Carrinho' : 'Comprar'}
-                                                                </button>
+                                                                {item.is_merchant !== false ? (
+                                                                    <button
+                                                                        onClick={() => handleMoveToCart(item)}
+                                                                        disabled={inCart}
+                                                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${
+                                                                            inCart
+                                                                                ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                                                                                : 'bg-orange-500 hover:bg-orange-600 text-black shadow-md shadow-orange-500/10 active:scale-95 cursor-pointer'
+                                                                        }`}
+                                                                    >
+                                                                        <ShoppingBag size={11} />
+                                                                        {inCart ? 'No Carrinho' : 'Comprar'}
+                                                                    </button>
+                                                                ) : (
+                                                                    <a
+                                                                        href={`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ''}&text=${encodeURIComponent(`Olá! Tenho interesse na figura ${item.nome} que está na minha lista de desejos. Poderia me passar mais informações?`)}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/10 active:scale-95 cursor-pointer"
+                                                                    >
+                                                                        <MessageCircle size={11} />
+                                                                        Falar Ateliê
+                                                                    </a>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>

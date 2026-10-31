@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { FiguraDTO } from '@/lib/dto';
-import { X, ChevronLeft, ChevronRight, Share, ExternalLink } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Share, ExternalLink, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
 import { getOptimizedImageUrl } from '@/lib/image-utils';
 import imageKitLoader from '@/lib/image-loader';
@@ -129,48 +129,62 @@ export const MobileModal = ({ figure, isOpen, onClose, onNext, onPrev, currentIn
                     )}
                 </div>
 
-                {!isInCart(figure.id) && (
-                    <div className="flex gap-3 mb-5">
-                        <div className="flex items-center bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl shadow-sm overflow-hidden flex-1 h-12">
-                            <button
-                                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                className="w-12 h-full flex items-center justify-center text-[var(--text-muted)] hover:text-orange-500 hover:bg-orange-500/10 transition-colors active:bg-orange-500/20 font-black text-lg"
-                            >
-                                -
-                            </button>
-                            <span className="flex-1 flex items-center justify-center text-sm font-black text-[var(--foreground)] border-x border-[var(--card-border)] shadow-inner">
-                                {quantity}
-                            </span>
-                            <button
-                                onClick={() => setQuantity(quantity + 1)}
-                                className="w-12 h-full flex items-center justify-center text-[var(--text-muted)] hover:text-orange-500 hover:bg-orange-500/10 transition-colors active:bg-orange-500/20 font-black text-lg"
-                            >
-                                +
-                            </button>
-                        </div>
-                        <select
-                            value={finish}
-                            onChange={(e) => setFinish(e.target.value as 'basic' | 'premium')}
-                            className="flex-[1.5] text-sm font-bold bg-[var(--input-bg)] border border-[var(--card-border)] text-[var(--foreground)] rounded-xl px-3 outline-none focus:border-orange-500/50 shadow-sm cursor-pointer hover:border-orange-500/30 transition-colors h-12"
-                        >
-                            <option value="basic">Acabamento Básico</option>
-                            <option value="premium">Acabamento Premium</option>
-                        </select>
-                    </div>
-                )}
+                {figure.is_merchant ? (
+                    <>
+                        {!isInCart(figure.id) && (
+                            <div className="flex gap-3 mb-5">
+                                <div className="flex items-center bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl shadow-sm overflow-hidden flex-1 h-12">
+                                    <button
+                                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                        className="w-12 h-full flex items-center justify-center text-[var(--text-muted)] hover:text-orange-500 hover:bg-orange-500/10 transition-colors active:bg-orange-500/20 font-black text-lg"
+                                    >
+                                        -
+                                    </button>
+                                    <span className="flex-1 flex items-center justify-center text-sm font-black text-[var(--foreground)] border-x border-[var(--card-border)] shadow-inner">
+                                        {quantity}
+                                    </span>
+                                    <button
+                                        onClick={() => setQuantity(quantity + 1)}
+                                        className="w-12 h-full flex items-center justify-center text-[var(--text-muted)] hover:text-orange-500 hover:bg-orange-500/10 transition-colors active:bg-orange-500/20 font-black text-lg"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                                <select
+                                    value={finish}
+                                    onChange={(e) => setFinish(e.target.value as 'basic' | 'premium')}
+                                    className="flex-[1.5] text-sm font-bold bg-[var(--input-bg)] border border-[var(--card-border)] text-[var(--foreground)] rounded-xl px-3 outline-none focus:border-orange-500/50 shadow-sm cursor-pointer hover:border-orange-500/30 transition-colors h-12"
+                                >
+                                    <option value="basic">Acabamento Básico</option>
+                                    <option value="premium">Acabamento Premium</option>
+                                </select>
+                            </div>
+                        )}
 
-                <button
-                    className={clsx(
-                        "w-full text-white font-black uppercase tracking-wider text-sm py-4 rounded-xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg",
-                        isInCart(figure.id)
-                            ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
-                            : "bg-orange-500 hover:bg-orange-600 shadow-orange-500/20"
-                    )}
-                    onClick={() => isInCart(figure.id) ? setIsCartOpen(true) : handleAddToCart()}
-                >
-                    <ExternalLink size={20} strokeWidth={2.5} />
-                    {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar ao Carrinho"}
-                </button>
+                        <button
+                            className={clsx(
+                                "w-full text-white font-black uppercase tracking-wider text-sm py-4 rounded-xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg",
+                                isInCart(figure.id)
+                                    ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
+                                    : "bg-orange-500 hover:bg-orange-600 shadow-orange-500/20"
+                            )}
+                            onClick={() => isInCart(figure.id) ? setIsCartOpen(true) : handleAddToCart()}
+                        >
+                            <ExternalLink size={20} strokeWidth={2.5} />
+                            {isInCart(figure.id) ? "Adicionado ✓" : "Adicionar ao Carrinho"}
+                        </button>
+                    </>
+                ) : (
+                    <a
+                        href={`https://api.whatsapp.com/send?phone=${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ''}&text=${encodeURIComponent(`Olá! Tenho interesse na figura ${figure.nome}. Poderia me passar mais informações?`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-wider text-sm py-4 rounded-xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-emerald-600/20"
+                    >
+                        <MessageCircle size={20} />
+                        <span>Falar com o Ateliê</span>
+                    </a>
+                )}
             </div>
         </div>
     );

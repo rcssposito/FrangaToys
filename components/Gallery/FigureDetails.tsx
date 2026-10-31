@@ -570,7 +570,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2.5 mt-4 relative w-full">
-                        {(figure.is_merchant || isCampanha) ? (
+                        {figure.is_merchant ? (
                             <button
                                 className={clsx(
                                     "flex-1 flex items-center justify-center gap-2 px-4 sm:px-8 py-4 sm:py-5 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] transition-all duration-300 shadow-xl active:scale-[0.98] relative z-10",
@@ -718,7 +718,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {(figure.is_merchant || isCampanha) ? (
+                    {figure.is_merchant ? (
                         <button
                             type="button"
                             onClick={() => isInCart(figure.id) ? setIsCartOpen(true) : addToCart(figure, selectedFinish)}
