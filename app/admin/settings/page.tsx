@@ -29,7 +29,8 @@ import {
     Sliders,
     TrendingUp,
     Layers,
-    RotateCcw
+    RotateCcw,
+    Globe
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -49,18 +50,34 @@ interface MismatchItem {
     fileVersion?: string | null;
 }
 
+interface SlugMismatchItem {
+    id: number;
+    figureName: string;
+    categoria: string;
+    serie: string;
+    currentSlug: string;
+    proposedSlug: string;
+    isVersionMismatch: boolean;
+    nameVersion?: string | null;
+    slugVersion?: string | null;
+    isLegacyFormat: boolean;
+    isNameMismatch: boolean;
+}
+
 function SettingsContent() {
     const searchParams = useSearchParams();
     const initialTab = searchParams.get('tab') === 'usuarios' 
         ? 'usuarios' 
         : searchParams.get('tab') === 'sync' 
         ? 'sync' 
+        : searchParams.get('tab') === 'slugs'
+        ? 'slugs'
         : searchParams.get('tab') === 'marketing'
         ? 'marketing'
         : 'custos';
-    const [activeTab, setActiveTab] = useState<'custos' | 'marketing' | 'usuarios' | 'sync'>(initialTab);
+    const [activeTab, setActiveTab] = useState<'custos' | 'marketing' | 'usuarios' | 'sync' | 'slugs'>(initialTab);
 
-    const changeTab = (tab: 'custos' | 'marketing' | 'usuarios' | 'sync') => {
+    const changeTab = (tab: 'custos' | 'marketing' | 'usuarios' | 'sync' | 'slugs') => {
         setActiveTab(tab);
         const params = new URLSearchParams(window.location.search);
         params.set('tab', tab);
@@ -99,6 +116,20 @@ function SettingsContent() {
     const [selectedMismatchIndexes, setSelectedMismatchIndexes] = useState<number[]>([]);
     const [syncProgress, setSyncProgress] = useState<{ current: number; total: number } | null>(null);
     const [syncResults, setSyncResults] = useState<any[] | null>(null);
+
+    // Estados da ferramenta de Sincronização de Slugs (SEO)
+    const [selectedSlugCategory, setSelectedSlugCategory] = useState<string>('ALL');
+    const [isScanningSlugs, setIsScanningSlugs] = useState(false);
+    const [isSyncingSlugs, setIsSyncingSlugs] = useState(false);
+    const [slugScanResult, setSlugScanResult] = useState<{
+        category: string;
+        totalRowsScanned: number;
+        totalMismatches: number;
+        mismatches: SlugMismatchItem[];
+    } | null>(null);
+    const [selectedSlugMismatchIndexes, setSelectedSlugMismatchIndexes] = useState<number[]>([]);
+    const [slugSyncProgress, setSlugSyncProgress] = useState<{ current: number; total: number } | null>(null);
+    const [slugSyncResults, setSlugSyncResults] = useState<any[] | null>(null);
 
     useEffect(() => {
         fetchSettings();
@@ -282,6 +313,83 @@ function SettingsContent() {
         }
     };
 
+    // Handlers de Sincronização de Slugs (SEO)
+    const handleScanSlugs = async () => {
+        setIsScanningSlugs(true);
+        setSlugSyncResults(null);
+        try {
+            const res = await fetch(`/api/admin/tools/sync-slugs?category=${selectedSlugCategory}`);
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Erro ao analisar slugs');
+            }
+            const data = await res.json();
+            setSlugScanResult(data);
+            setSelectedSlugMismatchIndexes(data.mismatches.map((_: any, idx: number) => idx));
+            if (data.totalMismatches === 0) {
+                toast.success('Todos os slugs estão perfeitamente sincronizados com o catálogo!');
+            } else {
+                toast.info(`${data.totalMismatches} inconsistência(s) de slug encontrada(s).`);
+            }
+        } catch (err: any) {
+            toast.error(err.message);
+        } finally {
+            setIsScanningSlugs(false);
+        }
+    };
+
+    const handleToggleSlugSelect = (idx: number) => {
+        setSelectedSlugMismatchIndexes(prev => 
+            prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+        );
+    };
+
+    const handleSelectAllSlugs = () => {
+        if (!slugScanResult) return;
+        if (selectedSlugMismatchIndexes.length === slugScanResult.mismatches.length) {
+            setSelectedSlugMismatchIndexes([]);
+        } else {
+            setSelectedSlugMismatchIndexes(slugScanResult.mismatches.map((_, idx) => idx));
+        }
+    };
+
+    const handleSyncSlugs = async () => {
+        if (!slugScanResult || selectedSlugMismatchIndexes.length === 0) return;
+        const itemsToSync = selectedSlugMismatchIndexes.map(idx => ({
+            id: slugScanResult.mismatches[idx].id,
+            figureName: slugScanResult.mismatches[idx].figureName,
+            proposedSlug: slugScanResult.mismatches[idx].proposedSlug
+        }));
+
+        if (!confirm(`Deseja atualizar os slugs de ${itemsToSync.length} figura(s) no banco de dados? Os sinônimos e links de catálogo serão preservados e atualizados.`)) return;
+
+        setIsSyncingSlugs(true);
+        setSlugSyncProgress({ current: 0, total: itemsToSync.length });
+        try {
+            const res = await fetch('/api/admin/tools/sync-slugs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: itemsToSync })
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Erro ao sincronizar slugs');
+            }
+
+            const data = await res.json();
+            setSlugSyncResults(data.results);
+            toast.success(data.message || 'Slugs sincronizados com sucesso!');
+            // Re-escaneia para atualizar a lista
+            handleScanSlugs();
+        } catch (err: any) {
+            toast.error(err.message);
+        } finally {
+            setIsSyncingSlugs(false);
+            setSlugSyncProgress(null);
+        }
+    };
+
     if (loading) return (
         <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
             <Loader2 className="animate-spin text-orange-500 w-10 h-10" />
@@ -364,6 +472,19 @@ function SettingsContent() {
                     >
                         <RefreshCw size={14} />
                         Sincronização
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => changeTab('slugs')}
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+                            activeTab === 'slugs'
+                                ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                                : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
+                    >
+                        <Globe size={14} />
+                        Slugs & SEO
                     </button>
                 </div>
             </div>
@@ -1112,6 +1233,200 @@ function SettingsContent() {
                                                 <>
                                                     <RefreshCw size={16} />
                                                     Renomear e Sincronizar ({selectedMismatchIndexes.length} Selecionados)
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ABA 5: AUDITORIA E SINCRONIZAÇÃO DE SLUGS & SEO */}
+            {activeTab === 'slugs' && (
+                <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-zinc-800/80">
+                        <div>
+                            <div className="flex items-center gap-2.5">
+                                <h2 className="text-lg font-black text-white tracking-tight flex items-center gap-2.5">
+                                    <Globe className="text-orange-400" size={20} />
+                                    Auditoria & Sincronização de Slugs (SEO)
+                                </h2>
+                                <span className="text-[10px] font-mono font-bold bg-zinc-800 border border-zinc-700/60 text-zinc-300 px-2 py-0.5 rounded-md">
+                                    Banco de Dados & Rotas
+                                </span>
+                            </div>
+                            <p className="text-xs text-zinc-400 mt-1">
+                                Identifique e corrija URLs com versões desatualizadas (v1 ≠ v2), hífens triplos legados (---) ou nomes modificados, garantindo links canônicos perfeitos para SEO.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Filtro de Categorias */}
+                    <div className="flex flex-wrap gap-2">
+                        {['ALL', 'Games', 'Marvel', 'DC', 'Random', 'Anime'].map(cat => (
+                            <button
+                                key={cat}
+                                type="button"
+                                onClick={() => { setSelectedSlugCategory(cat); setSlugScanResult(null); setSlugSyncResults(null); }}
+                                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                    selectedSlugCategory === cat
+                                        ? 'bg-orange-500 text-white font-black shadow-sm'
+                                        : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
+                                }`}
+                            >
+                                {cat === 'ALL' ? 'Todas as Categorias' : cat}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Botão de Análise */}
+                    <div>
+                        <button
+                            type="button"
+                            disabled={isScanningSlugs || isSyncingSlugs}
+                            onClick={handleScanSlugs}
+                            className="w-full bg-zinc-950/80 border border-zinc-800 hover:border-orange-500/50 hover:bg-zinc-900 text-white font-black py-4 rounded-xl flex items-center justify-center gap-2.5 transition-all active:scale-[0.99] disabled:opacity-50 text-xs uppercase tracking-wider cursor-pointer"
+                        >
+                            {isScanningSlugs ? (
+                                <>
+                                    <Loader2 size={16} className="animate-spin text-orange-400" />
+                                    Analisando Banco de Dados & Verificando Slugs...
+                                </>
+                            ) : (
+                                <>
+                                    <Search size={16} className="text-orange-400" />
+                                    Analisar Inconsistências de Slugs {selectedSlugCategory !== 'ALL' ? `(${selectedSlugCategory})` : ''}
+                                </>
+                            )}
+                        </button>
+                    </div>
+
+                    {/* Resultados do Scan */}
+                    {slugScanResult && (
+                        <div className="space-y-4 pt-4 border-t border-zinc-800/80 animate-in fade-in duration-300">
+                            {slugScanResult.totalMismatches === 0 ? (
+                                <div className="p-6 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center gap-4 text-emerald-400">
+                                    <CheckCircle2 size={24} className="shrink-0" />
+                                    <div>
+                                        <div className="font-black text-sm">Todos os Slugs Estão 100% Sincronizados!</div>
+                                        <div className="text-xs text-emerald-400/80 mt-0.5">
+                                            Nenhuma divergência encontrada nas {slugScanResult.totalRowsScanned} figuras verificadas na categoria {selectedSlugCategory === 'ALL' ? 'todas' : selectedSlugCategory}.
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-400">
+                                        <div className="flex items-center gap-3">
+                                            <AlertTriangle size={20} className="shrink-0" />
+                                            <div className="text-xs font-bold">
+                                                <strong>{slugScanResult.totalMismatches}</strong> divergência(s) de slug encontrada(s) no catálogo.
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={handleSelectAllSlugs}
+                                                className="text-[10px] font-black uppercase bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-lg text-zinc-300 hover:text-white cursor-pointer"
+                                            >
+                                                {selectedSlugMismatchIndexes.length === slugScanResult.mismatches.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Tabela de Divergências de Slugs */}
+                                    <div className="max-h-96 overflow-y-auto rounded-2xl border border-zinc-800 divide-y divide-zinc-900 bg-zinc-950/60 text-xs">
+                                        {slugScanResult.mismatches.map((m, idx) => {
+                                            const isSelected = selectedSlugMismatchIndexes.includes(idx);
+                                            const syncResult = slugSyncResults?.find(r => r.id === m.id);
+
+                                            return (
+                                                <div
+                                                    key={m.id}
+                                                    onClick={() => handleToggleSlugSelect(idx)}
+                                                    className={`p-4 flex items-center justify-between gap-4 cursor-pointer transition-colors ${
+                                                        isSelected ? 'bg-orange-500/5' : 'hover:bg-zinc-900/50'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={() => {}}
+                                                            className="w-4 h-4 rounded accent-orange-500 pointer-events-none"
+                                                        />
+                                                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase bg-zinc-900 border border-zinc-800 text-zinc-400 shrink-0">
+                                                            #{m.id}
+                                                        </span>
+                                                        <div className="min-w-0">
+                                                            <div className="font-bold text-zinc-200 truncate flex items-center gap-2">
+                                                                {m.figureName}
+                                                                {m.isVersionMismatch && (
+                                                                    <span className="bg-red-500/10 border border-red-500/30 text-red-400 px-1.5 py-0.5 text-[9px] rounded font-black uppercase">
+                                                                        Versão {m.nameVersion} ≠ {m.slugVersion}
+                                                                    </span>
+                                                                )}
+                                                                {m.isLegacyFormat && (
+                                                                    <span className="bg-purple-500/10 border border-purple-500/30 text-purple-400 px-1.5 py-0.5 text-[9px] rounded font-black uppercase">
+                                                                        Hífens Legados (---)
+                                                                    </span>
+                                                                )}
+                                                                {m.isNameMismatch && !m.isVersionMismatch && (
+                                                                    <span className="bg-amber-500/10 border border-amber-500/30 text-amber-400 px-1.5 py-0.5 text-[9px] rounded font-black uppercase">
+                                                                        Nome Divergente
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-[10px] text-zinc-500 flex items-center gap-1.5 font-mono truncate mt-0.5">
+                                                                <span className="line-through text-zinc-600">{m.currentSlug}</span>
+                                                                <ArrowRight size={10} className="text-zinc-600 shrink-0" />
+                                                                <span className="text-emerald-400 font-bold">{m.proposedSlug}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="shrink-0 text-right">
+                                                        {syncResult ? (
+                                                            syncResult.success ? (
+                                                                <span className="text-emerald-400 font-bold text-[11px] flex items-center gap-1">
+                                                                    <Check size={14} /> Atualizado
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-red-400 font-bold text-[10px]" title={syncResult.error}>
+                                                                    Erro
+                                                                </span>
+                                                            )
+                                                        ) : (
+                                                            <span className="text-[10px] text-zinc-500 font-bold uppercase">
+                                                                Pronto p/ Atualizar
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Botão de Execução da Sincronização */}
+                                    <div className="pt-2">
+                                        <button
+                                            type="button"
+                                            disabled={isSyncingSlugs || selectedSlugMismatchIndexes.length === 0}
+                                            onClick={handleSyncSlugs}
+                                            className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-black py-4 rounded-xl flex items-center justify-center gap-2.5 transition-all active:scale-[0.99] text-xs uppercase tracking-widest shadow-lg shadow-orange-500/10 cursor-pointer"
+                                        >
+                                            {isSyncingSlugs ? (
+                                                <>
+                                                    <Loader2 size={16} className="animate-spin" />
+                                                    Atualizando Slugs no Banco... ({slugSyncProgress?.current || 0}/{slugSyncProgress?.total || selectedSlugMismatchIndexes.length})
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <RefreshCw size={16} />
+                                                    Sincronizar Slugs ({selectedSlugMismatchIndexes.length} Selecionados)
                                                 </>
                                             )}
                                         </button>

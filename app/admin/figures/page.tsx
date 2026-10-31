@@ -1253,10 +1253,11 @@ function DataGridContent() {
             return isNaN(num) ? null : num;
         };
 
-        // Strip campaign-related fields, sales metrics and related object to prevent payload pollution
+        // Strip campaign-related fields, sales metrics, and media fields to prevent payload pollution and avoid wiping out photos
         const { 
             is_campanha, is_campanha_active, desconto_campanha, preco_fixo_campanha, 
             studios, vendas_count, faturamento_gerado, badge_desempenho,
+            imagem_url, imagem_secundaria, fotos_extras,
             ...restFigure 
         } = figure;
 
@@ -1407,6 +1408,7 @@ function DataGridContent() {
             const { 
                 is_campanha, is_campanha_active, desconto_campanha, preco_fixo_campanha, 
                 studios, vendas_count, faturamento_gerado, badge_desempenho,
+                imagem_url, imagem_secundaria, fotos_extras,
                 ...restFigure 
             } = figure;
             const payload = {
@@ -1861,6 +1863,16 @@ function DataGridContent() {
                     onClose={() => setPhotoManagerFigure(null)}
                     onSaved={(updated) => {
                         setFigures(prev => prev.map(f => f.id === photoManagerFigure.id ? { ...f, ...updated } : f));
+                        setAllOriginalFigures(prev => {
+                            if (!prev[photoManagerFigure.id]) return prev;
+                            return {
+                                ...prev,
+                                [photoManagerFigure.id]: {
+                                    ...prev[photoManagerFigure.id],
+                                    ...updated
+                                }
+                            };
+                        });
                     }}
                 />
             )}

@@ -20,7 +20,15 @@ export function extractStorageKey(urlOrPath: string): string {
     if (clean.startsWith('http://') || clean.startsWith('https://')) {
         try {
             const parsed = new URL(clean);
-            clean = parsed.pathname;
+            clean = decodeURIComponent(parsed.pathname);
+        } catch {
+            try {
+                clean = decodeURIComponent(clean);
+            } catch {}
+        }
+    } else {
+        try {
+            clean = decodeURIComponent(clean);
         } catch {}
     }
     // Remove prefixo /lojinha3d se vier de URLs legadas do ImageKit
@@ -219,27 +227,36 @@ export async function findExistingR2Key(key: string): Promise<string | null> {
     const bucket = process.env.CLOUDFLARE_R2_BUCKET_NAME || 'frangatoys-images';
     const cleanKey = key.trim().replace(/^\/+/, '');
     
-    // Tenta a chave exata
+    // Testa chave limpa e também variante decodificada se houver %20 ou outros
+    const candidates = [cleanKey];
     try {
-        await r2Client.send(new HeadObjectCommand({ Bucket: bucket, Key: cleanKey }));
-        return cleanKey;
+        const decoded = decodeURIComponent(cleanKey);
+        if (decoded !== cleanKey) candidates.push(decoded);
     } catch {}
 
-    // Se não tiver extensão, testa com extensões comuns de imagem (.webp, .png, .jpg, .jpeg)
-    if (!/\.(webp|png|jpg|jpeg)$/i.test(cleanKey)) {
-        for (const ext of ['.webp', '.png', '.jpg', '.jpeg']) {
+    for (const cand of candidates) {
+        // Tenta a chave exata
+        try {
+            await r2Client.send(new HeadObjectCommand({ Bucket: bucket, Key: cand }));
+            return cand;
+        } catch {}
+
+        // Se não tiver extensão, testa com extensões comuns de imagem (.webp, .png, .jpg, .jpeg)
+        if (!/\.(webp|png|jpg|jpeg)$/i.test(cand)) {
+            for (const ext of ['.webp', '.png', '.jpg', '.jpeg']) {
+                try {
+                    await r2Client.send(new HeadObjectCommand({ Bucket: bucket, Key: `${cand}${ext}` }));
+                    return `${cand}${ext}`;
+                } catch {}
+            }
+        } else {
+            // Se já tiver extensão, tenta também sem ela caso o arquivo tenha sido subido sem extensão
+            const withoutExt = cand.replace(/\.(webp|png|jpg|jpeg)$/i, '');
             try {
-                await r2Client.send(new HeadObjectCommand({ Bucket: bucket, Key: `${cleanKey}${ext}` }));
-                return `${cleanKey}${ext}`;
+                await r2Client.send(new HeadObjectCommand({ Bucket: bucket, Key: withoutExt }));
+                return withoutExt;
             } catch {}
         }
-    } else {
-        // Se já tiver extensão, tenta também sem ela caso o arquivo tenha sido subido sem extensão
-        const withoutExt = cleanKey.replace(/\.(webp|png|jpg|jpeg)$/i, '');
-        try {
-            await r2Client.send(new HeadObjectCommand({ Bucket: bucket, Key: withoutExt }));
-            return withoutExt;
-        } catch {}
     }
 
     return null;
@@ -259,6 +276,17 @@ export async function renameInR2(
         const resolvedOldKey = await findExistingR2Key(rawOldKey);
 
         if (!resolvedOldKey) {
+            // Se o arquivo original não for achado, verifica se o destino já existe (já foi renomeado com sucesso)
+            const resolvedNewKey = await findExistingR2Key(folder ? `${folder.replace(/^\/+|\/+$/g, '')}/${newFileNameOrKey.trim().replace(/^\/+/, '')}` : newFileNameOrKey);
+            if (resolvedNewKey) {
+                const publicUrlBase = (process.env.CLOUDFLARE_R2_PUBLIC_URL || '').replace(/\/+$/, '');
+                return {
+                    success: true,
+                    url: `${publicUrlBase}/${resolvedNewKey}`,
+                    key: resolvedNewKey,
+                };
+            }
+
             return {
                 success: false,
                 url: '',
@@ -286,10 +314,11 @@ export async function renameInR2(
             newKey = `${folderFromOld}/${newKey}`;
         }
 
-        // 1. Copiar com o novo nome no bucket
+        // 1. Copiar com o novo nome no bucket (CopySource DEVE ser codificado na URL caso haja espaços)
+        const copySource = encodeURI(`${bucket}/${resolvedOldKey}`);
         await r2Client.send(new CopyObjectCommand({
             Bucket: bucket,
-            CopySource: `${bucket}/${resolvedOldKey}`,
+            CopySource: copySource,
             Key: newKey,
             CacheControl: 'public, max-age=31536000, immutable',
         }));
