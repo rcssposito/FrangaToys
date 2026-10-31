@@ -41,6 +41,7 @@ import { clsx } from 'clsx';
 import { toast } from 'sonner';
 import ArchivePreviewModal from '@/components/Admin/ArchivePreviewModal';
 import HealthCheckPanel from '@/components/Admin/HealthCheckPanel';
+import DriveIngestPanel from '@/components/Admin/DriveIngestPanel';
 
 const BaseArtGenerator = dynamic(
     () => import('@/components/Admin/BaseArtGenerator/BaseArtGenerator'),
@@ -76,10 +77,11 @@ interface AnalyzedItem {
 
 function AutomationPageContent() {
     const searchParams = useSearchParams();
-    const [currentTab, setCurrentTab] = useState<'automation' | 'base' | 'health'>(() => {
+    const [currentTab, setCurrentTab] = useState<'automation' | 'base' | 'health' | 'ingest'>(() => {
         const t = searchParams?.get('tab');
         if (t === 'base') return 'base';
         if (t === 'health') return 'health';
+        if (t === 'ingest') return 'ingest';
         return 'automation';
     });
 
@@ -89,6 +91,8 @@ function AutomationPageContent() {
             setCurrentTab('base');
         } else if (tab === 'health') {
             setCurrentTab('health');
+        } else if (tab === 'ingest') {
+            setCurrentTab('ingest');
         } else if (tab === 'automation') {
             setCurrentTab('automation');
         }
@@ -389,6 +393,7 @@ function AutomationPageContent() {
                         <h1 className="text-2xl font-bold tracking-tight text-zinc-100">
                             {currentTab === 'base' ? 'Gerador de Base 1:1' :
                              currentTab === 'health' ? 'Health Check & Diagnóstico' :
+                             currentTab === 'ingest' ? 'Ingestão de Estúdios (Drive)' :
                              'Automação de Catálogo'}
                         </h1>
                         <p className="text-xs text-zinc-400 mt-0.5">
@@ -396,6 +401,8 @@ function AutomationPageContent() {
                                 ? 'Recorte milimétrico de arte e silhueta STL para adesivo de base 1:1.'
                                 : currentTab === 'health'
                                 ? 'Radar de vulnerabilidades CVE, status ao vivo dos modelos de IA e diagnóstico da esteira.'
+                                : currentTab === 'ingest'
+                                ? 'Lançamentos dos 14 estúdios no Google Drive prontos para download local.'
                                 : 'Triagem local, prévia de compactados e sincronização do acervo.'}
                         </p>
                     </div>
@@ -414,6 +421,18 @@ function AutomationPageContent() {
                     >
                         <Cpu size={14} />
                         <span>Automação & IA</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setCurrentTab('ingest')}
+                        className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                            currentTab === 'ingest'
+                                ? 'bg-orange-500 text-white font-black shadow-md shadow-orange-500/20'
+                                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
+                        }`}
+                    >
+                        <HardDrive size={14} />
+                        <span>Ingestão (Drive)</span>
                     </button>
                     <button
                         type="button"
@@ -531,6 +550,10 @@ function AutomationPageContent() {
             ) : currentTab === 'health' ? (
                 <div className="relative z-10 pt-2">
                     <HealthCheckPanel />
+                </div>
+            ) : currentTab === 'ingest' ? (
+                <div className="relative z-10 pt-2 animate-in fade-in duration-200">
+                    <DriveIngestPanel />
                 </div>
             ) : (
                 <>

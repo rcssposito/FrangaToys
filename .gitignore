@@ -34,6 +34,10 @@ yarn-error.log*
 .env*
 .secrets-rotation.json
 gcp-key.json
+.google-user-token.json
+.drive-*-cache.json
+pastas_compartilhadas.json
+pastas_compartilhadas.txt
 
 # vercel
 .vercel
