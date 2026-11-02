@@ -45,18 +45,77 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Sessão não identificada. Faça login novamente.' }, { status: 400 });
         }
 
-        // Atualiza telefone no cadastro do cliente
-        const { data: updated, error: updateError } = await supabaseAdmin
+        // Verifica se já existe outro cliente cadastrado com este telefone
+        const { data: existingPhoneClient } = await supabaseAdmin
             .from('clientes')
-            .update({
-                telefone: cleanPhone,
-                ultimo_acesso_em: new Date().toISOString()
-            })
-            .eq('id', clientToUpdateId)
             .select('*')
-            .single();
+            .or(`telefone.eq.${cleanPhone},telefone.ilike.%${cleanPhone.slice(-8)}%`)
+            .maybeSingle();
 
-        if (updateError) throw updateError;
+        let finalClient: any = null;
+
+        if (existingPhoneClient && existingPhoneClient.id !== clientToUpdateId) {
+            // Existe outro cadastro com este telefone: mescla os dois!
+            const { data: currentClient } = await supabaseAdmin
+                .from('clientes')
+                .select('*')
+                .eq('id', clientToUpdateId)
+                .maybeSingle();
+
+            const primary = currentClient || existingPhoneClient;
+            const secondary = currentClient ? existingPhoneClient : currentClient;
+
+            if (primary && secondary) {
+                const mergedWishlist = Array.from(new Set([
+                    ...(primary.wishlist || []),
+                    ...(secondary.wishlist || [])
+                ]));
+                const mergedTags = Array.from(new Set([
+                    ...(primary.tags || []),
+                    ...(secondary.tags || []),
+                    'Lead Quente'
+                ]));
+
+                await supabaseAdmin.from('crm_acessos_beacon').update({ cliente_id: primary.id }).eq('cliente_id', secondary.id);
+                await supabaseAdmin.from('vendas').update({ cliente_id: primary.id }).eq('cliente_id', secondary.id);
+
+                const { data: merged } = await supabaseAdmin
+                    .from('clientes')
+                    .update({
+                        telefone: cleanPhone,
+                        nome: primary.nome || secondary.nome,
+                        email: primary.email || secondary.email,
+                        auth_user_id: primary.auth_user_id || secondary.auth_user_id,
+                        avatar_url: primary.avatar_url || secondary.avatar_url,
+                        wishlist: mergedWishlist,
+                        tags: mergedTags,
+                        ultimo_acesso_em: new Date().toISOString()
+                    })
+                    .eq('id', primary.id)
+                    .select('*')
+                    .single();
+
+                await supabaseAdmin.from('clientes').delete().eq('id', secondary.id);
+                finalClient = merged;
+                clientToUpdateId = primary.id;
+            }
+        }
+
+        if (!finalClient) {
+            // Atualiza telefone no cadastro do cliente normalmente
+            const { data: updated, error: updateError } = await supabaseAdmin
+                .from('clientes')
+                .update({
+                    telefone: cleanPhone,
+                    ultimo_acesso_em: new Date().toISOString()
+                })
+                .eq('id', clientToUpdateId)
+                .select('*')
+                .single();
+
+            if (updateError) throw updateError;
+            finalClient = updated;
+        }
 
         // Associa telemetria retroativa do beacon se visitorId estiver disponível
         if (visitorId) {
@@ -66,14 +125,26 @@ export async function POST(req: NextRequest) {
                 .eq('visitor_id', visitorId);
         }
 
-        const response = NextResponse.json({ ok: true, client: updated });
+        const response = NextResponse.json({ ok: true, client: finalClient });
 
         // Salva nos cookies do navegador
+        response.cookies.set('franga_cliente_id', clientToUpdateId, {
+            path: '/',
+            maxAge: 60 * 60 * 24 * 365,
+            sameSite: 'lax'
+        });
         response.cookies.set('frangatoys_tracking_phone', cleanPhone, {
             path: '/',
             maxAge: 60 * 60 * 24 * 365,
             sameSite: 'lax'
         });
+        if (finalClient?.nome) {
+            response.cookies.set('frangatoys_client_nome', encodeURIComponent(finalClient.nome), {
+                path: '/',
+                maxAge: 60 * 60 * 24 * 365,
+                sameSite: 'lax'
+            });
+        }
 
         return response;
     } catch (err: any) {

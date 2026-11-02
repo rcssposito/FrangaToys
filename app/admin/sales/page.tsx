@@ -381,10 +381,13 @@ function SalesContent() {
             `Qualquer dúvida ou conferência de pedidos, me avise por aqui!`;
 
         if (phone) {
-            const phoneWithCountry = phone.startsWith('55') ? phone : `55${phone}`;
+            const rawPhone = phone.replace(/\D/g, '');
+            const phoneWithCountry = (rawPhone.length === 10 || rawPhone.length === 11 || !rawPhone.startsWith('55'))
+                ? `55${rawPhone}`
+                : rawPhone;
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            const baseUrl = isMobile ? 'https://wa.me' : 'https://web.whatsapp.com/send';
-            window.open(`${baseUrl}/${phoneWithCountry}?text=${encodeURIComponent(msg)}`, '_blank');
+            const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+            window.open(`${baseUrl}?phone=${phoneWithCountry}&text=${encodeURIComponent(msg)}`, '_blank');
         } else {
             navigator.clipboard.writeText(msg);
             toast.success(`Extrato de ${sellerData.nome} copiado para envio no WhatsApp!`);

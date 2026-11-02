@@ -45,25 +45,68 @@ export async function GET(request: Request) {
                         const userName = (user.user_metadata?.full_name || user.user_metadata?.name || user.email.split('@')[0] || 'Colecionador').trim();
                         const nowIso = new Date().toISOString();
 
-                        // 1. Busca se já existe um cliente cadastrado por auth_user_id, email ou telefone do cookie
+                        // 1. Busca se já existe um cliente cadastrado por auth_user_id, email, cookie de ID ou cookie de telefone
                         const cookieHeader = request.headers.get('cookie') || '';
                         const phoneMatch = cookieHeader.match(/frangatoys_tracking_phone=([^;]+)/);
                         const rawCookiePhone = phoneMatch ? decodeURIComponent(phoneMatch[1]).replace(/\D/g, '') : null;
+                        const clientCookieMatch = cookieHeader.match(/franga_cliente_id=([^;]+)/);
+                        const rawCookieClientId = clientCookieMatch ? decodeURIComponent(clientCookieMatch[1]).trim() : null;
 
                         let { data: existingClient } = await supabaseAdmin
                             .from('clientes')
-                            .select('id, nome, telefone, email, wishlist, tags, avatar_url')
+                            .select('*')
                             .or(`auth_user_id.eq.${user.id},email.ilike.${user.email}`)
                             .maybeSingle();
+
+                        if (!existingClient && rawCookieClientId) {
+                            const { data: clientById } = await supabaseAdmin
+                                .from('clientes')
+                                .select('*')
+                                .eq('id', rawCookieClientId)
+                                .maybeSingle();
+                            if (clientById) existingClient = clientById;
+                        }
 
                         if (!existingClient && rawCookiePhone && rawCookiePhone.length >= 10) {
                             const { data: clientByPhone } = await supabaseAdmin
                                 .from('clientes')
-                                .select('id, nome, telefone, email, wishlist, tags, avatar_url')
+                                .select('*')
                                 .or(`telefone.eq.${rawCookiePhone},telefone.ilike.%${rawCookiePhone.slice(-8)}%`)
                                 .maybeSingle();
                             if (clientByPhone) {
                                 existingClient = clientByPhone;
+                            }
+                        }
+
+                        // Se já achou cliente por Google, mas o cookie de telefone apontava para um registro separado: mescla!
+                        if (existingClient && rawCookiePhone && rawCookiePhone.length >= 10) {
+                            const { data: separatePhoneClient } = await supabaseAdmin
+                                .from('clientes')
+                                .select('*')
+                                .or(`telefone.eq.${rawCookiePhone},telefone.ilike.%${rawCookiePhone.slice(-8)}%`)
+                                .maybeSingle();
+
+                            if (separatePhoneClient && separatePhoneClient.id !== existingClient.id) {
+                                await supabaseAdmin.from('crm_acessos_beacon').update({ cliente_id: existingClient.id }).eq('cliente_id', separatePhoneClient.id);
+                                await supabaseAdmin.from('vendas').update({ cliente_id: existingClient.id }).eq('cliente_id', separatePhoneClient.id);
+
+                                const mergedWishlist = Array.from(new Set([
+                                    ...(existingClient.wishlist || []),
+                                    ...(separatePhoneClient.wishlist || [])
+                                ]));
+                                const mergedTags = Array.from(new Set([
+                                    ...(existingClient.tags || []),
+                                    ...(separatePhoneClient.tags || []),
+                                    'Google Login'
+                                ]));
+
+                                await supabaseAdmin.from('clientes').update({
+                                    telefone: existingClient.telefone || separatePhoneClient.telefone,
+                                    wishlist: mergedWishlist,
+                                    tags: mergedTags
+                                }).eq('id', existingClient.id);
+
+                                await supabaseAdmin.from('clientes').delete().eq('id', separatePhoneClient.id);
                             }
                         }
 
@@ -77,6 +120,7 @@ export async function GET(request: Request) {
                                 .from('clientes')
                                 .update({
                                     auth_user_id: user.id,
+                                    email: existingClient.email || user.email,
                                     nome: existingClient.nome || userName,
                                     avatar_url: userAvatar || existingClient.avatar_url,
                                     tags: mergedTags,
@@ -95,6 +139,7 @@ export async function GET(request: Request) {
                                     auth_user_id: user.id,
                                     nome: userName,
                                     email: user.email,
+                                    telefone: (rawCookiePhone && rawCookiePhone.length >= 10) ? rawCookiePhone : null,
                                     avatar_url: userAvatar,
                                     tags: ['Google Login', 'Lead Quente'],
                                     data_cadastro: nowIso,

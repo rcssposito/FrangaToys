@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { nome, telefone, wishlist = [], visitorId } = body;
+        const { nome, telefone, wishlist = [], visitorId, clienteId } = body;
 
         if (!nome || typeof nome !== 'string' || nome.trim().length < 2) {
             return NextResponse.json({ error: 'Por favor, informe seu nome.' }, { status: 400 });
@@ -31,79 +32,196 @@ export async function POST(req: NextRequest) {
                       req.headers.get('x-real-ip') || 
                       '';
 
-        let clientRecord: any = null;
-        let isNew = false;
+        // 1. Tenta identificar se o usuário já está logado via Supabase Auth (ex: Google Login)
+        const supabaseAuth = await createClient();
+        const { data: { user } } = await supabaseAuth.auth.getUser();
 
-        // 1. Verifica se o cliente já existe por telefone
-        const { data: existing, error: searchError } = await supabase
-            .from('clientes')
-            .select('id, nome, telefone, wishlist, tags, total_acessos')
-            .eq('telefone', cleanPhone)
-            .maybeSingle();
+        // 2. Cookie ou body ID existente
+        const cookieClienteId = req.cookies.get('franga_cliente_id')?.value;
+        const targetClienteId = clienteId || cookieClienteId;
 
-        if (searchError) {
-            console.error('Erro ao buscar cliente:', searchError);
+        // 3. Procura cliente por sessão (Google Auth ou Cookie ID)
+        let clientBySession: any = null;
+        if (user?.email) {
+            const { data } = await supabase
+                .from('clientes')
+                .select('*')
+                .or(`auth_user_id.eq.${user.id},email.ilike.${user.email}`)
+                .maybeSingle();
+            clientBySession = data;
+        }
+        if (!clientBySession && targetClienteId) {
+            const { data } = await supabase
+                .from('clientes')
+                .select('*')
+                .eq('id', targetClienteId)
+                .maybeSingle();
+            clientBySession = data;
         }
 
+        // 4. Procura cliente por telefone
+        const { data: clientByPhone } = await supabase
+            .from('clientes')
+            .select('*')
+            .or(`telefone.eq.${cleanPhone},telefone.ilike.%${cleanPhone.slice(-8)}%`)
+            .maybeSingle();
+
         const nowIso = new Date().toISOString();
+        let clientRecord: any = null;
+        let isNew = false;
+        const userAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
 
-        if (existing) {
-            // Unifica a wishlist existente com os novos itens
-            const existingWishlist = Array.isArray(existing.wishlist) ? existing.wishlist : [];
-            const mergedWishlist = Array.from(new Set([...existingWishlist, ...incomingWishlist]));
+        if (clientBySession && clientByPhone) {
+            if (clientBySession.id === clientByPhone.id) {
+                // É o mesmo registro: atualiza os campos mantendo unificado
+                const currentWishlist = Array.isArray(clientBySession.wishlist) ? clientBySession.wishlist : [];
+                const mergedWishlist = Array.from(new Set([...currentWishlist, ...incomingWishlist]));
+                const currentTags = Array.isArray(clientBySession.tags) ? clientBySession.tags : [];
+                const mergedTags = Array.from(new Set([...currentTags, 'Lead Quente', 'Favoritos', ...(user ? ['Google Login'] : [])]));
 
-            // Tags: garante que tem 'Lead Quente' e 'Favoritos'
-            const currentTags = Array.isArray(existing.tags) ? existing.tags : [];
-            const mergedTags = Array.from(new Set([...currentTags, 'Lead Quente', 'Favoritos']));
+                const { data: updated, error: updateErr } = await supabase
+                    .from('clientes')
+                    .update({
+                        nome: cleanName || clientBySession.nome,
+                        telefone: cleanPhone,
+                        email: clientBySession.email || (user?.email || null),
+                        auth_user_id: clientBySession.auth_user_id || (user?.id || null),
+                        avatar_url: clientBySession.avatar_url || userAvatar,
+                        wishlist: mergedWishlist,
+                        tags: mergedTags,
+                        ultimo_acesso_em: nowIso
+                    })
+                    .eq('id', clientBySession.id)
+                    .select('*')
+                    .single();
 
-            const { data: updated, error: updateError } = await supabase
+                if (updateErr) throw updateErr;
+                clientRecord = updated;
+            } else {
+                // São dois registros separados: mescla o registro por telefone no registro por sessão
+                const primary = clientBySession;
+                const secondary = clientByPhone;
+
+                const primaryWishlist = Array.isArray(primary.wishlist) ? primary.wishlist : [];
+                const secondaryWishlist = Array.isArray(secondary.wishlist) ? secondary.wishlist : [];
+                const mergedWishlist = Array.from(new Set([...primaryWishlist, ...secondaryWishlist, ...incomingWishlist]));
+
+                const primaryTags = Array.isArray(primary.tags) ? primary.tags : [];
+                const secondaryTags = Array.isArray(secondary.tags) ? secondary.tags : [];
+                const mergedTags = Array.from(new Set([...primaryTags, ...secondaryTags, 'Lead Quente', 'Favoritos', ...(user ? ['Google Login'] : [])]));
+
+                // Migra vínculos de telemetria e pedidos
+                await supabase.from('crm_acessos_beacon').update({ cliente_id: primary.id }).eq('cliente_id', secondary.id);
+                await supabase.from('vendas').update({ cliente_id: primary.id }).eq('cliente_id', secondary.id);
+
+                const { data: updated, error: updateErr } = await supabase
+                    .from('clientes')
+                    .update({
+                        nome: cleanName || primary.nome || secondary.nome,
+                        telefone: cleanPhone,
+                        email: primary.email || secondary.email || (user?.email || null),
+                        auth_user_id: primary.auth_user_id || (user?.id || null),
+                        avatar_url: primary.avatar_url || secondary.avatar_url || userAvatar,
+                        wishlist: mergedWishlist,
+                        tags: mergedTags,
+                        ultimo_acesso_em: nowIso,
+                        total_acessos: (primary.total_acessos || 1) + (secondary.total_acessos || 1)
+                    })
+                    .eq('id', primary.id)
+                    .select('*')
+                    .single();
+
+                if (updateErr) throw updateErr;
+
+                // Deleta registro duplicado redundante
+                await supabase.from('clientes').delete().eq('id', secondary.id);
+
+                clientRecord = updated;
+            }
+        } else if (clientBySession) {
+            // Cliente já existia por sessão (Google Login), vinculando WhatsApp
+            const currentWishlist = Array.isArray(clientBySession.wishlist) ? clientBySession.wishlist : [];
+            const mergedWishlist = Array.from(new Set([...currentWishlist, ...incomingWishlist]));
+            const currentTags = Array.isArray(clientBySession.tags) ? clientBySession.tags : [];
+            const mergedTags = Array.from(new Set([...currentTags, 'Lead Quente', 'Favoritos', ...(user ? ['Google Login'] : [])]));
+
+            const { data: updated, error: updateErr } = await supabase
                 .from('clientes')
                 .update({
-                    nome: cleanName || existing.nome,
+                    nome: cleanName || clientBySession.nome,
+                    telefone: cleanPhone,
+                    email: clientBySession.email || (user?.email || null),
+                    auth_user_id: clientBySession.auth_user_id || (user?.id || null),
+                    avatar_url: clientBySession.avatar_url || userAvatar,
                     wishlist: mergedWishlist,
                     tags: mergedTags,
                     ultimo_acesso_em: nowIso
                 })
-                .eq('id', existing.id)
+                .eq('id', clientBySession.id)
                 .select('*')
                 .single();
 
-            if (updateError) {
-                console.error('Erro ao atualizar cliente:', updateError);
-                return NextResponse.json({ error: 'Erro ao atualizar dados do cliente.' }, { status: 500 });
-            }
-
+            if (updateErr) throw updateErr;
             clientRecord = updated;
-            isNew = false;
-        } else {
-            // 2. Cria novo cliente com tags adequadas para o CRM
-            const { data: created, error: insertError } = await supabase
+        } else if (clientByPhone) {
+            // Cliente já existia por telefone, atualiza nome, tags, wishlist e anexa Google se disponível
+            const currentWishlist = Array.isArray(clientByPhone.wishlist) ? clientByPhone.wishlist : [];
+            const mergedWishlist = Array.from(new Set([...currentWishlist, ...incomingWishlist]));
+            const currentTags = Array.isArray(clientByPhone.tags) ? clientByPhone.tags : [];
+            const mergedTags = Array.from(new Set([...currentTags, 'Lead Quente', 'Favoritos', ...(user ? ['Google Login'] : [])]));
+
+            const updateData: any = {
+                nome: cleanName || clientByPhone.nome,
+                wishlist: mergedWishlist,
+                tags: mergedTags,
+                ultimo_acesso_em: nowIso
+            };
+            if (user?.email) {
+                updateData.email = clientByPhone.email || user.email;
+                updateData.auth_user_id = clientByPhone.auth_user_id || user.id;
+                updateData.avatar_url = clientByPhone.avatar_url || userAvatar;
+            }
+
+            const { data: updated, error: updateErr } = await supabase
                 .from('clientes')
-                .insert({
-                    nome: cleanName,
-                    telefone: cleanPhone,
-                    wishlist: incomingWishlist,
-                    tags: ['Lead Quente', 'Favoritos'],
-                    data_cadastro: nowIso,
-                    ultimo_acesso_em: nowIso,
-                    total_acessos: 1
-                })
+                .update(updateData)
+                .eq('id', clientByPhone.id)
                 .select('*')
                 .single();
 
-            if (insertError) {
-                console.error('Erro ao cadastrar cliente:', insertError);
-                return NextResponse.json({ error: 'Erro ao cadastrar cliente.' }, { status: 500 });
+            if (updateErr) throw updateErr;
+            clientRecord = updated;
+        } else {
+            // Novo cliente absoluto
+            const insertData: any = {
+                nome: cleanName,
+                telefone: cleanPhone,
+                wishlist: incomingWishlist,
+                tags: ['Lead Quente', 'Favoritos', ...(user ? ['Google Login'] : [])],
+                data_cadastro: nowIso,
+                ultimo_acesso_em: nowIso,
+                total_acessos: 1
+            };
+            if (user?.email) {
+                insertData.email = user.email;
+                insertData.auth_user_id = user.id;
+                insertData.avatar_url = userAvatar;
             }
 
+            const { data: created, error: insertErr } = await supabase
+                .from('clientes')
+                .insert(insertData)
+                .select('*')
+                .single();
+
+            if (insertErr) throw insertErr;
             clientRecord = created;
             isNew = true;
         }
 
-        // 3. Correlaciona imediatamente a telemetria do Beacon com o novo cliente
+        // 5. Correlaciona telemetria do Beacon
         if (clientRecord?.id) {
             try {
-                // Atualiza todas as sessões anteriores com este visitor_id
                 if (visitorId) {
                     await supabase
                         .from('crm_acessos_beacon')
@@ -111,7 +229,6 @@ export async function POST(req: NextRequest) {
                         .eq('visitor_id', visitorId);
                 }
 
-                // Se houver IP válido e recente, associa sessões anônimas do mesmo IP
                 if (rawIp && rawIp !== '127.0.0.1' && rawIp !== '::1' && rawIp !== 'localhost') {
                     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
                     await supabase
@@ -122,7 +239,6 @@ export async function POST(req: NextRequest) {
                         .gte('created_at', twoHoursAgo);
                 }
 
-                // Sincroniza cidade e estado do último acesso no cadastro do cliente se disponível
                 const { data: latestBeacon } = await supabase
                     .from('crm_acessos_beacon')
                     .select('cidade, estado')
@@ -145,12 +261,31 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             ok: true,
             isNew,
             cliente: clientRecord,
             client: clientRecord
         });
+
+        // Grava cookies para hidratação imediata no navegador
+        response.cookies.set('franga_cliente_id', clientRecord.id, {
+            path: '/',
+            maxAge: 60 * 60 * 24 * 365,
+            sameSite: 'lax'
+        });
+        response.cookies.set('frangatoys_tracking_phone', cleanPhone, {
+            path: '/',
+            maxAge: 60 * 60 * 24 * 365,
+            sameSite: 'lax'
+        });
+        response.cookies.set('frangatoys_client_nome', encodeURIComponent(clientRecord.nome || cleanName), {
+            path: '/',
+            maxAge: 60 * 60 * 24 * 365,
+            sameSite: 'lax'
+        });
+
+        return response;
     } catch (err: any) {
         console.error('Erro no cadastro de cliente:', err);
         return NextResponse.json({ error: err.message || 'Erro interno no servidor' }, { status: 500 });

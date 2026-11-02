@@ -332,11 +332,17 @@ export function CustomersView({ forcedMode }: { forcedMode?: 'clientes' | 'caden
 
     const handleSendWhatsAppMessage = () => {
         if (!whatsAppCustomer || !whatsAppText.trim()) return;
-        const phone = whatsAppCustomer.telefone.replace(/\D/g, '');
-        const phoneWithCountry = phone.startsWith('55') ? phone : `55${phone}`;
+        const rawPhone = (whatsAppCustomer.telefone || '').replace(/\D/g, '');
+        if (!rawPhone) {
+            toast.error('Cliente sem telefone válido cadastrado.');
+            return;
+        }
+        const phoneWithCountry = (rawPhone.length === 10 || rawPhone.length === 11 || !rawPhone.startsWith('55'))
+            ? `55${rawPhone}`
+            : rawPhone;
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const baseUrl = isMobile ? 'https://wa.me' : 'https://web.whatsapp.com/send';
-        window.open(`${baseUrl}/${phoneWithCountry}?text=${encodeURIComponent(whatsAppText)}`, '_blank');
+        const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
+        window.open(`${baseUrl}?phone=${phoneWithCountry}&text=${encodeURIComponent(whatsAppText)}`, '_blank');
         setIsWhatsAppModalOpen(false);
     };
 
@@ -682,7 +688,14 @@ export function CustomersView({ forcedMode }: { forcedMode?: 'clientes' | 'caden
 
     const sendWhatsAppGift = () => {
         if (!giftCustomer || !generatedCoupon) return;
-        const phone = giftCustomer.telefone.replace(/\D/g, '');
+        const rawPhone = (giftCustomer.telefone || '').replace(/\D/g, '');
+        if (!rawPhone) {
+            toast.error('Cliente sem telefone válido cadastrado.');
+            return;
+        }
+        const phoneWithCountry = (rawPhone.length === 10 || rawPhone.length === 11 || !rawPhone.startsWith('55'))
+            ? `55${rawPhone}`
+            : rawPhone;
         const emoji = String.fromCodePoint(0x1F381);
         const percentOrReal = giftTipo === 'porcentagem' ? `${giftValor}%` : `R$ ${giftValor}`;
         const condicaoMinima = giftMinimo ? ` (em compras acima de R$ ${giftMinimo})` : '';
@@ -690,7 +703,7 @@ export function CustomersView({ forcedMode }: { forcedMode?: 'clientes' | 'caden
         
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         const baseUrl = isMobile ? 'https://api.whatsapp.com/send' : 'https://web.whatsapp.com/send';
-        window.open(`${baseUrl}?phone=55${phone}&text=${encodeURIComponent(msg)}`, '_blank');
+        window.open(`${baseUrl}?phone=${phoneWithCountry}&text=${encodeURIComponent(msg)}`, '_blank');
         setIsGiftModalOpen(false);
     };
 
