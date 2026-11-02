@@ -15,16 +15,27 @@ export function BackNavigationButton({
     const router = useRouter();
 
     const handleBack = () => {
-        if (
-            typeof window !== 'undefined' &&
-            window.history.length > 1 &&
-            document.referrer &&
-            document.referrer.includes(window.location.host)
-        ) {
-            router.back();
-        } else {
-            router.push(fallbackHref);
+        if (typeof window !== 'undefined') {
+            // 1. Se navegou internamente dentro do site, usa o histórico nativo para preservar filtros e scroll
+            const hasInternalHistory =
+                (window.history.state?.idx !== undefined && window.history.state.idx > 0) ||
+                (document.referrer && document.referrer.includes(window.location.host)) ||
+                (window.history.length > 1 && !document.referrer);
+
+            if (hasInternalHistory) {
+                router.back();
+                return;
+            }
+
+            // 2. Se abriu em nova aba ou deu F5, resgata a última URL da galeria com todos os filtros
+            const savedGalleryUrl = sessionStorage.getItem('franga_last_gallery_url');
+            if (savedGalleryUrl) {
+                router.push(savedGalleryUrl);
+                return;
+            }
         }
+
+        router.push(fallbackHref);
     };
 
     return (

@@ -41,6 +41,9 @@ function HomeContent() {
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('franga_last_gallery_url', window.location.pathname + window.location.search);
+      }
       return;
     }
 
@@ -58,9 +61,44 @@ function HomeContent() {
     const currentQuery = typeof window !== 'undefined' ? window.location.search.replace(/^\?/, '') : '';
     if (queryString !== currentQuery) {
       const target = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname;
-      window.history.replaceState(null, '', target);
+      window.history.replaceState(window.history.state, '', target);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('franga_last_gallery_url', target);
+      }
     }
   }, [filters]);
+
+  // Sync filters state when navigating back/forward in browser history
+  useEffect(() => {
+    const newFilters: FilterState = {
+      q: searchParams.get('q') || undefined,
+      categoria: searchParams.get('categoria') || undefined,
+      studioIds: searchParams.get('studioIds') || undefined,
+      incluirNaoVendaveis: searchParams.get('incluirNaoVendaveis') || undefined,
+      sort: searchParams.get('sort') || 'newest',
+      priceRange: searchParams.get('priceRange') || undefined,
+      sizeRange: searchParams.get('sizeRange') || undefined,
+      prontaEntrega: searchParams.get('prontaEntrega') || undefined
+    };
+
+    setFilters(prev => {
+      const isSame =
+        prev.q === newFilters.q &&
+        prev.categoria === newFilters.categoria &&
+        prev.studioIds === newFilters.studioIds &&
+        prev.incluirNaoVendaveis === newFilters.incluirNaoVendaveis &&
+        prev.sort === newFilters.sort &&
+        prev.priceRange === newFilters.priceRange &&
+        prev.sizeRange === newFilters.sizeRange &&
+        prev.prontaEntrega === newFilters.prontaEntrega;
+
+      return isSame ? prev : newFilters;
+    });
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('franga_last_gallery_url', window.location.pathname + window.location.search);
+    }
+  }, [searchParams]);
 
   // Reset all filters to initial clean state
   const resetFiltersToClean = () => {
@@ -75,7 +113,8 @@ function HomeContent() {
       prontaEntrega: undefined
     });
     if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '', window.location.pathname);
+      window.history.replaceState(window.history.state, '', window.location.pathname);
+      sessionStorage.setItem('franga_last_gallery_url', window.location.pathname);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
