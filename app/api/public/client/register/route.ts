@@ -59,49 +59,29 @@ export async function POST(req: NextRequest) {
             clientBySession = data;
         }
 
-        // 4. Procura cliente por telefone
-        const { data: clientByPhone } = await supabase
+        // 4. Procura clientes existentes por telefone
+        const { data: phoneMatches } = await supabase
             .from('clientes')
             .select('*')
             .or(`telefone.eq.${cleanPhone},telefone.ilike.%${cleanPhone.slice(-8)}%`)
-            .maybeSingle();
+            .order('data_cadastro', { ascending: true });
+
+        const clientsWithPhone = phoneMatches || [];
+        const secondaries = clientBySession 
+            ? clientsWithPhone.filter(c => c.id !== clientBySession.id)
+            : [];
+        const clientByPhone = clientsWithPhone[0] || null;
 
         const nowIso = new Date().toISOString();
         let clientRecord: any = null;
         let isNew = false;
         const userAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
 
-        if (clientBySession && clientByPhone) {
-            if (clientBySession.id === clientByPhone.id) {
-                // É o mesmo registro: atualiza os campos mantendo unificado
-                const currentWishlist = Array.isArray(clientBySession.wishlist) ? clientBySession.wishlist : [];
-                const mergedWishlist = Array.from(new Set([...currentWishlist, ...incomingWishlist]));
-                const currentTags = Array.isArray(clientBySession.tags) ? clientBySession.tags : [];
-                const mergedTags = Array.from(new Set([...currentTags, 'Lead Quente', 'Favoritos', ...(user ? ['Google Login'] : [])]));
+        if (clientBySession && secondaries.length > 0) {
+            // Há registros separados pelo telefone: mescla todos no registro de sessão
+            let primary = { ...clientBySession };
 
-                const { data: updated, error: updateErr } = await supabase
-                    .from('clientes')
-                    .update({
-                        nome: cleanName || clientBySession.nome,
-                        telefone: cleanPhone,
-                        email: clientBySession.email || (user?.email || null),
-                        auth_user_id: clientBySession.auth_user_id || (user?.id || null),
-                        avatar_url: clientBySession.avatar_url || userAvatar,
-                        wishlist: mergedWishlist,
-                        tags: mergedTags,
-                        ultimo_acesso_em: nowIso
-                    })
-                    .eq('id', clientBySession.id)
-                    .select('*')
-                    .single();
-
-                if (updateErr) throw updateErr;
-                clientRecord = updated;
-            } else {
-                // São dois registros separados: mescla o registro por telefone no registro por sessão
-                const primary = clientBySession;
-                const secondary = clientByPhone;
-
+            for (const secondary of secondaries) {
                 const primaryWishlist = Array.isArray(primary.wishlist) ? primary.wishlist : [];
                 const secondaryWishlist = Array.isArray(secondary.wishlist) ? secondary.wishlist : [];
                 const mergedWishlist = Array.from(new Set([...primaryWishlist, ...secondaryWishlist, ...incomingWishlist]));
@@ -114,13 +94,28 @@ export async function POST(req: NextRequest) {
                 await supabase.from('crm_acessos_beacon').update({ cliente_id: primary.id }).eq('cliente_id', secondary.id);
                 await supabase.from('vendas').update({ cliente_id: primary.id }).eq('cliente_id', secondary.id);
 
+                // Preserva o nome mais completo (ex: nome com sobrenome de compras antigas)
+                const bestNome = (secondary.nome && secondary.nome.length > (cleanName || primary.nome || '').length)
+                    ? secondary.nome
+                    : (cleanName || primary.nome || secondary.nome);
+
                 const { data: updated, error: updateErr } = await supabase
                     .from('clientes')
                     .update({
-                        nome: cleanName || primary.nome || secondary.nome,
+                        nome: bestNome,
                         telefone: cleanPhone,
+                        cpf: primary.cpf || secondary.cpf || null,
+                        cep: primary.cep || secondary.cep || null,
+                        logradouro: primary.logradouro || secondary.logradouro || null,
+                        numero: primary.numero || secondary.numero || null,
+                        bairro: primary.bairro || secondary.bairro || null,
+                        cidade: primary.cidade || secondary.cidade || null,
+                        uf: primary.uf || secondary.uf || null,
+                        complemento: primary.complemento || secondary.complemento || null,
+                        instagram: primary.instagram || secondary.instagram || null,
+                        notas: primary.notas || secondary.notas || null,
                         email: primary.email || secondary.email || (user?.email || null),
-                        auth_user_id: primary.auth_user_id || (user?.id || null),
+                        auth_user_id: primary.auth_user_id || secondary.auth_user_id || (user?.id || null),
                         avatar_url: primary.avatar_url || secondary.avatar_url || userAvatar,
                         wishlist: mergedWishlist,
                         tags: mergedTags,
@@ -136,6 +131,7 @@ export async function POST(req: NextRequest) {
                 // Deleta registro duplicado redundante
                 await supabase.from('clientes').delete().eq('id', secondary.id);
 
+                primary = updated;
                 clientRecord = updated;
             }
         } else if (clientBySession) {

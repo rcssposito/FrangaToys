@@ -45,27 +45,28 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Sessão não identificada. Faça login novamente.' }, { status: 400 });
         }
 
-        // Verifica se já existe outro cliente cadastrado com este telefone
-        const { data: existingPhoneClient } = await supabaseAdmin
+        // Verifica se existem outros clientes cadastrados com este telefone
+        const { data: phoneMatches } = await supabaseAdmin
             .from('clientes')
             .select('*')
             .or(`telefone.eq.${cleanPhone},telefone.ilike.%${cleanPhone.slice(-8)}%`)
-            .maybeSingle();
+            .neq('id', clientToUpdateId);
 
         let finalClient: any = null;
 
-        if (existingPhoneClient && existingPhoneClient.id !== clientToUpdateId) {
-            // Existe outro cadastro com este telefone: mescla os dois!
+        if (phoneMatches && phoneMatches.length > 0) {
+            // Existe outro(s) cadastro(s) com este telefone: mescla tudo no cliente da sessão!
             const { data: currentClient } = await supabaseAdmin
                 .from('clientes')
                 .select('*')
                 .eq('id', clientToUpdateId)
                 .maybeSingle();
 
-            const primary = currentClient || existingPhoneClient;
-            const secondary = currentClient ? existingPhoneClient : currentClient;
+            let primary = currentClient || phoneMatches[0];
 
-            if (primary && secondary) {
+            for (const secondary of phoneMatches) {
+                if (secondary.id === primary.id) continue;
+
                 const mergedWishlist = Array.from(new Set([
                     ...(primary.wishlist || []),
                     ...(secondary.wishlist || [])
@@ -79,13 +80,28 @@ export async function POST(req: NextRequest) {
                 await supabaseAdmin.from('crm_acessos_beacon').update({ cliente_id: primary.id }).eq('cliente_id', secondary.id);
                 await supabaseAdmin.from('vendas').update({ cliente_id: primary.id }).eq('cliente_id', secondary.id);
 
+                // Preserva o nome mais completo e todos os dados fiscais/endereço
+                const bestNome = (secondary.nome && secondary.nome.length > (primary.nome || '').length)
+                    ? secondary.nome
+                    : (primary.nome || secondary.nome);
+
                 const { data: merged } = await supabaseAdmin
                     .from('clientes')
                     .update({
                         telefone: cleanPhone,
-                        nome: primary.nome || secondary.nome,
-                        email: primary.email || secondary.email,
-                        auth_user_id: primary.auth_user_id || secondary.auth_user_id,
+                        nome: bestNome,
+                        cpf: primary.cpf || secondary.cpf || null,
+                        cep: primary.cep || secondary.cep || null,
+                        logradouro: primary.logradouro || secondary.logradouro || null,
+                        numero: primary.numero || secondary.numero || null,
+                        bairro: primary.bairro || secondary.bairro || null,
+                        cidade: primary.cidade || secondary.cidade || null,
+                        uf: primary.uf || secondary.uf || null,
+                        complemento: primary.complemento || secondary.complemento || null,
+                        instagram: primary.instagram || secondary.instagram || null,
+                        notas: primary.notas || secondary.notas || null,
+                        email: primary.email || secondary.email || (user?.email || null),
+                        auth_user_id: primary.auth_user_id || secondary.auth_user_id || (user?.id || null),
                         avatar_url: primary.avatar_url || secondary.avatar_url,
                         wishlist: mergedWishlist,
                         tags: mergedTags,
@@ -96,9 +112,11 @@ export async function POST(req: NextRequest) {
                     .single();
 
                 await supabaseAdmin.from('clientes').delete().eq('id', secondary.id);
-                finalClient = merged;
-                clientToUpdateId = primary.id;
+                if (merged) primary = merged;
             }
+
+            finalClient = primary;
+            clientToUpdateId = primary.id;
         }
 
         if (!finalClient) {

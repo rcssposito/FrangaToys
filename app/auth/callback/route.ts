@@ -68,45 +68,64 @@ export async function GET(request: Request) {
                         }
 
                         if (!existingClient && rawCookiePhone && rawCookiePhone.length >= 10) {
-                            const { data: clientByPhone } = await supabaseAdmin
+                            const { data: phoneClients } = await supabaseAdmin
                                 .from('clientes')
                                 .select('*')
                                 .or(`telefone.eq.${rawCookiePhone},telefone.ilike.%${rawCookiePhone.slice(-8)}%`)
-                                .maybeSingle();
-                            if (clientByPhone) {
-                                existingClient = clientByPhone;
+                                .order('ultimo_acesso_em', { ascending: false, nullsFirst: false })
+                                .limit(1);
+                            if (phoneClients && phoneClients.length > 0) {
+                                existingClient = phoneClients[0];
                             }
                         }
 
                         // Se já achou cliente por Google, mas o cookie de telefone apontava para um registro separado: mescla!
                         if (existingClient && rawCookiePhone && rawCookiePhone.length >= 10) {
-                            const { data: separatePhoneClient } = await supabaseAdmin
+                            const { data: separatePhoneClients } = await supabaseAdmin
                                 .from('clientes')
                                 .select('*')
                                 .or(`telefone.eq.${rawCookiePhone},telefone.ilike.%${rawCookiePhone.slice(-8)}%`)
-                                .maybeSingle();
+                                .neq('id', existingClient.id);
 
-                            if (separatePhoneClient && separatePhoneClient.id !== existingClient.id) {
-                                await supabaseAdmin.from('crm_acessos_beacon').update({ cliente_id: existingClient.id }).eq('cliente_id', separatePhoneClient.id);
-                                await supabaseAdmin.from('vendas').update({ cliente_id: existingClient.id }).eq('cliente_id', separatePhoneClient.id);
+                            if (separatePhoneClients && separatePhoneClients.length > 0) {
+                                for (const separatePhoneClient of separatePhoneClients) {
+                                    await supabaseAdmin.from('crm_acessos_beacon').update({ cliente_id: existingClient.id }).eq('cliente_id', separatePhoneClient.id);
+                                    await supabaseAdmin.from('vendas').update({ cliente_id: existingClient.id }).eq('cliente_id', separatePhoneClient.id);
 
-                                const mergedWishlist = Array.from(new Set([
-                                    ...(existingClient.wishlist || []),
-                                    ...(separatePhoneClient.wishlist || [])
-                                ]));
-                                const mergedTags = Array.from(new Set([
-                                    ...(existingClient.tags || []),
-                                    ...(separatePhoneClient.tags || []),
-                                    'Google Login'
-                                ]));
+                                    const mergedWishlist = Array.from(new Set([
+                                        ...(existingClient.wishlist || []),
+                                        ...(separatePhoneClient.wishlist || [])
+                                    ]));
+                                    const mergedTags = Array.from(new Set([
+                                        ...(existingClient.tags || []),
+                                        ...(separatePhoneClient.tags || []),
+                                        'Google Login'
+                                    ]));
 
-                                await supabaseAdmin.from('clientes').update({
-                                    telefone: existingClient.telefone || separatePhoneClient.telefone,
-                                    wishlist: mergedWishlist,
-                                    tags: mergedTags
-                                }).eq('id', existingClient.id);
+                                    // Preserva o nome mais completo (ex: nome com sobrenome cadastrado em venda anterior)
+                                    const bestNome = (separatePhoneClient.nome && separatePhoneClient.nome.length > (existingClient.nome || '').length)
+                                        ? separatePhoneClient.nome
+                                        : (existingClient.nome || userName);
 
-                                await supabaseAdmin.from('clientes').delete().eq('id', separatePhoneClient.id);
+                                    await supabaseAdmin.from('clientes').update({
+                                        nome: bestNome,
+                                        telefone: existingClient.telefone || separatePhoneClient.telefone || rawCookiePhone,
+                                        cpf: existingClient.cpf || separatePhoneClient.cpf || null,
+                                        cep: existingClient.cep || separatePhoneClient.cep || null,
+                                        logradouro: existingClient.logradouro || separatePhoneClient.logradouro || null,
+                                        numero: existingClient.numero || separatePhoneClient.numero || null,
+                                        bairro: existingClient.bairro || separatePhoneClient.bairro || null,
+                                        cidade: existingClient.cidade || separatePhoneClient.cidade || null,
+                                        uf: existingClient.uf || separatePhoneClient.uf || null,
+                                        complemento: existingClient.complemento || separatePhoneClient.complemento || null,
+                                        instagram: existingClient.instagram || separatePhoneClient.instagram || null,
+                                        notas: existingClient.notas || separatePhoneClient.notas || null,
+                                        wishlist: mergedWishlist,
+                                        tags: mergedTags
+                                    }).eq('id', existingClient.id);
+
+                                    await supabaseAdmin.from('clientes').delete().eq('id', separatePhoneClient.id);
+                                }
                             }
                         }
 

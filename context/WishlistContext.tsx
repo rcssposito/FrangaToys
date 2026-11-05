@@ -381,6 +381,16 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
     const loginWithGoogle = useCallback(async () => {
         try {
+            // Garante que o telefone e ID locais estejam em cookies antes do redirect OAuth cross-domain
+            if (typeof document !== 'undefined') {
+                const p = localStorage.getItem('frangatoys_tracking_phone');
+                if (p) document.cookie = `frangatoys_tracking_phone=${p}; path=/; max-age=31536000; SameSite=Lax`;
+                const cid = localStorage.getItem('franga_cliente_id');
+                if (cid) document.cookie = `franga_cliente_id=${cid}; path=/; max-age=31536000; SameSite=Lax`;
+                const nm = localStorage.getItem('frangatoys_client_nome');
+                if (nm) document.cookie = `frangatoys_client_nome=${encodeURIComponent(nm)}; path=/; max-age=31536000; SameSite=Lax`;
+            }
+
             const { createClient } = await import('@/lib/supabase/client');
             const supabase = createClient();
             const returnUrl = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/';
