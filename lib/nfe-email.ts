@@ -88,6 +88,7 @@ function gerarXmlFallback(params: {
       <finNFe>1</finNFe>
       <indFinal>1</indFinal>
       <indPres>2</indPres>
+      <indIntermed>0</indIntermed>
     </ide>
     <emit>
       <CNPJ>67566499000170</CNPJ>

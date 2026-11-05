@@ -419,6 +419,7 @@ export async function POST(req: NextRequest) {
       <finNFe>1</finNFe>
       <indFinal>1</indFinal>
       <indPres>${payload.presenca_comprador}</indPres>
+      <indIntermed>0</indIntermed>
       <procEmi>0</procEmi>
       <verProc>FrangaToys v1.0</verProc>
     </ide>
