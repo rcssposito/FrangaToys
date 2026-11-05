@@ -87,9 +87,25 @@ export async function emitirNFeUniNFe(checkoutId: string): Promise<{ success: bo
     const ufDestinatario = realClient?.uf || 'SP';
     const cfop = ufDestinatario === 'SP' ? '5102' : '6102'; // CFOP correto para MEI (CRT=4)
 
+    const numItems = sales.length;
+    let accumulatedFrete = 0;
+
     const itensNFe = sales.map((sale: any, idx: number) => {
       const fig = sale.figuras;
       const unitPrice = (sale.valor_venda_final || 0) / (sale.quantidade || 1);
+      const valorBruto = Number(sale.valor_venda_final || 0);
+
+      // Rateio do frete entre os itens para bater exatamente com totalFrete na SEFAZ
+      let itemFrete = 0;
+      if (totalFrete > 0 && totalItens > 0) {
+        if (idx === numItems - 1) {
+          itemFrete = Number((totalFrete - accumulatedFrete).toFixed(2));
+        } else {
+          itemFrete = Number(((valorBruto / totalItens) * totalFrete).toFixed(2));
+          accumulatedFrete += itemFrete;
+        }
+      }
+
       return {
         numero_item: String(idx + 1),
         codigo_produto: (fig?.codigo || `FIG${sale.figura_id}`).replace(/[^a-zA-Z0-9]/g, '').slice(0, 60) || 'PROD01',
@@ -99,7 +115,8 @@ export async function emitirNFeUniNFe(checkoutId: string): Promise<{ success: bo
         unidade_comercial: 'UN',
         quantidade_comercial: Number(sale.quantidade || 1).toFixed(4),
         valor_unitario_comercial: Number(unitPrice).toFixed(10),
-        valor_bruto: Number(sale.valor_venda_final || 0).toFixed(2),
+        valor_bruto: valorBruto.toFixed(2),
+        valor_frete: itemFrete,
         unidade_tributavel: 'UN',
         quantidade_tributavel: Number(sale.quantidade || 1).toFixed(4),
         valor_unitario_tributavel: Number(unitPrice).toFixed(10),
@@ -250,7 +267,9 @@ export async function emitirNFeUniNFe(checkoutId: string): Promise<{ success: bo
       'RJ': '33', 'RN': '24', 'RS': '43', 'RO': '11', 'RR': '14', 'SC': '42', 'SP': '35', 'SE': '28', 'TO': '17'
     };
 
-    const cUF = ufMap[payload.uf_destinatario] || '35';
+    // Código IBGE da UF do Emitente (Franga Toys / SP = 35)
+    // O cUF do ide deve SEMPRE ser a UF do emitente (autorizadora), nunca a do destinatário
+    const cUF = '35';
     const now = new Date();
     const aamm = String(now.getFullYear()).slice(-2) + String(now.getMonth() + 1).padStart(2, '0');
     const dummyCNPJ = payload.cnpj_emitente.padEnd(14, '0').slice(0, 14);
@@ -293,6 +312,7 @@ export async function emitirNFeUniNFe(checkoutId: string): Promise<{ success: bo
         <uTrib>${item.unidade_tributavel}</uTrib>
         <qTrib>${Number(item.quantidade_tributavel).toFixed(4)}</qTrib>
         <vUnTrib>${Number(item.valor_unitario_tributavel).toFixed(10)}</vUnTrib>
+        ${Number(item.valor_frete || 0) > 0 ? `<vFrete>${Number(item.valor_frete).toFixed(2)}</vFrete>` : ''}
         <indTot>1</indTot>
       </prod>
       <imposto>
@@ -360,8 +380,9 @@ export async function emitirNFeUniNFe(checkoutId: string): Promise<{ success: bo
       <xFant>Franga Toys</xFant>
       <enderEmit>
         <xLgr>Rua Catanduvas do Sul</xLgr>
-        <nro>459 A</nro>
-        <xBairro>Jardim Primavera (Zona Norte)</xBairro>
+        <nro>459</nro>
+        <xCpl>A</xCpl>
+        <xBairro>Jardim Primavera</xBairro>
         <cMun>3550308</cMun>
         <xMun>São Paulo</xMun>
         <UF>SP</UF>
