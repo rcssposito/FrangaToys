@@ -227,11 +227,30 @@ export async function POST(req: Request) {
                 }).eq('figura_id', item.id);
             }
 
-            // Cálculo do custo (apenas resina + horas de impressão conforme regra de negócio)
-            const custo_resina_raw = (meta.resina_kg || 0) * (settings.custo_resina_kg || 0);
-            const custo_impressao_raw = (meta.horas_impressao || 0) * (settings.custo_h_impressao || 0);
+            // Cálculo do custo: se o item enviou custos customizados exclusivos da venda (ex: Categoria Outros), usa os valores da venda sem sujar o catálogo
+            const hasCustomCost = Boolean(
+                item.custom_cost_configured ||
+                item.custo_producao_unitario !== undefined ||
+                item.horas_impressao !== undefined ||
+                item.horas_pintura !== undefined
+            );
 
-            const custo_unitario_real = Math.ceil(custo_resina_raw + custo_impressao_raw);
+            const effectiveResinaKg = hasCustomCost
+                ? (Number(item.resina_kg) || 0)
+                : (Number(meta.resina_kg) || 0);
+            const effectiveHorasImpressao = hasCustomCost
+                ? (Number(item.horas_impressao) || 0)
+                : (Number(meta.horas_impressao) || 0);
+            const effectiveHorasPintura = hasCustomCost
+                ? (Number(item.horas_pintura) || 0)
+                : (Number(meta.horas_pintura) || 0);
+
+            const custo_resina_raw = effectiveResinaKg * (settings.custo_resina_kg || 0);
+            const custo_impressao_raw = effectiveHorasImpressao * (settings.custo_h_impressao || 0);
+
+            const custo_unitario_real = (hasCustomCost && item.custo_producao_unitario !== undefined && item.custo_producao_unitario !== null)
+                ? Math.ceil(Number(item.custo_producao_unitario) || 0)
+                : Math.ceil(custo_resina_raw + custo_impressao_raw);
             const custo_total_real = custo_unitario_real * item.quantidade;
 
             // Deduções
@@ -248,13 +267,13 @@ export async function POST(req: Request) {
 
             if (pintura_freelancer && !isRodrigo) {
                 // Custo do freelancer = horas de pintura * custo_h_pintura
-                custo_pintura_freelancer = Math.ceil((meta.horas_pintura || 0) * (settings.custo_h_pintura || 50)) * item.quantidade;
+                custo_pintura_freelancer = Math.ceil(effectiveHorasPintura * (settings.custo_h_pintura || 50)) * item.quantidade;
             }
 
             // Lucro Real = Valor Final - Custos da Impressora - Custo Terceiro - Comissão
             const lucro_real = item.valor_final - custo_total_real - custo_pintura_freelancer - comissao_vendedor;
 
-            totalResinaConsumida += (meta.resina_kg || 0) * item.quantidade;
+            totalResinaConsumida += effectiveResinaKg * item.quantidade;
 
             salesToInsert.push({
                 figura_id: item.id,
@@ -268,6 +287,9 @@ export async function POST(req: Request) {
                 valor_venda_final: item.valor_final,
                 valor_frete: salesToInsert.length === 0 ? (Number(valor_frete) || 0) : 0, // Apenas no primeiro item para não duplicar no dashboard
                 custo_producao_snapshot: custo_total_real,
+                resina_kg_snapshot: effectiveResinaKg,
+                horas_impressao_snapshot: effectiveHorasImpressao,
+                horas_pintura_snapshot: effectiveHorasPintura,
                 lucro_real,
                 valor_pago_pintor: custo_pintura_freelancer,
                 status: 'Aguardando Pagamento',
@@ -447,11 +469,32 @@ export async function PATCH(req: Request) {
 
         if (metaError) throw new Error('Falha ao obter metadados da figura');
 
-        const custo_resina_raw = (meta.resina_kg || 0) * (settings.custo_resina_kg || 0);
-        const custo_impressao_raw = (meta.horas_impressao || 0) * (settings.custo_h_impressao || 0);
+        const sameFigure = Number(finalFiguraId) === Number(currentSale.figura_id);
+        const effectiveResinaKg = body.resina_kg_snapshot !== undefined
+            ? Number(body.resina_kg_snapshot)
+            : (sameFigure && currentSale.resina_kg_snapshot !== null && currentSale.resina_kg_snapshot !== undefined
+                ? Number(currentSale.resina_kg_snapshot)
+                : (Number(meta.resina_kg) || 0));
+        const effectiveHorasImpressao = body.horas_impressao_snapshot !== undefined
+            ? Number(body.horas_impressao_snapshot)
+            : (sameFigure && currentSale.horas_impressao_snapshot !== null && currentSale.horas_impressao_snapshot !== undefined
+                ? Number(currentSale.horas_impressao_snapshot)
+                : (Number(meta.horas_impressao) || 0));
+        const effectiveHorasPintura = body.horas_pintura_snapshot !== undefined
+            ? Number(body.horas_pintura_snapshot)
+            : (sameFigure && currentSale.horas_pintura_snapshot !== null && currentSale.horas_pintura_snapshot !== undefined
+                ? Number(currentSale.horas_pintura_snapshot)
+                : (Number(meta.horas_pintura) || 0));
+
+        const custo_resina_raw = effectiveResinaKg * (settings.custo_resina_kg || 0);
+        const custo_impressao_raw = effectiveHorasImpressao * (settings.custo_h_impressao || 0);
 
         const custo_unitario_real = Math.ceil(custo_resina_raw + custo_impressao_raw);
-        const custo_total_real = custo_unitario_real * finalQuantidade;
+        const custo_total_real = body.custo_producao_snapshot !== undefined
+            ? Number(body.custo_producao_snapshot)
+            : (sameFigure && Number(finalQuantidade) === Number(currentSale.quantidade) && currentSale.custo_producao_snapshot !== null && currentSale.custo_producao_snapshot !== undefined
+                ? Number(currentSale.custo_producao_snapshot)
+                : custo_unitario_real * finalQuantidade);
 
         // Deduções
         let comissao_vendedor = 0;
@@ -467,7 +510,7 @@ export async function PATCH(req: Request) {
 
         let custo_pintura_freelancer = 0;
         if (finalPinturaFreelancer && !isRodrigo) {
-            custo_pintura_freelancer = Math.ceil((meta.horas_pintura || 0) * (settings.custo_h_pintura || 50)) * finalQuantidade;
+            custo_pintura_freelancer = Math.ceil(effectiveHorasPintura * (settings.custo_h_pintura || 50)) * finalQuantidade;
         }
 
         // Lucro Real = Valor Final - Custos da Impressora - Custo Terceiro - Comissão
@@ -487,6 +530,9 @@ export async function PATCH(req: Request) {
                 pintor_nome: finalPintorNome || null,
                 valor_pago_pintor,
                 custo_producao_snapshot: custo_total_real,
+                resina_kg_snapshot: effectiveResinaKg,
+                horas_impressao_snapshot: effectiveHorasImpressao,
+                horas_pintura_snapshot: effectiveHorasPintura,
                 comissao_vendedor,
                 lucro_real,
                 figura_id: finalFiguraId,

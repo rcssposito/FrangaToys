@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { toast } from 'sonner';
 import { 
     ArrowLeft, 
@@ -115,9 +115,14 @@ function StudiosContent() {
     useEffect(() => {
         if (canEdit) {
             fetchStudios();
-            fetchPatreon();
         }
     }, [canEdit]);
+
+    useEffect(() => {
+        if (canEdit && activeTab === 'acervo' && !patreonData) {
+            fetchPatreon();
+        }
+    }, [canEdit, activeTab, patreonData]);
 
     const fetchPatreon = async () => {
         try {
@@ -168,6 +173,7 @@ function StudiosContent() {
             });
 
             if (!res.ok) throw new Error('Falha ao salvar');
+            toast.success('Estúdio atualizado!');
         } catch (error) {
             toast.error('Erro ao salvar alterações');
         } finally {
@@ -228,7 +234,7 @@ function StudiosContent() {
     const inactiveCount = studios.filter(s => !s.ativo).length;
     const withSalesCount = studios.filter(s => (Number(s.total_vendas) || 0) > 0).length;
 
-    const filteredAndSortedStudios = studios
+    const filteredAndSortedStudios = useMemo(() => studios
         .filter(s => {
             if (statusFilter === 'active' && !s.ativo) return false;
             if (statusFilter === 'inactive' && s.ativo) return false;
@@ -243,7 +249,7 @@ function StudiosContent() {
             const valA = Number(a[sortBy]) || 0;
             const valB = Number(b[sortBy]) || 0;
             return valB - valA; // Descending for metrics and costs
-        });
+        }), [studios, statusFilter, searchTerm, sortBy]);
 
     return (
         <div className="w-full text-zinc-100 relative">

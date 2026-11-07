@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
     try {
-    const sessionOrResponse = await requireRoles(['admin', 'sales', 'pricing', 'finance', 'orcamento', 'production', 'painter']);
-    if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+        const sessionOrResponse = await requireRoles(['admin', 'sales', 'pricing', 'finance', 'orcamento', 'production', 'painter']);
+        if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
         const { searchParams } = new URL(req.url);
         const startDateParam = searchParams.get('startDate');
@@ -66,47 +66,38 @@ export async function GET(req: Request) {
             `)
 
             .gte('data_venda', currentStart.toISOString())
-            .lte('data_venda', currentEnd.toISOString());
+            .lte('data_venda', currentEnd.toISOString())
+            .not('status', 'in', '("Cancelado","Cancelada")');
 
         // 2. Fetch Previous Period Sales
         let prevQuery = supabase
             .from('vendas')
-            .select('valor_venda_final, lucro_real, quantidade, valor_frete')
+            .select('valor_venda_final, lucro_real, quantidade, valor_frete, status')
             .gte('data_venda', previousStart.toISOString())
-            .lte('data_venda', previousEnd.toISOString());
+            .lte('data_venda', previousEnd.toISOString())
+            .not('status', 'in', '("Cancelado","Cancelada")');
 
-        const [currRes, prevRes] = await Promise.all([query, prevQuery]);
+        // 3. Prepare parallel queries for Studios, Settings, Printing Queue Resin, Users, and Studio Monthly Expenses
+        const startYear = currentStart.getFullYear();
+        const endYear = currentEnd.getFullYear();
 
-        if (currRes.error) throw currRes.error;
-        if (prevRes.error) throw prevRes.error;
-
-        const sales = currRes.data;
-        const prevSales = prevRes.data;
-
-
-        // 3. Fetch Studio Details
-        const { data: studios, error: studiosError } = await supabase
+        const studiosQuery = supabase
             .from('studios')
             .select('nome, custo_mensal, qtd_display, ativo, figuras(id, imagem_url, series:series(nome, categorias:categorias(nome, id)), figuras_meta(escala, resina_kg, horas_pintura))');
 
-        if (studiosError) throw studiosError;
-
-        // 4. Fetch Resin Stock (Try ID 1 first, fallback to first available)
-        const { data: settingsList } = await supabase
+        const settingsQuery = supabase
             .from('pricing_params')
             .select('*')
             .order('id', { ascending: true })
             .limit(1);
-        
-        const settings = settingsList?.[0];
-        const resinStock = Number(settings?.estoque_resina_kg) || 0;
 
-        // 5. Calculate Total Resin Required (Only for printing queue)
-        const { data: pendingResinData } = await supabase
+        const pendingResinQuery = supabase
             .from('vendas')
             .select(`
                 quantidade,
+                resina_kg_snapshot,
                 figuras (
+                    id,
                     figuras_meta (
                         resina_kg
                     )
@@ -114,20 +105,59 @@ export async function GET(req: Request) {
             `)
             .in('status', ['Fila de Impressão', 'Imprimindo']);
 
+        const usersQuery = supabase.from('admin_users').select('email, nome');
+
+        const mensalidadesQuery = supabase
+            .from('studios_mensalidades')
+            .select('ano, mes, valor_pago, ativo')
+            .gte('ano', startYear)
+            .lte('ano', endYear)
+            .eq('ativo', true);
+
+        const [
+            currRes,
+            prevRes,
+            { data: studios, error: studiosError },
+            { data: settingsList },
+            { data: pendingResinData },
+            { data: users },
+            { data: mensalidadesData }
+        ] = await Promise.all([
+            query,
+            prevQuery,
+            studiosQuery,
+            settingsQuery,
+            pendingResinQuery,
+            usersQuery,
+            mensalidadesQuery
+        ]);
+
+        if (currRes.error) throw currRes.error;
+        if (prevRes.error) throw prevRes.error;
+        if (studiosError) throw studiosError;
+
+        const sales = currRes.data;
+        const prevSales = prevRes.data;
+
+        const settings = settingsList?.[0];
+        const resinStock = Number(settings?.estoque_resina_kg) || 0;
+
+        // 5. Calculate Total Resin Required (Only for printing queue, prioritizing per-sale resina_kg_snapshot)
         let totalResinRequired = 0;
         if (pendingResinData) {
             totalResinRequired = pendingResinData.reduce((acc, sale: any) => {
                 const figura = Array.isArray(sale.figuras) ? sale.figuras[0] : sale.figuras;
                 const metaList = figura?.figuras_meta;
                 const meta = Array.isArray(metaList) ? metaList[0] : metaList;
-                
-                const resinaPerUnit = Number(meta?.resina_kg) || 0;
+                const hasSnapshot = sale.resina_kg_snapshot !== null && sale.resina_kg_snapshot !== undefined;
+                const isCustomPlaceholder = Number(figura?.id) <= 0;
+                const resinaPerUnit = hasSnapshot
+                    ? (Number(sale.resina_kg_snapshot) || 0)
+                    : (isCustomPlaceholder ? 0 : (Number(meta?.resina_kg) || 0));
                 return acc + (resinaPerUnit * (Number(sale.quantidade) || 1));
             }, 0);
         }
 
-        // Fetch Users for Display Names
-        const { data: users } = await supabase.from('admin_users').select('email, nome');
         const userMap = (users || []).reduce((acc: any, u) => {
             if (u.email) acc[u.email.toLowerCase()] = u.nome || u.email.split('@')[0];
             return acc;
@@ -224,16 +254,6 @@ export async function GET(req: Request) {
         let costMultiplier = 1;
         if (dayDiff > 300) costMultiplier = 12;
 
-        // Buscar custos reais registrados em studios_mensalidades para o período selecionado
-        const startYear = currentStart.getFullYear();
-        const endYear = currentEnd.getFullYear();
-        const { data: mensalidadesData } = await supabase
-            .from('studios_mensalidades')
-            .select('ano, mes, valor_pago, ativo')
-            .gte('ano', startYear)
-            .lte('ano', endYear)
-            .eq('ativo', true);
-
         let totalFixedCost = monthlyFixedCost * costMultiplier;
 
         if (mensalidadesData && mensalidadesData.length > 0) {
@@ -284,7 +304,7 @@ export async function GET(req: Request) {
             // @ts-ignore
             const rawVendedor = (sale.vendedor || '').toLowerCase();
             const sellerName = rawVendedor ? (userMap[rawVendedor] || rawVendedor) : 'FrangaToys';
-            
+
             if ((sale.valor_venda_final || 0) > 0) {
                 if (!sellerSalesMap[sellerName]) {
                     sellerSalesMap[sellerName] = { revenue: 0, qty: 0, commission: 0, figures: [] };
@@ -363,10 +383,17 @@ export async function GET(req: Request) {
             const figura = Array.isArray(s.figuras) ? s.figuras[0] : s.figuras;
             const metas = figura?.figuras_meta;
             const meta = Array.isArray(metas) ? metas[0] : metas;
-            
-            const hoursPrint = Number(meta?.horas_impressao) || 0;
-            const hoursPaint = Number(meta?.horas_pintura) || 0;
-            const resinaKg = Number(meta?.resina_kg) || 0;
+            const isCustomPlaceholder = Number(figura?.id) <= 0;
+
+            const hoursPrint = s.horas_impressao_snapshot !== null && s.horas_impressao_snapshot !== undefined
+                ? (Number(s.horas_impressao_snapshot) || 0)
+                : (isCustomPlaceholder ? 0 : (Number(meta?.horas_impressao) || 0));
+            const hoursPaint = s.horas_pintura_snapshot !== null && s.horas_pintura_snapshot !== undefined
+                ? (Number(s.horas_pintura_snapshot) || 0)
+                : (isCustomPlaceholder ? 0 : (Number(meta?.horas_pintura) || 0));
+            const resinaKg = s.resina_kg_snapshot !== null && s.resina_kg_snapshot !== undefined
+                ? (Number(s.resina_kg_snapshot) || 0)
+                : (isCustomPlaceholder ? 0 : (Number(meta?.resina_kg) || 0));
 
             const daysPrint = Math.ceil(hoursPrint / 24);
             const daysPaint = Math.ceil(hoursPaint / 8);
@@ -376,7 +403,7 @@ export async function GET(req: Request) {
             // Production deadline is strictly 45 days after the sale date
             const bufferDays = 45;
             const deadlineDate = new Date(saleDate.getTime() + bufferDays * 24 * 60 * 60 * 1000);
-            
+
             s._deadlineTime = deadlineDate.getTime();
             s._daysRemaining = s.status === 'Concluída' || s.status === 'Cancelada'
                 ? null
@@ -388,9 +415,9 @@ export async function GET(req: Request) {
             s._clienteNome = s.cliente_nome || 'Cliente Desconhecido';
         });
 
-        const activeProductionSales = sales.filter(s => 
-            s.status !== 'Concluída' && 
-            s.status !== 'Cancelada' && 
+        const activeProductionSales = sales.filter(s =>
+            s.status !== 'Concluída' &&
+            s.status !== 'Cancelada' &&
             s.status !== 'Pronto p/ Entrega'
         );
 
@@ -482,7 +509,8 @@ export async function GET(req: Request) {
                 scaleInventoryMap[scaleLabel] = (scaleInventoryMap[scaleLabel] || 0) + 1;
 
                 // --- Resources Logic (New) ---
-                if (meta) {
+                const isCustomOrOutros = Number(f.id) <= 0 || studioName.toLowerCase() === 'custom' || studioName.toLowerCase() === 'outros' || cId === 0;
+                if (meta && !isCustomOrOutros) {
                     resourcesByStudioMap[studioName].resin += (Number(meta.resina_kg) || 0);
                     resourcesByStudioMap[studioName].paint += (Number(meta.horas_pintura) || 0);
                 }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, DollarSign, Box, Activity, Store, Maximize2, X, ArrowUpRight, ArrowDownRight, Clock, Tag, Layers, Ruler, ImageIcon, ExternalLink, Droplet, Printer, Eye, EyeOff, Trophy } from 'lucide-react';
+import { Users, Package, Settings, ShoppingCart, TrendingUp, TrendingDown, DollarSign, Box, Activity, Store, Maximize2, X, ArrowUpRight, ArrowDownRight, Clock, Tag, Layers, Ruler, ImageIcon, ExternalLink, Droplet, Printer, Eye, EyeOff, Trophy, Loader2 } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { toast } from 'sonner';
@@ -24,6 +24,7 @@ export default function AdminDashboard() {
     }, [authLoading]);
 
     const [loading, setLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [data, setData] = useState<any>(null);
     const [year, setYear] = useState<string>(new Date().getFullYear().toString());
     const [month, setMonth] = useState<string>(''); // '' = All months
@@ -37,6 +38,22 @@ export default function AdminDashboard() {
     const [seriesFilter, setSeriesFilter] = useState<string>('all');
     const [previewImage, setPreviewImage] = useState<{ url: string, nome: string } | null>(null);
     const [hideValues, setHideValues] = useState<boolean>(false);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setPreviewImage(null);
+                setExpandedChart(null);
+                setDrillDownCategory(null);
+                setDrillDownStudio(null);
+                setDrillDownSeries(null);
+                setDrillDownPriceBucket(null);
+                setDrillDownSeller(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     const getInitials = (name: string) => {
         const clean = (name || '').trim().replace(/\s+/g, ' ');
@@ -52,7 +69,8 @@ export default function AdminDashboard() {
     }, [year, month]);
 
     const fetchData = async () => {
-        setLoading(true);
+        if (!data) setLoading(true);
+        else setIsRefreshing(true);
         try {
             const params = new URLSearchParams();
 
@@ -83,6 +101,7 @@ export default function AdminDashboard() {
             console.error(err);
         } finally {
             setLoading(false);
+            setIsRefreshing(false);
         }
     };
 
@@ -1025,6 +1044,9 @@ export default function AdminDashboard() {
                         </Link>
 
                         <div className="flex items-center bg-zinc-900/90 backdrop-blur-md border border-zinc-800/80 rounded-xl p-1 shadow-sm">
+                            {isRefreshing && (
+                                <Loader2 size={14} className="animate-spin text-orange-400 ml-2.5 shrink-0" />
+                            )}
                             <select
                                 value={year}
                                 onChange={(e) => setYear(e.target.value)}
@@ -1050,7 +1072,7 @@ export default function AdminDashboard() {
                 </header>
 
                 {/* KPIs Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 transition-opacity duration-200 ${isRefreshing ? 'opacity-60' : 'opacity-100'}`}>
                     {kpis.map((kpi: any, idx) => {
                         if (kpi.restricted && !canViewFinance) return null;
                         return (

@@ -25,81 +25,82 @@ export async function GET(req: NextRequest) {
         const prevStartDate = new Date(Date.UTC(prevYear, prevMonth - 1, 1, 0, 0, 0));
         const prevEndDate = new Date(Date.UTC(prevYear, prevMonth, 0, 23, 59, 59, 999));
 
-        // 1. Carrega parâmetros de precificação globais
-        const { data: pricingParams } = await supabase
-            .from('pricing_params')
-            .select('*')
-            .eq('id', 1)
-            .single();
+        // 1-4. Executa consultas do DRE em paralelo
+        const [
+            { data: pricingParams },
+            { data: currentSales, error: salesError },
+            { data: prevSales },
+            { data: studiosData }
+        ] = await Promise.all([
+            supabase
+                .from('pricing_params')
+                .select('*')
+                .eq('id', 1)
+                .single(),
+            supabase
+                .from('vendas')
+                .select(`
+                    id,
+                    data_venda,
+                    cliente_nome,
+                    cliente_contato,
+                    canal_venda,
+                    status,
+                    status_pagamento,
+                    valor_venda_final,
+                    valor_frete,
+                    custo_producao_snapshot,
+                    lucro_real,
+                    quantidade,
+                    comissao_vendedor,
+                    valor_pago_pintor,
+                    pintor_nome,
+                    vendedor,
+                    figura_id,
+                    figuras: figuras (
+                        id,
+                        nome,
+                        codigo,
+                        imagem_url,
+                        studios: studios ( id, nome ),
+                        figuras_meta (
+                            resina_kg,
+                            horas_impressao,
+                            horas_pintura
+                        )
+                    )
+                `)
+                .gte('data_venda', startDate.toISOString())
+                .lte('data_venda', endDate.toISOString())
+                .not('status', 'in', '("Cancelado","Cancelada")')
+                .order('data_venda', { ascending: false }),
+            supabase
+                .from('vendas')
+                .select('id, valor_venda_final, valor_frete, custo_producao_snapshot, lucro_real, status, status_pagamento')
+                .gte('data_venda', prevStartDate.toISOString())
+                .lte('data_venda', prevEndDate.toISOString())
+                .not('status', 'in', '("Cancelado","Cancelada")'),
+            supabase
+                .from('studios_mensalidades')
+                .select(`
+                    id,
+                    ano,
+                    mes,
+                    ativo,
+                    valor_pago,
+                    tier_tipo,
+                    observacao,
+                    studio: studios ( id, nome, custo_mensal, ativo, logo_url )
+                `)
+                .eq('ano', year)
+                .eq('mes', month)
+        ]);
+
+        if (salesError) throw salesError;
 
         const custoResinaKg = Number(pricingParams?.custo_resina_kg) || 200;
         const custoHImpressao = Number(pricingParams?.custo_h_impressao) || 2;
         const taxaCartao = Number(pricingParams?.taxa_cartao) || 1.15; // Ex: 1.15 = 15% de taxa aproximada de cartão/gateway
-
-        // 2. Busca vendas do mês selecionado
-        const { data: currentSales, error: salesError } = await supabase
-            .from('vendas')
-            .select(`
-                id,
-                data_venda,
-                cliente_nome,
-                cliente_contato,
-                canal_venda,
-                status,
-                status_pagamento,
-                valor_venda_final,
-                valor_frete,
-                custo_producao_snapshot,
-                lucro_real,
-                quantidade,
-                comissao_vendedor,
-                valor_pago_pintor,
-                pintor_nome,
-                vendedor,
-                figura_id,
-                figuras: figuras (
-                    id,
-                    nome,
-                    codigo,
-                    imagem_url,
-                    studios: studios ( id, nome ),
-                    figuras_meta (
-                        resina_kg,
-                        horas_impressao,
-                        horas_pintura
-                    )
-                )
-            `)
-            .gte('data_venda', startDate.toISOString())
-            .lte('data_venda', endDate.toISOString())
-            .neq('status', 'Cancelado')
-            .order('data_venda', { ascending: false });
-
-        if (salesError) throw salesError;
-
-        // 3. Busca vendas do mês anterior para comparativo
-        const { data: prevSales } = await supabase
-            .from('vendas')
-            .select('id, valor_venda_final, valor_frete, custo_producao_snapshot, lucro_real, status, status_pagamento')
-            .gte('data_venda', prevStartDate.toISOString())
-            .lte('data_venda', prevEndDate.toISOString())
-            .neq('status', 'Cancelado');
-
-        // 4. Busca mensalidades de estúdios (Patreon) para o mês
-        const { data: studiosData } = await supabase
-            .from('studios_mensalidades')
-            .select(`
-                id,
-                ano,
-                mes,
-                ativo,
-                valor_pago,
-                tier_tipo,
-                observacao,
-                studio: studios ( id, nome, custo_mensal, ativo, logo_url )
-            `)
-            .eq('ano', year)
-            .eq('mes', month);
 
         // Se não houver mensalidades lançadas para o mês específico, busca na tabela de estúdios os que estão ativos
         let totalAssinaturasEstudios = 0;

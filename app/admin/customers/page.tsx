@@ -478,37 +478,27 @@ export function CustomersView({ forcedMode }: { forcedMode?: 'clientes' | 'caden
         return () => clearTimeout(timer);
     }, [search]);
 
+    // Close modals on Escape
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                if (!isUpdating) setIsEditModalOpen(false);
+                setIsWhatsAppModalOpen(false);
+                if (!isGeneratingGift) setIsGiftModalOpen(false);
+                if (!isSavingCadence) setIsCadenceModalOpen(false);
+                if (!isExecutingDispatch) setIsDispatchModalOpen(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isUpdating, isGeneratingGift, isSavingCadence, isExecutingDispatch]);
+
     useEffect(() => {
         if (viewMode === 'cadencias') {
             fetchCadencias();
             fetchAvailableCoupons();
         }
     }, [viewMode]);
-
-    // CEP Auto-complete no Modal
-    useEffect(() => {
-        if (!selectedCustomer?.cep) return;
-        const cleanCep = selectedCustomer.cep.replace(/\D/g, '');
-        if (cleanCep.length === 8) {
-            fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && !data.erro && selectedCustomer) {
-                        setSelectedCustomer(prev => {
-                            if (!prev) return null;
-                            return {
-                                ...prev,
-                                logradouro: data.logradouro || '',
-                                bairro: data.bairro || '',
-                                cidade: data.localidade || '',
-                                uf: data.uf || ''
-                            };
-                        });
-                    }
-                })
-                .catch(err => console.error('Erro ao buscar CEP:', err));
-        }
-    }, [selectedCustomer?.cep]);
 
     const handleModalCpfChange = (val: string) => {
         let value = val.replace(/\D/g, '');
@@ -530,13 +520,33 @@ export function CustomersView({ forcedMode }: { forcedMode?: 'clientes' | 'caden
     };
 
     const handleModalCepChange = (val: string) => {
-        let value = val.replace(/\D/g, '');
+        const rawDigits = val.replace(/\D/g, '').substring(0, 8);
+        let value = rawDigits;
         if (value.length > 5) {
             value = value.replace(/^(\d{5})(\d)/, '$1-$2');
         }
-        value = value.substring(0, 9);
         if (selectedCustomer) {
             setSelectedCustomer({ ...selectedCustomer, cep: value });
+        }
+        // Only trigger ViaCEP when the user actively edits the CEP to 8 digits
+        if (rawDigits.length === 8) {
+            fetch(`https://viacep.com.br/ws/${rawDigits}/json/`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && !data.erro) {
+                        setSelectedCustomer(prev => {
+                            if (!prev) return null;
+                            return {
+                                ...prev,
+                                logradouro: data.logradouro || prev.logradouro || '',
+                                bairro: data.bairro || prev.bairro || '',
+                                cidade: data.localidade || prev.cidade || '',
+                                uf: data.uf || prev.uf || ''
+                            };
+                        });
+                    }
+                })
+                .catch(err => console.error('Erro ao buscar CEP:', err));
         }
     };
 

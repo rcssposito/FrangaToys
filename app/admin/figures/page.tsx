@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, memo, Suspense } from 'react';
 import { toast } from 'sonner';
 import { Save, Loader2, ArrowLeft, Search, Trash2, X, ExternalLink, Image as ImageIcon, ImageOff, Minus, Plus, ChevronDown, ChevronUp, AlertTriangle, AlertCircle, CheckCircle2, Upload, ZoomIn, ZoomOut, RotateCcw, Maximize2, Boxes, Package, Box, Zap, Tag, Layers } from 'lucide-react';
 import Link from 'next/link';
@@ -57,7 +57,7 @@ interface PricingSettings {
     taxa_cartao?: number;
 }
 
-const FigureCard = ({
+const FigureCard = memo(({
     f, prices, canEdit, savingId, deletingId, hasRole,
     handleChange, handleSave, handleDelete, handleDownloadImage, setPreviewImage, setPhotoManagerFigure,
     setGooModalFigure
@@ -426,7 +426,14 @@ const FigureCard = ({
             )}
         </div>
     );
-};
+}, (prev, next) => (
+    prev.f === next.f &&
+    prev.prices.basic === next.prices.basic &&
+    prev.prices.premium === next.prices.premium &&
+    prev.canEdit === next.canEdit &&
+    (prev.savingId === prev.f.id) === (next.savingId === next.f.id) &&
+    (prev.deletingId === prev.f.id) === (next.deletingId === next.f.id)
+));
 
 interface ImageInspectorModalProps {
     imageUrl: string;
@@ -1233,7 +1240,20 @@ function DataGridContent() {
         return () => clearTimeout(timer);
     }, [selectedCategoryId, search, studioParam]); // run when studioParam changes too
 
-    const handleChange = (id: number, field: keyof Figure, value: string | boolean) => {
+    // Close modals on Escape
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setPreviewImage(null);
+                setPhotoManagerFigure(null);
+                setGooModalFigure(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    const handleChange = useCallback((id: number, field: keyof Figure, value: string | boolean | number) => {
         setPendingChanges(prev => ({
             ...prev,
             [id]: {
@@ -1241,7 +1261,7 @@ function DataGridContent() {
                 [field]: value
             }
         }));
-    };
+    }, []);
 
     const handleSave = async (figure: Figure) => {
         setSavingId(figure.id);
@@ -1782,7 +1802,9 @@ function DataGridContent() {
                     {/* Grade de Figuras (Cards) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 md:p-0 text-[var(--foreground)] bg-transparent w-full">
                         {figures.map(rawFigure => {
-                            const f = { ...rawFigure, ...(pendingChanges[rawFigure.id] || {}) };
+                            const f = pendingChanges[rawFigure.id]
+                                ? { ...rawFigure, ...pendingChanges[rawFigure.id] }
+                                : rawFigure;
                             const prices = calculatePrices(f);
                             return (
                                 <FigureCard

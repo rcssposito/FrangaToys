@@ -104,7 +104,7 @@ export default function SalesPage() {
 function SalesContent() {
     const [loading, setLoading] = useState(true);
     const [allSales, setAllSales] = useState<Sale[]>([]);
-    const [groups, setGroups] = useState<MonthGroup[]>([]);
+    // groups is now derived via useMemo below
     const [editingSale, setEditingSale] = useState<Sale | null>(null);
     const [editPaymentMethod, setEditPaymentMethod] = useState<'pix' | 'credit'>('pix');
     const [isGeneratingLink, setIsGeneratingLink] = useState(false);
@@ -214,6 +214,48 @@ function SalesContent() {
         { value: '10', label: 'Novembro' },
         { value: '11', label: 'Dezembro' },
     ];
+
+    const groups = useMemo<MonthGroup[]>(() => {
+        const grouped: { [key: string]: MonthGroup } = {};
+        const order: string[] = [];
+
+        let filtered = customerFilter
+            ? allSales.filter(s => s.cliente_id === customerFilter)
+            : allSales;
+
+        if (vendasSearch && vendasSearch.trim()) {
+            const term = vendasSearch.toLowerCase().trim();
+            filtered = filtered.filter(s =>
+                (s.cliente_nome && s.cliente_nome.toLowerCase().includes(term)) ||
+                (s.figuras?.nome && s.figuras.nome.toLowerCase().includes(term)) ||
+                (s.vendedor_nome && s.vendedor_nome.toLowerCase().includes(term)) ||
+                (s.vendedor && s.vendedor.toLowerCase().includes(term)) ||
+                (s.observacao && s.observacao.toLowerCase().includes(term))
+            );
+        }
+
+        filtered.forEach(sale => {
+            const date = new Date(sale.data_venda);
+            let label = format(date, 'MMMM yyyy', { locale: ptBR });
+            label = label.charAt(0).toUpperCase() + label.slice(1);
+
+            if (!grouped[label]) {
+                grouped[label] = {
+                    label,
+                    totalVenda: 0,
+                    totalLucro: 0,
+                    sales: []
+                };
+                order.push(label);
+            }
+
+            grouped[label].sales.push(sale);
+            grouped[label].totalVenda += (sale.valor_venda_final || 0);
+            grouped[label].totalLucro += (sale.lucro_real || 0);
+        });
+
+        return order.map(key => grouped[key]);
+    }, [allSales, customerFilter, vendasSearch]);
 
     const filteredSalesCount = useMemo(() => {
         return groups.reduce((acc, g) => acc + g.sales.length, 0);
@@ -408,7 +450,7 @@ function SalesContent() {
     useEffect(() => {
         fetchSales();
         fetchVendedores();
-        fetchCatalogItems();
+        // fetchCatalogItems is lazy-loaded when editingSale opens
         fetchSettings();
     }, []);
 
@@ -509,7 +551,7 @@ function SalesContent() {
 
             if (res.ok) {
                 setAllSales(data);
-                processGroups(data, vendasSearch);
+                // groups derived via useMemo
             }
         } catch (err) {
             toast.error('Erro ao carregar vendas');
@@ -519,7 +561,24 @@ function SalesContent() {
     };
 
     useEffect(() => {
-        processGroups(allSales, vendasSearch);
+        if (editingSale && catalogItems.length === 0) {
+            fetchCatalogItems();
+        }
+    }, [editingSale, catalogItems.length]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                if (!isUpdating) setEditingSale(null);
+                setPostEditResult(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isUpdating]);
+
+    useEffect(() => {
+        // noop placeholder
     }, [allSales, customerFilter, vendasSearch]);
 
     const processGroups = (data: Sale[], searchFilter = '') => {
@@ -563,7 +622,12 @@ function SalesContent() {
         });
 
         const result = order.map(key => grouped[key]);
-        setGroups(result);
+        return result;
+    };
+
+    const _groupsMovedAbove = null;
+
+    const _unused = () => {
     };
 
     const handleDelete = async (id: number) => {

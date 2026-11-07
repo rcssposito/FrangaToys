@@ -33,11 +33,11 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
     const pathname = usePathname();
     const { hasRole, logout, user } = usePermission();
 
-    // Checagem leve em segundo plano das chaves (.env) para sinalizar alertas de rotação na Sidebar
+    // Checagem leve em segundo plano das chaves (.env) uma vez por sessão ao carregar a Sidebar
     useEffect(() => {
         if (!user || !hasRole('admin')) return;
         let active = true;
-        fetch('/api/admin/automation/health-check?section=secrets', { cache: 'no-store' })
+        fetch('/api/admin/automation/health-check?section=secrets')
             .then((r) => (r.ok ? r.json() : null))
             .then((data) => {
                 if (!active || !data?.secretsRotation?.counts) return;
@@ -52,7 +52,7 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
         return () => {
             active = false;
         };
-    }, [user, pathname]);
+    }, [user?.email]);
 
     const menuItems = [
         {

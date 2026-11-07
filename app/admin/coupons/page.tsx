@@ -207,13 +207,35 @@ export function CouponsView({ forcedTab }: { forcedTab?: 'cupons' | 'campanhas' 
     };
 
     useEffect(() => {
-        fetchCupons();
-        fetchSeries();
-        fetchSuggestions();
-        if (initialTab === 'demanda') {
+        if (activeTab === 'cupons' && cupons.length === 0) {
+            fetchCupons();
+            fetchSeries();
+            fetchSuggestions();
+        } else if (activeTab === 'demanda' && popularFigures.length === 0) {
             fetchPopularData();
         }
-    }, []);
+    }, [activeTab]);
+
+    // Close modals on Escape
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                if (!saving) setIsModalOpen(false);
+                setPreviewImage(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [saving]);
+
+    // Debounced search for figures in coupon modal
+    useEffect(() => {
+        if (!isModalOpen) return;
+        const timer = setTimeout(() => {
+            handleSearchFigures(searchFigQuery);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchFigQuery, isModalOpen]);
 
     const handleSearchFigures = async (q: string) => {
         if (!q.trim()) {
@@ -1412,7 +1434,6 @@ export function CouponsView({ forcedTab }: { forcedTab?: 'cupons' | 'campanhas' 
                                             value={searchFigQuery}
                                             onChange={(e) => {
                                                 setSearchFigQuery(e.target.value);
-                                                handleSearchFigures(e.target.value);
                                             }}
                                             className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl px-4 py-3 outline-none focus:border-orange-500 transition-all font-bold placeholder-zinc-700 text-sm"
                                         />

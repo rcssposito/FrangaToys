@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { toast } from 'sonner';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2, Plus, Minus, AlertTriangle, CheckCircle2, User, Copy, RefreshCw, UserCheck, Sparkles, ArrowRight, MessageCircle, ExternalLink } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Search, DollarSign, Package, Calendar, Trash2, Plus, Minus, AlertTriangle, CheckCircle2, User, Copy, RefreshCw, UserCheck, Sparkles, ArrowRight, MessageCircle, ExternalLink, Sliders, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
 import { generatePixPayload } from '@/lib/pix';
@@ -14,9 +14,13 @@ interface CatalogItem {
     Figura: string;
     codigo?: string;
     studio: string;
+    categoria?: string;
+    categoria_id?: number | null;
+    is_outros?: boolean;
     "Estilizado (R$)": number;
     "Colorido (R$)": number;
     resina_kg: number;
+    horas_impressao?: number;
     horas_pintura: number;
     custo_producao: number;
     is_campanha?: boolean;
@@ -26,11 +30,13 @@ interface CatalogItem {
 
 interface CartItem extends CatalogItem {
     quantidade: number;
-    valor_final: number; // Valor Unitário selecionado (já com markup se for crédito)
+    valor_final: number; // Valor Total selecionado (já com markup se for crédito)
     selectedTier: 'estilizado' | 'colorido';
     altura_cm?: number;
     largura_cm?: number;
     profundidade_cm?: number;
+    custom_cost_configured?: boolean;
+    custom_unit_pix_price?: number;
 }
 
 function NewSaleContent() {
@@ -91,23 +97,24 @@ function NewSaleContent() {
     const [uf, setUf] = useState('');
     const [showBilling, setShowBilling] = useState(false);
 
-    // Auto-fill address details based on billing CEP
-    useEffect(() => {
-        const cleanCep = cep.replace(/\D/g, '');
+    // Auto-fill address details only when user types an 8-digit CEP (prevents overwriting CRM addresses on general CEPs)
+    const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const cleanCep = e.target.value.replace(/\D/g, '').substring(0, 8);
+        setCep(cleanCep);
         if (cleanCep.length === 8) {
             fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
                 .then(res => res.json())
                 .then(data => {
                     if (data && !data.erro) {
-                        setLogradouro(data.logradouro || '');
-                        setBairro(data.bairro || '');
-                        setCidade(data.localidade || '');
-                        setUf(data.uf || '');
+                        if (data.logradouro) setLogradouro(data.logradouro);
+                        if (data.bairro) setBairro(data.bairro);
+                        if (data.localidade) setCidade(data.localidade);
+                        if (data.uf) setUf(data.uf);
                     }
                 })
                 .catch(err => console.error('Erro ao buscar CEP:', err));
         }
-    }, [cep]);
+    };
 
     const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         let value = e.target.value.replace(/\D/g, '');
@@ -233,14 +240,147 @@ function NewSaleContent() {
         }
     };
 
+    const isOutrosCatalogItem = (item: CatalogItem | CartItem) => Boolean(
+        item.is_outros ||
+        (item.categoria && item.categoria.toLowerCase() === 'outros') ||
+        item.categoria_id === 0 ||
+        (item.studio && (item.studio.toLowerCase() === 'outros' || item.studio.toLowerCase() === 'custom')) ||
+        Number(item.id) <= 0
+    );
+
+    // Estados do Modal de Custos Exclusivos de Produção (Categoria Outros / Custom)
+    const [customCostModalItem, setCustomCostModalItem] = useState<CatalogItem | CartItem | null>(null);
+    const [customCostIsEditingCart, setCustomCostIsEditingCart] = useState(false);
+    const [customModalQty, setCustomModalQty] = useState<number>(1);
+    const [customModalTier, setCustomModalTier] = useState<'estilizado' | 'colorido'>('colorido');
+    const [customModalUnitPrice, setCustomModalUnitPrice] = useState<string>('');
+    const [customModalResinaKg, setCustomModalResinaKg] = useState<string>('0');
+    const [customModalHorasImp, setCustomModalHorasImp] = useState<string>('0');
+    const [customModalHorasPint, setCustomModalHorasPint] = useState<string>('0');
+    const [customModalDirectCost, setCustomModalDirectCost] = useState<string>('');
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && customCostModalItem) {
+                setCustomCostModalItem(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [customCostModalItem]);
+
+    const openCustomCostModal = (item: CatalogItem | CartItem, isEditingExistingCart = false) => {
+        const existingInCart = cart.find(c => c.id === item.id);
+        const source = isEditingExistingCart && existingInCart ? existingInCart : item;
+        const isOutros = isOutrosCatalogItem(source);
+        const alreadyConfigured = Boolean((source as CartItem).custom_cost_configured);
+
+        const defaultTier: 'estilizado' | 'colorido' = (source as CartItem).selectedTier || 'colorido';
+        const qty = (source as CartItem).quantidade || 1;
+        const baseUnitPix = (source as CartItem).custom_unit_pix_price !== undefined
+            ? (source as CartItem).custom_unit_pix_price!
+            : (isEditingExistingCart && existingInCart
+                ? Number(((existingInCart.valor_final || 0) / qty).toFixed(2))
+                : (defaultTier === 'estilizado' ? (source["Estilizado (R$)"] || 0) : (source["Colorido (R$)"] || source["Estilizado (R$)"] || 0)));
+
+        setCustomCostModalItem(source);
+        setCustomCostIsEditingCart(isEditingExistingCart || !!existingInCart);
+        setCustomModalQty(qty);
+        setCustomModalTier(defaultTier);
+        setCustomModalUnitPrice(baseUnitPix > 0 ? String(baseUnitPix) : '');
+
+        // Para itens da categoria Outros ainda não configurados na venda, iniciamos zerados (0 kg / 0h) para nunca sujar o dashboard com metadados antigos do catálogo
+        if (isOutros && !alreadyConfigured) {
+            setCustomModalResinaKg('0');
+            setCustomModalHorasImp('0');
+            setCustomModalHorasPint('0');
+            setCustomModalDirectCost('');
+        } else {
+            setCustomModalResinaKg(String(source.resina_kg ?? 0));
+            setCustomModalHorasImp(String(source.horas_impressao ?? 0));
+            setCustomModalHorasPint(String(source.horas_pintura ?? 0));
+            const calcFromParams = Math.ceil(
+                (Number(source.resina_kg) || 0) * (settings?.custo_resina_kg || 200) +
+                (Number(source.horas_impressao) || 0) * (settings?.custo_h_impressao || 2)
+            );
+            if (alreadyConfigured && source.custo_producao !== calcFromParams) {
+                setCustomModalDirectCost(String(source.custo_producao || 0));
+            } else {
+                setCustomModalDirectCost('');
+            }
+        }
+    };
+
+    const handleConfirmCustomCostModal = () => {
+        if (!customCostModalItem) return;
+
+        const qty = Math.max(1, Number(customModalQty) || 1);
+        const unitPixPrice = Number(String(customModalUnitPrice).replace(',', '.')) || 0;
+        const resinaKg = Math.max(0, Number(String(customModalResinaKg).replace(',', '.')) || 0);
+        const horasImp = Math.max(0, Number(String(customModalHorasImp).replace(',', '.')) || 0);
+        const horasPint = Math.max(0, Number(String(customModalHorasPint).replace(',', '.')) || 0);
+
+        const autoCalcCost = Math.ceil(
+            resinaKg * (settings?.custo_resina_kg || 200) +
+            horasImp * (settings?.custo_h_impressao || 2)
+        );
+        const hasDirectCost = customModalDirectCost.trim() !== '';
+        const unitProductionCost = hasDirectCost
+            ? Math.max(0, Number(String(customModalDirectCost).replace(',', '.')) || 0)
+            : autoCalcCost;
+
+        const taxaCard = settings?.taxa_cartao || 1.15;
+        const isOutros = isOutrosCatalogItem(customCostModalItem);
+        const finalUnitPrice = paymentMethod === 'credit' && !isOutros
+            ? Number((unitPixPrice * taxaCard).toFixed(2))
+            : unitPixPrice;
+
+        const updatedCartItem: CartItem = {
+            ...customCostModalItem,
+            quantidade: qty,
+            selectedTier: customModalTier,
+            resina_kg: resinaKg,
+            horas_impressao: horasImp,
+            horas_pintura: horasPint,
+            custo_producao: unitProductionCost,
+            custom_cost_configured: true,
+            custom_unit_pix_price: unitPixPrice,
+            valor_final: Number((finalUnitPrice * qty).toFixed(2))
+        };
+
+        setCart(prev => {
+            const exists = prev.some(i => i.id === customCostModalItem.id);
+            if (exists) {
+                return prev.map(i => i.id === customCostModalItem.id ? updatedCartItem : i);
+            }
+            return [...prev, updatedCartItem];
+        });
+
+        setSearch('');
+        setShippingQuotes([]);
+        setCustomCostModalItem(null);
+        toast.success(`Custos exclusivos de "${customCostModalItem.Figura}" aplicados para esta venda!`);
+    };
+
     const getItemUnitPrice = (item: CatalogItem | CartItem, tier: 'estilizado' | 'colorido', method = paymentMethod) => {
         const taxaCard = settings?.taxa_cartao || 1.15;
+        if ((item as CartItem).custom_cost_configured && (item as CartItem).custom_unit_pix_price !== undefined) {
+            const customBase = (item as CartItem).custom_unit_pix_price!;
+            const isOutros = isOutrosCatalogItem(item);
+            return method === 'credit' ? (isOutros ? customBase : Number((customBase * taxaCard).toFixed(2))) : customBase;
+        }
         const tierPrice = tier === 'estilizado' ? (item["Estilizado (R$)"] || 0) : (item["Colorido (R$)"] || item["Estilizado (R$)"] || 0);
-        const isOutros = item.studio === 'Outros';
+        const isOutros = isOutrosCatalogItem(item);
         return method === 'credit' ? (isOutros ? tierPrice : Number((tierPrice * taxaCard).toFixed(2))) : tierPrice;
     };
 
     const addToCart = (item: CatalogItem) => {
+        // Se for item da categoria Outros / Custom, abre o modal para digitar os custos exclusivos desta venda
+        if (isOutrosCatalogItem(item)) {
+            openCustomCostModal(item, false);
+            return;
+        }
+
         if (cart.find(i => i.id === item.id)) {
             updateItemQuantity(item.id, cart.find(i => i.id === item.id)!.quantidade + 1);
         } else {
@@ -523,7 +663,6 @@ function NewSaleContent() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     carrinho: cartComDesconto.map(i => {
-                        const isOutros = i.studio === 'Outros';
                         const valorFinalItem = i.valor_final;
                         
                         return {
@@ -531,7 +670,11 @@ function NewSaleContent() {
                             nome: i.Figura,
                             quantidade: i.quantidade,
                             valor_final: valorFinalItem,
-                            resina_kg: i.resina_kg
+                            resina_kg: i.resina_kg,
+                            horas_impressao: i.horas_impressao,
+                            horas_pintura: i.horas_pintura,
+                            custo_producao_unitario: i.custo_producao,
+                            custom_cost_configured: !!i.custom_cost_configured
                         };
                     }),
                     cliente_nome: cliente,
@@ -823,13 +966,35 @@ function NewSaleContent() {
                                         return (
                                             <div key={item.id} className="p-5 hover:bg-zinc-900/40 transition-colors group">
                                                 <div className="flex justify-between items-start mb-3">
-                                                    <div className="flex flex-col">
-                                                        <div className="font-black text-sm text-zinc-200 group-hover:text-cyan-400 transition-colors">{item.Figura}</div>
-                                                        <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-tight">{item.studio}</div>
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <div className="font-black text-sm text-zinc-200 group-hover:text-cyan-400 transition-colors">{item.Figura}</div>
+                                                            {(isOutrosCatalogItem(item) || item.custom_cost_configured) && (
+                                                                <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/30">
+                                                                    Custo Exclusivo: R$ {((item.custo_producao || 0) * item.quantidade).toFixed(0)} ({(item.resina_kg * item.quantidade).toFixed(3)}kg)
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-tight">{item.studio} {item.categoria ? `• ${item.categoria}` : ''}</div>
                                                     </div>
-                                                    <button onClick={() => removeFromCart(item.id)} className="text-zinc-600 hover:text-red-500 p-1.5 bg-zinc-900 rounded border border-zinc-800 transition-colors shadow-sm">
-                                                        <Trash2 size={14} />
-                                                    </button>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openCustomCostModal(item, true)}
+                                                            className={`px-2.5 py-1.5 rounded text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 border transition-all cursor-pointer shadow-sm ${
+                                                                isOutrosCatalogItem(item) || item.custom_cost_configured
+                                                                    ? 'bg-orange-500/15 hover:bg-orange-500/25 text-orange-400 border-orange-500/30'
+                                                                    : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-800'
+                                                            }`}
+                                                            title="Configurar custos de produção e consumo de material exclusivos para esta venda"
+                                                        >
+                                                            <Sliders size={12} />
+                                                            <span>Custos da Venda</span>
+                                                        </button>
+                                                        <button type="button" onClick={() => removeFromCart(item.id)} className="text-zinc-600 hover:text-red-500 p-1.5 bg-zinc-900 rounded border border-zinc-800 transition-colors shadow-sm">
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                                 
                                                 <div className="flex bg-zinc-950/50 p-1 rounded-xl border border-zinc-800/50 mb-3 w-full relative">
@@ -1164,7 +1329,7 @@ function NewSaleContent() {
                                                 <input
                                                     type="text"
                                                     value={cep}
-                                                    onChange={(e) => setCep(e.target.value.replace(/\D/g, '').substring(0, 8))}
+                                                    onChange={handleCepChange}
                                                     placeholder="00000-000"
                                                     className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 outline-none focus:border-cyan-500 text-sm transition-all"
                                                 />
@@ -1427,6 +1592,217 @@ function NewSaleContent() {
                     </div>
                 </div>
             </div>
+
+            {/* Modal de Custos de Produção Exclusivos para a Venda (Categoria Outros / Custom) */}
+            {customCostModalItem && (() => {
+                const modalResina = Math.max(0, Number(String(customModalResinaKg).replace(',', '.')) || 0);
+                const modalHorasImp = Math.max(0, Number(String(customModalHorasImp).replace(',', '.')) || 0);
+                const modalHorasPint = Math.max(0, Number(String(customModalHorasPint).replace(',', '.')) || 0);
+                const modalQty = Math.max(1, Number(customModalQty) || 1);
+                const modalUnitPrice = Math.max(0, Number(String(customModalUnitPrice).replace(',', '.')) || 0);
+
+                const autoUnitCost = Math.ceil(
+                    modalResina * (settings?.custo_resina_kg || 200) +
+                    modalHorasImp * (settings?.custo_h_impressao || 2)
+                );
+                const effectiveUnitCost = customModalDirectCost.trim() !== ''
+                    ? Math.max(0, Number(String(customModalDirectCost).replace(',', '.')) || 0)
+                    : autoUnitCost;
+
+                const totalItemSale = modalUnitPrice * modalQty;
+                const totalItemProdCost = effectiveUnitCost * modalQty;
+                const totalItemPainterCost = pinturaFreelancer
+                    ? Math.ceil(modalHorasPint * (settings?.custo_h_pintura || 50)) * modalQty
+                    : 0;
+                const estimatedItemProfit = totalItemSale - totalItemProdCost - totalItemPainterCost;
+
+                return (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+                        onClick={() => setCustomCostModalItem(null)}
+                    >
+                        <div
+                            className="relative max-w-lg w-full bg-zinc-950 border border-orange-500/30 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="flex items-start justify-between gap-4 border-b border-zinc-800/80 pb-4">
+                                <div>
+                                    <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/30 mb-1.5">
+                                        <Sliders size={11} />
+                                        Custo Exclusivo Desta Venda
+                                    </span>
+                                    <h3 className="text-lg font-black text-white leading-tight">
+                                        {customCostModalItem.Figura}
+                                    </h3>
+                                    <p className="text-xs text-zinc-400 mt-0.5">
+                                        Os valores abaixo valem <strong className="text-zinc-200">apenas para este pedido</strong> e não alteram o catálogo nem sujam o estoque do Dashboard.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setCustomCostModalItem(null)}
+                                    className="p-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-full transition-colors cursor-pointer"
+                                    title="Fechar (Esc)"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* Preço de Venda & Quantidade */}
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="col-span-2">
+                                        <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1.5">
+                                            Valor de Venda Unitário (R$ Base PIX)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            autoFocus
+                                            value={customModalUnitPrice}
+                                            onChange={e => setCustomModalUnitPrice(e.target.value)}
+                                            placeholder="Ex: 250.00"
+                                            className="w-full bg-zinc-900 border border-zinc-800 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-sm font-black text-emerald-400 outline-none transition-colors"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1.5">
+                                            Quantidade
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={customModalQty}
+                                            onChange={e => setCustomModalQty(Math.max(1, parseInt(e.target.value) || 1))}
+                                            className="w-full bg-zinc-900 border border-zinc-800 focus:border-orange-500 rounded-xl px-3.5 py-2.5 text-sm font-black text-white text-center outline-none transition-colors"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Consumo de Material Real da Peça */}
+                                <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-orange-400">
+                                            Consumo Real de Produção (Por Unidade)
+                                        </span>
+                                        <span className="text-[10px] text-zinc-500 font-mono">
+                                            Deixe 0 se não consumir
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div>
+                                            <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">
+                                                Resina (kg)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                step="0.001"
+                                                min="0"
+                                                value={customModalResinaKg}
+                                                onChange={e => setCustomModalResinaKg(e.target.value)}
+                                                placeholder="0.000"
+                                                className="w-full bg-zinc-950 border border-zinc-800 focus:border-orange-500 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">
+                                                H. Impressão
+                                            </label>
+                                            <input
+                                                type="number"
+                                                step="0.5"
+                                                min="0"
+                                                value={customModalHorasImp}
+                                                onChange={e => setCustomModalHorasImp(e.target.value)}
+                                                placeholder="0"
+                                                className="w-full bg-zinc-950 border border-zinc-800 focus:border-orange-500 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">
+                                                H. Pintura
+                                            </label>
+                                            <input
+                                                type="number"
+                                                step="0.5"
+                                                min="0"
+                                                value={customModalHorasPint}
+                                                onChange={e => setCustomModalHorasPint(e.target.value)}
+                                                placeholder="0"
+                                                className="w-full bg-zinc-950 border border-zinc-800 focus:border-orange-500 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Custo Direto Opcional */}
+                                    <div className="pt-2 border-t border-zinc-800/60">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <label className="text-[10px] font-bold uppercase text-zinc-400">
+                                                Ou Custo de Produção Fixo / Insumo Externo (R$/un)
+                                            </label>
+                                            <span className="text-[10px] font-mono text-zinc-500">
+                                                Auto (Resina+Imp): R$ {autoUnitCost.toFixed(2)}
+                                            </span>
+                                        </div>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={customModalDirectCost}
+                                            onChange={e => setCustomModalDirectCost(e.target.value)}
+                                            placeholder={`Vazio = usar cálculo automático (R$ ${autoUnitCost.toFixed(2)})`}
+                                            className="w-full bg-zinc-950 border border-zinc-800 focus:border-orange-500 rounded-xl px-3 py-2 text-xs font-bold text-amber-400 placeholder-zinc-600 outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Preview do Resultado da Venda */}
+                                <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-3.5 space-y-1.5 text-xs">
+                                    <div className="flex justify-between text-zinc-400">
+                                        <span>Receita Total do Item ({modalQty}x):</span>
+                                        <strong className="text-zinc-100">R$ {totalItemSale.toFixed(2)}</strong>
+                                    </div>
+                                    <div className="flex justify-between text-red-400/90 font-mono text-[11px]">
+                                        <span>(-) Custo Produção Snapshot ({(modalResina * modalQty).toFixed(3)}kg resina):</span>
+                                        <span>- R$ {totalItemProdCost.toFixed(2)}</span>
+                                    </div>
+                                    {totalItemPainterCost > 0 && (
+                                        <div className="flex justify-between text-orange-400 font-mono text-[11px]">
+                                            <span>(-) Pintura Freelancer ({(modalHorasPint * modalQty).toFixed(1)}h):</span>
+                                            <span>- R$ {totalItemPainterCost.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between pt-2 border-t border-zinc-800 font-black">
+                                        <span className="text-zinc-400 uppercase text-[10px] tracking-wider">Margem Direta desta Venda:</span>
+                                        <span className={estimatedItemProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                                            R$ {estimatedItemProfit.toFixed(2)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 pt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setCustomCostModalItem(null)}
+                                    className="flex-1 py-3 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleConfirmCustomCostModal}
+                                    className="flex-1 py-3 bg-orange-500 hover:bg-orange-600 text-black rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-orange-500/20 cursor-pointer"
+                                >
+                                    {customCostIsEditingCart ? 'Atualizar Custos' : 'Adicionar ao Carrinho'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }

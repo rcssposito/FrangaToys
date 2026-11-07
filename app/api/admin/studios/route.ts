@@ -9,22 +9,6 @@ export async function GET(req: Request) {
         const sessionOrResponse = await requireRoles(['admin', 'pricing']);
         if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
-        // Fetch pricing parameters (to calculate figure prices)
-        const { data: settings, error: settingsError } = await supabase
-            .from('pricing_params')
-            .select('*')
-            .eq('id', 1)
-            .single();
-
-        if (settingsError) throw settingsError;
-
-        // Fetch all studios with their figure IDs and metadata
-        const { data: studios, error: studiosError } = await supabase
-            .from('studios')
-            .select('*, figuras(id, views, figuras_meta(resina_kg, horas_impressao, horas_pintura, is_campanha_active, desconto_campanha, preco_fixo_campanha))');
-
-        if (studiosError) throw studiosError;
-
         // Parse search params for date filtering
         const { searchParams } = new URL(req.url);
         const startDate = searchParams.get('startDate');
@@ -33,7 +17,7 @@ export async function GET(req: Request) {
         let query = supabase
             .from('vendas')
             .select('figura_id, quantidade, valor_venda_final, lucro_real, status')
-            .neq('status', 'Cancelado');
+            .not('status', 'in', '("Cancelado","Cancelada")');
 
         if (startDate) {
             query = query.gte('data_venda', startDate);
@@ -52,8 +36,24 @@ export async function GET(req: Request) {
             query = query.lte('data_venda', endOfYear);
         }
 
-        const { data: sales, error: salesError } = await query;
+        const [
+            { data: settings, error: settingsError },
+            { data: studios, error: studiosError },
+            { data: sales, error: salesError }
+        ] = await Promise.all([
+            supabase
+                .from('pricing_params')
+                .select('*')
+                .eq('id', 1)
+                .single(),
+            supabase
+                .from('studios')
+                .select('*, figuras(id, views, figuras_meta(resina_kg, horas_impressao, horas_pintura, is_campanha_active, desconto_campanha, preco_fixo_campanha))'),
+            query
+        ]);
 
+        if (settingsError) throw settingsError;
+        if (studiosError) throw studiosError;
         if (salesError) throw salesError;
 
         // Map figure_id to studio_id

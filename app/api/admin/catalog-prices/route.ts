@@ -30,13 +30,28 @@ function formatCatalogItem(item: any, settings: any) {
     );
 
     const studioObj = Array.isArray(item.studios) ? item.studios[0] : item.studios;
+    const seriesObj = Array.isArray(item.series) ? item.series[0] : item.series;
+    const catObj = Array.isArray(seriesObj?.categorias) ? seriesObj.categorias[0] : seriesObj?.categorias;
+    const studioName = studioObj?.nome || 'N/A';
+    const categoriaName = catObj?.nome || 'N/A';
+    const categoriaId = catObj?.id ?? seriesObj?.categoria_id ?? null;
+    const isOutros =
+        categoriaId === 0 ||
+        categoriaName.toLowerCase() === 'outros' ||
+        studioName.toLowerCase() === 'outros' ||
+        studioName.toLowerCase() === 'custom' ||
+        Number(item.id) <= 0;
 
     return {
         id: item.id,
         Figura: item.nome,
         codigo: item.codigo,
-        studio: studioObj?.nome || 'N/A',
+        studio: studioName,
+        categoria: categoriaName,
+        categoria_id: categoriaId,
+        is_outros: isOutros,
         resina_kg: meta.resina_kg || 0,
+        horas_impressao: meta.horas_impressao || 0,
         horas_pintura: meta.horas_pintura || 0,
         altura_cm: meta.altura_cm || 0,
         largura_cm: meta.largura_cm || 0,
@@ -75,6 +90,11 @@ export async function GET(req: Request) {
             desconto_bundle_pct,
             preco_fixo_bundle,
             studios ( nome ),
+            series (
+                nome,
+                categoria_id,
+                categorias ( id, nome )
+            ),
             figuras_meta (
                 resina_kg,
                 horas_impressao,

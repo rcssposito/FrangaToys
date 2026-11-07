@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle, Receipt, X, Download, Check, Maximize2, Camera, Search, CheckSquare, Square, ListChecks, Trash2, Plus, Mail, ArrowLeft } from 'lucide-react';
+import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle, Receipt, X, Download, Check, Copy, Maximize2, Camera, Search, CheckSquare, Square, ListChecks, Trash2, Plus, Mail, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
@@ -265,29 +265,12 @@ export default function KanbanPage() {
                 setExpandedImage(null);
                 setWipModalSale(null);
                 setExpandedChecklistSaleId(null);
+                if (!isSavingNfe) setIsNfeModalOpen(false);
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
-
-    // Auto-fill address details based on CEP in NF-e modal
-    useEffect(() => {
-        const cleanCep = nfeCustomerCep.replace(/\D/g, '');
-        if (cleanCep.length === 8) {
-            fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && !data.erro) {
-                        setNfeCustomerLogradouro(data.logradouro || '');
-                        setNfeCustomerBairro(data.bairro || '');
-                        setNfeCustomerCidade(data.localidade || '');
-                        setNfeCustomerUf(data.uf || '');
-                    }
-                })
-                .catch(err => console.error('Erro ao buscar CEP:', err));
-        }
-    }, [nfeCustomerCep]);
+    }, [isSavingNfe]);
 
     const handleNfeCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         let value = e.target.value.replace(/\D/g, '');
@@ -307,11 +290,26 @@ export default function KanbanPage() {
     };
 
     const handleNfeCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let value = e.target.value.replace(/\D/g, '');
+        const rawDigits = e.target.value.replace(/\D/g, '').substring(0, 8);
+        let value = rawDigits;
         if (value.length > 5) {
             value = value.replace(/^(\d{5})(\d)/, '$1-$2');
         }
-        setNfeCustomerCep(value.substring(0, 9));
+        setNfeCustomerCep(value);
+        // Only trigger ViaCEP when the user actively edits the CEP to 8 digits
+        if (rawDigits.length === 8) {
+            fetch(`https://viacep.com.br/ws/${rawDigits}/json/`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && !data.erro) {
+                        if (data.logradouro) setNfeCustomerLogradouro(data.logradouro);
+                        if (data.bairro) setNfeCustomerBairro(data.bairro);
+                        if (data.localidade) setNfeCustomerCidade(data.localidade);
+                        if (data.uf) setNfeCustomerUf(data.uf);
+                    }
+                })
+                .catch(err => console.error('Erro ao buscar CEP:', err));
+        }
     };
 
     const handleOpenNfeModal = async (sale: Sale) => {
@@ -334,64 +332,68 @@ export default function KanbanPage() {
         setNfeNumber(2);
         setNfeNumberAlreadyAssigned(false);
 
-        try {
-            const nextRes = await fetch(`/api/admin/sales/nfe/xml?checkout_id=${sale.checkout_id || ''}`);
-            if (nextRes.ok) {
-                const nextData = await nextRes.json();
-                setNfeNumber(nextData.nextNfeNumber || 2);
-                setNfeNumberAlreadyAssigned(!!nextData.alreadyAssigned);
-            }
-        } catch (err) {
-            console.error('Erro ao buscar próximo número sequencial da NFe:', err);
-        }
-
-        if (sale.cliente_id) {
+        const fetchNextNumber = async () => {
             try {
-                const res = await fetch(`/api/admin/customers?id=${sale.cliente_id}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setNfeCustomerNome(data.nome || sale.cliente_nome || '');
-                    setNfeCustomerCpf(data.cpf || '');
-                    setNfeCustomerCep(data.cep || '');
-                    setNfeCustomerLogradouro(data.logradouro || '');
-                    setNfeCustomerNumero(data.numero || '');
-                    setNfeCustomerBairro(data.bairro || '');
-                    setNfeCustomerCidade(data.cidade || '');
-                    setNfeCustomerUf(data.uf || '');
+                const nextRes = await fetch(`/api/admin/sales/nfe/xml?checkout_id=${sale.checkout_id || ''}`);
+                if (nextRes.ok) {
+                    const nextData = await nextRes.json();
+                    setNfeNumber(nextData.nextNfeNumber || 2);
+                    setNfeNumberAlreadyAssigned(!!nextData.alreadyAssigned);
                 }
             } catch (err) {
-                console.error('Erro ao buscar dados cadastrais do cliente:', err);
-                toast.error('Não foi possível carregar os dados cadastrais do cliente.');
-            } finally {
-                setIsFetchingCustomer(false);
+                console.error('Erro ao buscar próximo número sequencial da NFe:', err);
             }
-        } else if (sale.cliente_contato) {
-            try {
-                const cleanPhone = sale.cliente_contato.replace(/\D/g, '');
-                if (cleanPhone.length >= 8) {
-                    const res = await fetch(`/api/admin/customers?q=${cleanPhone.slice(-8)}`);
+        };
+
+        const fetchCustomerData = async () => {
+            if (sale.cliente_id) {
+                try {
+                    const res = await fetch(`/api/admin/customers?id=${sale.cliente_id}`);
                     if (res.ok) {
-                        const list = await res.json();
-                        if (list && list.length > 0) {
-                            const data = list[0];
-                            setNfeClienteId(data.id);
-                            setNfeCustomerNome(data.nome || sale.cliente_nome || '');
-                            setNfeCustomerCpf(data.cpf || '');
-                            setNfeCustomerCep(data.cep || '');
-                            setNfeCustomerLogradouro(data.logradouro || '');
-                            setNfeCustomerNumero(data.numero || '');
-                            setNfeCustomerBairro(data.bairro || '');
-                            setNfeCustomerCidade(data.cidade || '');
-                            setNfeCustomerUf(data.uf || '');
+                        const data = await res.json();
+                        setNfeCustomerNome(data.nome || sale.cliente_nome || '');
+                        setNfeCustomerCpf(data.cpf || '');
+                        setNfeCustomerCep(data.cep || '');
+                        setNfeCustomerLogradouro(data.logradouro || '');
+                        setNfeCustomerNumero(data.numero || '');
+                        setNfeCustomerBairro(data.bairro || '');
+                        setNfeCustomerCidade(data.cidade || '');
+                        setNfeCustomerUf(data.uf || '');
+                    }
+                } catch (err) {
+                    console.error('Erro ao buscar dados cadastrais do cliente:', err);
+                    toast.error('Não foi possível carregar os dados cadastrais do cliente.');
+                }
+            } else if (sale.cliente_contato) {
+                try {
+                    const cleanPhone = sale.cliente_contato.replace(/\D/g, '');
+                    if (cleanPhone.length >= 8) {
+                        const res = await fetch(`/api/admin/customers?q=${cleanPhone.slice(-8)}`);
+                        if (res.ok) {
+                            const list = await res.json();
+                            if (list && list.length > 0) {
+                                const data = list[0];
+                                setNfeClienteId(data.id);
+                                setNfeCustomerNome(data.nome || sale.cliente_nome || '');
+                                setNfeCustomerCpf(data.cpf || '');
+                                setNfeCustomerCep(data.cep || '');
+                                setNfeCustomerLogradouro(data.logradouro || '');
+                                setNfeCustomerNumero(data.numero || '');
+                                setNfeCustomerBairro(data.bairro || '');
+                                setNfeCustomerCidade(data.cidade || '');
+                                setNfeCustomerUf(data.uf || '');
+                            }
                         }
                     }
+                } catch (err) {
+                    console.error('Erro ao buscar dados do cliente por telefone:', err);
                 }
-            } catch (err) {
-                console.error('Erro ao buscar dados do cliente por telefone:', err);
-            } finally {
-                setIsFetchingCustomer(false);
             }
-        } else {
+        };
+
+        try {
+            await Promise.all([fetchNextNumber(), fetchCustomerData()]);
+        } finally {
             setIsFetchingCustomer(false);
         }
     };
@@ -1977,7 +1979,22 @@ export default function KanbanPage() {
 
                                 {isManualNfe ? (
                                     <div className="space-y-2">
-                                        <label className="block text-[10px] text-zinc-500 uppercase font-black mb-1.5 tracking-widest pl-1">Chave de Acesso da NF-e (44 dígitos)</label>
+                                        <div className="flex items-center justify-between mb-1.5 pl-1">
+                                            <label className="block text-[10px] text-zinc-500 uppercase font-black tracking-widest">Chave de Acesso da NF-e (44 dígitos)</label>
+                                            {manualNfeKey && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(manualNfeKey);
+                                                        toast.success('Chave de acesso copiada!');
+                                                    }}
+                                                    className="text-[10px] font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 px-2 py-0.5 rounded-md transition-all cursor-pointer"
+                                                >
+                                                    <Copy size={11} />
+                                                    Copiar Chave
+                                                </button>
+                                            )}
+                                        </div>
                                         <input
                                             type="text"
                                             required

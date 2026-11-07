@@ -55,7 +55,9 @@ export async function GET() {
         const formatted = kanbanData.map(s => {
             const figure = Array.isArray(s.figuras) ? s.figuras[0] : s.figuras;
             const meta = Array.isArray(figure?.figuras_meta) ? figure?.figuras_meta[0] : figure?.figuras_meta;
-            const horasPintura = Number(meta?.horas_pintura) || 0;
+            const horasPintura = s.horas_pintura_snapshot !== null && s.horas_pintura_snapshot !== undefined
+                ? (Number(s.horas_pintura_snapshot) || 0)
+                : (Number(meta?.horas_pintura) || 0);
             const quantidade = Number(s.quantidade) || 1;
             const valorPinturaCalculado = Math.ceil(horasPintura * custoHPintura) * quantidade;
             const clienteObj = Array.isArray(s.clientes) ? s.clientes[0] : s.clientes;
@@ -133,6 +135,7 @@ export async function PATCH(req: Request) {
                     quantidade,
                     valor_venda_final,
                     custo_producao_snapshot,
+                    horas_pintura_snapshot,
                     comissao_vendedor,
                     valor_pago_pintor,
                     pintor_nome,
@@ -159,7 +162,9 @@ export async function PATCH(req: Request) {
 
                 const figure = Array.isArray(sale.figuras) ? sale.figuras[0] : sale.figuras;
                 const meta = Array.isArray(figure?.figuras_meta) ? figure?.figuras_meta[0] : figure?.figuras_meta;
-                const horasPintura = Number(meta?.horas_pintura) || 0;
+                const horasPintura = (sale as any).horas_pintura_snapshot !== null && (sale as any).horas_pintura_snapshot !== undefined
+                    ? (Number((sale as any).horas_pintura_snapshot) || 0)
+                    : (Number(meta?.horas_pintura) || 0);
                 const quantidade = Number(sale.quantidade) || 1;
                 
                 // Se for o Rodrigo Sposito, mão de obra própria não gera custo de terceiro
@@ -220,7 +225,7 @@ export async function PATCH(req: Request) {
             // Buscar status atual e peso de resina para calcular automação
             const { data: sale, error: fetchError } = await supabase
                 .from('vendas')
-                .select('status, quantidade, figuras(figuras_meta(resina_kg))')
+                .select('status, quantidade, resina_kg_snapshot, figuras(id, figuras_meta(resina_kg))')
                 .eq('id', id)
                 .single();
 
@@ -230,7 +235,11 @@ export async function PATCH(req: Request) {
             oldStatusForEmail = oldStatus;
             const figure = Array.isArray(sale.figuras) ? sale.figuras[0] : sale.figuras;
             const meta = Array.isArray(figure?.figuras_meta) ? figure?.figuras_meta[0] : figure?.figuras_meta;
-            const resinaWeight = Number(meta?.resina_kg) || 0;
+            const hasResinaSnapshot = (sale as any).resina_kg_snapshot !== null && (sale as any).resina_kg_snapshot !== undefined;
+            const isCustomPlaceholder = Number((figure as any)?.id) <= 0;
+            const resinaWeight = hasResinaSnapshot
+                ? (Number((sale as any).resina_kg_snapshot) || 0)
+                : (isCustomPlaceholder ? 0 : (Number(meta?.resina_kg) || 0));
             const totalUsed = resinaWeight * (sale.quantidade || 1);
 
             // Definir lógica de consumo (Pós-Impressão)

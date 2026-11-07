@@ -50,10 +50,15 @@ export function DreView() {
     
     const [regime, setRegime] = useState<'competencia' | 'caixa'>('competencia');
     const [loading, setLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [data, setData] = useState<any>(null);
 
     const fetchDRE = async () => {
-        setLoading(true);
+        if (data !== null) {
+            setIsRefreshing(true);
+        } else {
+            setLoading(true);
+        }
         try {
             const res = await fetch(`/api/admin/financial/dre?year=${selectedYear}&month=${selectedMonth}&regime=${regime}`);
             const json = await res.json();
@@ -64,6 +69,7 @@ export function DreView() {
             toast.error(err.message || 'Erro ao carregar relatório');
         } finally {
             setLoading(false);
+            setIsRefreshing(false);
         }
     };
 
@@ -202,7 +208,7 @@ export function DreView() {
                             className="p-2.5 bg-[var(--card-bg)] border border-[var(--card-border)] hover:bg-[var(--input-bg)] text-[var(--text-muted)] hover:text-white rounded-2xl transition-all cursor-pointer shadow-sm"
                             title="Atualizar Dados"
                         >
-                            <RefreshCw size={16} className={loading ? 'animate-spin text-orange-500' : ''} />
+                            <RefreshCw size={16} className={loading || isRefreshing ? 'animate-spin text-orange-500' : ''} />
                         </button>
 
                         <button
@@ -218,7 +224,7 @@ export function DreView() {
                 </div>
             </div>
 
-            {loading ? (
+            {loading && !data ? (
                 <div className="min-h-[400px] flex flex-col items-center justify-center gap-3">
                     <Loader2 size={36} className="animate-spin text-orange-500" />
                     <p className="text-xs uppercase font-black tracking-widest text-zinc-500">
@@ -230,7 +236,7 @@ export function DreView() {
                     Nenhum dado encontrado para o período selecionado.
                 </div>
             ) : (
-                <>
+                <div className={`space-y-8 transition-opacity duration-200 ${isRefreshing ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
                     {/* 4 Cards de Destaque / KPIs Executivos */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                         {/* 1. Faturamento Total */}
@@ -613,7 +619,7 @@ export function DreView() {
                             )}
                         </div>
                     )}
-                </>
+                </div>
             )}
 
         </div>

@@ -34,7 +34,8 @@ export async function GET(req: Request) {
                 vendas (
                     valor_venda_final,
                     valor_frete,
-                    data_venda
+                    data_venda,
+                    status
                 )
             `);
 
@@ -61,9 +62,10 @@ export async function GET(req: Request) {
 
         if (error) throw error;
 
-        // Processar estatísticas agregadas
+        // Processar estatísticas agregadas (ignorando vendas canceladas)
         const formattedData = (data || []).map((c: any) => {
             const stats = (c.vendas || []).reduce((acc: any, v: any) => {
+                if (v.status === 'Cancelado' || v.status === 'Cancelada') return acc;
                 acc.total_pedidos += 1;
                 acc.total_gasto += (v.valor_venda_final || 0) + (v.valor_frete || 0);
                 
