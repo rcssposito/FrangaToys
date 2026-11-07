@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
             status: sales[0].status,
             metodo_entrega: sales[0].metodo_entrega,
             valor_frete: sales[0].valor_frete,
+            link_pagamento: sales[0].link_pagamento || null,
             metodo_pagamento: sales[0].link_pagamento ? 'card' : 'pix',
             items: sales
         };

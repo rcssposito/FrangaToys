@@ -8,7 +8,7 @@ import {
     ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw, 
     ShoppingBag, Copy, QrCode, Check, Camera, X, Eye, FileText, CheckCircle2, 
     AlertCircle, Edit3, MapPin, ShieldCheck, Heart, Coffee, Sparkles, Paintbrush,
-    ChevronDown, ChevronUp, Trash2, Share2, ArrowRight, Clock, MessageCircle
+    ChevronDown, ChevronUp, Trash2, Share2, ArrowRight, Clock, MessageCircle, LogOut
 } from 'lucide-react';
 import { OrderTracker } from '@/components/OrderTracker';
 import Image from 'next/image';
@@ -963,7 +963,7 @@ export default function CustomerDashboard() {
     const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
     const [clientProfileName, setClientProfileName] = useState<string>('');
 
-    const { items: wishlistItems, removeFromWishlist, shareOnWhatsApp, syncWithPhone } = useWishlist();
+    const { items: wishlistItems, removeFromWishlist, shareOnWhatsApp, syncWithPhone, logoutClient } = useWishlist();
     const { addToCart, setIsCartOpen } = useCart();
 
     const formatBRL = (val?: number) => {
@@ -1056,12 +1056,25 @@ export default function CustomerDashboard() {
                         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
                         Voltar para a Loja
                     </Link>
-                    <div className="flex items-center gap-3">
-                         <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest bg-zinc-900 px-3 py-1 rounded-full border border-white/5">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                         <span className="hidden sm:inline-block text-[10px] font-black text-zinc-600 uppercase tracking-widest bg-zinc-900 px-3 py-1 rounded-full border border-white/5">
                             ACESSO PROTEGIDO
                          </span>
                          <button onClick={fetchOrders} className="p-2 text-zinc-500 hover:text-orange-500 transition-colors cursor-pointer" title="Recarregar">
                             <RefreshCw size={18} />
+                         </button>
+                         <button
+                            type="button"
+                            onClick={async () => {
+                                await logoutClient();
+                                localStorage.removeItem('frangatoys_tracking_token');
+                                router.push('/rastreio');
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-white/5 hover:border-red-500/30 text-zinc-400 hover:text-red-400 text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer"
+                            title="Consultar outro número ou sair desta conta"
+                         >
+                            <LogOut size={13} />
+                            <span>Trocar Conta</span>
                          </button>
                     </div>
                 </div>

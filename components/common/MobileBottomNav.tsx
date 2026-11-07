@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function MobileBottomNav() {
   const pathname = usePathname();
   const { totalItems, setIsCartOpen } = useCart();
-  const { wishlistCount, setIsWishlistOpen } = useWishlist();
+  const { wishlistCount, setIsWishlistOpen, savedPhone } = useWishlist();
 
   // Não exibe a barra inferior no Admin, Universo 3D nem na Página do Produto (onde há a barra de compra)
   if (pathname?.startsWith('/admin') || pathname === '/universo' || pathname?.startsWith('/figura/')) {
@@ -20,7 +20,8 @@ export default function MobileBottomNav() {
 
   const isHome = pathname === '/';
   const isCampanha = pathname === '/campanha';
-  const isRastreio = pathname === '/rastreio';
+  const isRastreio = Boolean(pathname?.startsWith('/rastreio'));
+  const rastreioHref = savedPhone ? `/rastreio/${savedPhone}` : '/rastreio';
 
   return (
     <nav 
@@ -98,7 +99,7 @@ export default function MobileBottomNav() {
 
         {/* 4. Rastreio */}
         <Link
-          href="/rastreio"
+          href={rastreioHref}
           className={clsx(
             "flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-xl transition-all active:scale-90 w-full",
             isRastreio ? "text-blue-400 font-black" : "text-zinc-400 hover:text-blue-400"
