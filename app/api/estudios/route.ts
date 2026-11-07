@@ -12,6 +12,8 @@ export async function GET(req: Request) {
             .select('*, figuras(count)');
         
         if (!incluirInativos) {
+            query = query.eq('ativo', true).eq('merchant', true);
+        } else {
             query = query.eq('merchant', true);
         }
 

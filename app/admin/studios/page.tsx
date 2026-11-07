@@ -81,7 +81,7 @@ function StudiosContent() {
     const [newStudioName, setNewStudioName] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<'receita_bruta' | 'lucro_liquido' | 'break_even_progresso_pct' | 'total_figuras' | 'custo_mensal' | 'nome'>('receita_bruta');
-    const [statusFilter, setStatusFilter] = useState<'active' | 'all' | 'with_sales' | 'inactive'>('active');
+    const [statusFilter, setStatusFilter] = useState<'active' | 'all' | 'with_sales' | 'pending_breakeven' | 'inactive'>('active');
     const [expandedStudioIds, setExpandedStudioIds] = useState<Record<number, boolean>>({});
     const [patreonData, setPatreonData] = useState<any>(null);
     const [openMenuId, setOpenMenuId] = useState<number | null>(null);
@@ -233,12 +233,24 @@ function StudiosContent() {
     const activeCount = studios.filter(s => s.ativo).length;
     const inactiveCount = studios.filter(s => !s.ativo).length;
     const withSalesCount = studios.filter(s => (Number(s.total_vendas) || 0) > 0).length;
+    const pendingBreakEvenCount = studios.filter(s => {
+        if (!s.ativo) return false;
+        const custoAnual = s.custo_anual ?? ((Number(s.custo_mensal) || 0) * 12);
+        const profit = s.lucro_liquido || 0;
+        return custoAnual > 0 && profit < custoAnual;
+    }).length;
 
     const filteredAndSortedStudios = useMemo(() => studios
         .filter(s => {
             if (statusFilter === 'active' && !s.ativo) return false;
             if (statusFilter === 'inactive' && s.ativo) return false;
             if (statusFilter === 'with_sales' && (Number(s.total_vendas) || 0) === 0) return false;
+            if (statusFilter === 'pending_breakeven') {
+                if (!s.ativo) return false;
+                const custoAnual = s.custo_anual ?? ((Number(s.custo_mensal) || 0) * 12);
+                const profit = s.lucro_liquido || 0;
+                if (!(custoAnual > 0 && profit < custoAnual)) return false;
+            }
             if (!searchTerm.trim()) return true;
             return s.nome.toLowerCase().includes(searchTerm.toLowerCase());
         })
@@ -460,6 +472,25 @@ function StudiosContent() {
                                         statusFilter === 'with_sales' ? 'bg-zinc-300 text-zinc-900' : 'bg-zinc-800 text-zinc-400'
                                     }`}>
                                         {withSalesCount}
+                                    </span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setStatusFilter('pending_breakeven')}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                        statusFilter === 'pending_breakeven'
+                                            ? 'bg-amber-500 text-zinc-950 shadow-sm'
+                                            : 'bg-zinc-900/60 text-amber-400/90 hover:text-amber-300 border border-amber-500/20'
+                                    }`}
+                                    title="Estúdios ativos com custo de licença ainda não coberto pelo lucro anual"
+                                >
+                                    <Target size={12} />
+                                    <span>Break-Even Pendente</span>
+                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${
+                                        statusFilter === 'pending_breakeven' ? 'bg-black/20 text-zinc-950 font-bold' : 'bg-amber-500/15 text-amber-300'
+                                    }`}>
+                                        {pendingBreakEvenCount}
                                     </span>
                                 </button>
 
@@ -944,15 +975,32 @@ function StudiosContent() {
                                         );
                                     })()}
 
-                                    {/* 1-Click Shortcut: Ver Figuras no Catálogo */}
-                                    <Link 
-                                        href={`/admin/figures?studio=${studio.id}`}
-                                        className="w-full py-2 px-3 rounded-xl bg-zinc-950 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-800/50 text-zinc-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm"
-                                    >
-                                        <Box size={13} className="text-zinc-400" />
-                                        <span>Ver Figuras no Catálogo ({studio.total_figuras || 0})</span>
-                                        <ExternalLink size={11} className="text-zinc-500" />
-                                    </Link>
+                                    {/* 1-Click Shortcuts: Ver Figuras no Catálogo + Configurar */}
+                                    <div className="flex items-center gap-2">
+                                        <Link 
+                                            href={`/admin/figures?studio=${studio.id}`}
+                                            className="flex-1 py-2 px-3 rounded-xl bg-zinc-950 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-800/50 text-zinc-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm"
+                                        >
+                                            <Box size={13} className="text-zinc-400 shrink-0" />
+                                            <span className="truncate">Figuras ({studio.total_figuras || 0})</span>
+                                            <ExternalLink size={11} className="text-zinc-500 shrink-0" />
+                                        </Link>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleExpand(studio.id)}
+                                            className={clsx(
+                                                "py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0",
+                                                isExpanded
+                                                    ? "bg-zinc-800 border-zinc-700 text-white"
+                                                    : "bg-zinc-950 border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-800/50 text-zinc-400 hover:text-white"
+                                            )}
+                                            title="Editar logo, Instagram, site e anotações"
+                                        >
+                                            <Settings size={13} />
+                                            <span>{isExpanded ? 'Fechar' : 'Editar'}</span>
+                                        </button>
+                                    </div>
 
                                     {/* Collapsible Edit Panel */}
                                     {isExpanded && (

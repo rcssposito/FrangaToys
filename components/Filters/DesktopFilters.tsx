@@ -18,7 +18,8 @@ import {
   Boxes,
   Swords,
   Ruler,
-  ChevronDown
+  ChevronDown,
+  X
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { z } from 'zod';
@@ -90,8 +91,7 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
     const toggleCategory = (cat: string) => {
         onChange({ 
             ...filters, 
-            categoria: filters.categoria === cat ? undefined : cat,
-            prontaEntrega: undefined 
+            categoria: filters.categoria === cat ? undefined : cat
         });
     };
 
@@ -103,8 +103,7 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
             : [...current, idStr];
         onChange({ 
             ...filters, 
-            studioIds: newIds.join(','),
-            prontaEntrega: undefined 
+            studioIds: newIds.length > 0 ? newIds.join(',') : undefined
         });
     };
 
@@ -113,6 +112,8 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
             q: filters.q,
             categoria: filters.categoria,
             sort: filters.sort || 'newest',
+            studioIds: undefined,
+            incluirNaoVendaveis: undefined,
             prontaEntrega: undefined
         });
     };
@@ -126,14 +127,12 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
             onChange({ 
                 ...filters, 
                 priceRange: newRange, 
-                sort: 'name_asc',
-                prontaEntrega: undefined 
+                sort: 'name_asc'
             });
         } else {
             onChange({ 
                 ...filters, 
-                priceRange: newRange,
-                prontaEntrega: undefined 
+                priceRange: newRange
             });
         }
     };
@@ -141,17 +140,19 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
     const handleSizeRangeChange = (newRange: string | undefined) => {
         onChange({ 
             ...filters, 
-            sizeRange: newRange,
-            prontaEntrega: undefined 
+            sizeRange: newRange
         });
     };
 
+    const selectedStudioIds = filters.studioIds ? filters.studioIds.split(',').filter(Boolean) : [];
+    const selectedStudios = estudios?.filter(s => selectedStudioIds.includes(String(s.id))) || [];
+
     return (
-        <div className="max-w-6xl mx-auto px-4 mb-8">
+        <div className="max-w-6xl mx-auto px-4 mb-6">
             
-            <div className="flex flex-col items-center justify-center mb-8">
-                <div className="flex justify-center mb-6">
-                    <div className="flex items-center gap-2 bg-zinc-900/60 backdrop-blur-md border border-white/5 px-6 py-2.5 rounded-full shadow-lg">
+            <div className="flex flex-col items-center justify-center mb-5">
+                <div className="flex justify-center mb-4">
+                    <div className="flex items-center gap-2 bg-zinc-900/60 backdrop-blur-md border border-white/5 px-6 py-2 rounded-full shadow-lg">
                         <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse shadow-[0_0_10px_rgba(249,115,22,0.8)]" />
                         <span className="text-[10px] font-black text-zinc-300 uppercase tracking-[0.25em] leading-none">
                             {isLoading ? 'Sintonizando...' : `${totalCount} Peças no Acervo`}
@@ -159,13 +160,13 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
                     </div>
                 </div>
 
-                <h1 className="text-center text-4xl md:text-5xl font-black tracking-tight text-white mb-2 leading-tight">
+                <h1 className="text-center text-4xl md:text-5xl font-black tracking-tight text-white mb-1 leading-tight">
                     Encontre sua <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-500">próxima peça.</span>
                 </h1>
             </div>
 
-            <div className="max-w-3xl mx-auto mb-6">
-                <div className="relative flex items-center bg-zinc-950/60 backdrop-blur-md border border-white/5 hover:border-orange-500/20 focus-within:border-orange-500/50 rounded-2xl transition-all shadow-[0_0_30px_rgba(0,0,0,0.5)] focus-within:shadow-[0_0_35px_rgba(249,115,22,0.08)] group pl-5 pr-3 py-3.5">
+            <div className="max-w-3xl mx-auto mb-5">
+                <div className="relative flex items-center bg-zinc-950/60 backdrop-blur-md border border-white/5 hover:border-orange-500/20 focus-within:border-orange-500/50 rounded-2xl transition-all shadow-[0_0_30px_rgba(0,0,0,0.5)] focus-within:shadow-[0_0_35px_rgba(249,115,22,0.08)] group pl-5 pr-3 py-3">
                     <Search className="text-zinc-500 w-5 h-5 mr-3 flex-shrink-0 group-focus-within:text-orange-500 transition-colors" />
                     <input
                         value={localSearch}
@@ -178,22 +179,72 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
                         placeholder="Buscar por nome, série ou estúdio..."
                         className="w-full bg-transparent text-white focus:outline-none placeholder:text-zinc-650 text-sm font-medium"
                     />
+                    {localSearch && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setLocalSearch('');
+                                setDebouncedSearch('');
+                                isUserInteraction.current = false;
+                                onChange({ ...filters, q: undefined });
+                            }}
+                            className="p-1 text-zinc-500 hover:text-white transition-colors cursor-pointer mr-1"
+                            title="Limpar busca"
+                        >
+                            <X size={15} />
+                        </button>
+                    )}
                     <div className="h-6 w-px bg-zinc-800/60 mx-3" />
                     <button
+                        type="button"
                         onClick={() => setShowAdvanced(!showAdvanced)}
                         className={clsx(
-                          "px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap",
-                          showAdvanced
+                          "px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer",
+                          showAdvanced || selectedStudioIds.length > 0
                             ? "bg-orange-500 text-white shadow-lg shadow-orange-500/25"
                             : "text-zinc-400 hover:text-orange-400"
                         )}
                     >
-                        Busca avançada
+                        <span>Busca avançada</span>
+                        {selectedStudioIds.length > 0 && (
+                            <span className="px-1.5 py-0.2 rounded-full bg-black/30 text-[10px] font-mono">
+                                {selectedStudioIds.length}
+                            </span>
+                        )}
                     </button>
                 </div>
+
+                {/* Pílulas de Estúdios Filtrados (visíveis mesmo com Busca Avançada fechada) */}
+                {selectedStudios.length > 0 && (
+                    <div className="flex flex-wrap items-center justify-center gap-2 mt-2.5">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                            Estúdio:
+                        </span>
+                        {selectedStudios.map(st => (
+                            <button
+                                key={st.id}
+                                type="button"
+                                onClick={() => toggleStudio(st.id)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/15 border border-orange-500/40 text-orange-400 hover:bg-orange-500/25 text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
+                            >
+                                <span>{st.nome}</span>
+                                <X size={11} />
+                            </button>
+                        ))}
+                        {selectedStudios.length > 1 && (
+                            <button
+                                type="button"
+                                onClick={() => onChange({ ...filters, studioIds: undefined })}
+                                className="text-[10px] font-bold text-zinc-500 hover:text-white underline cursor-pointer ml-1"
+                            >
+                                Limpar todos
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
 
-            <div className="max-w-5xl mx-auto mb-8 bg-zinc-950/40 backdrop-blur-md border border-white/5 rounded-2xl p-1.5 shadow-xl flex items-center justify-between">
+            <div className="max-w-5xl mx-auto mb-5 bg-zinc-950/40 backdrop-blur-md border border-white/5 rounded-2xl p-1.5 shadow-xl flex items-center justify-between">
                 <button
                     onClick={() => onChange({ ...filters, categoria: undefined, prontaEntrega: undefined })}
                     className={clsx(
@@ -260,8 +311,8 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
             </div>
 
             {showAdvanced && (
-                <div className="max-w-6xl mx-auto rounded-2xl border border-white/5 bg-zinc-900/40 backdrop-blur-md p-6 animate-in fade-in slide-in-from-top-2 shadow-2xl mb-6">
-                    <div className="mb-6">
+                <div className="max-w-6xl mx-auto rounded-2xl border border-white/5 bg-zinc-900/40 backdrop-blur-md p-6 animate-in fade-in slide-in-from-top-2 shadow-2xl mb-5">
+                    <div className="mb-4">
                         <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3">Filtrar por Estúdio</div>
                         <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 max-h-60 overflow-y-auto custom-scrollbar pr-2">
                             {estudios?.map(studio => {
@@ -286,22 +337,10 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
                         </div>
                     </div>
 
-                    <div className="mb-6 flex flex-wrap gap-6">
-                        <label className="flex items-center gap-2.5 select-none cursor-pointer">
-                            <input
-                                type="checkbox"
-                                className="accent-orange-500 w-4 h-4 rounded-md border-white/10"
-                                checked={filters.incluirNaoVendaveis === 'true'}
-                                onChange={(e) => onChange({ ...filters, incluirNaoVendaveis: e.target.checked ? 'true' : 'false' })}
-                            />
-                            <span className="text-xs font-black uppercase tracking-wider text-zinc-300">Exibir itens indisponíveis</span>
-                        </label>
-                    </div>
-
                     <div className="flex gap-3 pt-4 border-t border-white/5">
                         <button
                             onClick={handleClear}
-                            className="px-6 py-2 rounded-full border border-white/5 bg-zinc-950/40 hover:bg-zinc-900 text-zinc-300 hover:text-white text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-md"
+                            className="px-6 py-2 rounded-full border border-white/5 bg-zinc-950/40 hover:bg-zinc-900 text-zinc-300 hover:text-white text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-md cursor-pointer"
                         >
                             Limpar
                         </button>
@@ -400,7 +439,7 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
                         <button
                             onClick={() => handleSortChange('newest')}
                             className={clsx(
-                                "flex items-center gap-1 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                                "flex items-center gap-1 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer",
                                 filters.sort === 'newest' ? "bg-orange-500 text-white shadow-lg shadow-orange-500/25" : "text-zinc-500 hover:text-zinc-300"
                             )}
                         >
@@ -409,7 +448,7 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
                         <button
                             onClick={() => handleSortChange('name_asc')}
                             className={clsx(
-                                "flex items-center gap-1 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                                "flex items-center gap-1 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer",
                                 filters.sort === 'name_asc' ? "bg-orange-500 text-white shadow-lg shadow-orange-500/25" : "text-zinc-500 hover:text-zinc-300"
                             )}
                         >
@@ -418,7 +457,7 @@ export const DesktopFilters = ({ filters, onChange, categories, totalCount, isLo
                         <button
                             onClick={() => handleSortChange('name_desc')}
                             className={clsx(
-                                "flex items-center gap-1 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                                "flex items-center gap-1 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer",
                                 filters.sort === 'name_desc' ? "bg-orange-500 text-white shadow-lg shadow-orange-500/25" : "text-zinc-500 hover:text-zinc-300"
                             )}
                         >

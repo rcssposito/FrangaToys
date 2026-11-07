@@ -102,8 +102,7 @@ export const MobileFilters = ({ filters, onChange, categories }: MobileFiltersPr
             : [...current, idStr];
         onChange({ 
             ...filters, 
-            studioIds: newIds.join(','),
-            prontaEntrega: undefined 
+            studioIds: newIds.length > 0 ? newIds.join(',') : undefined
         });
     };
 
@@ -112,14 +111,12 @@ export const MobileFilters = ({ filters, onChange, categories }: MobileFiltersPr
             onChange({ 
                 ...filters, 
                 priceRange: newRange, 
-                sort: 'name_asc',
-                prontaEntrega: undefined 
+                sort: 'name_asc'
             });
         } else {
             onChange({ 
                 ...filters, 
-                priceRange: newRange,
-                prontaEntrega: undefined 
+                priceRange: newRange
             });
         }
     };
@@ -127,8 +124,7 @@ export const MobileFilters = ({ filters, onChange, categories }: MobileFiltersPr
     const handleSizeRangeChange = (newRange: string | undefined) => {
         onChange({ 
             ...filters, 
-            sizeRange: newRange,
-            prontaEntrega: undefined 
+            sizeRange: newRange
         });
     };
 
@@ -139,7 +135,6 @@ export const MobileFilters = ({ filters, onChange, categories }: MobileFiltersPr
     const countActiveFilters = () => {
         let count = 0;
         if (filters.studioIds) count += filters.studioIds.split(',').filter(Boolean).length;
-        if (filters.incluirNaoVendaveis === 'true') count++;
         if (filters.priceRange) count++;
         if (filters.sizeRange) count++;
         if (filters.sort && filters.sort !== 'newest') count++;
@@ -161,8 +156,23 @@ export const MobileFilters = ({ filters, onChange, categories }: MobileFiltersPr
                         onFocus={() => isFocused.current = true}
                         onBlur={() => isFocused.current = false}
                         placeholder="Buscar..."
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] text-base sm:text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-all placeholder:text-[var(--text-muted)] shadow-[var(--shadow-sm)]"
+                        className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] text-[var(--foreground)] text-base sm:text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-all placeholder:text-[var(--text-muted)] shadow-[var(--shadow-sm)]"
                     />
+                    {localSearch && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setLocalSearch('');
+                                setDebouncedSearch('');
+                                isUserInteraction.current = false;
+                                onChange({ ...filters, q: undefined });
+                            }}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-zinc-500 hover:text-white transition-colors"
+                            title="Limpar busca"
+                        >
+                            <X size={15} />
+                        </button>
+                    )}
                 </div>
                 <button
                     onClick={() => setIsSheetOpen(true)}
@@ -214,8 +224,7 @@ export const MobileFilters = ({ filters, onChange, categories }: MobileFiltersPr
                             key={cat}
                             onClick={() => onChange({ 
                                 ...filters, 
-                                categoria: filters.categoria === cat ? undefined : cat,
-                                prontaEntrega: undefined 
+                                categoria: filters.categoria === cat ? undefined : cat
                             })}
                             className={clsx(
                                 "whitespace-nowrap px-5 py-2 rounded-full text-xs font-bold border transition-all active:scale-95 shadow-sm",
@@ -264,19 +273,6 @@ export const MobileFilters = ({ filters, onChange, categories }: MobileFiltersPr
 
                                 {/* Sheet Content (Scrollable) */}
                                 <div className="flex-1 overflow-y-auto p-4 space-y-6">
-
-                                    {/* Toggles */}
-                                    <div className="space-y-3">
-                                        <label className="flex items-center justify-between p-3 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] shadow-sm cursor-pointer">
-                                            <span className="font-bold text-sm text-[var(--foreground)]">Exibir Indisponíveis</span>
-                                            <input
-                                                type="checkbox"
-                                                className="accent-orange-500 w-5 h-5"
-                                                checked={filters.incluirNaoVendaveis === 'true'}
-                                                onChange={(e) => onChange({ ...filters, incluirNaoVendaveis: e.target.checked ? 'true' : 'false' })}
-                                            />
-                                        </label>
-                                    </div>
 
                                     {/* Ordenação */}
                                     <div>
