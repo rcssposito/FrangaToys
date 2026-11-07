@@ -34,7 +34,7 @@ export function WishlistDrawer() {
     const [isRegistering, setIsRegistering] = useState(false);
     const drawerRef = useRef<HTMLDivElement>(null);
 
-    // Fecha ao clicar fora
+    // Fecha ao clicar fora ou pressionar Escape
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
@@ -42,8 +42,15 @@ export function WishlistDrawer() {
             }
         };
 
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setIsWishlistOpen(false);
+            }
+        };
+
         if (isWishlistOpen) {
             document.addEventListener('mousedown', handleClickOutside);
+            window.addEventListener('keydown', handleKeyDown);
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = '';
@@ -51,6 +58,7 @@ export function WishlistDrawer() {
 
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
+            window.removeEventListener('keydown', handleKeyDown);
             document.body.style.overflow = '';
         };
     }, [isWishlistOpen, setIsWishlistOpen]);

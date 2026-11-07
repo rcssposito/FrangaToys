@@ -129,34 +129,6 @@ function HomeContent() {
     return () => window.removeEventListener('reset-home-filters', handleResetEvent);
   }, []);
 
-  // Sync changes from URL searchParams back to filter state (e.g. Next.js navigation)
-  useEffect(() => {
-    const q = searchParams.get('q') || undefined;
-    const categoria = searchParams.get('categoria') || undefined;
-    const studioIds = searchParams.get('studioIds') || undefined;
-    const incluirNaoVendaveis = searchParams.get('incluirNaoVendaveis') || undefined;
-    const sort = searchParams.get('sort') || 'newest';
-    const priceRange = searchParams.get('priceRange') || undefined;
-    const sizeRange = searchParams.get('sizeRange') || undefined;
-    const prontaEntrega = searchParams.get('prontaEntrega') || undefined;
-
-    setFilters(prev => {
-      if (
-        prev.q === q &&
-        prev.categoria === categoria &&
-        prev.studioIds === studioIds &&
-        prev.incluirNaoVendaveis === incluirNaoVendaveis &&
-        prev.sort === sort &&
-        prev.priceRange === priceRange &&
-        prev.sizeRange === sizeRange &&
-        prev.prontaEntrega === prontaEntrega
-      ) {
-        return prev;
-      }
-      return { q, categoria, studioIds, incluirNaoVendaveis, sort, priceRange, sizeRange, prontaEntrega };
-    });
-  }, [searchParams]);
-
   // Sync browser Back/Forward (popstate) navigation back to filter state
   useEffect(() => {
     const handlePopState = () => {

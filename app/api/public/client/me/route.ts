@@ -25,7 +25,7 @@ export async function GET(request: Request) {
         if (user?.email) {
             const { data } = await supabaseAdmin
                 .from('clientes')
-                .select('id, nome, email, telefone, avatar_url, wishlist, tags, auth_user_id')
+                .select('id, nome, email, telefone, cpf, cep, logradouro, numero, bairro, cidade, uf, avatar_url, wishlist, tags, auth_user_id')
                 .or(`auth_user_id.eq.${user.id},email.ilike.${user.email}`)
                 .maybeSingle();
 
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
                 // Se ainda não tinha o email ou auth_user_id no registro, mas tem o telefone correspondente
                 const { data: byPhone } = await supabaseAdmin
                     .from('clientes')
-                    .select('id, nome, email, telefone, avatar_url, wishlist, tags, auth_user_id')
+                    .select('id, nome, email, telefone, cpf, cep, logradouro, numero, bairro, cidade, uf, avatar_url, wishlist, tags, auth_user_id')
                     .or(`telefone.eq.${cleanPhone},telefone.ilike.%${cleanPhone.slice(-8)}%`)
                     .maybeSingle();
                 
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
             if (clienteId) {
                 const { data } = await supabaseAdmin
                     .from('clientes')
-                    .select('id, nome, email, telefone, avatar_url, wishlist, tags, auth_user_id')
+                    .select('id, nome, email, telefone, cpf, cep, logradouro, numero, bairro, cidade, uf, avatar_url, wishlist, tags, auth_user_id')
                     .eq('id', clienteId)
                     .maybeSingle();
                 clientRecord = data;
@@ -73,7 +73,7 @@ export async function GET(request: Request) {
             if (!clientRecord && cleanPhone && cleanPhone.length >= 10) {
                 const { data } = await supabaseAdmin
                     .from('clientes')
-                    .select('id, nome, email, telefone, avatar_url, wishlist, tags, auth_user_id')
+                    .select('id, nome, email, telefone, cpf, cep, logradouro, numero, bairro, cidade, uf, avatar_url, wishlist, tags, auth_user_id')
                     .or(`telefone.eq.${cleanPhone},telefone.ilike.%${cleanPhone.slice(-8)}%`)
                     .maybeSingle();
                 clientRecord = data;
@@ -94,6 +94,13 @@ export async function GET(request: Request) {
                     nome: clientRecord.nome,
                     email: clientRecord.email || (user?.email || null),
                     telefone: clientRecord.telefone,
+                    cpf: clientRecord.cpf || null,
+                    cep: clientRecord.cep || null,
+                    logradouro: clientRecord.logradouro || null,
+                    numero: clientRecord.numero || null,
+                    bairro: clientRecord.bairro || null,
+                    cidade: clientRecord.cidade || null,
+                    uf: clientRecord.uf || null,
                     avatar_url: clientRecord.avatar_url || userAvatar || null,
                     wishlist: Array.isArray(clientRecord.wishlist) ? clientRecord.wishlist : []
                 }

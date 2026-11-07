@@ -23,6 +23,8 @@ import { useCart } from '@/context/CartContext';
 function PixPaymentWidget({ order }: { order: any }) {
     const [copied, setCopied] = useState(false);
     const [pixPayload, setPixPayload] = useState('');
+    const [qrLoaded, setQrLoaded] = useState(false);
+    const [qrError, setQrError] = useState(false);
 
     const finalVal = Number(order.valor_venda_final) || 0;
     const freteVal = Number(order.valor_frete) || 0;
@@ -37,6 +39,8 @@ function PixPaymentWidget({ order }: { order: any }) {
             // Chave E-mail da loja, nome Bianca Machado Mastrocollo
             const payload = generatePixPayload("contato@frangatoys.com.br", "Bianca Machado Mastrocollo", remaining, checkoutId);
             setPixPayload(payload);
+            setQrLoaded(false);
+            setQrError(false);
 
             if (checkoutId) {
                 fetch('/api/public/orders/notify-pix-copied', {
@@ -118,12 +122,28 @@ function PixPaymentWidget({ order }: { order: any }) {
                         </div>
                     ) : (
                         <>
-                            <div className="bg-white p-3 rounded-2xl shrink-0 shadow-xl border border-white/10">
-                                <img 
-                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(pixPayload)}`} 
-                                    alt="PIX QR Code" 
-                                    className="w-32 h-32"
-                                />
+                            <div className="bg-white p-3 rounded-2xl shrink-0 shadow-xl border border-white/10 w-[152px] h-[152px] flex items-center justify-center relative">
+                                {!qrLoaded && !qrError && (
+                                    <div className="absolute inset-3 rounded-xl bg-zinc-200 animate-pulse flex items-center justify-center">
+                                        <QrCode size={28} className="text-zinc-400" />
+                                    </div>
+                                )}
+                                {qrError ? (
+                                    <div className="text-center p-2 space-y-1">
+                                        <QrCode size={28} className="text-zinc-400 mx-auto" />
+                                        <span className="block text-[9px] font-bold text-zinc-600 leading-tight">
+                                            Use o botão Copiar Pix ao lado
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <img 
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(pixPayload)}`} 
+                                        alt="PIX QR Code" 
+                                        className={clsx("w-32 h-32 transition-opacity duration-300", qrLoaded ? "opacity-100" : "opacity-0")}
+                                        onLoad={() => setQrLoaded(true)}
+                                        onError={() => setQrError(true)}
+                                    />
+                                )}
                             </div>
                             
                             <div className="space-y-3 w-full min-w-0">
@@ -131,18 +151,27 @@ function PixPaymentWidget({ order }: { order: any }) {
                                     Escaneie o QR Code ao lado ou copie a chave Pix abaixo:
                                 </p>
                                 
-                                <div className="w-full bg-zinc-900/60 border border-zinc-800 p-3 rounded-2xl overflow-hidden text-ellipsis whitespace-nowrap text-[9px] font-mono text-zinc-500 shadow-inner">
+                                <div 
+                                    onClick={copyPix}
+                                    title="Clique para copiar o código PIX"
+                                    className="w-full bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 p-3 rounded-2xl overflow-hidden text-ellipsis whitespace-nowrap text-[9px] font-mono text-zinc-400 shadow-inner cursor-pointer transition-colors select-all"
+                                >
                                     {pixPayload}
                                 </div>
 
                                 <button 
                                     onClick={copyPix}
-                                    className="w-full bg-orange-500 hover:bg-orange-400 text-black text-[10px] font-black py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-widest shadow-lg shadow-orange-500/10"
+                                    className={clsx(
+                                        "w-full text-[10px] font-black py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-widest shadow-lg cursor-pointer",
+                                        copied
+                                            ? "bg-emerald-500 text-black shadow-emerald-500/20"
+                                            : "bg-orange-500 hover:bg-orange-400 text-black shadow-orange-500/10"
+                                    )}
                                 >
                                     {copied ? (
                                         <>
                                             <Check size={14} strokeWidth={3} />
-                                            Código Copiado!
+                                            Código PIX Copiado!
                                         </>
                                     ) : (
                                         <>
@@ -387,7 +416,12 @@ function ArtistTipWidget({ order }: { order: any }) {
                             <button 
                                 type="button"
                                 onClick={copyTipPix}
-                                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black text-xs font-black py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-wider shadow-lg shadow-amber-500/20 cursor-pointer"
+                                className={clsx(
+                                    "w-full text-black text-xs font-black py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-wider shadow-lg cursor-pointer",
+                                    copied
+                                        ? "bg-emerald-500 shadow-emerald-500/20"
+                                        : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-amber-500/20"
+                                )}
                             >
                                 {copied ? (
                                     <>
@@ -794,6 +828,15 @@ function NfeDataFormWidget({ order, identifier, onSaved }: { order: any; identif
 
 function WipGalleryWidget({ photos }: { photos: any[] }) {
     const [selectedPhoto, setSelectedPhoto] = useState<any | null>(null);
+
+    useEffect(() => {
+        if (!selectedPhoto) return;
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setSelectedPhoto(null);
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [selectedPhoto]);
 
     if (!photos || photos.length === 0) return null;
 

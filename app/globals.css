@@ -42,13 +42,6 @@
   --white-custom: #ffffff;
 }
 
-/* MacBook Pro 16" scale adjustment */
-@media (min-width: 1400px) and (max-width: 1800px) {
-  html {
-    font-size: 15px; 
-  }
-}
-
 [data-theme='dark'] {
   /* Softer Dark Base with Defined, Readable Cards */
   --background: #151618;
@@ -85,8 +78,8 @@ body {
   transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Bulletproof 3D Flip utility for cross-browser support (Firefox/Chrome/Safari) */
-.flip-card {
+/* Bulletproof 3D Flip utility — only activates 3D compositing when card is interacted with */
+.flip-card.has-flipped {
   perspective: 1000px;
   -webkit-perspective: 1000px;
 }
@@ -95,6 +88,9 @@ body {
   position: relative;
   width: 100%;
   height: 100%;
+}
+
+.flip-card.has-flipped .flip-card-inner {
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   -webkit-transition: -webkit-transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
@@ -102,18 +98,9 @@ body {
 }
 
 /* Flipping acionado pelo botão Detalhes ou toque */
-.is-flipped .flip-card-inner {
+.flip-card.is-flipped .flip-card-inner {
   transform: rotateY(180deg);
   -webkit-transform: rotateY(180deg);
-}
-
-.flip-card-front,
-.flip-card-back,
-.flip-card-front *,
-.flip-card-back * {
-  -webkit-backface-visibility: hidden;
-  -moz-backface-visibility: hidden;
-  backface-visibility: hidden;
 }
 
 .flip-card-front,
@@ -125,12 +112,24 @@ body {
   height: 100%;
 }
 
-.flip-card-front {
+.flip-card.has-flipped .flip-card-front,
+.flip-card.has-flipped .flip-card-back {
+  -webkit-backface-visibility: hidden;
+  -moz-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.flip-card.has-flipped .flip-card-front {
   transform: rotateY(0deg);
   -webkit-transform: rotateY(0deg);
 }
 
 .flip-card-back {
+  display: none;
+}
+
+.flip-card.has-flipped .flip-card-back {
+  display: block;
   transform: rotateY(180deg);
   -webkit-transform: rotateY(180deg);
 }

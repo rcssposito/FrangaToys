@@ -36,10 +36,19 @@ export default function CampanhaClient() {
 
   // Search, Category & Filter state (initialized from URL query params when present)
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('default');
   const isUrlHydrated = useRef(false);
+
+  // Debounce text search (300ms) to avoid filtering/sorting thousands of items on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Hydrate initial filters from URL on mount & listen to Back/Forward navigation
   useEffect(() => {
@@ -56,6 +65,7 @@ export default function CampanhaClient() {
         setSelectedCategory('Todos');
       }
       setSearch(urlQ || '');
+      setDebouncedSearch(urlQ || '');
       if (urlFiltro && ['all', 'pronta-entrega', 'under-150', 'under-250', 'under-400', 'under-600'].includes(urlFiltro)) {
         setQuickFilter(urlFiltro);
       } else {
@@ -79,7 +89,7 @@ export default function CampanhaClient() {
     if (!isUrlHydrated.current || typeof window === 'undefined') return;
     const params = new URLSearchParams();
     if (selectedCategory && selectedCategory !== 'Todos') params.set('categoria', selectedCategory);
-    if (search.trim()) params.set('q', search.trim());
+    if (debouncedSearch.trim()) params.set('q', debouncedSearch.trim());
     if (quickFilter && quickFilter !== 'all') params.set('filtro', quickFilter);
     if (sortBy && sortBy !== 'default') params.set('sort', sortBy);
 
@@ -89,7 +99,7 @@ export default function CampanhaClient() {
       const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
       window.history.replaceState(null, '', nextUrl);
     }
-  }, [selectedCategory, search, quickFilter, sortBy]);
+  }, [selectedCategory, debouncedSearch, quickFilter, sortBy]);
 
   // Progressive rendering for large campaigns (>1000 items)
   const [visibleCount, setVisibleCount] = useState(PAGE_BATCH_SIZE);
@@ -186,9 +196,9 @@ export default function CampanhaClient() {
       result = result.filter(item => (item.categoria || 'Outros') === selectedCategory);
     }
 
-    // Text search
-    if (search.trim()) {
-      const q = search.toLowerCase().trim();
+    // Text search (debounced)
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase().trim();
       result = result.filter(item => 
         item.nome?.toLowerCase().includes(q) ||
         item.serie?.toLowerCase().includes(q) ||
@@ -234,12 +244,12 @@ export default function CampanhaClient() {
     }
 
     return result;
-  }, [items, selectedCategory, search, quickFilter, sortBy]);
+  }, [items, selectedCategory, debouncedSearch, quickFilter, sortBy]);
 
   // Reset progressive visible slice when filters change
   useEffect(() => {
     setVisibleCount(PAGE_BATCH_SIZE);
-  }, [selectedCategory, search, quickFilter, sortBy]);
+  }, [selectedCategory, debouncedSearch, quickFilter, sortBy]);
 
   // Infinite Scroll Observer for smooth DOM rendering
   useEffect(() => {
@@ -272,6 +282,7 @@ export default function CampanhaClient() {
   const handleClearFilters = () => {
     setSelectedCategory('Todos');
     setSearch('');
+    setDebouncedSearch('');
     setQuickFilter('all');
     setSortBy('default');
   };
@@ -448,7 +459,10 @@ export default function CampanhaClient() {
               />
               {search && (
                 <button
-                  onClick={() => setSearch('')}
+                  onClick={() => {
+                    setSearch('');
+                    setDebouncedSearch('');
+                  }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white p-0.5 cursor-pointer"
                   title="Limpar busca"
                 >

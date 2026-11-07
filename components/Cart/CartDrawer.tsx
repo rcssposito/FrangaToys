@@ -41,10 +41,6 @@ export const CartDrawer = () => {
     const [metodoPagamento, setMetodoPagamento] = useState<'pix' | 'card'>('pix');
     const [isProcessing, setIsProcessing] = useState(false);
 
-    // Salesperson selection state
-    const [vendedores, setVendedores] = useState<{ id: number; nome: string; telefone: string }[]>([]);
-    const [selectedVendedorId, setSelectedVendedorId] = useState<number | ''>('');
-
     // Address & Tax states for NF-e and billing
     const [cpf, setCpf] = useState('');
     const [logradouro, setLogradouro] = useState('');
@@ -52,6 +48,98 @@ export const CartDrawer = () => {
     const [bairro, setBairro] = useState('');
     const [cidade, setCidade] = useState('');
     const [uf, setUf] = useState('');
+
+    const numeroInputRef = useRef<HTMLInputElement>(null);
+    const userEditedCepRef = useRef(false);
+    const lastQuotedCepRef = useRef('');
+    const hasLoadedProfileRef = useRef(false);
+
+    const formatCepDisplay = (val: string) => {
+        const digits = val.replace(/\D/g, '').substring(0, 8);
+        if (digits.length > 5) return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+        return digits;
+    };
+
+    const formatPhoneDisplay = (val: string) => {
+        const digits = val.replace(/\D/g, '').substring(0, 11);
+        if (digits.length === 0) return '';
+        if (digits.length <= 2) return `(${digits}`;
+        if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+        if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+        return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    };
+
+    const formatCpfDisplay = (raw: string) => {
+        let value = raw.replace(/\D/g, '');
+        if (value.length <= 11) {
+            return value
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        }
+        return value.substring(0, 14)
+            .replace(/^(\d{2})(\d)/, '$1.$2')
+            .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+            .replace(/\.(\d{3})(\d)/, '.$1/$2')
+            .replace(/(\d{4})(\d)/, '$1-$2');
+    };
+
+    // Lock body scroll and close on Escape key
+    useEffect(() => {
+        if (!isOpen) return;
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && !isProcessing) {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.body.style.overflow = prevOverflow;
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isOpen, isProcessing]);
+
+    // Auto-preenchimento inteligente (Perfil salvo no navegador + sessão do cliente)
+    useEffect(() => {
+        if (!isOpen || hasLoadedProfileRef.current) return;
+        hasLoadedProfileRef.current = true;
+
+        try {
+            const cached = localStorage.getItem('franga_checkout_profile');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (parsed.nome) setNome(prev => prev || parsed.nome);
+                if (parsed.contato) setContato(prev => prev || String(parsed.contato).replace(/\D/g, '').substring(0, 11));
+                if (parsed.cpf) setCpf(prev => prev || formatCpfDisplay(String(parsed.cpf)));
+                if (parsed.cep) setCep(prev => prev || String(parsed.cep).replace(/\D/g, '').substring(0, 8));
+                if (parsed.logradouro) setLogradouro(prev => prev || parsed.logradouro);
+                if (parsed.numero) setNumero(prev => prev || parsed.numero);
+                if (parsed.bairro) setBairro(prev => prev || parsed.bairro);
+                if (parsed.cidade) setCidade(prev => prev || parsed.cidade);
+                if (parsed.uf) setUf(prev => prev || parsed.uf);
+            }
+        } catch {}
+
+        fetch('/api/public/client/me')
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+                const c = data?.client;
+                if (!c) return;
+                if (c.nome) setNome(prev => prev || c.nome);
+                if (c.telefone) setContato(prev => prev || String(c.telefone).replace(/\D/g, '').substring(0, 11));
+                if (c.cpf) setCpf(prev => prev || formatCpfDisplay(String(c.cpf)));
+                if (c.cep) setCep(prev => prev || String(c.cep).replace(/\D/g, '').substring(0, 8));
+                if (c.logradouro) setLogradouro(prev => prev || c.logradouro);
+                if (c.numero) setNumero(prev => prev || c.numero);
+                if (c.bairro) setBairro(prev => prev || c.bairro);
+                if (c.cidade) setCidade(prev => prev || c.cidade);
+                if (c.uf) setUf(prev => prev || c.uf);
+            })
+            .catch(() => {});
+    }, [isOpen]);
 
     // Carregar cupom pré-ativado via link/campanha (URL ?cupom=XYZ)
     useEffect(() => {
@@ -64,7 +152,7 @@ export const CartDrawer = () => {
         } catch {}
     }, [isOpen, cupomCodigo, cupomAplicado]);
 
-    // Auto-fill address details based on CEP
+    // Auto-fill address details based on CEP (with protection against overwriting saved address unless CEP was edited)
     useEffect(() => {
         const cleanCep = cep.replace(/\D/g, '');
         if (cleanCep.length === 8) {
@@ -72,50 +160,24 @@ export const CartDrawer = () => {
                 .then(res => res.json())
                 .then(data => {
                     if (data && !data.erro) {
-                        setLogradouro(data.logradouro || '');
-                        setBairro(data.bairro || '');
-                        setCidade(data.localidade || '');
-                        setUf(data.uf || '');
+                        const shouldOverwrite = userEditedCepRef.current;
+                        setLogradouro(prev => (shouldOverwrite || !prev) ? (data.logradouro || prev) : prev);
+                        setBairro(prev => (shouldOverwrite || !prev) ? (data.bairro || prev) : prev);
+                        setCidade(prev => (shouldOverwrite || !prev) ? (data.localidade || prev) : prev);
+                        setUf(prev => (shouldOverwrite || !prev) ? (data.uf || prev) : prev);
+                        if (shouldOverwrite && step === 'checkout') {
+                            userEditedCepRef.current = false;
+                            setTimeout(() => numeroInputRef.current?.focus(), 60);
+                        }
                     }
                 })
                 .catch(err => console.error('Erro ao buscar CEP:', err));
         }
-    }, [cep]);
+    }, [cep, step]);
 
     const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        let value = e.target.value.replace(/\D/g, '');
-        if (value.length <= 11) {
-            // CPF Mask
-            value = value
-                .replace(/(\d{3})(\d)/, '$1.$2')
-                .replace(/(\d{3})(\d)/, '$1.$2')
-                .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-        } else {
-            // CNPJ Mask
-            value = value.substring(0, 14)
-                .replace(/^(\d{2})(\d)/, '$1.$2')
-                .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-                .replace(/\.(\d{3})(\d)/, '.$1/$2')
-                .replace(/(\d{4})(\d)/, '$1-$2');
-        }
-        setCpf(value);
+        setCpf(formatCpfDisplay(e.target.value));
     };
-
-    // Fetch active salespeople when opening checkout step
-    useEffect(() => {
-        if (step === 'checkout') {
-            fetch('/api/admin/users')
-                .then(res => res.json())
-                .then((data: any[]) => {
-                    const salesForce = data.filter(u =>
-                        u.telefone &&
-                        (u.roles?.includes('sales') || u.roles?.includes('admin'))
-                    );
-                    setVendedores(salesForce);
-                })
-                .catch(err => console.error('Error fetching salespeople:', err));
-        }
-    }, [step]);
 
     const [hasSentLead, setHasSentLead] = useState(false);
     
@@ -152,7 +214,6 @@ export const CartDrawer = () => {
         if (!isOpen) {
             setTimeout(() => {
                 setStep('cart');
-                setSelectedVendedorId('');
                 setHasSentLead(false);
             }, 300);
         }
@@ -232,19 +293,20 @@ export const CartDrawer = () => {
         }
     };
 
-    const handleFetchShipping = async () => {
-        if (cep.length < 8) {
+    const handleFetchShipping = async (overrideCep?: string) => {
+        const cleanCep = (overrideCep ?? cep).replace(/\D/g, '');
+        if (cleanCep.length < 8) {
             toast.error('Informe um CEP válido');
             return;
         }
 
+        lastQuotedCepRef.current = cleanCep;
         setIsCalculatingFrete(true);
         try {
             // Geolocalização no cliente (browser) para evitar erro 429 de IP compartilhado na nuvem
             let destLat: number | undefined;
             let destLng: number | undefined;
             try {
-                const cleanCep = cep.replace(/\D/g, '');
                 const geoRes = await fetch(`https://cep.awesomeapi.com.br/json/${cleanCep}`);
                 if (geoRes.ok) {
                     const geoData = await geoRes.json();
@@ -261,7 +323,7 @@ export const CartDrawer = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    sCepDestino: cep,
+                    sCepDestino: cleanCep,
                     destLat,
                     destLng
                 })
@@ -279,6 +341,21 @@ export const CartDrawer = () => {
             setIsCalculatingFrete(false);
         }
     };
+
+    // Cotação automática de frete ao digitar 8 dígitos de CEP na etapa de entrega
+    useEffect(() => {
+        const cleanCep = cep.replace(/\D/g, '');
+        if (
+            isOpen &&
+            step === 'shipping' &&
+            metodoEntrega === 'envio' &&
+            cleanCep.length === 8 &&
+            !isCalculatingFrete &&
+            lastQuotedCepRef.current !== cleanCep
+        ) {
+            handleFetchShipping(cleanCep);
+        }
+    }, [isOpen, step, metodoEntrega, cep, isCalculatingFrete]);
 
     const handleApplyCoupon = async () => {
         if (!cupomCodigo.trim()) return;
@@ -388,7 +465,6 @@ export const CartDrawer = () => {
                     valor_frete: metodoEntrega === 'envio' ? selectedFrete?.Valor : 0,
                     metodo_pagamento: metodoPagamento,
                     observacoes,
-                    vendedor_id: selectedVendedorId,
                     cupom_codigo: cupomAplicado?.codigo,
                     cpf,
                     cep,
@@ -402,6 +478,20 @@ export const CartDrawer = () => {
 
             const data = await res.json();
             if (data.error) throw new Error(data.error);
+
+            try {
+                localStorage.setItem('franga_checkout_profile', JSON.stringify({
+                    nome,
+                    contato,
+                    cpf,
+                    cep,
+                    logradouro,
+                    numero,
+                    bairro,
+                    cidade,
+                    uf
+                }));
+            } catch {}
 
             toast.success('Pedido registrado com sucesso!');
             clearCart();
@@ -443,41 +533,85 @@ export const CartDrawer = () => {
                         className="fixed inset-y-0 right-0 w-full max-w-md bg-[#09090b] border-l border-zinc-800 shadow-2xl z-[70] flex flex-col transition-all duration-300"
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between p-6 border-b border-zinc-800 bg-black/20">
-                            {step === 'cart' ? (
-                                <div>
-                                    <h2 className="text-xl font-black text-white uppercase tracking-tighter">
-                                        Seu Carrinho
-                                    </h2>
-                                    <p className="text-xs font-bold text-zinc-500 tracking-widest uppercase mt-0.5">
-                                        {totalItems} {totalItems === 1 ? 'item' : 'itens'} adicionados
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        onClick={() => setStep('cart')}
-                                        className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-400 transition-colors active:scale-95"
-                                    >
-                                        <ChevronLeft size={20} strokeWidth={2.5} />
-                                    </button>
+                        <div className="p-6 pb-4 border-b border-zinc-800 bg-black/20 space-y-4">
+                            <div className="flex items-center justify-between">
+                                {step === 'cart' ? (
                                     <div>
                                         <h2 className="text-xl font-black text-white uppercase tracking-tighter">
-                                            Finalizar Pedido
+                                            Seu Carrinho
                                         </h2>
                                         <p className="text-xs font-bold text-zinc-500 tracking-widest uppercase mt-0.5">
-                                            Dados para contato
+                                            {totalItems} {totalItems === 1 ? 'item' : 'itens'} adicionados
                                         </p>
                                     </div>
+                                ) : (
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (step === 'checkout') setStep('payment');
+                                                else if (step === 'payment') setStep('shipping');
+                                                else setStep('cart');
+                                            }}
+                                            className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-colors active:scale-95 cursor-pointer"
+                                            title="Voltar etapa anterior"
+                                        >
+                                            <ChevronLeft size={20} strokeWidth={2.5} />
+                                        </button>
+                                        <div>
+                                            <h2 className="text-xl font-black text-white uppercase tracking-tighter">
+                                                {step === 'shipping' ? 'Entrega' : step === 'payment' ? 'Pagamento' : 'Seus Dados'}
+                                            </h2>
+                                            <p className="text-xs font-bold text-zinc-500 tracking-widest uppercase mt-0.5">
+                                                {step === 'shipping'
+                                                    ? 'Retirada ou envio'
+                                                    : step === 'payment'
+                                                        ? 'PIX com desconto ou Cartão'
+                                                        : 'Dados para contato e NF-e'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="p-2.5 bg-zinc-900 hover:text-white rounded-xl text-zinc-500 border border-zinc-800 transition-all active:scale-90 cursor-pointer"
+                                >
+                                    <X size={20} strokeWidth={2.5} />
+                                </button>
+                            </div>
+
+                            {/* 4-Step Visual Progress Bar */}
+                            {items.length > 0 && (
+                                <div className="grid grid-cols-4 gap-1.5 pt-1">
+                                    {([
+                                        { id: 'cart', label: '1. Sacola' },
+                                        { id: 'shipping', label: '2. Entrega' },
+                                        { id: 'payment', label: '3. Pagamento' },
+                                        { id: 'checkout', label: '4. Dados' }
+                                    ] as const).map((s, idx) => {
+                                        const order = ['cart', 'shipping', 'payment', 'checkout'] as const;
+                                        const currentIndex = order.indexOf(step);
+                                        const isCompleted = idx < currentIndex;
+                                        const isActive = idx === currentIndex;
+                                        return (
+                                            <button
+                                                key={s.id}
+                                                type="button"
+                                                disabled={idx > currentIndex}
+                                                onClick={() => idx < currentIndex && setStep(s.id)}
+                                                className={`flex flex-col gap-1.5 text-left transition-all ${idx < currentIndex ? 'cursor-pointer opacity-90 hover:opacity-100' : idx === currentIndex ? 'cursor-default' : 'cursor-not-allowed opacity-40'}`}
+                                            >
+                                                <div className={`h-1 rounded-full transition-all ${isActive ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' : isCompleted ? 'bg-emerald-500' : 'bg-zinc-800'}`} />
+                                                <span className={`text-[9px] font-black uppercase tracking-wider truncate ${isActive ? 'text-orange-400' : isCompleted ? 'text-emerald-400' : 'text-zinc-600'}`}>
+                                                    {s.label}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             )}
-
-                            <button
-                                onClick={onClose}
-                                className="p-2.5 bg-zinc-900 hover:text-white rounded-xl text-zinc-500 border border-zinc-800 transition-all active:scale-90"
-                            >
-                                <X size={20} strokeWidth={2.5} />
-                            </button>
                         </div>
 
                         {/* Content Area */}
@@ -665,16 +799,20 @@ export const CartDrawer = () => {
                                                     <input
                                                         type="text"
                                                         inputMode="numeric"
-                                                        pattern="[0-9]*"
-                                                        value={cep}
-                                                        onChange={(e) => setCep(e.target.value.replace(/\D/g, '').substring(0, 8))}
-                                                        placeholder="CEP de Destino"
+                                                        value={formatCepDisplay(cep)}
+                                                        onChange={(e) => {
+                                                            userEditedCepRef.current = true;
+                                                            setCep(e.target.value.replace(/\D/g, '').substring(0, 8));
+                                                        }}
+                                                        placeholder="CEP de Destino (00000-000)"
                                                         className="flex-1 bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-base sm:text-sm"
                                                     />
                                                     <button
-                                                        onClick={handleFetchShipping}
+                                                        type="button"
+                                                        onClick={() => handleFetchShipping()}
                                                         disabled={isCalculatingFrete || cep.length < 8}
-                                                        className="bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 text-white px-6 rounded-2xl font-black transition-all active:scale-95 flex items-center justify-center"
+                                                        className="bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 text-white px-6 rounded-2xl font-black transition-all active:scale-95 flex items-center justify-center cursor-pointer"
+                                                        title="Cotar frete"
                                                     >
                                                         {isCalculatingFrete ? <Loader2 size={18} className="animate-spin" /> : <ChevronRight size={18} />}
                                                     </button>
@@ -774,9 +912,9 @@ export const CartDrawer = () => {
                                                 <input
                                                     type="tel"
                                                     inputMode="tel"
-                                                    value={contato}
-                                                    onChange={(e) => setContato(e.target.value.replace(/\D/g, ''))}
-                                                    placeholder="11999999999"
+                                                    value={formatPhoneDisplay(contato)}
+                                                    onChange={(e) => setContato(e.target.value.replace(/\D/g, '').substring(0, 11))}
+                                                    placeholder="(11) 99999-9999"
                                                     className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-base sm:text-sm"
                                                 />
                                             </div>
@@ -805,9 +943,11 @@ export const CartDrawer = () => {
                                                     <input
                                                         type="text"
                                                         inputMode="numeric"
-                                                        pattern="[0-9]*"
-                                                        value={cep}
-                                                        onChange={(e) => setCep(e.target.value.replace(/\D/g, '').substring(0, 8))}
+                                                        value={formatCepDisplay(cep)}
+                                                        onChange={(e) => {
+                                                            userEditedCepRef.current = true;
+                                                            setCep(e.target.value.replace(/\D/g, '').substring(0, 8));
+                                                        }}
                                                         placeholder="00000-000"
                                                         className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-base sm:text-xs"
                                                     />
@@ -828,6 +968,7 @@ export const CartDrawer = () => {
                                                     <div className="col-span-1 space-y-2">
                                                         <label className="text-[9px] font-black uppercase tracking-wider text-zinc-600 ml-1">Número</label>
                                                         <input
+                                                            ref={numeroInputRef}
                                                             type="text"
                                                             inputMode="numeric"
                                                             value={numero}
@@ -869,24 +1010,6 @@ export const CartDrawer = () => {
                                                             className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-all font-bold placeholder-zinc-700 text-base sm:text-xs text-center"
                                                         />
                                                     </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-2 focus-within:text-blue-500 transition-colors">
-                                                <label className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 ml-1 text-zinc-600">
-                                                    <User size={12} /> Consultor (Opcional)
-                                                </label>
-                                                <div className="relative">
-                                                     <select
-                                                        value={selectedVendedorId}
-                                                        onChange={(e) => setSelectedVendedorId(e.target.value === '' ? '' : Number(e.target.value))}
-                                                        className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-2xl px-5 py-4 outline-none focus:border-blue-500 transition-all font-bold appearance-none text-sm cursor-pointer"
-                                                    >
-                                                        <option value="">Atendimento Geral</option>
-                                                        {vendedores.map(v => (
-                                                            <option key={v.id} value={v.id}>{v.nome}</option>
-                                                        ))}
-                                                    </select>
                                                 </div>
                                             </div>
 

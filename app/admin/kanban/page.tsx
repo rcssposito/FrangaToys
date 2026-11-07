@@ -1034,6 +1034,10 @@ export default function KanbanPage() {
         let list = sales.filter(task => {
             if (searchQuery.trim()) {
                 const q = searchQuery.toLowerCase().trim();
+                const cleanQ = q.replace(/^#/, '');
+                const idMatch = String(task.id).includes(cleanQ);
+                const checkoutIdMatch = (task.checkout_id || '').toLowerCase().includes(q);
+                const obsMatch = (task.observacao || '').toLowerCase().includes(q);
                 const clienteMatch = (task.cliente_nome || '').toLowerCase().includes(q);
                 const figuraMatch = (task.figuras?.nome || '').toLowerCase().includes(q);
                 const contatoMatch = (task.cliente_contato || '').includes(q);
@@ -1044,7 +1048,7 @@ export default function KanbanPage() {
                 const vendedorMatch = (task.vendedor_nome || task.vendedor || '').toLowerCase().includes(q);
                 const pintorMatch = (task.pintor_nome || '').toLowerCase().includes(q);
 
-                if (!clienteMatch && !figuraMatch && !contatoMatch && !studioMatch && !vendedorMatch && !pintorMatch) {
+                if (!idMatch && !checkoutIdMatch && !obsMatch && !clienteMatch && !figuraMatch && !contatoMatch && !studioMatch && !vendedorMatch && !pintorMatch) {
                     return false;
                 }
             }
@@ -1197,7 +1201,7 @@ export default function KanbanPage() {
                         type="text"
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
-                        placeholder="Buscar por cliente, figura, estúdio..."
+                        placeholder="Buscar por #ID, cliente, figura, estúdio..."
                         className="w-full bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-zinc-500 outline-none focus:border-zinc-600 transition-colors font-medium"
                     />
                     {searchQuery && (

@@ -36,7 +36,7 @@ interface FigureDetailsProps {
 
 export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
     const router = useRouter();
-    const { addToCart, removeFromCart, isInCart, setIsCartOpen } = useCart();
+    const { items, addToCart, removeFromCart, updateFinish, isInCart, setIsCartOpen } = useCart();
     const { isInWishlist, toggleWishlist } = useWishlist();
     const inWishlist = isInWishlist(figure.id);
     // Verificação de campanha super agressiva (Lê da raiz, do objeto precos e por assinatura de valor)
@@ -45,8 +45,9 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
         (figure.preco_fixo_campanha && figure.preco_fixo_campanha > 0)
     );
 
+    const cartItem = items.find(i => i.id === figure.id);
     const [selectedFinishOverride, setSelectedFinishOverride] = useState<'estilizado' | 'colorido' | 'premium' | null>(null);
-    const selectedFinish = selectedFinishOverride || 'colorido';
+    const selectedFinish = selectedFinishOverride || cartItem?.finish || 'colorido';
 
     const [showInfo, setShowInfo] = useState(false);
     const [isZenMode, setIsZenMode] = useState(false);
@@ -54,7 +55,6 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
     // Reset override when figure changes
     useEffect(() => {
         setSelectedFinishOverride(null);
-        console.log('Figura carregada:', figure.id, 'Campanha:', isCampanha);
     }, [figure.id, isCampanha]);
 
     useEffect(() => {
@@ -171,6 +171,29 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
     useEffect(() => {
         setActiveImageIndex(0);
     }, [figure.id]);
+
+    // Suporte a teclado (Escape e Setas) e trava de scroll no Zen Mode
+    useEffect(() => {
+        if (!isZenMode) return;
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setIsZenMode(false);
+            } else if (e.key === 'ArrowLeft' && galleryImages.length > 1) {
+                setActiveImageIndex(prev => (prev > 0 ? prev - 1 : galleryImages.length - 1));
+            } else if (e.key === 'ArrowRight' && galleryImages.length > 1) {
+                setActiveImageIndex(prev => (prev < galleryImages.length - 1 ? prev + 1 : 0));
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.body.style.overflow = prevOverflow;
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isZenMode, galleryImages.length]);
 
     const currentImage = galleryImages[activeImageIndex] || figure.imagem_url || '';
     const currentOptimizedUrl = getOptimizedImageUrl(currentImage);
@@ -510,57 +533,72 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                             )}
                         </AnimatePresence>
  
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-2.5">
                             {finishOptions.map((opt) => (
                                 <button
                                     key={opt.id}
-                                    onClick={() => setSelectedFinishOverride(opt.id)}
+                                    type="button"
+                                    onClick={() => {
+                                        setSelectedFinishOverride(opt.id);
+                                        if (cartItem && cartItem.finish !== opt.id) {
+                                            updateFinish(figure.id, opt.id);
+                                            toast.success(`Acabamento alterado para ${opt.label} no carrinho!`);
+                                        }
+                                    }}
                                     className={clsx(
-                                        "relative flex flex-col items-center justify-center aspect-[1/1] p-1.5 rounded-2xl border-2 transition-all duration-300 text-center group",
+                                        "relative flex flex-col items-center justify-between py-3.5 px-3 sm:py-4 sm:px-4 rounded-2xl border-2 transition-all duration-300 text-center group cursor-pointer",
                                         selectedFinish === opt.id
-                                            ? `${opt.border} bg-zinc-900/80 ring-1 ring-white/20 scale-[1.02] shadow-2xl`
-                                            : "border-transparent bg-zinc-900/40 opacity-50 hover:opacity-100 hover:bg-zinc-900/60"
+                                            ? `${opt.border} bg-zinc-900/90 ring-1 ring-white/20 scale-[1.01] shadow-2xl`
+                                            : "border-zinc-800/60 bg-zinc-900/40 opacity-60 hover:opacity-100 hover:bg-zinc-900/60"
                                     )}
                                 >
-                                    <div className={clsx(
-                                        "mb-2 w-10 h-10 rounded-xl flex items-center justify-center transition-transform",
-                                        selectedFinish === opt.id ? "scale-110" : "group-hover:scale-105",
-                                        opt.bg,
-                                        opt.color
-                                    )}>
-                                        <opt.icon size={20} />
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                        <div className={clsx(
+                                            "w-8 h-8 rounded-xl flex items-center justify-center transition-transform shrink-0",
+                                            selectedFinish === opt.id ? "scale-105" : "group-hover:scale-105",
+                                            opt.bg,
+                                            opt.color
+                                        )}>
+                                            <opt.icon size={16} />
+                                        </div>
+                                        <div className="text-left">
+                                            <span className={clsx(
+                                                "text-[10px] font-black uppercase tracking-wider block leading-tight",
+                                                selectedFinish === opt.id ? "text-white" : "text-zinc-400"
+                                            )}>
+                                                {opt.label}
+                                            </span>
+                                            <span className="text-[8px] font-bold text-zinc-500 block leading-tight">
+                                                {opt.description}
+                                            </span>
+                                        </div>
                                     </div>
 
-                                    <span className={clsx(
-                                        "text-[9px] font-black uppercase tracking-widest block leading-tight mb-1",
-                                        selectedFinish === opt.id ? "text-white" : "text-zinc-500"
-                                    )}>
-                                        {opt.label}
-                                    </span>
+                                    <div className="w-full pt-2 mt-1 border-t border-white/5 flex flex-col items-center">
+                                        {opt.originalPrice && opt.price && opt.originalPrice > opt.price && (
+                                            <span className="text-[9px] text-zinc-500 line-through font-mono leading-none mb-0.5">
+                                                {formatPrice(opt.originalPrice)}
+                                            </span>
+                                        )}
 
-                                    {opt.originalPrice && opt.price && opt.originalPrice > opt.price && (
-                                        <span className="text-[10px] text-zinc-500 line-through font-mono leading-none">
-                                            {formatPrice(opt.originalPrice)}
+                                        <span className={clsx(
+                                            "text-xs sm:text-sm font-black tracking-tight",
+                                            selectedFinish === opt.id ? opt.color : "text-zinc-400"
+                                        )}>
+                                            {formatPrice(opt.price)}
                                         </span>
-                                    )}
 
-                                    <span className={clsx(
-                                        "text-xs font-black tracking-tight",
-                                        selectedFinish === opt.id ? opt.color : "text-zinc-400"
-                                    )}>
-                                        {formatPrice(opt.price)}
-                                    </span>
-
-                                    <span className={clsx(
-                                        "text-[9px] font-bold tracking-tight mt-0.5",
-                                        selectedFinish === opt.id ? "text-emerald-500" : "text-emerald-500/50"
-                                    )}>
-                                        PIX: {formatPrice(opt.pixPrice)}
-                                    </span>
+                                        <span className={clsx(
+                                            "text-[10px] font-extrabold tracking-tight mt-0.5",
+                                            selectedFinish === opt.id ? "text-emerald-400" : "text-emerald-500/60"
+                                        )}>
+                                            PIX: {formatPrice(opt.pixPrice)}
+                                        </span>
+                                    </div>
 
                                     {selectedFinish === opt.id && (
                                         <div className="absolute -top-2 -right-2">
-                                            <CheckCircle2 size={24} className="fill-blue-500 text-black border-none drop-shadow-lg" />
+                                            <CheckCircle2 size={22} className="fill-blue-500 text-black border-none drop-shadow-lg" />
                                         </div>
                                     )}
                                 </button>

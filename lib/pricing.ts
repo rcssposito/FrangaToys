@@ -130,15 +130,15 @@ export function getFigureTier(price: number): number {
 export function getTierBadgeStyle(tier: number): { label: string, bg: string, text: string, border: string } {
     switch (tier) {
         case 1:
-            return { label: 'Tier 1', bg: 'bg-purple-950/40 backdrop-blur-md', text: 'text-purple-400 font-extrabold', border: 'border-purple-500/20' };
+            return { label: 'Tier 1', bg: 'bg-purple-950/85', text: 'text-purple-300 font-extrabold', border: 'border-purple-500/30' };
         case 2:
-            return { label: 'Tier 2', bg: 'bg-amber-950/40 backdrop-blur-md', text: 'text-amber-400 font-extrabold', border: 'border-amber-500/20' };
+            return { label: 'Tier 2', bg: 'bg-amber-950/85', text: 'text-amber-300 font-extrabold', border: 'border-amber-500/30' };
         case 3:
-            return { label: 'Tier 3', bg: 'bg-blue-950/40 backdrop-blur-md', text: 'text-blue-400 font-extrabold', border: 'border-blue-500/20' };
+            return { label: 'Tier 3', bg: 'bg-blue-950/85', text: 'text-blue-300 font-extrabold', border: 'border-blue-500/30' };
         case 4:
-            return { label: 'Tier 4', bg: 'bg-emerald-950/40 backdrop-blur-md', text: 'text-emerald-400 font-extrabold', border: 'border-emerald-500/20' };
+            return { label: 'Tier 4', bg: 'bg-emerald-950/85', text: 'text-emerald-300 font-extrabold', border: 'border-emerald-500/30' };
         default:
-            return { label: 'Tier 5', bg: 'bg-zinc-900/40 backdrop-blur-md', text: 'text-zinc-350 font-extrabold', border: 'border-zinc-500/20' };
+            return { label: 'Tier 5', bg: 'bg-zinc-900/90', text: 'text-zinc-300 font-extrabold', border: 'border-zinc-500/30' };
     }
 }
 

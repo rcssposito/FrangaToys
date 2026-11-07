@@ -1,6 +1,6 @@
 'use client';
  
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { FiguraDTO } from '@/lib/dto';
 import Image from 'next/image';
 import { clsx } from 'clsx';
@@ -17,8 +17,9 @@ interface FigureCardProps {
     priority?: boolean;
 }
  
-export const FigureCard = ({ figure, className, priority }: FigureCardProps) => {
+export const FigureCard = memo(({ figure, className, priority }: FigureCardProps) => {
     const [isFlipped, setIsFlipped] = useState(false);
+    const [hasFlipped, setHasFlipped] = useState(false);
     const { isInWishlist, toggleWishlist } = useWishlist();
     const inWishlist = isInWishlist(figure.id);
 
@@ -54,6 +55,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
         e.preventDefault();
         e.stopPropagation();
         trackClick(); // Conta como interesse mesmo se só girar
+        setHasFlipped(true);
         setIsFlipped(!isFlipped);
     };    const imageUrl = getOptimizedImageUrl(figure.imagem_url);
     const secondaryImageUrl = figure.imagem_secundaria
@@ -70,6 +72,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
         <div
             className={clsx(
                 "group flip-card w-full aspect-[4/5] cursor-pointer", 
+                hasFlipped && "has-flipped",
                 isFlipped && "is-flipped",
                 className
             )}
@@ -78,7 +81,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
             <div className="flip-card-inner">
  
                 {/* === FRONT FACE (Luxury Design) === */}
-                <div className="flip-card-front relative bg-[#09090b] border border-zinc-800/40 hover:border-orange-500/30 hover:shadow-[0_0_30px_rgba(249,115,22,0.08)] transition-all duration-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl group/front [transform:translateZ(0)]">
+                <div className="flip-card-front relative bg-[#09090b] border border-zinc-800/40 hover:border-orange-500/30 hover:shadow-[0_0_30px_rgba(249,115,22,0.08)] transition-all duration-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl group/front">
                     <Link 
                         href={`/figura/${figure.slug || figure.id}?ref=vitrine`} 
                         className="absolute inset-0 z-10"
@@ -91,7 +94,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                         <button
                             type="button"
                             onClick={handleFlip}
-                            className="hidden sm:inline-block bg-black/75 backdrop-blur-xl border border-white/15 text-white/90 text-[8px] sm:text-[9px] px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-xl active:scale-95 touch-manipulation cursor-pointer"
+                            className="hidden sm:inline-block bg-zinc-950/90 border border-white/15 text-white/90 text-[8px] sm:text-[9px] px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-full font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-xl active:scale-95 touch-manipulation cursor-pointer"
                             title="Girar para ver dimensões e opções"
                         >
                             Detalhes
@@ -117,10 +120,10 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                                 });
                             }}
                             className={clsx(
-                                "w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center backdrop-blur-xl border transition-all duration-300 shadow-xl active:scale-90 cursor-pointer touch-manipulation",
+                                "w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-all duration-300 shadow-xl active:scale-90 cursor-pointer touch-manipulation",
                                 inWishlist
-                                    ? "bg-orange-500/25 border-orange-500 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.35)] scale-105"
-                                    : "bg-black/75 border-white/20 text-white/80 hover:text-orange-400 hover:border-orange-500/50 hover:bg-black/95 hover:scale-105"
+                                    ? "bg-orange-950/90 border-orange-500 text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.35)] scale-105"
+                                    : "bg-zinc-950/90 border-white/20 text-white/80 hover:text-orange-400 hover:border-orange-500/50 hover:bg-black hover:scale-105"
                             )}
                             title={inWishlist ? "Remover dos Favoritos" : "Adicionar aos Favoritos"}
                             aria-label={inWishlist ? "Remover dos Favoritos" : "Adicionar aos Favoritos"}
@@ -150,10 +153,10 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                         alt={figure.nome}
                         fill
                         className={clsx(
-                            "object-contain p-2 transition-all duration-700 opacity-90",
+                            "object-contain p-2 transition-transform duration-700",
                             secondaryImageUrl 
                                 ? "group-hover/front:opacity-0 group-hover/front:scale-105" 
-                                : "group-hover/front:scale-105 group-hover/front:opacity-100"
+                                : "group-hover/front:scale-105"
                         )}
                         sizes="(max-width: 768px) 50vw, 25vw"
                         priority={priority}
@@ -172,9 +175,9 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                     )}
 
                     {/* Status Badges Overlay (Top Left - Curated for Mobile) */}
-                    <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex flex-col gap-1 sm:gap-2 pointer-events-none max-w-[65%]">
+                    <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex flex-col items-start gap-1 sm:gap-2 pointer-events-none max-w-[65%]">
                         {figure.pronta_entrega && (
-                            <div className="bg-amber-500/30 backdrop-blur-md text-amber-300 text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-amber-500/40 animate-pulse">
+                            <div className="bg-amber-950/90 text-amber-300 text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-amber-500/40">
                                 <Zap size={10} className="fill-amber-400 text-amber-400 shrink-0" />
                                 <span className="truncate">Envio 24h</span>
                                 {figure.estoque_pronta_entrega && figure.estoque_pronta_entrega > 1 ? (
@@ -184,7 +187,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                         )}
                         {/* Oferta Badge */}
                         {!!(figure.is_campanha_active || (figure.preco_fixo_campanha && figure.preco_fixo_campanha > 0)) && (
-                            <div className="bg-purple-950/60 backdrop-blur-md text-purple-300 text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-purple-500/30 animate-pulse">
+                            <div className="bg-purple-950/90 text-purple-300 text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-purple-500/40">
                                 <Sparkles size={10} className="fill-purple-400 shrink-0" />
                                 <span>
                                     Oferta{figure.desconto_campanha && figure.desconto_campanha > 0 ? ` -${figure.desconto_campanha}%` : ''}
@@ -193,12 +196,12 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                         )}
                         {/* Combo / Bundle Badge */}
                         {!!(figure.is_bundle || figure.precos?.desconto_bundle_pct) && (
-                            <div className="bg-gradient-to-r from-purple-950/90 to-indigo-950/90 backdrop-blur-md text-purple-300 text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-purple-500/40">
+                            <div className="bg-gradient-to-r from-purple-950/95 to-indigo-950/95 text-purple-300 text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider flex items-center gap-1 shadow-md border border-purple-500/40">
                                 <Sparkles size={10} className="fill-purple-400 shrink-0" /> Combo -{figure.precos?.desconto_bundle_pct || figure.desconto_bundle_pct || 20}%
                             </div>
                         )}
                         {figure.disponivel && !figure.pronta_entrega && (
-                            <div className="hidden sm:inline-block bg-emerald-950/40 backdrop-blur-md text-emerald-400 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider border border-emerald-500/20 shadow-md">
+                            <div className="hidden sm:inline-block bg-emerald-950/85 text-emerald-400 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider border border-emerald-500/30 shadow-md">
                                 Disponível
                             </div>
                         )}
@@ -211,12 +214,12 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                             </div>
                         )}
                         {figure.tem_pintura_real && (
-                            <div className="hidden sm:flex bg-blue-950/40 backdrop-blur-md text-blue-400 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider items-center gap-1 shadow-md border border-blue-500/20">
+                            <div className="hidden sm:flex bg-blue-950/85 text-blue-400 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider items-center gap-1 shadow-md border border-blue-500/30">
                                 <Instagram size={10} /> Ver Fotos
                             </div>
                         )}
                         {figure.tem_extras && (
-                            <div className="hidden sm:flex bg-amber-950/40 backdrop-blur-md text-amber-400 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider items-center gap-1 shadow-md border border-amber-500/20">
+                            <div className="hidden sm:flex bg-amber-950/85 text-amber-400 text-[8px] sm:text-[9px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md uppercase tracking-wider items-center gap-1 shadow-md border border-amber-500/30">
                                 <Sparkles size={10} /> Extras
                             </div>
                         )}
@@ -225,7 +228,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                     {/* Footer Info (Glassmorphism Overlay for Contrast) */}
                     <div className="absolute bottom-0 inset-x-0 p-2.5 sm:p-5 pt-8 sm:pt-12 pb-3 sm:pb-6 bg-gradient-to-t from-black via-black/85 to-transparent z-20 pointer-events-none">
                         <div className="flex flex-col gap-0.5 sm:gap-1 items-center">
-                            <div className="backdrop-blur-md bg-black/50 px-2 py-0.5 rounded-full border border-white/10 mb-0.5 sm:mb-1 shadow-2xl">
+                            <div className="bg-zinc-950/90 px-2 py-0.5 rounded-full border border-white/10 mb-0.5 sm:mb-1 shadow-2xl">
                                 <h3 className="text-[7px] sm:text-[8px] font-black text-zinc-400 uppercase tracking-[0.2em] drop-shadow-md truncate max-w-[140px] sm:max-w-none">
                                     {figure.studio || 'Studio Indiferente'}
                                 </h3>
@@ -237,7 +240,7 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                             
                             {/* Starting Price Badge (High Visibility & Always Shows Price) */}
                             {(figure.precos || figure.preco) && (
-                                <div className="mt-1 sm:mt-3 bg-zinc-950/85 backdrop-blur-xl border border-orange-500/25 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-tighter shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-center gap-1 sm:gap-1.5">
+                                <div className="mt-1 sm:mt-3 bg-zinc-950/95 border border-orange-500/25 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-tighter shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-center gap-1 sm:gap-1.5">
                                     <span className="text-[7px] sm:text-[8px] text-zinc-400 uppercase font-black mr-0.5 tracking-widest hidden sm:inline">A partir de</span>
                                     {figure.precos?.original_pix_colorido && figurePrice < figure.precos.original_pix_colorido && (
                                         <span className="text-[8px] sm:text-[9px] text-zinc-500 line-through font-mono">
@@ -252,18 +255,20 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
                 </div>
  
                 {/* === BACK FACE (Price Table & Info) === */}
-                <div className="flip-card-back border border-zinc-800 bg-[#09090b] rounded-2xl sm:rounded-3xl overflow-hidden [transform:rotateY(180deg)_translateZ(0)]">
-                    {/* Darkened Background Image */}
-                    <div className="absolute inset-0 opacity-10 filter grayscale">
-                        <Image
-                            loader={imageKitLoader}
-                            src={imageUrl}
-                            alt="Background"
-                            fill
-                            className="object-cover blur-sm"
-                            sizes="(max-width: 768px) 100vw, 33vw"
-                        />
-                    </div>
+                <div className="flip-card-back border border-zinc-800 bg-[#09090b] rounded-2xl sm:rounded-3xl overflow-hidden">
+                    {/* Darkened Background Image (lazy-rendered only when flipped) */}
+                    {(isFlipped || hasFlipped) && (
+                        <div className="absolute inset-0 opacity-10 filter grayscale">
+                            <Image
+                                loader={imageKitLoader}
+                                src={imageUrl}
+                                alt="Background"
+                                fill
+                                className="object-cover blur-sm"
+                                sizes="(max-width: 768px) 50vw, 25vw"
+                            />
+                        </div>
+                    )}
  
                     <Link 
                         href={`/figura/${figure.slug || figure.id}?ref=vitrine`}
@@ -413,4 +418,5 @@ export const FigureCard = ({ figure, className, priority }: FigureCardProps) => 
             </div>
         </div>
     );
-};
+});
+FigureCard.displayName = 'FigureCard';

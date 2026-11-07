@@ -65,7 +65,10 @@ export default function Header() {
             <img
               src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
               alt="Franga Toys Logo"
-              className="h-14 md:h-18 object-contain"
+              width={180}
+              height={72}
+              fetchPriority="high"
+              className="h-14 md:h-18 w-auto object-contain"
             />
           </Link>
         </div>
@@ -221,7 +224,10 @@ export default function Header() {
             <img
               src="https://ik.imagekit.io/lojinha3d/Franga%20Toys.png"
               alt="Franga Toys Logo"
-              className="h-8 object-contain"
+              width={100}
+              height={32}
+              fetchPriority="high"
+              className="h-8 w-auto object-contain"
             />
           </Link>
         </div>
