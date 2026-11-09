@@ -132,28 +132,28 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
     };
 
     const finishOptions = [
-        { 
-            id: 'estilizado', 
-            label: 'Sem Pintura', 
-            icon: Paintbrush, 
-            description: 'Impresso, Limpo & com Primer', 
-            color: 'text-zinc-400', 
-            bg: 'bg-zinc-400/10', 
-            border: 'border-zinc-400/20', 
-            price: figure.precos?.estilizado, 
+        {
+            id: 'estilizado',
+            label: 'Sem Pintura',
+            icon: Paintbrush,
+            description: 'Impresso, Limpo & com Primer',
+            color: 'text-zinc-400',
+            bg: 'bg-zinc-400/10',
+            border: 'border-zinc-400/20',
+            price: figure.precos?.estilizado,
             pixPrice: figure.precos?.pix_estilizado,
             originalPrice: figure.precos?.original_estilizado,
             originalPixPrice: figure.precos?.original_pix_estilizado,
         },
-        { 
-            id: 'colorido', 
-            label: 'Colorido', 
-            icon: Palette, 
-            description: 'Pintura Premium', 
-            color: 'text-amber-500', 
-            bg: 'bg-amber-500/10', 
-            border: 'border-amber-500/20', 
-            price: figure.precos?.colorido, 
+        {
+            id: 'colorido',
+            label: 'Colorido',
+            icon: Palette,
+            description: 'Pintura Premium',
+            color: 'text-amber-500',
+            bg: 'bg-amber-500/10',
+            border: 'border-amber-500/20',
+            price: figure.precos?.colorido,
             pixPrice: figure.precos?.pix_colorido,
             originalPrice: figure.precos?.original_colorido,
             originalPixPrice: figure.precos?.original_pix_colorido,
@@ -198,13 +198,20 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
     const currentImage = galleryImages[activeImageIndex] || figure.imagem_url || '';
     const currentOptimizedUrl = getOptimizedImageUrl(currentImage);
 
-    const figurePrice = figure.precos?.colorido || figure.precos?.estilizado || 0;
-    const tier = figure.precos?.colorido ? getFigureTier(figure.precos.colorido) : null;
+    const isOutros = Boolean(
+        figure.categoria?.toLowerCase() === 'outros' ||
+        figure.serie?.toLowerCase() === 'outros' ||
+        figure.studio?.toLowerCase() === 'outros' ||
+        figure.studio?.toLowerCase() === 'custom'
+    );
+
+    const figurePrice = isOutros ? 0 : (figure.precos?.colorido || figure.precos?.estilizado || 0);
+    const tier = !isOutros && figure.precos?.colorido ? getFigureTier(figure.precos.colorido) : null;
     const tierStyle = tier ? getTierBadgeStyle(tier) : null;
 
     const activeFinishOption = finishOptions.find(f => f.id === selectedFinish) || finishOptions[1];
-    const activePrice = activeFinishOption?.price || figurePrice || figure.preco || 0;
-    const activePixPrice = activeFinishOption?.pixPrice;
+    const activePrice = isOutros ? 0 : (activeFinishOption?.price || figurePrice || figure.preco || 0);
+    const activePixPrice = isOutros ? undefined : activeFinishOption?.pixPrice;
 
     return (
         <div className="relative flex flex-col items-center justify-center min-h-full w-full max-w-6xl mx-auto p-4 md:p-4">
@@ -437,8 +444,8 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                         onClick={() => setActiveImageIndex(idx)}
                                         className={clsx(
                                             "relative w-14 h-14 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 transition-all duration-200 cursor-pointer p-1 bg-zinc-950/80 border",
-                                            isActive 
-                                                ? "border-orange-500 ring-2 ring-orange-500/50 shadow-lg shadow-orange-500/20 scale-105" 
+                                            isActive
+                                                ? "border-orange-500 ring-2 ring-orange-500/50 shadow-lg shadow-orange-500/20 scale-105"
                                                 : "border-zinc-800/80 opacity-60 hover:opacity-100 hover:border-zinc-600"
                                         )}
                                         title={`Ver foto ${idx + 1}`}
@@ -532,7 +539,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                 </motion.div>
                             )}
                         </AnimatePresence>
- 
+
                         <div className="grid grid-cols-2 gap-2.5">
                             {finishOptions.map((opt) => (
                                 <button
@@ -575,25 +582,41 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                     </div>
 
                                     <div className="w-full pt-2 mt-1 border-t border-white/5 flex flex-col items-center">
-                                        {opt.originalPrice && opt.price && opt.originalPrice > opt.price && (
-                                            <span className="text-[9px] text-zinc-500 line-through font-mono leading-none mb-0.5">
-                                                {formatPrice(opt.originalPrice)}
-                                            </span>
+                                        {!isOutros && opt.price ? (
+                                            <>
+                                                {opt.originalPrice && opt.originalPrice > opt.price && (
+                                                    <span className="text-[9px] text-zinc-500 line-through font-mono leading-none mb-0.5">
+                                                        {formatPrice(opt.originalPrice)}
+                                                    </span>
+                                                )}
+
+                                                <span className={clsx(
+                                                    "text-xs sm:text-sm font-black tracking-tight",
+                                                    selectedFinish === opt.id ? opt.color : "text-zinc-400"
+                                                )}>
+                                                    {formatPrice(opt.price)}
+                                                </span>
+
+                                                <span className={clsx(
+                                                    "text-[10px] font-extrabold tracking-tight mt-0.5",
+                                                    selectedFinish === opt.id ? "text-emerald-400" : "text-emerald-500/60"
+                                                )}>
+                                                    PIX: {formatPrice(opt.pixPrice)}
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className={clsx(
+                                                    "text-xs sm:text-sm font-black tracking-wider uppercase",
+                                                    selectedFinish === opt.id ? "text-orange-400" : "text-zinc-400"
+                                                )}>
+                                                    A combinar
+                                                </span>
+                                                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mt-0.5">
+                                                    Sob orçamento
+                                                </span>
+                                            </>
                                         )}
-
-                                        <span className={clsx(
-                                            "text-xs sm:text-sm font-black tracking-tight",
-                                            selectedFinish === opt.id ? opt.color : "text-zinc-400"
-                                        )}>
-                                            {formatPrice(opt.price)}
-                                        </span>
-
-                                        <span className={clsx(
-                                            "text-[10px] font-extrabold tracking-tight mt-0.5",
-                                            selectedFinish === opt.id ? "text-emerald-400" : "text-emerald-500/60"
-                                        )}>
-                                            PIX: {formatPrice(opt.pixPrice)}
-                                        </span>
                                     </div>
 
                                     {selectedFinish === opt.id && (
@@ -664,12 +687,13 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                                 nome: figure.nome,
                                 imagem_url: figure.imagem_url,
                                 codigo: figure.codigo,
-                                preco: figure.precos?.colorido || figure.preco || 0,
-                                precos: figure.precos,
+                                preco: isOutros ? 0 : (figure.precos?.colorido || figure.preco || 0),
+                                precos: isOutros ? null : figure.precos,
                                 serie: figure.serie,
                                 studio: figure.studio,
                                 slug: figure.slug,
-                                is_campanha: !!isCampanha
+                                is_campanha: !isOutros && !!isCampanha,
+                                is_merchant: isOutros ? false : figure.is_merchant
                             })}
                             className={clsx(
                                 "p-4 sm:p-5 rounded-2xl border transition-all duration-300 relative z-10 cursor-pointer active:scale-[0.95] shrink-0",
@@ -740,7 +764,11 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                         {selectedFinish === 'estilizado' ? 'Sem Pintura' : 'Colorido'}
                     </span>
                     <div className="flex items-baseline gap-1.5">
-                        {activePixPrice ? (
+                        {isOutros || (!activePixPrice && !activePrice) ? (
+                            <span className="text-sm font-black text-orange-400 uppercase tracking-wider">
+                                A combinar
+                            </span>
+                        ) : activePixPrice ? (
                             <>
                                 <span className="text-base font-black text-emerald-400 tracking-tight">
                                     {formatPrice(activePixPrice)}
@@ -785,14 +813,16 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
             </div>
 
             {/* Modal de Oferta Especial (Exit-Intent / Idle com trava de 30 dias) */}
-            <IdleOfferModal
-                figure={figure}
-                currentFinish={selectedFinish}
-                onAcceptOffer={() => {
-                    addToCart(figure, selectedFinish);
-                    setIsCartOpen(true);
-                }}
-            />
+            {!isOutros && figure.is_merchant && (
+                <IdleOfferModal
+                    figure={figure}
+                    currentFinish={selectedFinish}
+                    onAcceptOffer={() => {
+                        addToCart(figure, selectedFinish);
+                        setIsCartOpen(true);
+                    }}
+                />
+            )}
         </div>
     );
 }

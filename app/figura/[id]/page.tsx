@@ -24,7 +24,7 @@ const getFigureWithPricing = cache(async (identifier: string) => {
             *,
             series ( 
                 nome,
-                categorias ( nome )
+                categorias ( id, nome )
             ),
             figuras_meta ( * ),
             studios ( nome, merchant, ativo )
@@ -129,6 +129,11 @@ export default async function FiguraPage({ params }: Props) {
         }
     }
 
+    const seriesData = Array.isArray(figure.series) ? figure.series[0] : (figure.series as any);
+    const studioData = Array.isArray((figure as any).studios) ? (figure as any).studios[0] : (figure as any).studios;
+    const catObj = Array.isArray(seriesData?.categorias) ? seriesData.categorias[0] : seriesData?.categorias;
+    const categoriaNome = catObj?.nome || 'Outros';
+
     const metaData = Array.isArray(figure.figuras_meta) ? figure.figuras_meta[0] : figure.figuras_meta;
     const metaWithBundle = metaData ? {
         ...metaData,
@@ -138,9 +143,6 @@ export default async function FiguraPage({ params }: Props) {
     } : null;
     const prices = settings && metaWithBundle ? calculateFigurePrices(metaWithBundle, settings) : undefined;
 
-    const seriesData = Array.isArray(figure.series) ? figure.series[0] : (figure.series as any);
-    const studioData = Array.isArray((figure as any).studios) ? (figure as any).studios[0] : (figure as any).studios;
-
     const figureDto = {
         id: figure.id,
         nome: figure.nome,
@@ -148,7 +150,7 @@ export default async function FiguraPage({ params }: Props) {
         disponivel: figure.disponivel,
         serie: seriesData?.nome,
         serie_id: figure.serie_id,
-        categoria: seriesData?.categorias?.nome || (seriesData as any)?.categorias?.[0]?.nome,
+        categoria: categoriaNome,
         studio: studioData?.nome,
         altura_cm: metaData?.altura_cm,
         largura_cm: metaData?.largura_cm,

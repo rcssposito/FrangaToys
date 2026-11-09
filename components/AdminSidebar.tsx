@@ -19,6 +19,7 @@ import {
     PanelLeftOpen,
     Flame,
     Cpu,
+    Printer,
 } from 'lucide-react';
 import ThemeToggle from '@/components/common/ThemeToggle';
 
@@ -78,6 +79,12 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             href: '/admin/kanban',
             icon: KanbanSquare,
             roles: ['admin', 'sales', 'production', 'painter']
+        },
+        {
+            name: 'Etiquetas',
+            href: '/admin/etiquetas',
+            icon: Printer,
+            roles: ['admin', 'sales', 'production', 'painter', 'finance', 'orcamento']
         },
         {
             name: 'Marketing & Clientes',

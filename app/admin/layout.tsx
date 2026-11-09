@@ -28,6 +28,7 @@ const routeRoles: Record<string, string[]> = {
     '/admin/dre': ['admin', 'finance', 'sales'],
     '/admin/gerador-base': ['admin', 'sales', 'pricing', 'production', 'painter', 'orcamento'],
     '/admin/automation': ['admin', 'sales', 'pricing', 'production', 'painter', 'orcamento'],
+    '/admin/etiquetas': ['admin', 'sales', 'finance', 'production', 'painter', 'orcamento'],
     '/admin/settings': ['admin']
 };
 
@@ -77,9 +78,11 @@ export default function AdminLayout({
 
     return (
         <AuthProvider>
-            <div className={`min-h-screen bg-[var(--background)] text-[var(--foreground)] pt-16 md:pt-0 transition-all duration-300 ${isCollapsed ? 'md:pl-20' : 'md:pl-64'}`}>
-                <AdminSidebar isCollapsed={isCollapsed} onToggleCollapse={toggleCollapse} />
-                <main className="p-4 md:p-8">
+            <div className={`min-h-screen bg-[var(--background)] text-[var(--foreground)] pt-16 md:pt-0 transition-all duration-300 ${isCollapsed ? 'md:pl-20' : 'md:pl-64'} print:min-h-0 print:pt-0 print:pl-0 print:m-0 print:p-0 print:bg-white`}>
+                <div className="print:hidden">
+                    <AdminSidebar isCollapsed={isCollapsed} onToggleCollapse={toggleCollapse} />
+                </div>
+                <main className="p-4 md:p-8 print:p-0 print:m-0">
                     <AuthGuard allowedRoles={requiredRoles}>
                         {children}
                     </AuthGuard>

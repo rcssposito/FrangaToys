@@ -133,3 +133,56 @@ body {
   transform: rotateY(180deg);
   -webkit-transform: rotateY(180deg);
 }
+
+/* ==========================================================================
+   ESTILOS DE IMPRESSÃO (100mm x 150mm) - 1 PÁGINA EXATA
+   ========================================================================== */
+@media print {
+  @page {
+    size: 100mm 150mm;
+    margin: 0;
+  }
+
+  html,
+  body {
+    width: 100mm !important;
+    height: 150mm !important;
+    max-width: 100mm !important;
+    max-height: 150mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ocultar elementos de layout e tela */
+  aside,
+  nav,
+  header,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Container do documento ativo a ser impresso */
+  .printable-document-active {
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100mm !important;
+    height: 150mm !important;
+    max-width: 100mm !important;
+    max-height: 150mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

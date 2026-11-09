@@ -40,7 +40,7 @@ export const FiguraSchema = z.object({
     original_pix_estilizado: z.number().optional(),
     original_pix_colorido: z.number().optional(),
     desconto_bundle_pct: z.number().optional(),
-  }).optional(),
+  }).nullable().optional(),
   tem_extras: z.boolean().nullable().optional(),
   tem_pintura_real: z.boolean().nullable().optional(),
   is_merchant: z.boolean().optional().default(false),

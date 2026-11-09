@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
             .single();
 
         // 3. Category Logic (Database-side filtering)
+        const isFilteringOutros = filters.categoria?.toLowerCase() === 'outros';
         const shouldFilterCategory = filters.categoria && filters.categoria !== 'Todos' && filters.categoria !== 'all';
 
         // Construct select string dynamically based on whether we filter or not
@@ -73,7 +74,7 @@ export async function GET(req: NextRequest) {
             while (hasMore) {
                 const { data, error } = await supabase
                     .from('figuras')
-                    .select('id, figuras_meta(resina_kg, horas_impressao, horas_pintura, is_campanha_active, desconto_campanha, preco_fixo_campanha)')
+                    .select('id, series(nome, categorias(id, nome)), studios(nome), figuras_meta(resina_kg, horas_impressao, horas_pintura, is_campanha_active, desconto_campanha, preco_fixo_campanha)')
                     .range(page * pageSize, (page + 1) * pageSize - 1);
 
                 if (error) throw error;
@@ -95,6 +96,18 @@ export async function GET(req: NextRequest) {
                 const max = parts[1] === '+' || parts[1] === '' ? Infinity : parseFloat(parts[1]);
                 
                 const matchedIds = allMeta.filter(item => {
+                    const seriesObj = Array.isArray(item.series) ? item.series[0] : item.series;
+                    const studioObj = Array.isArray(item.studios) ? item.studios[0] : item.studios;
+                    const catObj = Array.isArray(seriesObj?.categorias) ? seriesObj.categorias[0] : seriesObj?.categorias;
+                    const isOutrosItem = Boolean(
+                        catObj?.id === 0 ||
+                        catObj?.nome?.toLowerCase() === 'outros' ||
+                        seriesObj?.nome?.toLowerCase() === 'outros' ||
+                        studioObj?.nome?.toLowerCase() === 'outros' ||
+                        studioObj?.nome?.toLowerCase() === 'custom'
+                    );
+                    if (isOutrosItem) return false;
+
                     const metaList = item.figuras_meta;
                     const meta = Array.isArray(metaList) ? metaList[0] : metaList;
                     if (!meta) return false;
@@ -232,7 +245,11 @@ export async function GET(req: NextRequest) {
                 }
             }
             if (shouldFilterCategory) {
-                q = q.eq('series.categorias.nome', filters.categoria);
+                if (isFilteringOutros) {
+                    q = q.ilike('series.categorias.nome', 'outros');
+                } else {
+                    q = q.eq('series.categorias.nome', filters.categoria);
+                }
             }
             if (qOrCondition) {
                 q = q.or(qOrCondition);
@@ -294,6 +311,12 @@ export async function GET(req: NextRequest) {
             } : null;
             const pricesData = settings && metaWithBundle ? calculateFigurePrices(metaWithBundle, settings) : null;
             
+            const seriesData = Array.isArray(item.series) ? item.series[0] : item.series;
+            const studioData = Array.isArray(item.studios) ? item.studios[0] : item.studios;
+            const categoriaData = seriesData?.categorias;
+            const categoriaObj = Array.isArray(categoriaData) ? categoriaData[0] : categoriaData;
+            const categoriaNome = categoriaObj?.nome || 'Outros';
+
             // Pre-calculate prices to avoid ternary issues in large objects
             let precos = null;
             if (pricesData) {
@@ -312,11 +335,6 @@ export async function GET(req: NextRequest) {
                 };
             }
 
-            const seriesData = Array.isArray(item.series) ? item.series[0] : item.series;
-            const studioData = Array.isArray(item.studios) ? item.studios[0] : item.studios;
-            const categoriaData = seriesData?.categorias;
-            const categoriaNome = Array.isArray(categoriaData) ? categoriaData[0]?.nome : categoriaData?.nome;
-
             return {
                 id: item.id,
                 nome: item.nome,
@@ -331,7 +349,7 @@ export async function GET(req: NextRequest) {
                 tem_pintura_real: item.tem_pintura_real || false,
                 slug: item.slug || null,
                 serie: seriesData?.nome || null,
-                categoria: categoriaNome || null,
+                categoria: categoriaNome,
                 studio: studioData?.nome || null,
                 studio_logo: studioData?.logo_url || null,
                 studio_instagram: studioData?.instagram_handle || null,

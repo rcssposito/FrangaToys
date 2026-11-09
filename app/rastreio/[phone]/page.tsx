@@ -4,9 +4,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { clsx } from 'clsx';
-import { 
-    ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw, 
-    ShoppingBag, Copy, QrCode, Check, Camera, X, Eye, FileText, CheckCircle2, 
+import {
+    ArrowLeft, Loader2, Package, Calendar, Award, ExternalLink, RefreshCw,
+    ShoppingBag, Copy, QrCode, Check, Camera, X, Eye, FileText, CheckCircle2,
     AlertCircle, Edit3, MapPin, ShieldCheck, Heart, Coffee, Sparkles, Paintbrush,
     ChevronDown, ChevronUp, Trash2, Share2, ArrowRight, Clock, MessageCircle, LogOut
 } from 'lucide-react';
@@ -79,7 +79,7 @@ function PixPaymentWidget({ order }: { order: any }) {
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500">
                         {isCard ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg>
                         ) : (
                             <QrCode size={20} />
                         )}
@@ -93,7 +93,7 @@ function PixPaymentWidget({ order }: { order: any }) {
                         </p>
                     </div>
                 </div>
-                
+
                 <div className="text-right">
                     <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
                         {order.status_pagamento === 'Parcial' ? 'PAGAMENTO PARCIAL' : 'AGUARDANDO PAGAMENTO'}
@@ -110,7 +110,7 @@ function PixPaymentWidget({ order }: { order: any }) {
                             <p className="text-[10.5px] text-zinc-400 font-medium">
                                 Clique no botão abaixo para efetuar o pagamento com cartão de crédito via Mercado Pago:
                             </p>
-                            <a 
+                            <a
                                 href={order.link_pagamento}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -136,22 +136,22 @@ function PixPaymentWidget({ order }: { order: any }) {
                                         </span>
                                     </div>
                                 ) : (
-                                    <img 
-                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(pixPayload)}`} 
-                                        alt="PIX QR Code" 
+                                    <img
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(pixPayload)}`}
+                                        alt="PIX QR Code"
                                         className={clsx("w-32 h-32 transition-opacity duration-300", qrLoaded ? "opacity-100" : "opacity-0")}
                                         onLoad={() => setQrLoaded(true)}
                                         onError={() => setQrError(true)}
                                     />
                                 )}
                             </div>
-                            
+
                             <div className="space-y-3 w-full min-w-0">
                                 <p className="text-[10px] text-zinc-500 font-black uppercase tracking-wider text-center sm:text-left">
                                     Escaneie o QR Code ao lado ou copie a chave Pix abaixo:
                                 </p>
-                                
-                                <div 
+
+                                <div
                                     onClick={copyPix}
                                     title="Clique para copiar o código PIX"
                                     className="w-full bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 p-3 rounded-2xl overflow-hidden text-ellipsis whitespace-nowrap text-[9px] font-mono text-zinc-400 shadow-inner cursor-pointer transition-colors select-all"
@@ -159,7 +159,7 @@ function PixPaymentWidget({ order }: { order: any }) {
                                     {pixPayload}
                                 </div>
 
-                                <button 
+                                <button
                                     onClick={copyPix}
                                     className={clsx(
                                         "w-full text-[10px] font-black py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-widest shadow-lg cursor-pointer",
@@ -241,7 +241,7 @@ function NfeWidget({ order }: { order: any }) {
                     <div className="text-xs font-mono text-zinc-500 select-all group-hover:text-zinc-300 transition-colors overflow-hidden text-ellipsis whitespace-nowrap">
                         {order.chave_nfe}
                     </div>
-                    <button 
+                    <button
                         onClick={copyNfe}
                         className="p-1.5 text-zinc-500 hover:text-orange-500 rounded-lg hover:bg-zinc-850/50 transition-all shrink-0 active:scale-90 flex items-center justify-center"
                         title="Copiar chave de acesso"
@@ -251,7 +251,7 @@ function NfeWidget({ order }: { order: any }) {
                 </div>
             </div>
             {order.link_danfe && (
-                <a 
+                <a
                     href={order.link_danfe}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -303,7 +303,7 @@ function ArtistTipWidget({ order }: { order: any }) {
     return (
         <div className="mt-4 p-3.5 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-950/20 via-zinc-950/70 to-zinc-950/90 border border-amber-500/25 shadow-xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/10 transition-all" />
-            
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-zinc-800/80">
                 <div className="flex items-center gap-2.5">
                     <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
@@ -395,9 +395,9 @@ function ArtistTipWidget({ order }: { order: any }) {
                 {activeAmount > 0 && tipPayload && (
                     <div className="bg-zinc-950/90 border border-zinc-800/90 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-center gap-3.5">
                         <div className="bg-white p-2 rounded-xl shrink-0 shadow-md">
-                            <img 
-                                src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(tipPayload)}`} 
-                                alt="PIX Gorjeta QR Code" 
+                            <img
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(tipPayload)}`}
+                                alt="PIX Gorjeta QR Code"
                                 className="w-20 h-20 sm:w-24 sm:h-24"
                             />
                         </div>
@@ -413,7 +413,7 @@ function ArtistTipWidget({ order }: { order: any }) {
                                 </span>
                             </div>
 
-                            <button 
+                            <button
                                 type="button"
                                 onClick={copyTipPix}
                                 className={clsx(
@@ -601,8 +601,8 @@ function NfeDataFormWidget({ order, identifier, onSaved }: { order: any; identif
                             Dados para a Nota Fiscal (NF-e)
                         </h4>
                         <p className="text-[10px] text-zinc-500 font-medium">
-                            {isReady 
-                                ? 'Dados registrados para emissão da Nota Fiscal e envio da sua peça.' 
+                            {isReady
+                                ? 'Dados registrados para emissão da Nota Fiscal e envio da sua peça.'
                                 : 'Complete seus dados para emissão da sua Nota Fiscal e finalizarmos sua entrega.'}
                         </p>
                     </div>
@@ -875,7 +875,7 @@ function WipGalleryWidget({ photos }: { photos: any[] }) {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 group-hover:opacity-95 transition-opacity" />
-                        
+
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 backdrop-blur-[2px]">
                             <span className="p-2 bg-black/70 text-white rounded-full border border-white/20">
                                 <Eye size={16} />
@@ -986,7 +986,7 @@ export default function CustomerDashboard() {
             // Verifica se o identificador é um UUID ou telefone
             const isToken = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
             const queryParam = isToken ? `token=${identifier}` : `phone=${identifier}`;
-            
+
             const res = await fetch(`/api/public/orders?${queryParam}`);
             const data = await res.json();
             const loadedOrders = data.items || [];
@@ -1046,10 +1046,10 @@ export default function CustomerDashboard() {
     return (
         <div className="min-h-screen bg-black text-white p-4 md:p-10">
             <div className="max-w-4xl mx-auto space-y-8">
-                
+
                 {/* Header Nav */}
                 <div className="flex items-center justify-between">
-                    <Link 
+                    <Link
                         href="/"
                         className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors text-xs font-black uppercase tracking-widest cursor-pointer group"
                     >
@@ -1057,13 +1057,13 @@ export default function CustomerDashboard() {
                         Voltar para a Loja
                     </Link>
                     <div className="flex items-center gap-2 sm:gap-3">
-                         <span className="hidden sm:inline-block text-[10px] font-black text-zinc-600 uppercase tracking-widest bg-zinc-900 px-3 py-1 rounded-full border border-white/5">
+                        <span className="hidden sm:inline-block text-[10px] font-black text-zinc-600 uppercase tracking-widest bg-zinc-900 px-3 py-1 rounded-full border border-white/5">
                             ACESSO PROTEGIDO
-                         </span>
-                         <button onClick={fetchOrders} className="p-2 text-zinc-500 hover:text-orange-500 transition-colors cursor-pointer" title="Recarregar">
+                        </span>
+                        <button onClick={fetchOrders} className="p-2 text-zinc-500 hover:text-orange-500 transition-colors cursor-pointer" title="Recarregar">
                             <RefreshCw size={18} />
-                         </button>
-                         <button
+                        </button>
+                        <button
                             type="button"
                             onClick={async () => {
                                 await logoutClient();
@@ -1072,10 +1072,10 @@ export default function CustomerDashboard() {
                             }}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-white/5 hover:border-red-500/30 text-zinc-400 hover:text-red-400 text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer"
                             title="Consultar outro número ou sair desta conta"
-                         >
+                        >
                             <LogOut size={13} />
                             <span>Trocar Conta</span>
-                         </button>
+                        </button>
                     </div>
                 </div>
 
@@ -1164,8 +1164,8 @@ export default function CustomerDashboard() {
                             ) : (
                                 <div className="space-y-6">
                                     {activeOrders.map((order) => (
-                                        <div 
-                                            key={order.id} 
+                                        <div
+                                            key={order.id}
                                             className="bg-zinc-900/40 backdrop-blur-md border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl transition-all hover:bg-zinc-900/60"
                                         >
                                             <div className="p-3.5 sm:p-6 md:p-8 space-y-6 sm:space-y-8">
@@ -1208,7 +1208,7 @@ export default function CustomerDashboard() {
                                                     </div>
 
                                                     <div className="flex items-center gap-3">
-                                                        <a 
+                                                        <a
                                                             href={`/verificar/${order.token}`}
                                                             target="_blank"
                                                             className="flex items-center gap-2 bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] px-5 py-3 rounded-full hover:bg-emerald-500 hover:text-white transition-all shadow-xl active:scale-95"
@@ -1221,9 +1221,9 @@ export default function CustomerDashboard() {
 
                                                 {/* The Visual Tracker */}
                                                 <div className="pt-4 border-t border-zinc-800/50">
-                                                    <OrderTracker 
-                                                        status={order.status} 
-                                                        checklist={order.checklist} 
+                                                    <OrderTracker
+                                                        status={order.status}
+                                                        checklist={order.checklist}
                                                         pintorNome={order.pintor_display || order.pintor_nome}
                                                     />
                                                 </div>
@@ -1242,13 +1242,13 @@ export default function CustomerDashboard() {
 
                                                 {/* Seção de Pagamento PIX */}
                                                 {((order.status_pagamento === 'Pendente' ||
-                                                   order.status_pagamento === 'Pendente/Incompleto' || 
-                                                   order.status_pagamento === 'Aguardando Pagamento' || 
-                                                   order.status_pagamento === 'Parcial' ||
-                                                   order.status === 'Aguardando Pagamento') && 
-                                                  order.status !== 'Cancelada') && (
-                                                    <PixPaymentWidget order={order} />
-                                                )}
+                                                    order.status_pagamento === 'Pendente/Incompleto' ||
+                                                    order.status_pagamento === 'Aguardando Pagamento' ||
+                                                    order.status_pagamento === 'Parcial' ||
+                                                    order.status === 'Aguardando Pagamento') &&
+                                                    order.status !== 'Cancelada') && (
+                                                        <PixPaymentWidget order={order} />
+                                                    )}
 
                                                 {/* Gorjeta para os Artistas */}
                                                 {order.status !== 'Cancelada' && (
@@ -1280,12 +1280,12 @@ export default function CustomerDashboard() {
                                         const isCanceled = order.status === 'Cancelada';
 
                                         return (
-                                            <div 
+                                            <div
                                                 key={order.id}
                                                 className="bg-zinc-950/70 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-lg transition-all"
                                             >
                                                 {/* Summary Header (Collapsed Row) */}
-                                                <div 
+                                                <div
                                                     onClick={() => toggleOrderExpanded(order.id)}
                                                     className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:bg-zinc-900/40 transition-colors"
                                                 >
@@ -1311,8 +1311,8 @@ export default function CustomerDashboard() {
                                                                 <h4 className="text-sm font-black text-white truncate">{order.figura?.nome}</h4>
                                                                 <span className={clsx(
                                                                     "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider shrink-0",
-                                                                    isCanceled 
-                                                                        ? "bg-zinc-800 text-zinc-400 border border-zinc-700" 
+                                                                    isCanceled
+                                                                        ? "bg-zinc-800 text-zinc-400 border border-zinc-700"
                                                                         : "bg-emerald-950/50 text-emerald-400 border border-emerald-500/30"
                                                                 )}>
                                                                     {order.status}
@@ -1353,9 +1353,9 @@ export default function CustomerDashboard() {
                                                 {isExpanded && (
                                                     <div className="p-3.5 sm:p-6 border-t border-zinc-800/80 bg-zinc-900/30 space-y-6">
                                                         <div className="pt-2">
-                                                            <OrderTracker 
-                                                                status={order.status} 
-                                                                checklist={order.checklist} 
+                                                            <OrderTracker
+                                                                status={order.status}
+                                                                checklist={order.checklist}
                                                                 pintorNome={order.pintor_display || order.pintor_nome}
                                                             />
                                                         </div>
@@ -1492,12 +1492,20 @@ export default function CustomerDashboard() {
                                                         {item.nome}
                                                     </h4>
                                                     <div className="mt-2 flex items-baseline gap-2">
-                                                        <span className="text-sm font-black text-orange-400">
-                                                            {formatBRL(cardPrice)}
-                                                        </span>
-                                                        {pixPrice && (
-                                                            <span className="text-[10px] font-bold text-emerald-400">
-                                                                PIX: {formatBRL(pixPrice)}
+                                                        {cardPrice > 0 ? (
+                                                            <>
+                                                                <span className="text-sm font-black text-orange-400">
+                                                                    {formatBRL(cardPrice)}
+                                                                </span>
+                                                                {pixPrice && (
+                                                                    <span className="text-[10px] font-bold text-emerald-400">
+                                                                        PIX: {formatBRL(pixPrice)}
+                                                                    </span>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-xs font-black text-orange-400 uppercase tracking-wider">
+                                                                A combinar
                                                             </span>
                                                         )}
                                                     </div>
@@ -1558,7 +1566,7 @@ export default function CustomerDashboard() {
                 {/* Help Section */}
                 <div className="bg-orange-500/5 border border-orange-500/10 rounded-3xl p-6 text-center">
                     <p className="text-zinc-500 text-xs font-medium">
-                        Dúvidas sobre seu pedido, envio ou customizações? 
+                        Dúvidas sobre seu pedido, envio ou customizações?
                         <a href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ''}`} className="text-orange-500 font-bold ml-1 hover:underline">Fale com o Ateliê no WhatsApp</a>
                     </p>
                 </div>

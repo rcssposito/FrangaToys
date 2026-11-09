@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle, Receipt, X, Download, Check, Copy, Maximize2, Camera, Search, CheckSquare, Square, ListChecks, Trash2, Plus, Mail, ArrowLeft } from 'lucide-react';
+import { Loader2, KanbanSquare, Package, Clock, Paintbrush, CheckCircle2, Factory, Layers, Truck, FileText, DollarSign, ExternalLink, MessageCircle, Receipt, X, Download, Check, Copy, Maximize2, Camera, Search, CheckSquare, Square, ListChecks, Trash2, Plus, Mail, ArrowLeft, Printer } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
@@ -1758,6 +1758,13 @@ export default function KanbanPage() {
                                                         >
                                                             <Receipt size={13} />
                                                         </button>
+                                                        <Link
+                                                            href={`/admin/etiquetas?vendaId=${task.id}`}
+                                                            title="Gerar Etiqueta Térmica de Envio (100x150mm)"
+                                                            className="w-9 h-9 text-zinc-400 hover:text-orange-400 bg-zinc-900/60 hover:bg-orange-500/10 border border-zinc-800/80 hover:border-orange-500/30 rounded-lg transition-all duration-200 active:scale-90 flex items-center justify-center hover:shadow-[0_0_10px_rgba(249,115,22,0.2)]"
+                                                        >
+                                                            <Printer size={13} />
+                                                        </Link>
                                                         <button
                                                             onClick={() => handleManualSendEmail(task)}
                                                             disabled={sendingEmailSaleId === task.id}

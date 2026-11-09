@@ -56,8 +56,8 @@ export async function GET(req: NextRequest) {
                 disponivel,
                 tem_extras,
                 slug,
-                series: series ( id, nome ),
-                studios: studios ( id, nome ),
+                series: series ( id, nome, categorias ( id, nome ) ),
+                studios: studios ( id, nome, merchant, ativo ),
                 figuras_meta (
                     resina_kg,
                     horas_impressao,
@@ -74,6 +74,11 @@ export async function GET(req: NextRequest) {
         if (error) throw error;
 
         const formattedFigures = (figures || []).map((f: any) => {
+            const seriesObj = Array.isArray(f.series) ? f.series[0] : f.series;
+            const studioObj = Array.isArray(f.studios) ? f.studios[0] : f.studios;
+            const catObj = Array.isArray(seriesObj?.categorias) ? seriesObj.categorias[0] : seriesObj?.categorias;
+            const categoriaNome = catObj?.nome || 'Outros';
+
             const metas = Array.isArray(f.figuras_meta) ? f.figuras_meta : [f.figuras_meta].filter(Boolean);
             const meta = metas.find((m: any) => m.is_campanha || m.is_campanha_active || m.preco_fixo_campanha > 0 || m.desconto_campanha > 0) || metas[0] || {};
             const prices = calculateFigurePrices(meta, settings || undefined);
@@ -89,11 +94,13 @@ export async function GET(req: NextRequest) {
                 disponivel: f.disponivel,
                 tem_extras: f.tem_extras,
                 slug: f.slug,
-                serie: f.series?.nome || 'Sem Série',
-                studio: f.studios?.nome || 'Studio',
+                serie: seriesObj?.nome || 'Sem Série',
+                categoria: categoriaNome,
+                studio: studioObj?.nome || 'Studio',
                 preco: prices.colorido,
                 precos: prices,
-                is_campanha: isCampanha
+                is_campanha: isCampanha,
+                is_merchant: Boolean(studioObj?.merchant && studioObj?.ativo !== false)
             };
         });
 

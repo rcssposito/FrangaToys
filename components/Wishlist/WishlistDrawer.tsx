@@ -210,8 +210,8 @@ export function WishlistDrawer() {
                             pathname: window.location.pathname
                         }),
                         keepalive: true
-                    }).catch(() => {});
-                } catch {}
+                    }).catch(() => { });
+                } catch { }
             }
 
             syncWithPhone(cleanPhone);
@@ -250,7 +250,7 @@ export function WishlistDrawer() {
                         className="absolute inset-y-0 right-0 max-w-full flex pl-10"
                     >
                         <div className="w-screen max-w-md bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl text-white">
-                            
+
                             {/* Header */}
                             <div className="p-6 border-b border-zinc-800/80 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
@@ -475,21 +475,28 @@ export function WishlistDrawer() {
 
                                                             <div className="flex items-end justify-between gap-2 mt-2">
                                                                 <div>
-                                                                    <div className="text-xs font-black text-emerald-400">
-                                                                        R$ {precoPix.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                    </div>
-                                                                    <span className="text-[9px] text-zinc-500 font-medium">no PIX</span>
+                                                                    {precoPix > 0 ? (
+                                                                        <>
+                                                                            <div className="text-xs font-black text-emerald-400">
+                                                                                R$ {precoPix.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                            </div>
+                                                                            <span className="text-[9px] text-zinc-500 font-medium">no PIX</span>
+                                                                        </>
+                                                                    ) : (
+                                                                        <div className="text-xs font-black text-orange-400 uppercase tracking-wider">
+                                                                            A combinar
+                                                                        </div>
+                                                                    )}
                                                                 </div>
 
                                                                 {item.is_merchant !== false ? (
                                                                     <button
                                                                         onClick={() => handleMoveToCart(item)}
                                                                         disabled={inCart}
-                                                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${
-                                                                            inCart
+                                                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${inCart
                                                                                 ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
                                                                                 : 'bg-orange-500 hover:bg-orange-600 text-black shadow-md shadow-orange-500/10 active:scale-95 cursor-pointer'
-                                                                        }`}
+                                                                            }`}
                                                                     >
                                                                         <ShoppingBag size={11} />
                                                                         {inCart ? 'No Carrinho' : 'Comprar'}

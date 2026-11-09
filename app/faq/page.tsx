@@ -32,10 +32,11 @@ import Footer from '@/components/common/Footer';
 
 interface FaqItem {
   id: string;
-  category: 'cuidados' | 'acabamentos' | 'envio' | 'prazos' | 'garantia';
+  category: 'cuidados' | 'acabamentos' | 'envio' | 'prazos' | 'garantia' | 'modelagem';
   pergunta: string;
   resposta: string | React.ReactNode;
   destaque?: boolean;
+  keywords?: string;
 }
 
 const FAQ_DATA: FaqItem[] = [
@@ -249,13 +250,75 @@ const FAQ_DATA: FaqItem[] = [
     )
   },
   {
+    id: 'modelagem-3d-ia-precos',
+    category: 'modelagem',
+    pergunta: 'Quanto custa modelar um personagem do zero ou arrumar um arquivo de IA (Meshy)?',
+    destaque: true,
+    keywords: 'modelagem modelar 3d ia meshy inteligencia artificial preço valor 20 50 reais orçamento exclusivo',
+    resposta: (
+      <div className="space-y-4 text-zinc-350 text-sm leading-relaxed">
+        <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-200 flex items-start gap-3">
+          <AlertTriangle size={20} className="text-amber-400 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-black text-white uppercase tracking-wide text-xs">
+              Importante: Modelagem 3D para impressão NÃO custa R$ 20 nem R$ 50!
+            </p>
+            <p className="text-xs text-zinc-300 leading-relaxed">
+              Com a enxurrada de propagandas de ferramentas de IA (como <strong>Meshy</strong> e similares), muita gente acredita que criar uma estátua colecionável pronta para impressão custa poucos reais. Na prática, arquivos gerados por IA saem deformados, ocos de forma errada, sem definição de rosto/anatomia e sem engenharia de encaixe — sendo <strong>inviáveis para impressão em resina de alta definição</strong> sem um pesado retrabalho artístico.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="p-4 rounded-xl bg-zinc-900/70 border border-zinc-800 flex flex-col justify-between gap-2">
+            <div>
+              <span className="text-[10px] font-black uppercase text-orange-400 tracking-wider block mb-1">
+                1. Corrigir / Reestruturar Modelo de IA
+              </span>
+              <div className="text-lg font-black text-white mb-1.5">
+                R$ 800 a R$ 1.000
+              </div>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Refazer a malha defeituosa da IA, reesculpir rosto, mãos e detalhes borrados, dar espessura física correta e criar os cortes e pinos de encaixe.
+              </p>
+            </div>
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider pt-2 border-t border-white/5">
+              + Impressão, Pintura e Frete
+            </span>
+          </div>
+
+          <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/25 flex flex-col justify-between gap-2">
+            <div>
+              <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider block mb-1">
+                2. Modelar do Zero (Escultura Exclusiva)
+              </span>
+              <div className="text-lg font-black text-white mb-1.5">
+                R$ 3.500 a R$ 5.000
+              </div>
+              <p className="text-xs text-zinc-300 leading-relaxed">
+                Escultura digital 100% autoral feita do zero por um escultor 3D profissional, variando conforme a complexidade da pose, texturas, cenário/base e acessórios.
+              </p>
+            </div>
+            <span className="text-[10px] font-bold text-amber-400/80 uppercase tracking-wider pt-2 border-t border-orange-500/20">
+              + Impressão, Pintura e Frete
+            </span>
+          </div>
+        </div>
+
+        <p className="text-xs text-zinc-400 bg-zinc-900/40 border border-white/5 p-3 rounded-xl">
+          💡 <strong className="text-zinc-200">Por que as peças do nosso catálogo são muito mais acessíveis?</strong> Porque nos modelos da vitrine nós trabalhamos com <strong className="text-white">licenças comerciais de grandes estúdios parceiros</strong>, onde o custo de milhares de reais da modelagem é diluído entre colecionadores do mundo inteiro.
+        </p>
+      </div>
+    )
+  },
+  {
     id: 'pedidos-personalizados',
-    category: 'garantia',
-    pergunta: 'Vocês imprimem personagens que não estão no site?',
+    category: 'modelagem',
+    pergunta: 'Vocês imprimem personagens que não estão no site (com arquivo STL já existente)?',
     resposta: (
       <div className="space-y-2 text-zinc-350 text-sm leading-relaxed">
         <p>
-          <strong className="text-white">Com certeza, porém no limite do possível!</strong> Temos parceria com diversos estúdios de modelagem 3D do mundo e podemos avaliar projetos que você encontrou em suas buscas pela figure perfeita.
+          <strong className="text-white">Sim, desde que já exista um modelo 3D profissional próprio para colecionáveis!</strong> Temos parceria com diversos estúdios de modelagem 3D do mundo e podemos avaliar projetos que você encontrou ou já possui o arquivo STL finalizado para impressão.
         </p>
         <p>
           Chame nosso ateliê no{' '}
@@ -276,6 +339,7 @@ const FAQ_DATA: FaqItem[] = [
 
 const CATEGORIES = [
   { id: 'all', label: 'Todas as Dúvidas', icon: HelpCircle },
+  { id: 'modelagem', label: 'Modelagem 3D & IA', icon: Box },
   { id: 'cuidados', label: 'Cuidados & Limpeza', icon: Sparkles },
   { id: 'acabamentos', label: 'Pintura & Resina', icon: Palette },
   { id: 'prazos', label: 'Prazos & Pronta Entrega', icon: Clock },
@@ -287,6 +351,7 @@ export default function FaqPage() {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({
+    'modelagem-3d-ia-precos': true,
     'limpeza-dia-a-dia': true,
     'produtos-proibidos': true,
     'sem-pintura-vs-colorido': true
@@ -309,7 +374,8 @@ export default function FaqPage() {
       const q = searchQuery.toLowerCase();
       const matchQuestion = item.pergunta.toLowerCase().includes(q);
       const matchId = item.id.toLowerCase().includes(q);
-      return matchQuestion || matchId;
+      const matchKeywords = item.keywords ? item.keywords.toLowerCase().includes(q) : false;
+      return matchQuestion || matchId || matchKeywords;
     });
   }, [activeCategory, searchQuery]);
 
