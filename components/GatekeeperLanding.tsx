@@ -76,6 +76,28 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
                 throw new Error(data.error || 'Erro ao processar solicitação');
             }
 
+            // Cliente Reconhecido (Auto-Aprovado Instantaneamente)
+            if (data.auto_approved) {
+                toast.success(`Bem-vindo de volta, ${data.primeiroNome}! 🎉`, {
+                    description: 'Identificamos seu cadastro de cliente. Acesso VIP liberado!'
+                });
+                if (data.token) {
+                    try {
+                        localStorage.setItem('franga_vip_token', data.token);
+                    } catch {}
+                    document.cookie = `franga_vip_token=${data.token}; path=/; max-age=${90 * 24 * 60 * 60}; SameSite=Lax`;
+                }
+                setShowAccessModal(false);
+                setTimeout(() => {
+                    if (onAccessGranted) {
+                        onAccessGranted();
+                    } else {
+                        window.location.reload();
+                    }
+                }, 900);
+                return;
+            }
+
             setIsSubmitted(true);
             toast.success('Solicitação enviada com sucesso!');
         } catch (err: any) {
@@ -389,21 +411,21 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
 
                             <div className="flex items-center gap-2 mb-2">
                                 <Key size={16} className="text-amber-400" />
-                                <h3 className="text-base font-black text-white">Inserir Chave VIP</h3>
+                                <h3 className="text-base font-black text-white">Acesso VIP ou Cliente</h3>
                             </div>
 
                             <p className="text-xs text-zinc-400 mb-4">
-                                Digite seu token ou chave mestre para liberar o acervo:
+                                Digite sua Chave VIP de convite ou seu WhatsApp cadastrado:
                             </p>
 
                             <form onSubmit={handleManualKeySubmit} className="space-y-3">
                                 <input
                                     type="text"
                                     required
-                                    placeholder="Ex: vip_a1b2c3d4..."
+                                    placeholder="Chave VIP ou WhatsApp com DDD..."
                                     value={manualKey}
                                     onChange={(e) => setManualKey(e.target.value)}
-                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 font-mono focus:outline-none focus:border-amber-400"
+                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 font-mono focus:outline-none focus:border-amber-400"
                                 />
 
                                 <button
