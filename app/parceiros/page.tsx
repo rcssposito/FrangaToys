@@ -346,7 +346,7 @@ export default function PartnersPage() {
                                                 {studio.nome}
                                             </h3>
                                             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider truncate">
-                                                {isLicensedActive ? 'Parceiro Oficial Licenciado' : 'Acervo • Sob Consulta'} • {count} {count === 1 ? 'peça' : 'peças'}
+                                                {isLicensedActive ? 'Estúdio de Modelagem 3D' : 'Acervo • Sob Consulta'} • {count} {count === 1 ? 'peça' : 'peças'}
                                             </p>
                                         </div>
                                         <div className="flex gap-2 shrink-0">

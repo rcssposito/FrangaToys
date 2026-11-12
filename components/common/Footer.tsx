@@ -139,6 +139,17 @@ export default function Footer() {
 
         </div>
 
+        {/* Legal Disclaimer / Fanart Tribute Notice */}
+        <div className="w-full bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-4 my-6 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400 text-center md:text-left">
+          <p className="font-bold text-zinc-700 dark:text-zinc-300 mb-1 flex items-center gap-1.5 justify-center md:justify-start">
+            <ShieldCheck size={13} className="text-amber-500" />
+            <span>Aviso Legal & Direitos de Propriedade Intelectual:</span>
+          </p>
+          <p>
+            As peças produzidas pelo ateliê Franga Toys são esculturas artesanais sob encomenda e tributos artísticos (fanart), modeladas por artistas digitais independentes. A Franga Toys presta exclusivamente serviços de impressão 3D em resina e pintura/acabamento artístico manual, não possuindo representação comercial, licenciamento oficial ou qualquer vínculo com as detentoras dos direitos de propriedade intelectual dos personagens originais. Todos os direitos e marcas pertencem aos seus respectivos titulares e criadores.
+          </p>
+        </div>
+
         {/* Divider */}
         <div className="w-full h-px bg-zinc-200 dark:bg-zinc-800/60 my-8 md:my-10" />
 

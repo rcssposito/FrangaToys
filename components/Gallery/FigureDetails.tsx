@@ -716,6 +716,11 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                             Ver Guia & FAQ
                         </Link>
                     </div>
+
+                    {/* Disclaimer Protetivo Fanart */}
+                    <p className="text-[10px] text-zinc-500 text-center leading-relaxed pt-2 border-t border-white/5">
+                        Escultura artesanal sob encomenda (tributo fanart de artistas independentes). Não possuímos vínculo ou filiação com detentoras de marcas.
+                    </p>
                 </div>
 
                 {/* Cross-Sell Section (Full width below both columns so it doesn't unbalance right column height) */}

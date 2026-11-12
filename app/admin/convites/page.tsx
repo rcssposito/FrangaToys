@@ -14,6 +14,7 @@ interface Solicitacao {
     whatsapp?: string;
     email?: string;
     instagram?: string;
+    mensagem?: string;
     ip?: string;
     status: 'pendente' | 'aprovado' | 'recusado';
     token_vip?: string;
@@ -250,6 +251,16 @@ export default function ConvitesPage() {
                                             {new Date(item.created_at).toLocaleDateString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
+
+                                    {item.mensagem && (
+                                        <div className="bg-zinc-950/70 border border-amber-500/20 rounded-xl px-3 py-2 text-xs text-amber-200/90 font-medium leading-relaxed my-1.5 flex items-start gap-2 max-w-2xl">
+                                            <MessageCircle size={13} className="text-amber-400 shrink-0 mt-0.5" />
+                                            <div>
+                                                <span className="text-[10px] uppercase font-bold text-amber-400/80 tracking-wider block mb-0.5">Mensagem do Solicitante:</span>
+                                                <span className="italic">"{item.mensagem}"</span>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Links Rápidos Anti-Advogado */}
                                     <div className="flex items-center gap-2 pt-1">

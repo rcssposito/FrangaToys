@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Key, CheckCircle2, Lock, ArrowRight, Loader2, Instagram, Phone, User, ShieldCheck, Sparkles, X } from 'lucide-react';
+import { Key, CheckCircle2, Lock, ArrowRight, Loader2, Instagram, Phone, User, ShieldCheck, Sparkles, X, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 
@@ -31,6 +31,7 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
     const [nome, setNome] = useState('');
     const [whatsapp, setWhatsapp] = useState('');
     const [instagram, setInstagram] = useState('');
+    const [mensagem, setMensagem] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [isLoggingGoogle, setIsLoggingGoogle] = useState(false);
@@ -85,6 +86,11 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
             toast.error('Informe um WhatsApp válido com DDD.');
             return;
         }
+        const cleanIg = instagram.trim().replace(/^@/, '');
+        if (!cleanIg) {
+            toast.error('Por favor, informe seu usuário do Instagram (@seu_perfil).');
+            return;
+        }
 
         setIsSubmitting(true);
         try {
@@ -94,7 +100,8 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
                 body: JSON.stringify({
                     nome: nome.trim(),
                     whatsapp: cleanPhone,
-                    instagram: instagram.trim() || undefined
+                    instagram: cleanIg,
+                    mensagem: mensagem.trim() || undefined
                 })
             });
 
@@ -188,8 +195,19 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
                     <ArrowRight size={14} className="text-zinc-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all shrink-0" />
                 </motion.button>
 
-                {/* Botão Já tenho convite no Canto Direito */}
-                <div className="absolute right-3 sm:right-8 top-1/2 -translate-y-1/2">
+                {/* Ações no Canto Direito: Instagram + Chave VIP */}
+                <div className="absolute right-3 sm:right-8 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                    <a
+                        href="https://www.instagram.com/frangatoys/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 hover:border-pink-500/40 text-xs font-semibold text-zinc-200 hover:text-pink-400 transition-all shadow-xl active:scale-95 group"
+                        title="Chamar no Instagram @frangatoys"
+                    >
+                        <Instagram size={14} className="text-pink-400 group-hover:scale-110 transition-transform" />
+                        <span className="hidden md:inline">@frangatoys</span>
+                    </a>
+
                     <button
                         onClick={() => setShowKeyModal(true)}
                         className="flex items-center gap-2 px-2.5 sm:px-3 py-2 rounded-xl bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/15 text-xs font-semibold text-zinc-200 hover:text-white transition-all shadow-xl active:scale-95"
@@ -255,14 +273,13 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
                 )}
             </main>
 
-            {/* Footer Minimalista */}
-            <footer className="w-full z-20 px-6 sm:px-8 py-4 flex items-center justify-between text-[11px] text-zinc-400 drop-shadow-md">
-                <span className="font-mono">
-                    © {new Date().getFullYear()} FRANGA TOYS
+            {/* Footer com Barra Escura Translúcida para Máxima Legibilidade */}
+            <footer className="w-full z-20 px-4 sm:px-8 sm:pr-20 py-3 bg-black/70 backdrop-blur-md border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-zinc-200">
+                <span className="font-mono text-[11px] sm:text-xs text-zinc-300 font-semibold tracking-wide shrink-0">
+                    © {new Date().getFullYear()} FRANGA TOYS — Ateliê Artesanal
                 </span>
-                <span className="flex items-center gap-1.5 text-zinc-400">
-                    <ShieldCheck size={12} className="text-amber-400" />
-                    Produção Sob Demanda
+                <span className="text-[11px] sm:text-xs text-zinc-300 text-center sm:text-right max-w-xl font-medium leading-relaxed drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                    Esculturas artesanais sob encomenda (fanart / tributo). Não possuímos vínculo ou filiação com detentoras oficiais de marcas.
                 </span>
             </footer>
 
@@ -348,7 +365,7 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
                                         <div>
                                             <label className="text-[11px] font-bold text-zinc-300 block mb-1 flex items-center gap-1.5">
                                                 <User size={12} className="text-amber-400" />
-                                                Nome Completo
+                                                <span>Nome Completo <span className="text-amber-400">*</span></span>
                                             </label>
                                             <input
                                                 type="text"
@@ -363,7 +380,7 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
                                         <div>
                                             <label className="text-[11px] font-bold text-zinc-300 block mb-1 flex items-center gap-1.5">
                                                 <Phone size={12} className="text-amber-400" />
-                                                WhatsApp com DDD
+                                                <span>WhatsApp com DDD <span className="text-amber-400">*</span></span>
                                             </label>
                                             <input
                                                 type="tel"
@@ -377,15 +394,30 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
 
                                         <div>
                                             <label className="text-[11px] font-bold text-zinc-300 block mb-1 flex items-center gap-1.5">
-                                                <Instagram size={12} className="text-amber-400" />
-                                                Instagram (Opcional)
+                                                <Instagram size={12} className="text-pink-400" />
+                                                <span>Instagram <span className="text-amber-400">*</span></span>
                                             </label>
                                             <input
                                                 type="text"
+                                                required
                                                 placeholder="@seu_perfil"
                                                 value={instagram}
                                                 onChange={(e) => setInstagram(e.target.value)}
-                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-amber-400"
+                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 font-mono focus:outline-none focus:border-amber-400"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[11px] font-bold text-zinc-300 block mb-1 flex items-center gap-1.5">
+                                                <MessageSquare size={12} className="text-amber-400" />
+                                                <span>Quer facilitar sua aprovação?</span>
+                                            </label>
+                                            <textarea
+                                                rows={2}
+                                                placeholder="Deixe uma mensagem (ex: como conheceu o ateliê, peças de interesse...)"
+                                                value={mensagem}
+                                                onChange={(e) => setMensagem(e.target.value)}
+                                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-amber-400 resize-none leading-relaxed"
                                             />
                                         </div>
 
@@ -407,6 +439,20 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
                                             )}
                                         </button>
                                     </form>
+
+                                    {/* Link direto para quem prefere chamar no Instagram */}
+                                    <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400">
+                                        <span>Prefere falar direto?</span>
+                                        <a
+                                            href="https://www.instagram.com/frangatoys/"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 text-pink-400 hover:text-pink-300 font-bold hover:underline"
+                                        >
+                                            <Instagram size={13} />
+                                            <span>Chamar no Instagram</span>
+                                        </a>
+                                    </div>
                                 </>
                             )}
                         </motion.div>

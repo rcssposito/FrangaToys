@@ -8,11 +8,19 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { nome, whatsapp, instagram } = body;
+        const { nome, whatsapp, instagram, mensagem } = body;
 
         if (!nome || !whatsapp) {
             return NextResponse.json(
                 { error: 'Nome e WhatsApp são obrigatórios' },
+                { status: 400 }
+            );
+        }
+
+        const cleanInstagram = (instagram || '').trim().replace(/^@/, '');
+        if (!cleanInstagram) {
+            return NextResponse.json(
+                { error: 'O perfil do Instagram (@seu_perfil) é obrigatório.' },
                 { status: 400 }
             );
         }
@@ -25,7 +33,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const cleanInstagram = (instagram || '').trim().replace(/^@/, '');
+        const cleanMensagem = (mensagem || '').trim();
         const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
                    req.headers.get('x-real-ip') || 
                    'IP Desconhecido';
@@ -37,7 +45,8 @@ export async function POST(req: NextRequest) {
             .insert({
                 nome: nome.trim(),
                 whatsapp: cleanPhone,
-                instagram: cleanInstagram || null,
+                instagram: cleanInstagram,
+                mensagem: cleanMensagem || null,
                 ip,
                 user_agent: userAgent,
                 status: 'pendente'
@@ -72,10 +81,11 @@ export async function POST(req: NextRequest) {
         // 3. Monta mensagem do Telegram com visual e links de busca
         let tgMsg = `🔒 *NOVA SOLICITAÇÃO DE ACESSO AO ATELIÊ!*\n\n` +
             `👤 *Nome:* ${nome.trim()}\n` +
-            `📱 *WhatsApp:* [${cleanPhone}](${whatsappLink})\n`;
+            `📱 *WhatsApp:* [${cleanPhone}](${whatsappLink})\n` +
+            `📸 *Instagram:* [@${cleanInstagram}](${instagramLink})\n`;
 
-        if (cleanInstagram) {
-            tgMsg += `📸 *Instagram:* [@${cleanInstagram}](${instagramLink})\n`;
+        if (cleanMensagem) {
+            tgMsg += `💬 *Mensagem do Visitante:* _"${cleanMensagem}"_\n`;
         }
 
         tgMsg += `🌐 *IP:* \`${ip}\`\n\n` +

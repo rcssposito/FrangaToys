@@ -306,7 +306,7 @@ const FAQ_DATA: FaqItem[] = [
         </div>
 
         <p className="text-xs text-zinc-400 bg-zinc-900/40 border border-white/5 p-3 rounded-xl">
-          💡 <strong className="text-zinc-200">Por que as peças do nosso catálogo são muito mais acessíveis?</strong> Porque nos modelos da vitrine nós trabalhamos com <strong className="text-white">licenças comerciais de grandes estúdios parceiros</strong>, onde o custo de milhares de reais da modelagem é diluído entre colecionadores do mundo inteiro.
+          💡 <strong className="text-zinc-200">Por que as peças do nosso catálogo são muito mais acessíveis?</strong> Porque trabalhamos com <strong className="text-white">apoio e tiers comerciais de estúdios de escultura 3D independentes</strong> (Patreon / artistas digitais), onde o custo de modelagem é diluído entre colecionadores do mundo inteiro.
         </p>
       </div>
     )
@@ -331,6 +331,25 @@ const FAQ_DATA: FaqItem[] = [
             WhatsApp
           </a>{' '}
           informando o personagem, tamanho desejado e acabamento para receber um orçamento exclusivo.
+        </p>
+      </div>
+    )
+  },
+  {
+    id: 'licenciamento-fanart',
+    category: 'modelagem',
+    pergunta: 'As peças do catálogo são produtos oficiais ou licenciados das marcas?',
+    destaque: true,
+    resposta: (
+      <div className="space-y-2 text-zinc-350 text-sm leading-relaxed">
+        <p>
+          <strong className="text-white">Não. Todas as peças produzidas pelo ateliê são esculturas artesanais sob encomenda no formato de tributos artísticos (fanart).</strong>
+        </p>
+        <p>
+          Os modelos digitais 3D são criados por escultores e estúdios independentes ao redor do mundo. A Franga Toys atua estritamente como um ateliê prestador de serviços de impressão 3D em resina e pintura/acabamento manual sob demanda.
+        </p>
+        <p>
+          Não possuímos filiação, licenciamento oficial ou qualquer vínculo com as detentoras dos direitos de propriedade intelectual dos personagens e franquias representados. Todos os direitos e marcas pertencem aos seus respectivos titulares e criadores originais.
         </p>
       </div>
     )
