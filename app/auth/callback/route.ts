@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { verifyVipByEmail, VIP_COOKIE_NAME, generateDecisionSecret } from '@/lib/gatekeeper';
+import { sendTelegramAlert } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
@@ -197,6 +199,76 @@ export async function GET(request: Request) {
                                     sameSite: 'lax'
                                 });
                             }
+                        }
+
+                        // 4. Checagem Gatekeeper (Acesso VIP)
+                        const vipStatus = await verifyVipByEmail(user.email);
+                        if (vipStatus.valid && vipStatus.token) {
+                            // Usuário já está aprovado! Grava o cookie VIP para liberar a vitrine
+                            response.cookies.set(VIP_COOKIE_NAME, vipStatus.token, {
+                                path: '/',
+                                maxAge: 60 * 60 * 24 * 60,
+                                sameSite: 'lax',
+                                secure: process.env.NODE_ENV === 'production'
+                            });
+                        } else {
+                            // Não aprovado ainda: registra solicitação e notifica Telegram
+                            const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'IP Desconhecido';
+                            const userAgent = request.headers.get('user-agent') || 'Desconhecido';
+
+                            const { data: existingReq } = await supabaseAdmin
+                                .from('solicitacoes_acesso')
+                                .select('*')
+                                .ilike('email', user.email)
+                                .maybeSingle();
+
+                            if (!existingReq) {
+                                const { data: newReq } = await supabaseAdmin
+                                    .from('solicitacoes_acesso')
+                                    .insert({
+                                        nome: userName,
+                                        email: user.email,
+                                        ip,
+                                        user_agent: userAgent,
+                                        status: 'pendente'
+                                    })
+                                    .select()
+                                    .single();
+
+                                if (newReq) {
+                                    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || origin;
+                                    const approveSecret = generateDecisionSecret(newReq.id, 'approve');
+                                    const rejectSecret = generateDecisionSecret(newReq.id, 'reject');
+                                    const approveUrl = `${baseUrl}/api/public/access/decision?id=${newReq.id}&action=approve&secret=${approveSecret}`;
+                                    const rejectUrl = `${baseUrl}/api/public/access/decision?id=${newReq.id}&action=reject&secret=${rejectSecret}`;
+
+                                    const googleLawyerSearch = `https://www.google.com/search?q=${encodeURIComponent(`"${userName}" (advogado OR oab OR associados)`)}`;
+                                    const jusbrasilSearch = `https://www.google.com/search?q=${encodeURIComponent(`site:jusbrasil.com.br "${userName}"`)}`;
+
+                                    const tgMsg = `🔒 *NOVA SOLICITAÇÃO VIA GOOGLE LOGIN!*\n\n` +
+                                        `👤 *Nome:* ${userName}\n` +
+                                        `📧 *E-mail Verificado:* \`${user.email}\`\n` +
+                                        `🌐 *IP:* \`${ip}\`\n\n` +
+                                        `🔍 *CHECAGEM PREVENTIVA (Anti-Advocacia/Bot):*\n` +
+                                        `• [Buscar se é Advogado / OAB](${googleLawyerSearch})\n` +
+                                        `• [Checar no Jusbrasil](${jusbrasilSearch})\n\n` +
+                                        `⚡ _Selecione a ação abaixo para liberar ou barrar o visitante:_`;
+
+                                    const replyMarkup = {
+                                        inline_keyboard: [
+                                            [
+                                                { text: '🟢 APROVAR ACESSO', url: approveUrl },
+                                                { text: '🔴 RECUSAR / BLOQUEAR', url: rejectUrl }
+                                            ]
+                                        ]
+                                    };
+
+                                    await sendTelegramAlert(tgMsg, replyMarkup);
+                                }
+                            }
+
+                            const pendingRedirect = `${origin}/?google_auth=pending&name=${encodeURIComponent(userName)}&email=${encodeURIComponent(user.email)}`;
+                            return NextResponse.redirect(pendingRedirect);
                         }
                     }
                 } catch (clientErr) {

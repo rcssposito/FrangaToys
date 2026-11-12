@@ -29,6 +29,7 @@ const routeRoles: Record<string, string[]> = {
     '/admin/gerador-base': ['admin', 'sales', 'pricing', 'production', 'painter', 'orcamento'],
     '/admin/automation': ['admin', 'sales', 'pricing', 'production', 'painter', 'orcamento'],
     '/admin/etiquetas': ['admin', 'sales', 'finance', 'production', 'painter', 'orcamento'],
+    '/admin/convites': ['admin', 'sales'],
     '/admin/settings': ['admin']
 };
 

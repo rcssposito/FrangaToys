@@ -20,6 +20,7 @@ import {
     Flame,
     Cpu,
     Printer,
+    Lock,
 } from 'lucide-react';
 import ThemeToggle from '@/components/common/ThemeToggle';
 
@@ -103,6 +104,12 @@ export default function AdminSidebar({ isCollapsed, onToggleCollapse }: AdminSid
             href: '/admin/automation',
             icon: Cpu,
             roles: ['admin', 'production', 'painter', 'pricing', 'orcamento']
+        },
+        {
+            name: 'Acesso VIP',
+            href: '/admin/convites',
+            icon: Lock,
+            roles: ['admin', 'sales']
         },
         {
             name: 'Configurações',

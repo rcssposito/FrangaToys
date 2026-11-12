@@ -16,6 +16,7 @@ import { useFiguras } from '@/hooks/useFiguras';
 import { clsx } from 'clsx';
 
 import ThemeToggle from '@/components/common/ThemeToggle';
+import { GatekeeperLanding } from '@/components/GatekeeperLanding';
 
 type FilterState = z.infer<typeof FiltersSchema>;
 
@@ -212,14 +213,77 @@ function HomeContent() {
   );
 }
 
+function GatekeeperWrapper() {
+  const searchParams = useSearchParams();
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkAccess() {
+      // 1. Verifica se veio token na URL (?vip=...)
+      const vipParam = searchParams.get('vip');
+      if (vipParam) {
+        try {
+          const res = await fetch('/api/public/access/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: vipParam })
+          });
+          const data = await res.json();
+          if (isMounted && data.ok) {
+            setHasAccess(true);
+            return;
+          }
+        } catch {
+          // fallback para cookie
+        }
+      }
+
+      // 2. Verifica se o navegador já possui cookie VIP válido
+      try {
+        const res = await fetch('/api/public/access/verify');
+        const data = await res.json();
+        if (isMounted) {
+          setHasAccess(!!data.ok);
+        }
+      } catch {
+        if (isMounted) {
+          setHasAccess(false);
+        }
+      }
+    }
+
+    checkAccess();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [searchParams]);
+
+  if (hasAccess === null) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loader2 className="animate-spin text-orange-500" size={36} />
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return <GatekeeperLanding onAccessGranted={() => setHasAccess(true)} />;
+  }
+
+  return <HomeContent />;
+}
+
 export default function Home() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="animate-spin text-blue-500" size={40} />
+        <Loader2 className="animate-spin text-orange-500" size={36} />
       </div>
     }>
-      <HomeContent />
+      <GatekeeperWrapper />
     </Suspense>
   );
 }

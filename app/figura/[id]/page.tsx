@@ -3,9 +3,11 @@ import { cache } from 'react';
 export const dynamic = 'force-dynamic';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { FigureDetails } from '@/components/Gallery/FigureDetails';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { calculateFigurePrices } from '@/lib/pricing';
 import { BackNavigationButton } from '@/components/ui/BackNavigationButton';
+import { cookies } from 'next/headers';
+import { verifyVipToken, VIP_COOKIE_NAME } from '@/lib/gatekeeper';
 
 interface Props {
     params: Promise<{ id: string }>;
@@ -84,6 +86,16 @@ const getFigureWithPricing = cache(async (identifier: string) => {
 });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+    const cookieStore = await cookies();
+    const vipToken = cookieStore.get(VIP_COOKIE_NAME)?.value;
+    const access = await verifyVipToken(vipToken);
+    if (!access.valid) {
+        return {
+            title: 'Ateliê Franga Toys',
+            robots: { index: false, follow: false, nocache: true }
+        };
+    }
+
     const { id: identifier } = await params;
     const { figure, settings } = await getFigureWithPricing(identifier);
 
@@ -127,6 +139,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function FiguraPage({ params }: Props) {
+    const cookieStore = await cookies();
+    const vipToken = cookieStore.get(VIP_COOKIE_NAME)?.value;
+    const access = await verifyVipToken(vipToken);
+    if (!access.valid) {
+        redirect('/');
+    }
+
     const { id: identifier } = await params;
     const { figure, error, settings } = await getFigureWithPricing(identifier);
 

@@ -3,12 +3,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { FiltersSchema, FiguraDTO } from '@/lib/dto';
 import { calculateFigurePrices } from '@/lib/pricing';
+import { verifyVipToken, VIP_COOKIE_NAME } from '@/lib/gatekeeper';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
+
+        // Validação Gatekeeper (Modo Clube Fechado Anti-Bot/Scraper)
+        const vipCookie = req.cookies.get(VIP_COOKIE_NAME)?.value;
+        const vipQuery = searchParams.get('vip');
+        const access = await verifyVipToken(vipCookie || vipQuery);
+
+        if (!access.valid) {
+            return NextResponse.json({
+                items: [],
+                total: 0,
+                gatekeeper_blocked: true,
+                message: 'Acesso restrito a membros autorizados da Franga Toys.'
+            }, { status: 401 });
+        }
+
         const queryParams = Object.fromEntries(searchParams.entries());
 
         // Validate Input
