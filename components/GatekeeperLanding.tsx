@@ -1,17 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Sparkles, Key, CheckCircle2, Lock, ArrowRight, Loader2, Instagram, Phone, User } from 'lucide-react';
+import { ShieldCheck, Sparkles, Key, CheckCircle2, Lock, ArrowRight, Loader2, Instagram, Phone, User, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 
 interface GatekeeperLandingProps {
     onAccessGranted?: () => void;
 }
 
 export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
+    const supabase = createClient();
     const searchParams = useSearchParams();
     const isGooglePending = searchParams.get('google_auth') === 'pending';
     const googleName = searchParams.get('name') || '';
@@ -24,6 +25,17 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [isLoggingGoogle, setIsLoggingGoogle] = useState(false);
 
+    // Notifica se houve erro no callback do Google
+    useEffect(() => {
+        const authError = searchParams.get('error');
+        const authDesc = searchParams.get('error_description');
+        if (authError) {
+            toast.error('Erro na autenticação Google', {
+                description: authDesc ? decodeURIComponent(authDesc) : (authError === 'auth_callback_failed' ? 'Código de login inválido ou expirado.' : decodeURIComponent(authError))
+            });
+        }
+    }, [searchParams]);
+
     // Modal de Chave Manual
     const [showKeyModal, setShowKeyModal] = useState(false);
     const [manualKey, setManualKey] = useState('');
@@ -32,10 +44,11 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
     const handleGoogleLogin = async () => {
         setIsLoggingGoogle(true);
         try {
+            const redirectUrl = `${window.location.origin}/auth/callback?next=/`;
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: `${window.location.origin}/auth/callback?next=/`
+                    redirectTo: redirectUrl
                 }
             });
             if (error) throw error;

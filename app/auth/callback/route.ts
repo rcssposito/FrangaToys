@@ -267,8 +267,15 @@ export async function GET(request: Request) {
                                 }
                             }
 
-                            const pendingRedirect = `${origin}/?google_auth=pending&name=${encodeURIComponent(userName)}&email=${encodeURIComponent(user.email)}`;
-                            return NextResponse.redirect(pendingRedirect);
+                            const appBaseUrl = isLocalEnv 
+                                ? origin 
+                                : (forwardedHost ? `https://${forwardedHost}` : origin);
+                            const pendingUrl = `${appBaseUrl}/?google_auth=pending&name=${encodeURIComponent(userName)}&email=${encodeURIComponent(user.email)}`;
+                            const pendingResponse = NextResponse.redirect(pendingUrl);
+                            response.cookies.getAll().forEach(c => {
+                                pendingResponse.cookies.set(c.name, c.value, c);
+                            });
+                            return pendingResponse;
                         }
                     }
                 } catch (clientErr) {
@@ -283,8 +290,14 @@ export async function GET(request: Request) {
     }
 
     // Fallback de erro
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const isLocalEnv = process.env.NODE_ENV === 'development';
+    const appBaseUrl = isLocalEnv 
+        ? origin 
+        : (forwardedHost ? `https://${forwardedHost}` : origin);
+
     const fallbackUrl = isAdminLogin 
-        ? `${origin}/admin/login?error=auth_callback_failed` 
-        : `${origin}/?error=auth_callback_failed`;
+        ? `${appBaseUrl}/admin/login?error=auth_callback_failed` 
+        : `${appBaseUrl}/?error=auth_callback_failed`;
     return NextResponse.redirect(fallbackUrl);
 }
