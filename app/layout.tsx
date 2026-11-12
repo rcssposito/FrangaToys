@@ -21,23 +21,9 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: {
     template: '%s | Franga Toys',
-    default: 'Franga Toys | Pintura em Impressão 3D',
+    default: 'Franga Toys | Ateliê de Impressão 3D',
   },
-  description: 'Figures 3D pintadas à mão. Peças únicas para colecionadores. Sob encomenda. Compre direto pelo site.',
-  keywords: ['action figures', 'impressão 3d', 'pintura à mão', 'colecionáveis', 'anime', 'marvel', 'dc', 'customização', 'franga toys'],
-  openGraph: {
-    title: 'Franga Toys | Pintura em Impressão 3D',
-    description: 'Figures 3D pintadas à mão. Peças únicas para colecionadores. Sob encomenda.',
-    url: 'https://frangatoys.com.br',
-    siteName: 'Franga Toys',
-    locale: 'pt_BR',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Franga Toys | Pintura em Impressão 3D',
-    description: 'Figures 3D pintadas à mão. Peças únicas para colecionadores. Sob encomenda.',
-  },
+  description: 'Serviços de impressão 3D em resina e pintura artesanal personalizada sob encomenda.',
 };
 
 export default function RootLayout({
@@ -56,24 +42,6 @@ export default function RootLayout({
           <CookieConsent />
           <Toaster position="top-center" richColors />
         </Providers>
-
-        {/* Google Analytics */}
-        {process.env.NEXT_PUBLIC_GA_ID && (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
-              strategy="afterInteractive"
-            />
-            <Script id="google-analytics" strategy="afterInteractive">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}');
-              `}
-            </Script>
-          </>
-        )}
       </body>
     </html>
   );

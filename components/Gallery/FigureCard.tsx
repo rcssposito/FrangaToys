@@ -90,7 +90,7 @@ export const FigureCard = memo(({ figure, className, priority }: FigureCardProps
                 {/* === FRONT FACE (Luxury Design) === */}
                 <div className="flip-card-front relative bg-[#09090b] border border-zinc-800/40 hover:border-orange-500/30 hover:shadow-[0_0_30px_rgba(249,115,22,0.08)] transition-all duration-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl group/front">
                     <Link
-                        href={`/figura/${figure.slug || figure.id}?ref=vitrine`}
+                        href={`/figura/${figure.id}?ref=vitrine`}
                         className="absolute inset-0 z-10"
                         onClick={() => trackClick()}
                     />
@@ -283,7 +283,7 @@ export const FigureCard = memo(({ figure, className, priority }: FigureCardProps
                     )}
 
                     <Link
-                        href={`/figura/${figure.slug || figure.id}?ref=vitrine`}
+                        href={`/figura/${figure.id}?ref=vitrine`}
                         className="relative z-10 flex flex-col h-full cursor-pointer"
                         onClick={() => trackClick()}
                     >

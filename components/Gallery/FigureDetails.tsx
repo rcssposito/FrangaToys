@@ -726,7 +726,7 @@ export function FigureDetails({ figure, crossSell }: FigureDetailsProps) {
                             <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Compre Junto</h4>
                         </div>
                         <div
-                            onClick={() => router.push(`/figura/${crossSell.slug}?ref=cross_sell`)}
+                            onClick={() => router.push(`/figura/${crossSell.id}?ref=cross_sell`)}
                             className="group flex items-center gap-4 bg-zinc-900/40 hover:bg-zinc-900/80 border border-white/5 hover:border-orange-500/30 p-3 rounded-2xl cursor-pointer transition-all duration-300"
                         >
                             <div className="relative w-16 h-16 bg-black rounded-xl overflow-hidden shadow-inner flex-shrink-0">

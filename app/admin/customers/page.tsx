@@ -2095,7 +2095,7 @@ export function CustomersView({ forcedMode }: { forcedMode?: 'clientes' | 'caden
                                                                             {group.figuras.slice(0, 3).map((fig) => (
                                                                                 <a
                                                                                     key={fig.id}
-                                                                                    href={fig.slug ? `/figura/${fig.slug}` : `/figura/${fig.id}`}
+                                                                                    href={`/figura/${fig.id}`}
                                                                                     target="_blank"
                                                                                     rel="noopener noreferrer"
                                                                                     onClick={(e) => e.stopPropagation()}
@@ -2397,7 +2397,7 @@ export function CustomersView({ forcedMode }: { forcedMode?: 'clientes' | 'caden
                                                                 {/* Figura associada */}
                                                                 {log.figuras && (
                                                                     <a
-                                                                        href={log.figuras.slug ? `/figura/${log.figuras.slug}` : (log.figura_id ? `/figura/${log.figura_id}` : (log.figuras.id ? `/figura/${log.figuras.id}` : '#'))}
+                                                                        href={log.figura_id ? `/figura/${log.figura_id}` : (log.figuras.id ? `/figura/${log.figuras.id}` : '#')}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
                                                                         className="flex items-center gap-2 mt-0.5 hover:opacity-85 transition-opacity group cursor-pointer w-fit"

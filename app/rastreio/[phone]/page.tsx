@@ -1451,7 +1451,7 @@ export default function CustomerDashboard() {
                                         >
                                             {/* Image with Direct Link */}
                                             <div className="relative aspect-[4/5] bg-[#09090b] overflow-hidden">
-                                                <Link href={`/figura/${item.slug || item.id}?ref=wishlist`} className="absolute inset-0 z-10" />
+                                                <Link href={`/figura/${item.id}?ref=wishlist`} className="absolute inset-0 z-10" />
                                                 {item.imagem_url ? (
                                                     <Image
                                                         loader={imageKitLoader}
@@ -1548,7 +1548,7 @@ export default function CustomerDashboard() {
                                                         </a>
                                                     )}
                                                     <Link
-                                                        href={`/figura/${item.slug || item.id}?ref=wishlist`}
+                                                        href={`/figura/${item.id}?ref=wishlist`}
                                                         className="px-3 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider border border-zinc-700 transition-colors"
                                                     >
                                                         Ver

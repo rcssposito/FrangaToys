@@ -11,39 +11,70 @@ interface Props {
     params: Promise<{ id: string }>;
 }
 
+const BLOCKED_PROPERTIES_REGEX = /\b(naruto|boruto|sasuke|itachi|kakashi|jiraiya|minato|tsunade|orochimaru|madara|obito|hinata|gaara|pain\s*nagato|akatsuki|dragon\s*ball|dragonball|dbz|dbs|kakaroto|goku|vegeta|gohan|piccolo|trunks|frieza|freeza|cell\s*saga|perfect\s*cell|majin\s*buu|broly|one\s*piece|monkey\s*d|luffy|roronoa|zoro|nico\s*robin|sanji|usopp|chopper|portgas|saint\s*seiya|cavaleiros\s*do\s*zod[ií]aco|seiya|shiryu|hyoga|shun|ikki|bleach|ichigo|rukia|aizen|death\s*note|light\s*yagami|shinigami\s*ryuk|hunter\s*x\s*hunter|killua|kurapika|hisoka|one\s*punch\s*man|saitama|genos|jojo'?s?\s*bizarre|inuyasha|sesshomaru|digimon|doraemon|fof[aã]o|sitio\s*do\s*picapau)\b/i;
+
 /**
  * Deduplica a consulta de figura + parâmetros de preço entre generateMetadata e FiguraPage
  * dentro do mesmo ciclo de renderização do React Server Component.
+ * Permite estritamente IDs numéricos para blindar a URL contra identificação por crawlers.
+ * Força 404 para URLs não numéricas ou para propriedades intelectuais bloqueadas.
  */
 const getFigureWithPricing = cache(async (identifier: string) => {
     const isNumeric = /^\d+$/.test(identifier);
 
-    let figureQuery = supabase
-        .from('figuras')
-        .select(`
-            *,
-            series ( 
-                nome,
-                categorias ( id, nome )
-            ),
-            figuras_meta ( * ),
-            studios ( nome, merchant, ativo )
-        `);
-
-    if (isNumeric) {
-        figureQuery = figureQuery.eq('id', parseInt(identifier, 10));
-    } else {
-        figureQuery = figureQuery.eq('slug', identifier);
+    // Se a URL contiver slugs de texto/personagens (ex: /figura/batman...), rejeita com 404
+    if (!isNumeric) {
+        return {
+            figure: null,
+            error: null,
+            settings: null,
+        };
     }
 
+    const figureId = parseInt(identifier, 10);
+
     const [figureRes, settingsRes] = await Promise.all([
-        figureQuery.single(),
+        supabase
+            .from('figuras')
+            .select(`
+                *,
+                series ( 
+                    nome,
+                    categorias ( id, nome )
+                ),
+                figuras_meta ( * ),
+                studios ( nome, merchant, ativo )
+            `)
+            .eq('id', figureId)
+            .single(),
         supabase
             .from('pricing_params')
             .select('*')
             .eq('id', 1)
             .single()
     ]);
+
+    const figure = figureRes.data;
+
+    // Se a figura pertencer a franquias bloqueadas/notificadas, força 404 imediatamente
+    if (figure) {
+        const nome = figure.nome || '';
+        const slug = figure.slug || '';
+        const seriesData = Array.isArray(figure.series) ? figure.series[0] : figure.series;
+        const serieNome = seriesData?.nome || '';
+
+        if (
+            BLOCKED_PROPERTIES_REGEX.test(nome) ||
+            BLOCKED_PROPERTIES_REGEX.test(slug) ||
+            BLOCKED_PROPERTIES_REGEX.test(serieNome)
+        ) {
+            return {
+                figure: null,
+                error: null,
+                settings: null,
+            };
+        }
+    }
 
     return {
         figure: figureRes.data,
@@ -76,6 +107,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
         title,
         description,
+        robots: {
+            index: false,
+            follow: false,
+            nocache: true,
+        },
         openGraph: {
             title,
             description,
@@ -116,16 +152,24 @@ export default async function FiguraPage({ params }: Props) {
             .limit(20);
             
         if (crossSellData && crossSellData.length > 0) {
-            const randomIndex = Math.floor(Math.random() * crossSellData.length);
-            const selectedCrossSell = crossSellData[randomIndex];
-            const csMeta = Array.isArray(selectedCrossSell.figuras_meta) ? selectedCrossSell.figuras_meta[0] : selectedCrossSell.figuras_meta;
-            crossSellFigure = {
-                id: selectedCrossSell.id,
-                nome: selectedCrossSell.nome,
-                imagem_url: selectedCrossSell.imagem_url,
-                slug: selectedCrossSell.slug || selectedCrossSell.id.toString(),
-                is_campanha: Boolean(csMeta?.is_campanha_active || csMeta?.preco_fixo_campanha || csMeta?.desconto_campanha)
-            };
+            const safeCrossSellData = crossSellData.filter((cs: any) => {
+                const csNome = cs.nome || '';
+                const csSlug = cs.slug || '';
+                return !BLOCKED_PROPERTIES_REGEX.test(csNome) && !BLOCKED_PROPERTIES_REGEX.test(csSlug);
+            });
+
+            if (safeCrossSellData.length > 0) {
+                const randomIndex = Math.floor(Math.random() * safeCrossSellData.length);
+                const selectedCrossSell = safeCrossSellData[randomIndex];
+                const csMeta = Array.isArray(selectedCrossSell.figuras_meta) ? selectedCrossSell.figuras_meta[0] : selectedCrossSell.figuras_meta;
+                crossSellFigure = {
+                    id: selectedCrossSell.id,
+                    nome: selectedCrossSell.nome,
+                    imagem_url: selectedCrossSell.imagem_url,
+                    slug: selectedCrossSell.id.toString(),
+                    is_campanha: Boolean(csMeta?.is_campanha_active || csMeta?.preco_fixo_campanha || csMeta?.desconto_campanha)
+                };
+            }
         }
     }
 

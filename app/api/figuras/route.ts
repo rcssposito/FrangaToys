@@ -300,6 +300,16 @@ export async function GET(req: NextRequest) {
             }
         }
 
+        // Filtro de blindagem legal: remove completamente todas as propriedades intelectuais notificadas/sensíveis
+        const BLOCKED_PROPERTIES_REGEX = /\b(naruto|boruto|sasuke|itachi|kakashi|jiraiya|minato|tsunade|orochimaru|madara|obito|hinata|gaara|pain\s*nagato|akatsuki|dragon\s*ball|dragonball|dbz|dbs|kakaroto|goku|vegeta|gohan|piccolo|trunks|frieza|freeza|cell\s*saga|perfect\s*cell|majin\s*buu|broly|one\s*piece|monkey\s*d|luffy|roronoa|zoro|nico\s*robin|sanji|usopp|chopper|portgas|saint\s*seiya|cavaleiros\s*do\s*zod[ií]aco|seiya|shiryu|hyoga|shun|ikki|bleach|ichigo|rukia|aizen|death\s*note|light\s*yagami|shinigami\s*ryuk|hunter\s*x\s*hunter|killua|kurapika|hisoka|one\s*punch\s*man|saitama|genos|jojo'?s?\s*bizarre|inuyasha|sesshomaru|digimon|doraemon|fof[aã]o|sitio\s*do\s*picapau)\b/i;
+
+        data = data.filter((item: any) => {
+            const nome = item.nome || '';
+            const slug = item.slug || '';
+            const serieNome = (Array.isArray(item.series) ? item.series[0]?.nome : item.series?.nome) || '';
+            return !BLOCKED_PROPERTIES_REGEX.test(nome) && !BLOCKED_PROPERTIES_REGEX.test(slug) && !BLOCKED_PROPERTIES_REGEX.test(serieNome);
+        });
+
         // Transform to DTO
         const items = data.map((item: any) => {
             const meta = Array.isArray(item.figuras_meta) ? item.figuras_meta[0] : item.figuras_meta;
