@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback, Suspense } from 'react';
 import Link from 'next/link';
+import { GatekeeperLanding } from '@/components/GatekeeperLanding';
 import { 
     forceSimulation, 
     forceLink, 
@@ -338,6 +339,8 @@ export default function ThematicUniversePage() {
     const containerRef = useRef<HTMLDivElement | null>(null);
 
     const [loading, setLoading] = useState(true);
+    const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+    const [reloadTrigger, setReloadTrigger] = useState(0);
     const [rawNodes, setRawNodes] = useState<GraphNode[]>([]);
     const [rawLinks, setRawLinks] = useState<GraphLink[]>([]);
     const [stats, setStats] = useState<any>(null);
@@ -368,9 +371,32 @@ export default function ThematicUniversePage() {
         async function loadUniverse() {
             try {
                 setLoading(true);
-                const res = await fetch('/api/public/universo');
+                const vipQuery = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('vip') : '';
+                const fetchUrl = vipQuery ? `/api/public/universo?vip=${encodeURIComponent(vipQuery)}` : '/api/public/universo';
+                const res = await fetch(fetchUrl);
+
+                if (res.status === 401) {
+                    if (isMounted) {
+                        setHasAccess(false);
+                        setLoading(false);
+                    }
+                    return;
+                }
+
                 if (!res.ok) throw new Error('Falha ao obter dados do universo');
                 const data = await res.json();
+
+                if (data.gatekeeper_blocked) {
+                    if (isMounted) {
+                        setHasAccess(false);
+                        setLoading(false);
+                    }
+                    return;
+                }
+
+                if (isMounted) {
+                    setHasAccess(true);
+                }
 
                 const nodes: GraphNode[] = (data.nodes || []).map((n: GraphNode) => ({ ...n }));
                 const links: GraphLink[] = (data.links || []).map((l: GraphLink) => ({ ...l }));
@@ -487,7 +513,7 @@ export default function ThematicUniversePage() {
         }
         loadUniverse();
         return () => { isMounted = false; };
-    }, []);
+    }, [reloadTrigger]);
 
     // 2. Inicializar Física Orbital com Micro-Órbitas Travadas
     useEffect(() => {
@@ -1519,6 +1545,17 @@ export default function ThematicUniversePage() {
         }
     };
 
+    if (hasAccess === false) {
+        return (
+            <Suspense fallback={<div className="min-h-screen bg-black" />}>
+                <GatekeeperLanding onAccessGranted={() => {
+                    setHasAccess(null);
+                    setReloadTrigger(prev => prev + 1);
+                }} />
+            </Suspense>
+        );
+    }
+
     return (
         <div className="relative w-screen h-screen overflow-hidden bg-zinc-950 text-white select-none touch-none">
             {/* Aviso Mobile: Universo exclusivo para Desktop */}
@@ -1841,16 +1878,18 @@ export default function ThematicUniversePage() {
                     <div className="pt-4 border-t border-zinc-800/80 space-y-2">
                         <Link
                             href={
-                                selectedNode.type === 'category' 
-                                    ? `/?categoria=${encodeURIComponent(selectedNode.name)}` 
-                                    : (selectedNode.type === 'studio' 
-                                    ? `/parceiros` 
-                                    : `/?q=${encodeURIComponent(selectedNode.name)}`)
+                                selectedNode.type === 'figure'
+                                    ? `/figura/${selectedNode.id.replace('fig-', '')}`
+                                    : (selectedNode.type === 'category' 
+                                        ? `/?categoria=${encodeURIComponent(selectedNode.name)}` 
+                                        : (selectedNode.type === 'studio' 
+                                        ? `/parceiros` 
+                                        : `/?q=${encodeURIComponent(selectedNode.name)}`))
                             }
                             className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs uppercase tracking-wider py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 transition-all cursor-pointer"
                         >
                             <ExternalLink size={14} />
-                            {selectedNode.type === 'category' ? 'Ver Peças da Categoria' : (selectedNode.type === 'studio' ? 'Ver Estúdio na Loja' : (selectedNode.type === 'figure' ? 'Ver Figura na Loja' : `Ver Peças de ${selectedNode.name}`))}
+                            {selectedNode.type === 'category' ? 'Ver Peças da Categoria' : (selectedNode.type === 'studio' ? 'Ver Estúdio na Loja' : (selectedNode.type === 'figure' ? 'Ver Ficha da Peça' : `Ver Peças de ${selectedNode.name}`))}
                         </Link>
                         <button
                             onClick={() => setSelectedNode(null)}

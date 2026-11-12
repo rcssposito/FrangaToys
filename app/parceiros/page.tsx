@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { GatekeeperLanding } from '@/components/GatekeeperLanding';
 import {
     Loader2,
     ArrowLeft,
@@ -34,6 +35,7 @@ interface Studio {
 type SortOption = 'count-desc' | 'name-asc';
 
 export default function PartnersPage() {
+    const [hasAccess, setHasAccess] = useState<boolean | null>(null);
     const [studios, setStudios] = useState<Studio[]>([]);
     const [loading, setLoading] = useState(true);
     const [showInactive, setShowInactive] = useState(false);
@@ -42,6 +44,22 @@ export default function PartnersPage() {
     const [failedLogos, setFailedLogos] = useState<Record<number, boolean>>({});
 
     useEffect(() => {
+        let isMounted = true;
+        async function checkAccess() {
+            try {
+                const res = await fetch('/api/public/access/verify');
+                const data = await res.json();
+                if (isMounted) setHasAccess(!!data.ok);
+            } catch {
+                if (isMounted) setHasAccess(false);
+            }
+        }
+        checkAccess();
+        return () => { isMounted = false; };
+    }, []);
+
+    useEffect(() => {
+        if (!hasAccess) return;
         const fetchStudios = async () => {
             setLoading(true);
             try {
@@ -57,7 +75,11 @@ export default function PartnersPage() {
             }
         };
         fetchStudios();
-    }, [showInactive]);
+    }, [showInactive, hasAccess]);
+
+    if (hasAccess === false) {
+        return <GatekeeperLanding onAccessGranted={() => setHasAccess(true)} />;
+    }
 
     const getFigureCount = (studio: Studio): number => {
         return studio.figuras?.[0]?.count ?? 0;

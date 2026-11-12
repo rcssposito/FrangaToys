@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { verifyVipToken, VIP_COOKIE_NAME } from '@/lib/gatekeeper';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,8 +28,23 @@ function getCategoryColor(name: string): string {
     return CATEGORY_COLORS.default;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
+        const { searchParams } = new URL(req.url);
+
+        // Validação Gatekeeper (Modo Ateliê Fechado)
+        const vipCookie = req.cookies.get(VIP_COOKIE_NAME)?.value;
+        const vipQuery = searchParams.get('vip');
+        const access = await verifyVipToken(vipCookie || vipQuery);
+
+        if (!access.valid) {
+            return NextResponse.json({
+                nodes: [],
+                links: [],
+                gatekeeper_blocked: true,
+                message: 'Acesso restrito a membros autorizados da Franga Toys.'
+            }, { status: 401 });
+        }
         // 1. Buscar categorias cadastradas
         const { data: categorias, error: catErr } = await supabase
             .from('categorias')
