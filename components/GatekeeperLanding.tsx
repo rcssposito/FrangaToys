@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Key, CheckCircle2, Lock, ArrowRight, Loader2, Instagram, Phone, User, ShieldCheck, Sparkles, X, MessageSquare } from 'lucide-react';
@@ -14,12 +13,8 @@ interface GatekeeperLandingProps {
 
 export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
     const supabase = createClient();
-    const searchParams = useSearchParams();
-    const isGooglePending = searchParams.get('google_auth') === 'pending';
-    const googleName = searchParams.get('name') || '';
-    const googleEmail = searchParams.get('email') || '';
 
-    // Modal de Solicitação de Acesso (Google / Form WhatsApp)
+    // Modal de Solicitação de Acesso
     const [showAccessModal, setShowAccessModal] = useState(false);
 
     // Modal de Chave Manual (Já tenho convite)
@@ -34,35 +29,6 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
     const [mensagem, setMensagem] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
-    const [isLoggingGoogle, setIsLoggingGoogle] = useState(false);
-
-    // Notificação se houve erro no callback do Google
-    useEffect(() => {
-        const authError = searchParams.get('error');
-        const authDesc = searchParams.get('error_description');
-        if (authError) {
-            toast.error('Erro na autenticação Google', {
-                description: authDesc ? decodeURIComponent(authDesc) : (authError === 'auth_callback_failed' ? 'Código de login inválido ou expirado.' : decodeURIComponent(authError))
-            });
-        }
-    }, [searchParams]);
-
-    const handleGoogleLogin = async () => {
-        setIsLoggingGoogle(true);
-        try {
-            const redirectUrl = `${window.location.origin}/auth/callback?next=/`;
-            const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                    redirectTo: redirectUrl
-                }
-            });
-            if (error) throw error;
-        } catch (err: any) {
-            toast.error(err.message || 'Erro ao conectar com Google');
-            setIsLoggingGoogle(false);
-        }
-    };
 
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         let val = e.target.value.replace(/\D/g, '');
@@ -221,56 +187,29 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
 
             {/* Centro da tela: Título Centralizado + Subtítulo */}
             <main className="w-full relative z-10 flex-1 flex flex-col items-center justify-center px-4 text-center">
-                
-                {/* Se o usuário veio de Google Login Pendente */}
-                {isGooglePending ? (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="bg-black/90 border border-amber-500/40 rounded-3xl p-6 sm:p-8 max-w-md backdrop-blur-2xl shadow-2xl text-center shadow-black/95"
-                    >
-                        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center mx-auto mb-3">
-                            <Lock size={22} />
+                <div className="flex flex-col items-center space-y-4 max-w-xl mx-auto">
+                    {/* Título Centralizado */}
+                    <div className="space-y-2 select-none">
+                        <div className="flex items-center justify-center gap-2 text-amber-300 text-xs sm:text-sm font-black uppercase tracking-[0.3em] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                            <Sparkles size={14} className="text-amber-400" />
+                            <span>BEM-VINDO AO ATELIÊ</span>
+                            <Sparkles size={14} className="text-amber-400" />
                         </div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
-                            Conta Google Registrada
-                        </span>
-                        <h2 className="text-xl font-black text-white mt-3 mb-2">
-                            Olá, {googleName || 'Colecionador'}!
-                        </h2>
-                        <p className="text-xs text-zinc-300 leading-relaxed mb-4">
-                            Sua conta <strong className="text-white font-mono">{googleEmail}</strong> foi enviada para liberação prévia do ateliê.
-                        </p>
-                        <p className="text-[11px] text-zinc-400 border-t border-white/10 pt-3">
-                            Assim que aprovado, ao recarregar a página o catálogo abrirá automaticamente.
-                        </p>
-                    </motion.div>
-                ) : (
-                    <div className="flex flex-col items-center space-y-4 max-w-xl mx-auto">
+
+                        <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight uppercase text-white drop-shadow-[0_4px_30px_rgba(0,0,0,0.95)]">
+                            FRANGA TOYS
+                        </h1>
                         
-                        {/* Título Centralizado */}
-                        <div className="space-y-2 select-none">
-                            <div className="flex items-center justify-center gap-2 text-amber-300 text-xs sm:text-sm font-black uppercase tracking-[0.3em] drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-                                <Sparkles size={14} className="text-amber-400" />
-                                <span>BEM-VINDO AO ATELIÊ</span>
-                                <Sparkles size={14} className="text-amber-400" />
-                            </div>
-
-                            <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight uppercase text-white drop-shadow-[0_4px_30px_rgba(0,0,0,0.95)]">
-                                FRANGA TOYS
-                            </h1>
-                            
-                            <div className="text-xs sm:text-sm font-black uppercase tracking-[0.35em] text-amber-400 drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
-                                ESCULTURAS & PINTURA ARTESANAL
-                            </div>
+                        <div className="text-xs sm:text-sm font-black uppercase tracking-[0.35em] text-amber-400 drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)]">
+                            ESCULTURAS & PINTURA ARTESANAL
                         </div>
-
-                        {/* Subtítulo com acabamento de alta definição */}
-                        <p className="text-xs sm:text-sm text-zinc-200 leading-relaxed max-w-lg drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)] font-medium">
-                            Peças artesanais com acabamento de alta definição e tiragens sob demanda. A visualização do catálogo é liberada mediante aprovação prévia.
-                        </p>
                     </div>
-                )}
+
+                    {/* Subtítulo com acabamento de alta definição */}
+                    <p className="text-xs sm:text-sm text-zinc-200 leading-relaxed max-w-lg drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)] font-medium">
+                        Peças artesanais com acabamento de alta definição e tiragens sob demanda. A visualização do catálogo é liberada mediante aprovação prévia.
+                    </p>
+                </div>
             </main>
 
             {/* Footer com Barra Escura Translúcida para Máxima Legibilidade */}
@@ -328,39 +267,10 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
                                         <h3 className="text-base font-black text-white">Solicitar Acesso ao Ateliê</h3>
                                     </div>
                                     <p className="text-xs text-zinc-400 mb-5">
-                                        Escolha como prefere se identificar para liberação do catálogo:
+                                        Preencha seus dados para análise e liberação do seu convite:
                                     </p>
 
-                                    {/* Opção 1: Google OAuth */}
-                                    <button
-                                        onClick={handleGoogleLogin}
-                                        disabled={isLoggingGoogle}
-                                        className="w-full bg-white hover:bg-zinc-100 text-zinc-950 font-bold text-xs py-3.5 px-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-3 active:scale-[0.99] disabled:opacity-50"
-                                    >
-                                        {isLoggingGoogle ? (
-                                            <Loader2 size={16} className="animate-spin text-zinc-950" />
-                                        ) : (
-                                            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                                            </svg>
-                                        )}
-                                        <span>Solicitar com Conta Google</span>
-                                    </button>
-
-                                    {/* Divisor */}
-                                    <div className="relative my-4">
-                                        <div className="absolute inset-0 flex items-center">
-                                            <div className="w-full border-t border-zinc-800" />
-                                        </div>
-                                        <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider">
-                                            <span className="bg-zinc-950 px-2 text-zinc-500">ou via whatsapp</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Opção 2: Form WhatsApp */}
+                                    {/* Formulário de Solicitação */}
                                     <form onSubmit={handleSubmit} className="space-y-3">
                                         <div>
                                             <label className="text-[11px] font-bold text-zinc-300 block mb-1 flex items-center gap-1.5">
@@ -508,6 +418,37 @@ export function GatekeeperLanding({ onAccessGranted }: GatekeeperLandingProps) {
                                     )}
                                 </button>
                             </form>
+
+                            {/* Ajuda para quem caiu aqui sem chave */}
+                            <div className="pt-4 mt-4 border-t border-zinc-800/80 text-center space-y-2.5">
+                                <p className="text-xs text-zinc-400">
+                                    Não tem um convite ou chave VIP?
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowKeyModal(false);
+                                        setShowAccessModal(true);
+                                    }}
+                                    className="w-full py-2.5 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800/90 border border-amber-500/30 hover:border-amber-500/50 text-amber-300 hover:text-amber-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.99]"
+                                >
+                                    <Lock size={12} className="text-amber-400" />
+                                    <span>Pedir Acesso ao Ateliê</span>
+                                    <ArrowRight size={12} />
+                                </button>
+                                <div className="text-[11px] text-zinc-500 flex items-center justify-center gap-1 pt-0.5">
+                                    <span>Ou fale direto no</span>
+                                    <a
+                                        href="https://www.instagram.com/frangatoys/"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-pink-400 hover:text-pink-300 font-semibold hover:underline inline-flex items-center gap-1"
+                                    >
+                                        <Instagram size={11} />
+                                        @frangatoys
+                                    </a>
+                                </div>
+                            </div>
                         </motion.div>
                     </div>
                 )}

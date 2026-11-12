@@ -60,28 +60,55 @@ export async function GET(req: NextRequest) {
                 .eq('id', id);
 
             const inviteUrl = `${baseUrl}?vip=${token}`;
-            const cleanPhone = record.whatsapp.replace(/\D/g, '');
-            const whatsappMessage = encodeURIComponent(
-                `Olá, ${record.nome}! Seu convite para o ateliê exclusivo da Franga Toys foi liberado 🎉\n\n` +
-                `Acesse o acervo completo e coleções pelo link seguro:\n${inviteUrl}\n\n` +
-                `Qualquer dúvida com acabamentos ou encomendas personalizadas, estamos à disposição por aqui!`
-            );
-            const whatsappSendUrl = `https://wa.me/55${cleanPhone}?text=${whatsappMessage}`;
+            const rawPhone = (record.whatsapp || '').trim();
+            const cleanPhone = rawPhone.replace(/\D/g, '');
+            const email = record.email || '';
+            const primeiroNome = record.nome ? record.nome.trim().split(' ')[0] : 'Colecionador';
 
-            // Notifica confirmação no Telegram
-            await sendTelegramAlert(
-                `✅ *ACESSO LIBERADO COM SUCESSO!*\n\n` +
-                `👤 *Cliente:* ${record.nome}\n` +
-                `📱 *WhatsApp:* ${record.whatsapp}\n` +
-                `🔑 *Token VIP:* \`${token}\`\n\n` +
-                `🔗 [Enviar Convite no WhatsApp do Cliente](${whatsappSendUrl})`
-            );
+            const rawMessage = 
+                `Olá, ${primeiroNome}! Seu convite para o ateliê exclusivo da Franga Toys foi liberado 🎉\n\n` +
+                `🔑 *Sua Chave VIP:* ${token}\n\n` +
+                `Acesse o acervo pelo link seguro:\n${inviteUrl}\n\n` +
+                `Se preferir, insira sua chave em "Já tenho convite" na tela inicial.\n\n` +
+                `Qualquer dúvida com peças sob encomenda ou acabamentos, estamos à disposição por aqui!`;
+
+            const whatsappMessage = encodeURIComponent(rawMessage);
+            const whatsappSendUrl = cleanPhone ? `https://wa.me/55${cleanPhone}?text=${whatsappMessage}` : null;
+            const whatsappWebUrl = cleanPhone ? `https://web.whatsapp.com/send?phone=55${cleanPhone}&text=${whatsappMessage}` : null;
+
+            // Notifica confirmação no Telegram com a mensagem pronta para copiar e links Web/App
+            let tgConfirmMsg = `✅ *ACESSO LIBERADO COM SUCESSO!*\n\n` +
+                `👤 *Cliente:* ${primeiroNome} (${record.nome})\n`;
+
+            if (rawPhone) {
+                tgConfirmMsg += `📱 *WhatsApp:* ${rawPhone}\n`;
+            }
+            if (email) {
+                tgConfirmMsg += `📧 *E-mail:* ${email}\n`;
+            }
+
+            tgConfirmMsg += `🔑 *Chave VIP:* \`${token}\`\n\n` +
+                `💬 *Mensagem para o cliente (toque para copiar):*\n\`\`\`\n${rawMessage}\n\`\`\`\n\n`;
+
+            if (whatsappWebUrl && whatsappSendUrl) {
+                tgConfirmMsg += `🔗 [Abrir no WhatsApp Web (PC da Loja)](${whatsappWebUrl})\n` +
+                    `📱 [Abrir no WhatsApp App](${whatsappSendUrl})`;
+            } else {
+                tgConfirmMsg += `ℹ️ _Solicitação via Google sem WhatsApp. O usuário já tem acesso liberado ao recarregar o site._`;
+            }
+
+            await sendTelegramAlert(tgConfirmMsg);
 
             return new NextResponse(renderHtmlApproval({
                 nome: record.nome,
-                whatsapp: record.whatsapp,
+                primeiroNome,
+                whatsapp: rawPhone || null,
+                email: email || null,
+                token,
+                rawMessage,
                 inviteUrl,
-                whatsappSendUrl
+                whatsappSendUrl,
+                whatsappWebUrl
             }), {
                 status: 200,
                 headers: { 'Content-Type': 'text/html; charset=utf-8' }
@@ -98,13 +125,20 @@ export async function GET(req: NextRequest) {
                 })
                 .eq('id', id);
 
-            await sendTelegramAlert(
-                `🚫 *SOLICITAÇÃO RECUSADA!*\n\n` +
-                `👤 *Nome:* ${record.nome}\n` +
-                `📱 *WhatsApp:* ${record.whatsapp}\n` +
-                `🌐 *IP:* \`${record.ip}\`\n\n` +
-                `_Este visitante foi barrado e não terá acesso ao catálogo._`
-            );
+            let tgRejectMsg = `🚫 *SOLICITAÇÃO RECUSADA!*\n\n` +
+                `👤 *Nome:* ${record.nome}\n`;
+
+            if (record.whatsapp) {
+                tgRejectMsg += `📱 *WhatsApp:* ${record.whatsapp}\n`;
+            }
+            if (record.email) {
+                tgRejectMsg += `📧 *E-mail:* ${record.email}\n`;
+            }
+
+            tgRejectMsg += `🌐 *IP:* \`${record.ip}\`\n\n` +
+                `_Este visitante foi barrado e não terá acesso ao catálogo._`;
+
+            await sendTelegramAlert(tgRejectMsg);
 
             return new NextResponse(renderHtmlResponse(
                 'Solicitação Barrada!',
@@ -130,7 +164,27 @@ export async function GET(req: NextRequest) {
     }
 }
 
-function renderHtmlApproval({ nome, whatsapp, inviteUrl, whatsappSendUrl }: { nome: string; whatsapp: string; inviteUrl: string; whatsappSendUrl: string }) {
+function renderHtmlApproval({ 
+    nome, 
+    primeiroNome, 
+    whatsapp, 
+    email,
+    token,
+    rawMessage,
+    inviteUrl, 
+    whatsappSendUrl,
+    whatsappWebUrl 
+}: { 
+    nome: string; 
+    primeiroNome: string; 
+    whatsapp: string | null; 
+    email: string | null;
+    token: string;
+    rawMessage: string;
+    inviteUrl: string; 
+    whatsappSendUrl: string | null;
+    whatsappWebUrl: string | null;
+}) {
     return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -144,7 +198,7 @@ function renderHtmlApproval({ nome, whatsapp, inviteUrl, whatsappSendUrl }: { no
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
     <div class="max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center">
-        <div class="w-16 h-16 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-5 text-3xl">
+        <div class="w-16 h-16 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl font-black">
             ✓
         </div>
         
@@ -152,25 +206,47 @@ function renderHtmlApproval({ nome, whatsapp, inviteUrl, whatsappSendUrl }: { no
             Acesso Liberado
         </span>
 
-        <h1 class="text-2xl font-black text-white mt-4 mb-2">
-            ${nome}
+        <h1 class="text-2xl font-black text-white mt-3 mb-1">
+            ${primeiroNome}
         </h1>
-        <p class="text-xs text-zinc-400 mb-6">
-            WhatsApp: <strong>${whatsapp}</strong> — Token VIP gerado e válido por 60 dias.
+        <p class="text-xs text-zinc-400 mb-4">
+            ${nome} ${whatsapp ? `• WhatsApp: <strong>${whatsapp}</strong>` : ''} ${email ? `• E-mail: <strong>${email}</strong>` : ''}
         </p>
 
-        <!-- Botão Principal WhatsApp -->
-        <a href="${whatsappSendUrl}" target="_blank" class="w-full block bg-emerald-500 hover:bg-emerald-400 text-black font-black text-sm uppercase tracking-wider py-4 px-6 rounded-2xl shadow-lg shadow-emerald-500/20 transition-all mb-3 text-center">
-            📲 Enviar Convite no WhatsApp
-        </a>
-
-        <!-- Copiar Link -->
-        <div class="bg-black/60 border border-zinc-800 rounded-2xl p-3 text-left mb-6">
-            <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block mb-1">Link do Convite</span>
-            <input type="text" readonly value="${inviteUrl}" class="w-full bg-transparent text-xs text-zinc-300 select-all outline-none font-mono" id="inviteInput" />
+        <!-- Chave VIP em Destaque -->
+        <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 mb-5 text-center">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 block mb-1">Chave VIP Gerada</span>
+            <span class="font-mono text-sm font-black text-amber-200 select-all tracking-wider">${token}</span>
         </div>
 
-        <a href="${inviteUrl}" class="text-xs text-zinc-500 hover:text-white font-medium underline transition-colors">
+        ${whatsappWebUrl && whatsappSendUrl ? `
+        <!-- Botões de Envio de WhatsApp -->
+        <div class="space-y-2 mb-4">
+            <a href="${whatsappWebUrl}" target="_blank" class="w-full block bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase tracking-wider py-3.5 px-4 rounded-xl shadow-lg transition-all text-center">
+                💻 Enviar no WhatsApp Web (PC da Loja)
+            </a>
+            <a href="${whatsappSendUrl}" target="_blank" class="w-full block bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs uppercase tracking-wider py-3 px-4 rounded-xl transition-all text-center">
+                📱 Abrir no WhatsApp App (Celular)
+            </a>
+        </div>
+        ` : `
+        <div class="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-3.5 mb-4 text-xs text-blue-300 leading-relaxed text-left">
+            ℹ️ <strong>Conta Google Aprovada:</strong> O cliente não cadastrou WhatsApp. O acesso já está liberado automaticamente na conta dele ao recarregar o site.
+        </div>
+        `}
+
+        <!-- Copiar Mensagem Formatada -->
+        <div class="bg-black/60 border border-zinc-800 rounded-2xl p-3 text-left mb-5">
+            <div class="flex items-center justify-between mb-1.5">
+                <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Texto da Mensagem</span>
+                <button onclick="navigator.clipboard.writeText(document.getElementById('msgArea').value); alert('Mensagem copiada!');" class="text-[10px] text-amber-400 hover:underline font-bold">
+                    Copiar Texto
+                </button>
+            </div>
+            <textarea id="msgArea" readonly rows="4" class="w-full bg-transparent text-[11px] text-zinc-300 select-all outline-none resize-none leading-relaxed font-sans">${rawMessage}</textarea>
+        </div>
+
+        <a href="${inviteUrl}" target="_blank" class="text-xs text-zinc-500 hover:text-white font-medium underline transition-colors">
             Testar link na vitrine →
         </a>
     </div>

@@ -79,9 +79,14 @@ export default function ConvitesPage() {
     const copyInviteLink = (token?: string, nome?: string, whatsapp?: string) => {
         if (!token) return;
         const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://frangatoys.com.br';
-        const link = `${baseUrl}?vip=${token}`;
-        navigator.clipboard.writeText(link);
-        toast.success('Link VIP copiado para a área de transferência!');
+        const inviteUrl = `${baseUrl}?vip=${token}`;
+        const primeiroNome = nome ? nome.trim().split(' ')[0] : 'Colecionador';
+        const fullText = 
+            `Olá, ${primeiroNome}! Seu convite para o ateliê exclusivo da Franga Toys foi liberado 🎉\n\n` +
+            `🔑 *Sua Chave VIP:* ${token}\n\n` +
+            `Acesse pelo link seguro: ${inviteUrl}`;
+        navigator.clipboard.writeText(fullText);
+        toast.success('Mensagem com Chave VIP copiada!');
     };
 
     const openWhatsAppInvite = (token?: string, nome?: string, whatsapp?: string) => {
@@ -89,12 +94,14 @@ export default function ConvitesPage() {
         const cleanPhone = whatsapp.replace(/\D/g, '');
         const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://frangatoys.com.br';
         const inviteUrl = `${baseUrl}?vip=${token}`;
+        const primeiroNome = nome ? nome.trim().split(' ')[0] : 'Colecionador';
         const msg = encodeURIComponent(
-            `Olá ${nome}! Seu convite para o acervo exclusivo da Franga Toys foi liberado 🎉\n\n` +
-            `Acesse pelo link seguro:\n${inviteUrl}\n\n` +
-            `Dúvidas sobre encomendas ou acabamentos, estou à disposição!`
+            `Olá, ${primeiroNome}! Seu convite para o ateliê exclusivo da Franga Toys foi liberado 🎉\n\n` +
+            `🔑 *Sua Chave VIP:* ${token}\n\n` +
+            `Acesse o acervo pelo link seguro:\n${inviteUrl}\n\n` +
+            `Qualquer dúvida com peças sob encomenda ou acabamentos, estamos à disposição por aqui!`
         );
-        window.open(`https://wa.me/55${cleanPhone}?text=${msg}`, '_blank');
+        window.open(`https://web.whatsapp.com/send?phone=55${cleanPhone}&text=${msg}`, '_blank');
     };
 
     const filtered = solicitacoes.filter(s => {
