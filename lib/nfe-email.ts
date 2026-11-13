@@ -54,7 +54,7 @@ function gerarXmlFallback(params: {
       <prod>
         <cProd>FIG${idx + 1}</cProd>
         <cEAN>SEM GTIN</cEAN>
-        <xProd>${escapeXml(item.nome)}</xProd>
+        <xProd>Peça decorativa artesanal colecionável em resina sob encomenda com serviço de pintura artesanal em peça decorativa</xProd>
         <NCM>95030099</NCM>
         <CFOP>5102</CFOP>
         <uCom>UN</uCom>

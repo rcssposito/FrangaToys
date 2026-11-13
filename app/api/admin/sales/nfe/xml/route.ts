@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
       return {
         numero_item: String(idx + 1),
         codigo_produto: (fig?.codigo || `FIG${sale.figura_id}`).replace(/[^a-zA-Z0-9]/g, '').slice(0, 60) || 'PROD01',
-        descricao: fig?.nome || 'Figura Personalizada',
+        descricao: 'Peça decorativa artesanal colecionável em resina sob encomenda com serviço de pintura artesanal em peça decorativa',
         codigo_ncm: '95030099', 
         cfop: cfop,
         unidade_comercial: 'UN',
