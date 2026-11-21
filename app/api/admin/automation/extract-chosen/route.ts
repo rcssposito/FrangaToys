@@ -100,21 +100,30 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Parâmetros obrigatórios ausentes.' }, { status: 400 });
         }
 
-        const ext = path.extname(archivePath).toLowerCase();
         const figureDir = path.dirname(archivePath);
 
-        // Função para extrair um arquivo do compactado para o destino
-        const extractImageToFile = (innerPath: string, destFile: string) => {
+        // Função para extrair um arquivo do compactado para o destino (suporta múltiplos RARs na mesma pasta)
+        const extractImageToFile = (rawInnerPath: string, destFile: string) => {
+            let targetArchive = archivePath;
+            let innerPath = rawInnerPath;
+            if (innerPath.startsWith('@ARCHIVE:') && innerPath.includes('||')) {
+                const [archHeader, realInner] = innerPath.split('||');
+                const sibName = archHeader.replace('@ARCHIVE:', '');
+                targetArchive = path.join(figureDir, sibName);
+                innerPath = realInner;
+            }
+            const ext = path.extname(targetArchive).toLowerCase();
+
             if (innerPath.includes('::')) {
                 const [nestedArchiveName, targetImageName] = innerPath.split('::');
                 let nestedBuffer: Buffer;
 
                 if (ext === '.rar') {
-                    nestedBuffer = execSync(`"${UNRAR_PATH}" p -inul "${archivePath}" "${nestedArchiveName}"`, {
+                    nestedBuffer = execSync(`"${UNRAR_PATH}" p -inul "${targetArchive}" "${nestedArchiveName}"`, {
                         maxBuffer: 60 * 1024 * 1024
                     });
                 } else {
-                    nestedBuffer = execSync(`tar -xf "${archivePath}" -O "${nestedArchiveName}"`, {
+                    nestedBuffer = execSync(`tar -xf "${targetArchive}" -O "${nestedArchiveName}"`, {
                         maxBuffer: 60 * 1024 * 1024
                     });
                 }
@@ -124,7 +133,7 @@ export async function POST(req: NextRequest) {
                 if (!imgEntry) throw new Error('Imagem não encontrada no sub-compactado.');
                 fs.writeFileSync(destFile, imgEntry.getData());
             } else if (ext === '.rar') {
-                execSync(`"${UNRAR_PATH}" e -y -inul "${archivePath}" "${innerPath}" "${path.dirname(destFile)}\\"`);
+                execSync(`"${UNRAR_PATH}" e -y -inul "${targetArchive}" "${innerPath}" "${path.dirname(destFile)}\\"`);
                 const extractedName = path.basename(innerPath);
                 const extractedPath = path.join(path.dirname(destFile), extractedName);
                 if (fs.existsSync(extractedPath) && extractedPath.toLowerCase() !== destFile.toLowerCase()) {
@@ -133,14 +142,14 @@ export async function POST(req: NextRequest) {
                 }
             } else {
                 try {
-                    const imgBuffer = execSync(`tar -xf "${archivePath}" -O "${innerPath}"`, {
+                    const imgBuffer = execSync(`tar -xf "${targetArchive}" -O "${innerPath}"`, {
                         maxBuffer: 30 * 1024 * 1024
                     });
                     fs.writeFileSync(destFile, imgBuffer);
                 } catch (tarErr) {
-                    const stats = fs.statSync(archivePath);
+                    const stats = fs.statSync(targetArchive);
                     if (stats.size < 2 * 1024 * 1024 * 1024) {
-                        const zip = new AdmZip(archivePath);
+                        const zip = new AdmZip(targetArchive);
                         const entry = zip.getEntry(innerPath);
                         if (!entry) throw new Error('Imagem não encontrada no ZIP.');
                         fs.writeFileSync(destFile, entry.getData());

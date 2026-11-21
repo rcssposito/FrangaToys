@@ -280,7 +280,8 @@ ${JSON.stringify(files)}`;
         // 4. Execução Determinística: Normalização Canônica e Cálculo Preciso de Versão
         const finalResults = await Promise.all(
             aiResults.map(async (item) => {
-                const ext = path.extname(item.arquivo).toLowerCase();
+                const rawExt = path.extname(item.arquivo).toLowerCase();
+                const ext = /\.(rar|zip|7z)$/i.test(rawExt) ? rawExt : '';
                 let itemSerie = (item.serie || '').trim();
                 let itemPersonagem = (item.personagem || '').trim();
                 let itemCategoria = (item.categoria || '').trim();

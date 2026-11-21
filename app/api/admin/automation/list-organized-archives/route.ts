@@ -33,7 +33,8 @@ export async function GET(req: NextRequest) {
                 const figPath = path.join(catPath, fig.name);
                 const files = fs.readdirSync(figPath);
 
-                const archiveFile = files.find(f => /\.(rar|zip|7z)$/i.test(f));
+                const archiveFiles = files.filter(f => /\.(rar|zip|7z)$/i.test(f));
+                const primaryArchive = archiveFiles.find(f => /image|render|foto|pic|art/i.test(f)) || archiveFiles[0];
                 
                 // Reconhece qualquer imagem de capa (.webp, .jpg, .png) que não seja ícone .ico
                 const coverFile = files.find(f => 
@@ -42,11 +43,11 @@ export async function GET(req: NextRequest) {
                     !path.basename(f).startsWith('._')
                 );
 
-                if (archiveFile) {
+                if (primaryArchive) {
                     archives.push({
-                        name: archiveFile,
+                        name: archiveFiles.length > 1 ? `${archiveFiles.length} arquivos (${primaryArchive})` : primaryArchive,
                         category: cat.name,
-                        fullPath: path.join(figPath, archiveFile),
+                        fullPath: path.join(figPath, primaryArchive),
                         figureName: fig.name,
                         hasWebpCover: !!coverFile,
                         coverFileName: coverFile || null

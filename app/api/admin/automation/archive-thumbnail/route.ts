@@ -11,11 +11,18 @@ const UNRAR_PATH = 'C:\\Program Files\\WinRAR\\UnRAR.exe';
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
-        const archivePath = searchParams.get('archivePath');
-        const innerPath = searchParams.get('innerPath');
+        let archivePath = searchParams.get('archivePath');
+        let innerPath = searchParams.get('innerPath');
 
         if (!archivePath || !innerPath) {
             return new Response('Parâmetros archivePath e innerPath obrigatórios.', { status: 400 });
+        }
+
+        if (innerPath.startsWith('@ARCHIVE:') && innerPath.includes('||')) {
+            const [archHeader, realInner] = innerPath.split('||');
+            const sibName = archHeader.replace('@ARCHIVE:', '');
+            archivePath = path.join(path.dirname(archivePath), sibName);
+            innerPath = realInner;
         }
 
         if (!fs.existsSync(archivePath)) {

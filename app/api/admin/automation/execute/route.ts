@@ -42,8 +42,57 @@ export async function POST(req: NextRequest) {
                     original: item.originalName,
                     final: '',
                     success: false,
-                    error: 'Arquivo de origem não encontrado.'
+                    error: 'Arquivo ou pasta de origem não encontrado.'
                 });
+                continue;
+            }
+
+            const sourceStat = fs.statSync(sourcePath);
+            let destCategoryFolder = baseFolder;
+            if (item.moveToCategory && item.targetFolder) {
+                destCategoryFolder = path.join(baseFolder, item.targetFolder);
+            }
+
+            if (sourceStat.isDirectory()) {
+                // Origem já é uma pasta agrupada no Passo 1: renomeia/move a pasta inteira para a categoria!
+                const figureFolderName = item.newName.trim().replace(/\.(rar|zip|7z)$/i, '').trim();
+                const destFolder = path.join(destCategoryFolder, figureFolderName);
+
+                if (!fs.existsSync(destCategoryFolder)) {
+                    fs.mkdirSync(destCategoryFolder, { recursive: true });
+                }
+
+                try {
+                    if (fs.existsSync(destFolder) && destFolder.toLowerCase() !== sourcePath.toLowerCase()) {
+                        // Se a pasta de destino já existir, move os arquivos internos para dentro dela e remove a pasta origem vazia
+                        const innerFiles = fs.readdirSync(sourcePath);
+                        for (const f of innerFiles) {
+                            const srcFile = path.join(sourcePath, f);
+                            const dstFile = path.join(destFolder, f);
+                            if (!fs.existsSync(dstFile)) {
+                                fs.renameSync(srcFile, dstFile);
+                            }
+                        }
+                        if (fs.readdirSync(sourcePath).length === 0) {
+                            fs.rmdirSync(sourcePath);
+                        }
+                    } else if (destFolder.toLowerCase() !== sourcePath.toLowerCase()) {
+                        fs.renameSync(sourcePath, destFolder);
+                    }
+
+                    logs.push({
+                        original: item.originalName,
+                        final: destFolder,
+                        success: true
+                    });
+                } catch (err: any) {
+                    logs.push({
+                        original: item.originalName,
+                        final: destFolder,
+                        success: false,
+                        error: err.message || 'Erro ao mover/renomear pasta agrupada.'
+                    });
+                }
                 continue;
             }
 
@@ -56,28 +105,17 @@ export async function POST(req: NextRequest) {
             // Nome da figura (sem extensão) para criar a pasta da figura
             const figureFolderName = path.parse(finalCleanName).name;
 
-            let destCategoryFolder = baseFolder;
-            if (item.moveToCategory && item.targetFolder) {
-                destCategoryFolder = path.join(baseFolder, item.targetFolder);
-            }
-
             // Pasta dedicada da figura: Categoria / Nome_da_Figura
             const destFolder = path.join(destCategoryFolder, figureFolderName);
             if (!fs.existsSync(destFolder)) {
                 fs.mkdirSync(destFolder, { recursive: true });
             }
 
-            const targetPath = path.join(destFolder, finalCleanName);
+            let targetPath = path.join(destFolder, finalCleanName);
 
-            // Proteção contra sobrescrita acidental
+            // Se já existe um arquivo com o nome canônico na pasta (ex: múltiplos RARs da mesma figura), mantém o nome original do RAR dentro da mesma pasta!
             if (fs.existsSync(targetPath) && targetPath.toLowerCase() !== sourcePath.toLowerCase()) {
-                logs.push({
-                    original: item.originalName,
-                    final: targetPath,
-                    success: false,
-                    error: `Já existe um arquivo com esse nome no destino: ${item.newName}`
-                });
-                continue;
+                targetPath = path.join(destFolder, item.originalName);
             }
 
             try {
