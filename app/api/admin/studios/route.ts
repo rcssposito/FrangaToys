@@ -236,7 +236,8 @@ export async function PUT(req: Request) {
              const { error: cascadeError } = await supabase
                 .from('figuras')
                 .update({ disponivel: merchant })
-                .eq('studio_id', id);
+                .eq('studio_id', id)
+                .neq('serie_id', 45);
             
             if (cascadeError) {
                 console.error("Erro no cascateamento de merchant:", cascadeError);
