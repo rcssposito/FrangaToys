@@ -94,6 +94,18 @@ export function GooMetadataModal({
         );
     };
 
+    const allLocalSelected = localFiles.length > 0 && localFiles.every(f => selectedPaths.includes(f.fullPath));
+
+    const handleToggleSelectAll = () => {
+        if (allLocalSelected) {
+            const visibleSet = new Set(localFiles.map(f => f.fullPath));
+            setSelectedPaths(prev => prev.filter(p => !visibleSet.has(p)));
+        } else {
+            const merged = new Set([...selectedPaths, ...localFiles.map(f => f.fullPath)]);
+            setSelectedPaths(Array.from(merged));
+        }
+    };
+
     const handleAnalyzeSelected = async () => {
         if (selectedPaths.length === 0) return;
         setIsAnalyzing(true);
@@ -254,6 +266,22 @@ export function GooMetadataModal({
                                 >
                                     Ver todos
                                 </button>
+                                {localFiles.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={handleToggleSelectAll}
+                                        className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-colors flex items-center gap-1.5 cursor-pointer ${
+                                            allLocalSelected
+                                                ? 'bg-amber-500/15 border-amber-500/50 text-amber-300 hover:bg-amber-500/25'
+                                                : 'bg-slate-800/80 border-slate-700 text-slate-200 hover:bg-slate-700'
+                                        }`}
+                                    >
+                                        <Check className="w-3.5 h-3.5" />
+                                        {allLocalSelected
+                                            ? `Desmarcar todos (${localFiles.length})`
+                                            : `Selecionar todos (${localFiles.length})`}
+                                    </button>
+                                )}
                             </div>
 
                             {/* Files List */}

@@ -51,8 +51,9 @@ export async function GET(request: NextRequest) {
         // Ordenar pelos mais recentes primeiro
         gooFiles.sort((a, b) => b.modifiedAt.getTime() - a.modifiedAt.getTime());
 
-        // Limitar a no máximo 50 resultados para performance
-        const limited = gooFiles.slice(0, 50);
+        // Limitar a 50 quando sem filtro; quando buscando por nome, retorna até 250 para não cortar figuras com muitas mesas (ex: 52+)
+        const maxResults = search ? 250 : 50;
+        const limited = gooFiles.slice(0, maxResults);
 
         return NextResponse.json({
             success: true,
